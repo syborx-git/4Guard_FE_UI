@@ -2,7 +2,10 @@
  * @file client-management.component.ts
  * @description Componente principal de Gestión de Clientes (Depositantes / Owners 3PL) — 4GUARD WMS.
  *
- * Homologado con Gestión de Transportistas, Sucursales y Usuarios.
+ * Implementa el Golden Standard Split View 35/65 con soporte completo para:
+ * - Matriz de Contactos Corporativos (FormArray dinámico)
+ * - Múltiples Direcciones de Destino Físico (Bodegas / Plantas) con contacto en sitio y teléfono
+ * - Historial de Auditoría BE en tiempo real
  */
 
 import {
@@ -18,6 +21,7 @@ import {
   ReactiveFormsModule,
   FormBuilder,
   FormGroup,
+  FormArray,
   Validators,
   AbstractControl,
   ValidationErrors,
@@ -34,6 +38,8 @@ import {
   Client,
   ClientStatus,
   CLIENT_STATUS_LABELS,
+  ClientContact,
+  PhysicalDestination,
   ClientAuditEntry,
 } from '../models/client.model';
 
@@ -62,7 +68,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
 
   protected readonly selectedClient = signal<Client | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
@@ -92,6 +98,13 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
     ];
   });
 
+  /** Retorna los primeros 8 dígitos (#00000001) para visualización compacta y limpia en todo el sistema. */
+  protected getShortId(id?: string | null): string {
+    if (!id) return '--------';
+    const clean = id.replace(/[^a-zA-Z0-9]/g, '');
+    return clean.length >= 8 ? clean.slice(0, 8).toUpperCase() : clean.padEnd(8, '0').toUpperCase();
+  }
+
   // ─── Computed Lista Filtrada ────────────────────────────────────────────────
 
   protected readonly filteredClients = computed(() => {
@@ -104,7 +117,11 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
         const nameMatch = (c.name || '').toLowerCase().includes(search);
         const codeMatch = (c.externalId || '').toLowerCase().includes(search);
         const orgMatch = (c.orgName || '').toLowerCase().includes(search);
-        return nameMatch || codeMatch || orgMatch;
+        const addrMatch = (c.address || '').toLowerCase().includes(search);
+        const destMatch = (c.destinations || []).some(d =>
+          d.plantName.toLowerCase().includes(search) || d.fullAddress.toLowerCase().includes(search)
+        );
+        return nameMatch || codeMatch || orgMatch || addrMatch || destMatch;
       });
     }
 
@@ -115,26 +132,49 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
     return list;
   });
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── Computed KPIs ──────────────────────────────────────────────────────────
 
-  protected readonly totalClients = computed(() => this.clientService.totalCount());
-  protected readonly kpiActive    = computed(() => this.clientService.activeCount());
-  protected readonly kpiInactive  = computed(() => this.clientService.inactiveCount());
+  protected readonly totalClients      = computed(() => this.clientService.totalCount());
+  protected readonly kpiActive         = computed(() => this.clientService.activeCount());
+  protected readonly kpiInactive       = computed(() => this.clientService.inactiveCount());
+  protected readonly totalDestinations = computed(() => this.clientService.totalDestinations());
 
-  // ─── Formulario Reactivo ─────────────────────────────────────────────────────
+  // ─── Formulario Reactivo con FormArrays ───────────────────────────────────────
 
   protected readonly form: FormGroup = this.fb.group({
     organizationId: ['a53f0907-9fa5-4bdf-87db-2eb5e7683935', [Validators.required]],
     name: ['', [Validators.required, Validators.maxLength(150), noWhitespaceValidator]],
     externalId: ['', [Validators.required, Validators.maxLength(50), noWhitespaceValidator]],
+    address: ['', [Validators.required, noWhitespaceValidator]],
+    phone: [''],
+    email: ['', [Validators.email]],
+    webPortalPassword: ['4GuardTemp#2026'],
     status: ['ACTIVE', [Validators.required]],
+    contacts: this.fb.array([]),
+    destinations: this.fb.array([]),
   });
+
+  get contactsFormArray(): FormArray {
+    return this.form.get('contacts') as FormArray;
+  }
+
+  get destinationsFormArray(): FormArray {
+    return this.form.get('destinations') as FormArray;
+  }
 
   protected readonly clientStatusLabels = CLIENT_STATUS_LABELS;
 
   // ─── Ciclo de Vida ───────────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    this.startNewClient();
     this.loadOrganizations();
     this.loadClients();
   }
@@ -165,6 +205,44 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
       });
   }
 
+  // ─── Métodos para FormArrays (Contactos y Destinos Físicos) ─────────────────
+
+  addContactField(contact?: Partial<ClientContact>): void {
+    const group = this.fb.group({
+      id: [contact?.id || null],
+      name: [contact?.name || '', [Validators.required, noWhitespaceValidator]],
+      department: [contact?.department || '', [Validators.required]],
+      phone: [contact?.phone || ''],
+      email: [contact?.email || '', [Validators.required, Validators.email]],
+      isPrimary: [contact?.isPrimary || false],
+    });
+    this.contactsFormArray.push(group);
+  }
+
+  removeContactField(index: number): void {
+    if (this.contactsFormArray.length > 1) {
+      this.contactsFormArray.removeAt(index);
+    }
+  }
+
+  addDestinationField(destination?: Partial<PhysicalDestination>): void {
+    const group = this.fb.group({
+      id: [destination?.id || null],
+      destinationCode: [destination?.destinationCode || `DEST-${Math.floor(100 + Math.random() * 900)}`],
+      plantName: [destination?.plantName || '', [Validators.required, noWhitespaceValidator]],
+      fullAddress: [destination?.fullAddress || '', [Validators.required, noWhitespaceValidator]],
+      contactPerson: [destination?.contactPerson || '', [Validators.required, noWhitespaceValidator]],
+      phone: [destination?.phone || '', [Validators.required, noWhitespaceValidator]],
+      status: [destination?.status || 'ACTIVO'],
+      notes: [destination?.notes || ''],
+    });
+    this.destinationsFormArray.push(group);
+  }
+
+  removeDestinationField(index: number): void {
+    this.destinationsFormArray.removeAt(index);
+  }
+
   // ─── Filtros ─────────────────────────────────────────────────────────────────
 
   protected clearFilters(): void {
@@ -188,12 +266,28 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
     this.selectedClient.set(null);
     this.formMode.set('new');
     const defaultOrg = this.availableOrganizations()[0]?.id || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+
+    this.contactsFormArray.clear();
+    this.destinationsFormArray.clear();
+
     this.form.reset({
       organizationId: defaultOrg,
       name: '',
       externalId: '',
+      address: '',
+      phone: '',
+      email: '',
+      webPortalPassword: '4GuardTemp#2026',
       status: 'ACTIVE',
     });
+
+    // Añadir 1 contacto base y 1 destino de ejemplo
+    this.addContactField({ department: 'Logística y Abasto' });
+    this.addDestinationField({
+      plantName: 'Planta Principal / Almacén Central',
+      status: 'ACTIVO'
+    });
+
     this.submitAttempted.set(false);
     this.backendError.set(null);
     this.saveSuccess.set(false);
@@ -203,25 +297,36 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
   }
 
   protected cancelForm(): void {
-    const client = this.selectedClient();
-    if (client) {
-      this.formMode.set('edit');
-      this.populateForm(client);
-    } else {
-      this.formMode.set('idle');
-    }
-    this.submitAttempted.set(false);
-    this.backendError.set(null);
-    this.saveSuccess.set(false);
+    this.startNewClient();
   }
 
   private populateForm(client: Client): void {
+    this.contactsFormArray.clear();
+    this.destinationsFormArray.clear();
+
     this.form.patchValue({
       organizationId: client.orgId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
       name: client.name,
       externalId: client.externalId,
+      address: client.address || '',
+      phone: client.phone || '',
+      email: client.email || '',
+      webPortalPassword: client.webPortalPassword || '4GuardTemp#2026',
       status: client.status,
     });
+
+    // Cargar contactos
+    if (client.contacts && client.contacts.length > 0) {
+      client.contacts.forEach(c => this.addContactField(c));
+    } else {
+      this.addContactField();
+    }
+
+    // Cargar destinos
+    if (client.destinations && client.destinations.length > 0) {
+      client.destinations.forEach(d => this.addDestinationField(d));
+    }
+
     this.form.markAsPristine();
     this.form.markAsUntouched();
   }
@@ -253,6 +358,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.toastService.error('Por favor completa todos los campos requeridos en las secciones del cliente.');
       return;
     }
 
@@ -265,18 +371,25 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
         orgName: this.availableOrganizations().find(o => o.id === raw.organizationId)?.name || '4GUARD LOGISTICS CORP',
         name: raw.name.trim(),
         externalId: raw.externalId.trim().toUpperCase(),
-        status: raw.status,
+        address: raw.address.trim(),
+        phone: raw.phone.trim(),
+        email: raw.email?.trim() || undefined,
+        webPortalPassword: raw.webPortalPassword,
+        status: 'ACTIVE',
+        contacts: raw.contacts || [],
+        destinations: raw.destinations || [],
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: (res) => {
           this.saveSuccess.set(true);
-          const newClient = this.clientService.clients().find(c => c.externalId === raw.externalId.trim().toUpperCase());
+          const newClient = this.clientService.clients().find(c => c.externalId === raw.externalId.trim().toUpperCase()) ||
+                            this.clientService.clients()[0];
           if (newClient) {
             this.selectedClient.set(newClient);
             this.loadAuditLogs(newClient.id);
           }
           this.formMode.set('edit');
           this.submitAttempted.set(false);
-          this.toastService.success('Cliente creado con éxito.');
+          this.toastService.success(`Cliente ${raw.name} y sus destinos físicos guardados con éxito.`);
           setTimeout(() => this.saveSuccess.set(false), 3500);
         },
         error: (err: HttpErrorResponse) => this.handleBackendError(err),
@@ -288,7 +401,13 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
         orgName: this.availableOrganizations().find(o => o.id === raw.organizationId)?.name || '4GUARD LOGISTICS CORP',
         name: raw.name.trim(),
         externalId: raw.externalId.trim().toUpperCase(),
-        status: raw.status,
+        address: raw.address.trim(),
+        phone: raw.phone.trim(),
+        email: raw.email?.trim() || undefined,
+        webPortalPassword: raw.webPortalPassword,
+        status: this.selectedClient()?.status || 'ACTIVE',
+        contacts: raw.contacts || [],
+        destinations: raw.destinations || [],
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: (res) => {
           this.saveSuccess.set(true);
@@ -299,7 +418,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
           this.submitAttempted.set(false);
           this.form.markAsPristine();
           this.loadAuditLogs(clientId);
-          this.toastService.success('Cliente actualizado con éxito.');
+          this.toastService.success('Cliente y destinos actualizados con éxito.');
           setTimeout(() => this.saveSuccess.set(false), 3500);
         },
         error: (err: HttpErrorResponse) => this.handleBackendError(err),
@@ -372,6 +491,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
     if (ctrl.errors['required'])       return 'Este campo es obligatorio.';
     if (ctrl.errors['whitespaceOnly']) return 'No puede contener solo espacios.';
     if (ctrl.errors['maxlength'])      return `Máximo ${ctrl.errors['maxlength'].requiredLength} caracteres.`;
+    if (ctrl.errors['email'])          return 'Formato de correo inválido.';
     return 'Campo inválido.';
   }
 
@@ -438,5 +558,57 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
 
   protected get hasActiveFilters(): boolean {
     return !!this.filterText() || !!this.filterStatus();
+  }
+
+  // ─── Helpers de Formato para Línea de Tiempo Homologada ─────────────────────────
+
+  protected getAuditIcon(action?: string, fallbackIcon?: string): string {
+    if (fallbackIcon && fallbackIcon !== 'info') return fallbackIcon;
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'add_circle';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'delete_forever';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('ACTIVE') || a.includes('LOCK')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action?: string, fallbackColor?: string): string {
+    if (fallbackColor && (fallbackColor === 'amber' || fallbackColor === 'blue' || fallbackColor === 'purple' || fallbackColor === 'emerald' || fallbackColor === 'red' || fallbackColor === 'indigo' || fallbackColor === 'update' || fallbackColor === 'create' || fallbackColor === 'status' || fallbackColor === 'delete')) {
+      return `carriers-tl-node--${fallbackColor}`;
+    }
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'carriers-tl-node--red';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('LOCK')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      name: 'Razón Social / Nombre',
+      externalId: 'Código / RFC / Tax ID',
+      taxId: 'RFC / Identificación Fiscal',
+      email: 'Correo de Facturación',
+      phone: 'Teléfono Principal',
+      address: 'Dirección Fiscal / Bodega',
+      status: 'Estado Operativo',
+      contactsCount: 'Total de Contactos',
+      destinationsCount: 'Total de Destinos',
+      organizationId: 'ID Organización',
+      organizationName: 'Organización'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activo';
+      if (s === 'INACTIVE') return 'Inactivo';
+      if (s === 'SUSPENDED') return 'Suspendido';
+    }
+    return String(value);
   }
 }

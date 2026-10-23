@@ -1,0 +1,127 @@
+<!-- quality-shell.component.html — Homologado con Recepción de Mercancía / 4GUARD WMS -->
+<div class="quality-page">
+  
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL CON EL SLIDE DE PESTAÑAS Y BOTÓN DE ACCIÓN
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="quality-header">
+
+    <div class="quality-header__top">
+      <div class="quality-header__left">
+        <div class="quality-header__icon-wrap">
+          <span class="material-symbols-outlined quality-header__icon">verified_user</span>
+        </div>
+
+        <div class="quality-header__copy">
+          <div class="quality-header__eyebrow">
+            <a routerLink="/dashboard" class="quality-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Dashboard</span>
+            </a>
+            <span class="quality-header__eyebrow-sep">·</span>
+            <span>Aseguramiento y Control de Calidad</span>
+          </div>
+          <h1 class="quality-header__title">Control de Calidad</h1>
+          <p class="quality-header__subtitle">
+            Gestión integral de producto no conforme, dictamen formal de liberaciones y verificación de carga F01-PO-GC-8.6-03
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </header>
+
+  <!-- ── 1. KPI CARDS HEADER / NAVEGACIÓN PRINCIPAL DE SUBMÓDULOS ── -->
+  <div class="quality-kpi-grid">
+    <!-- 1. Bloqueos / PNC -->
+    <div
+      routerLink="/quality/blocks"
+      routerLinkActive="quality-kpi-card--active"
+      class="quality-kpi-card quality-kpi-card--primary"
+      title="Ir a 1. Bloqueos / PNC"
+    >
+      <div class="quality-kpi-card__icon">
+        <span class="material-symbols-outlined">warning</span>
+      </div>
+      <div class="quality-kpi-card__info">
+        <span class="quality-kpi-card__label">TOTAL BLOQUEADOS</span>
+        <strong class="quality-kpi-card__value">{{ qualityState.kpiTotalBlocked() }}</strong>
+        <span class="quality-kpi-card__sub">1. Bloqueos / PNC</span>
+      </div>
+    </div>
+
+    <!-- 2. Dictamen Liberaciones -->
+    <div
+      routerLink="/quality/releases"
+      routerLinkActive="quality-kpi-card--active"
+      class="quality-kpi-card quality-kpi-card--success"
+      title="Ir a 2. Dictamen Liberaciones"
+    >
+      <div class="quality-kpi-card__icon">
+        <span class="material-symbols-outlined">check_circle</span>
+      </div>
+      <div class="quality-kpi-card__info">
+        <span class="quality-kpi-card__label">LIBERACIONES</span>
+        <strong class="quality-kpi-card__value">{{ qualityState.kpiTotalReleases() }}</strong>
+        <span class="quality-kpi-card__sub">2. Dictamen Liberaciones</span>
+      </div>
+    </div>
+
+    <!-- 3. Verificación F01 -->
+    <div
+      routerLink="/quality/load-verifications"
+      routerLinkActive="quality-kpi-card--active"
+      class="quality-kpi-card quality-kpi-card--danger"
+      title="Ir a 3. Verificación F01"
+    >
+      <div class="quality-kpi-card__icon">
+        <span class="material-symbols-outlined">fact_check</span>
+      </div>
+      <div class="quality-kpi-card__info">
+        <span class="quality-kpi-card__label">VERIFICACIONES F01</span>
+        <strong class="quality-kpi-card__value">{{ qualityState.kpiTotalVerifications() }}</strong>
+        <span class="quality-kpi-card__sub">3. Verificación F01</span>
+      </div>
+    </div>
+
+    <!-- 4. KPIs y Reclamos (F01) -->
+    <div
+      routerLink="/quality/claims"
+      routerLinkActive="quality-kpi-card--active"
+      class="quality-kpi-card quality-kpi-card--info"
+      title="Ir a 4. KPIs y Reclamos (F01)"
+    >
+      <div class="quality-kpi-card__icon">
+        <span class="material-symbols-outlined">query_stats</span>
+      </div>
+      <div class="quality-kpi-card__info">
+        <span class="quality-kpi-card__label">RECLAMOS E INCIDENCIAS</span>
+        <strong class="quality-kpi-card__value">{{ qualityState.kpiTotalClaims() }}</strong>
+        <span class="quality-kpi-card__sub">4. Reclamos (F01)</span>
+      </div>
+    </div>
+
+    <!-- 5. Tablero de 10 KPIs & Desviaciones (NUEVO) -->
+    <div
+      routerLink="/quality/kpi-dashboard"
+      routerLinkActive="quality-kpi-card--active"
+      class="quality-kpi-card quality-kpi-card--gold"
+      title="Ir a 5. Tablero de 10 KPIs & Desviaciones"
+    >
+      <div class="quality-kpi-card__icon">
+        <span class="material-symbols-outlined">analytics</span>
+      </div>
+      <div class="quality-kpi-card__info">
+        <span class="quality-kpi-card__label">TABLERO DE 10 KPIS</span>
+        <strong class="quality-kpi-card__value">{{ qualityState.kpiTotalDeviations() }} <span style="font-size: 14px; font-weight: normal;">Dev.</span></strong>
+        <span class="quality-kpi-card__sub">5. KPIs & Desviaciones</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. SUBMÓDULO ACTIVO (ROUTER OUTLET) ────────────────────────────── -->
+  <main class="quality-main-container">
+    <router-outlet></router-outlet>
+  </main>
+
+</div>

@@ -114,12 +114,16 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la vista ──────────────────────────────────────────────────────
 
   protected readonly selectedCarrier = signal<Carrier | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly statusDialogMode = signal<StatusDialogMode>('none');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
   protected readonly auditEntries = signal<CarrierAuditEntry[]>([]);
+
+  // ── Validaciones asíncronas de RFC en el evento blur ───────────────────────
+  protected readonly rfcValidating = signal<boolean>(false);
+  protected readonly rfcAvailable = signal<boolean | null>(null);
 
   // ─── Filtros del directorio ──────────────────────────────────────────────────
 
@@ -144,14 +148,15 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
       const digitsSearch = search.replace(/\D/g, '');
       list = list.filter(c => {
         const matchText =
-          c.tradeName.toLowerCase().includes(search)    ||
-          c.businessName.toLowerCase().includes(search) ||
-          c.rfc.toLowerCase().includes(search)          ||
-          c.contactName.toLowerCase().includes(search)  ||
-          c.email.toLowerCase().includes(search);
+          (c.tradeName || '').toLowerCase().includes(search)    ||
+          (c.businessName || '').toLowerCase().includes(search) ||
+          (c.rfc || '').toLowerCase().includes(search)          ||
+          (c.contactName || '').toLowerCase().includes(search)  ||
+          (c.email || '').toLowerCase().includes(search)        ||
+          (c.notes || '').toLowerCase().includes(search);
         const matchPhone =
           digitsSearch.length > 0 &&
-          c.phone.replace(/\D/g, '').includes(digitsSearch);
+          (c.phone || '').replace(/\D/g, '').includes(digitsSearch);
         return matchText || matchPhone;
       });
     }
@@ -166,6 +171,13 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
 
     return list;
   });
+
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
 
   // ─── KPIs computados para la cabecera ───────────────────────────────────────
 
@@ -183,23 +195,21 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   // ─── Formulario reactivo ─────────────────────────────────────────────────────
 
   protected readonly form: FormGroup = this.fb.group({
-    // Sección 1 — Información General
+    // Sección 1 — Información Principal de la Línea de Transporte
     businessName: ['', [Validators.required, Validators.maxLength(200), noWhitespaceValidator]],
     tradeName:    ['', [Validators.required, Validators.maxLength(150), noWhitespaceValidator]],
-    rfc:          ['', [Validators.required, Validators.maxLength(13), rfcValidator]],
-    carrierType:  ['', Validators.required],
     status:       ['ACTIVE', Validators.required],
-
-    // Sección 2 — Contacto Principal
-    contactName:  ['', [Validators.required, Validators.maxLength(100), noWhitespaceValidator]],
-    phone:        ['', [Validators.required, phoneValidator]],
-    email:        ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
-
-    // Sección 3 — Información Operativa
-    serviceType:  ['', Validators.required],
-    coverage:     ['', [Validators.required, Validators.maxLength(300), noWhitespaceValidator]],
-    permitNumber: ['', Validators.maxLength(80)],
     notes:        ['', Validators.maxLength(1000)],
+
+    // Sección 2 — Información Complementaria Opcional
+    carrierType:  ['EXTERNAL'],
+    rfc:          ['', [Validators.maxLength(13), rfcValidator]],
+    contactName:  ['', [Validators.maxLength(100)]],
+    phone:        ['', [phoneValidator]],
+    email:        ['', [Validators.email, Validators.maxLength(150)]],
+    serviceType:  ['FTL'],
+    coverage:     ['', [Validators.maxLength(300)]],
+    permitNumber: ['', Validators.maxLength(80)],
   });
 
   /** Capacidades de vehículos seleccionadas (manejadas por separado). */
@@ -250,6 +260,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCarriers();
+    this.startNewCarrier();
   }
 
   ngOnDestroy(): void {
@@ -316,11 +327,26 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   protected startNewCarrier(): void {
     this.selectedCarrier.set(null);
     this.formMode.set('new');
-    this.form.reset({ status: 'ACTIVE' });
+    this.form.reset({
+      status: 'ACTIVE',
+      carrierType: 'EXTERNAL',
+      serviceType: 'FTL',
+      businessName: '',
+      tradeName: '',
+      notes: '',
+      rfc: '',
+      contactName: '',
+      phone: '',
+      email: '',
+      coverage: '',
+      permitNumber: ''
+    });
     this.selectedVehicleTypes.clear();
     this.submitAttempted.set(false);
     this.backendError.set(null);
     this.saveSuccess.set(false);
+    this.rfcValidating.set(false);
+    this.rfcAvailable.set(null);
     this.auditEntries.set([]);
     this.form.markAsPristine();
     this.form.markAsUntouched();
@@ -332,33 +358,100 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
       this.formMode.set('edit');
       this.populateForm(carrier);
     } else {
-      this.formMode.set('idle');
+      this.startNewCarrier();
     }
     this.submitAttempted.set(false);
     this.backendError.set(null);
     this.saveSuccess.set(false);
+    this.rfcValidating.set(false);
+    this.rfcAvailable.set(null);
   }
 
   // ─── Helpers del formulario ────────────────────────────────────────────────────
 
   private populateForm(carrier: Carrier): void {
     this.form.patchValue({
-      businessName: carrier.businessName,
-      tradeName:    carrier.tradeName,
-      rfc:          carrier.rfc,
-      carrierType:  carrier.carrierType,
-      status:       carrier.status,
-      contactName:  carrier.contactName,
-      phone:        carrier.phone,
-      email:        carrier.email,
-      serviceType:  carrier.serviceType,
-      coverage:     carrier.coverage,
+      businessName: carrier.businessName || '',
+      tradeName:    carrier.tradeName || '',
+      rfc:          carrier.rfc || '',
+      carrierType:  carrier.carrierType || 'EXTERNAL',
+      status:       carrier.status || 'ACTIVE',
+      contactName:  carrier.contactName || '',
+      phone:        carrier.phone || '',
+      email:        carrier.email || '',
+      serviceType:  carrier.serviceType || 'FTL',
+      coverage:     carrier.coverage || '',
       permitNumber: carrier.permitNumber || '',
       notes:        carrier.notes || '',
     });
-    this.selectedVehicleTypes = new Set(carrier.supportedVehicleTypes);
+    this.selectedVehicleTypes = new Set(carrier.supportedVehicleTypes || []);
+    this.rfcValidating.set(false);
+    this.rfcAvailable.set(null);
     this.form.markAsPristine();
     this.form.markAsUntouched();
+  }
+
+  // ─── Evento Blur para Validación de RFC Duplicado vía Backend ─────────────
+
+  protected onRfcBlur(): void {
+    const ctrl = this.form.get('rfc');
+    if (!ctrl || !ctrl.value || !ctrl.value.trim()) {
+      this.rfcAvailable.set(null);
+      return;
+    }
+
+    const rfcVal = String(ctrl.value).trim().toUpperCase();
+    ctrl.setValue(rfcVal, { emitEvent: false });
+
+    // Validar sintaxis del RFC (12 caracteres persona moral o 13 persona física)
+    const syntaxValid = /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/i.test(rfcVal);
+    if (!syntaxValid) {
+      this.rfcAvailable.set(null);
+      return;
+    }
+
+    // En modo edición, si el RFC no ha cambiado respecto al transportista actual, es válido
+    if (this.formMode() === 'edit' && this.selectedCarrier()?.rfc?.toUpperCase() === rfcVal) {
+      this.rfcAvailable.set(true);
+      return;
+    }
+
+    const excludeId = this.formMode() === 'edit' ? this.selectedCarrier()?.id : undefined;
+
+    this.rfcValidating.set(true);
+    this.rfcAvailable.set(null);
+
+    this.carrierService.validateTaxId(rfcVal, undefined, excludeId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.rfcValidating.set(false);
+          this.rfcAvailable.set(true);
+          if (ctrl.errors && ctrl.errors['rfcExists']) {
+            const { rfcExists, rfcExistsMsg, ...otherErrors } = ctrl.errors;
+            ctrl.setErrors(Object.keys(otherErrors).length > 0 ? otherErrors : null);
+          }
+          const successMsg = res?.message || `El RFC '${rfcVal}' está disponible para registro.`;
+          this.toastService.success(successMsg);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.rfcValidating.set(false);
+          this.rfcAvailable.set(false);
+          const serverMsg = err?.error?.message || `El RFC '${rfcVal}' ya existe para otro transportista.`;
+          ctrl.setErrors({ rfcExists: true, rfcExistsMsg: serverMsg });
+          ctrl.markAsTouched();
+          this.toastService.error(serverMsg);
+        }
+      });
+  }
+
+  protected onRfcInput(): void {
+    this.rfcAvailable.set(null);
+    const ctrl = this.form.get('rfc');
+    if (ctrl?.errors && ctrl.errors['rfcExists']) {
+      const { rfcExists, rfcExistsMsg, ...otherErrors } = ctrl.errors;
+      ctrl.setErrors(Object.keys(otherErrors).length > 0 ? otherErrors : null);
+    }
   }
 
   protected toggleVehicleType(type: VehicleCapabilityType): void {
@@ -375,14 +468,15 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
 
   /** Obtiene las iniciales del nombre comercial para el avatar circular. */
   protected getInitials(carrier: Carrier): string {
-    const words = carrier.tradeName.trim().split(/\s+/).filter(Boolean);
+    const name = carrier.tradeName || carrier.businessName || '';
+    const words = name.trim().split(/\s+/).filter(Boolean);
     if (words.length === 0) return '?';
     if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
     return (words[0][0] + words[1][0]).toUpperCase();
   }
 
   /** Retorna la clase CSS del avatar según el tipo de transportista. */
-  protected getAvatarClass(type: CarrierType): string {
+  protected getAvatarClass(type?: CarrierType): string {
     const map: Record<CarrierType, string> = {
       EXTERNAL:        'avatar--external',
       CLIENT_TRANSPORT:'avatar--client',
@@ -390,7 +484,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
       THIRD_PARTY_3PL: 'avatar--3pl',
       PARCEL:          'avatar--parcel',
     };
-    return map[type] ?? 'avatar--external';
+    return (type && map[type]) ? map[type] : 'avatar--external';
   }
 
   /** Verifica si un campo del formulario tiene errores visibles al usuario. */
@@ -408,6 +502,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
     if (ctrl.errors['maxlength'])      return `Máximo ${ctrl.errors['maxlength'].requiredLength} caracteres.`;
     if (ctrl.errors['email'])          return 'Ingresa un correo electrónico válido.';
     if (ctrl.errors['invalidRfc'])     return 'El RFC no tiene un formato válido.';
+    if (ctrl.errors['rfcExists'])      return ctrl.errors['rfcExistsMsg'] || 'El RFC ingresado ya existe para otro transportista.';
     if (ctrl.errors['invalidPhone'])   return 'El teléfono debe tener entre 7 y 15 dígitos.';
     return 'Campo inválido.';
   }
@@ -431,23 +526,33 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
     this.submitAttempted.set(true);
     this.backendError.set(null);
 
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      const rfcCtrl = this.form.get('rfc');
+      if (rfcCtrl?.errors?.['rfcExists']) {
+        const msg = rfcCtrl.errors['rfcExistsMsg'] || 'El RFC ingresado ya existe para otro transportista.';
+        this.toastService.error(msg);
+      } else {
+        this.toastService.error('Revisa los campos obligatorios del formulario antes de guardar.');
+      }
+      return;
+    }
 
     const raw = this.form.getRawValue();
     const dto: CreateCarrierRequest = {
-      businessName:          raw.businessName.trim(),
-      tradeName:             raw.tradeName.trim(),
-      rfc:                   raw.rfc.trim().toUpperCase(),
-      carrierType:           raw.carrierType,
-      status:                raw.status,
-      contactName:           raw.contactName.trim(),
-      phone:                 raw.phone.trim(),
-      email:                 raw.email.trim().toLowerCase(),
-      serviceType:           raw.serviceType,
-      coverage:              raw.coverage.trim(),
+      businessName:          raw.businessName?.trim() || '',
+      tradeName:             raw.tradeName?.trim() || '',
+      status:                this.formMode() === 'new' ? 'ACTIVE' : (this.selectedCarrier()?.status || 'ACTIVE'),
       supportedVehicleTypes: Array.from(this.selectedVehicleTypes),
-      permitNumber:          raw.permitNumber?.trim() || undefined,
       notes:                 raw.notes?.trim() || undefined,
+      rfc:                   raw.rfc?.trim() ? raw.rfc.trim().toUpperCase() : undefined,
+      carrierType:           raw.carrierType || 'EXTERNAL',
+      contactName:           raw.contactName?.trim() || undefined,
+      phone:                 raw.phone?.trim() || undefined,
+      email:                 raw.email?.trim() ? raw.email.trim().toLowerCase() : undefined,
+      serviceType:           raw.serviceType || 'FTL',
+      coverage:              raw.coverage?.trim() || undefined,
+      permitNumber:          raw.permitNumber?.trim() || undefined,
     };
 
     const mode = this.formMode();
@@ -571,12 +676,18 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   private handleBackendError(err: HttpErrorResponse): void {
     const status = err.status;
     const serverMsg = err?.error?.message || err?.message;
+    let msg = 'Ocurrió un error inesperado al procesar la solicitud.';
 
-    if (status === 409) {
-      if (serverMsg?.toLowerCase().includes('rfc')) {
-        this.backendError.set('El RFC ingresado ya está registrado para otro transportista.');
+    if (status === 409 || status === 400) {
+      if (serverMsg?.toLowerCase().includes('rfc') || serverMsg?.toLowerCase().includes('taxid')) {
+        msg = serverMsg || 'El RFC ingresado ya existe para otro transportista.';
+        const ctrl = this.form.get('rfc');
+        if (ctrl) {
+          ctrl.setErrors({ rfcExists: true, rfcExistsMsg: msg });
+          ctrl.markAsTouched();
+        }
       } else if (serverMsg?.toLowerCase().includes('razón') || serverMsg?.toLowerCase().includes('business')) {
-        this.backendError.set('La razón social ingresada ya existe en el sistema.');
+        msg = 'La razón social ingresada ya existe en el sistema.';
       } else if (serverMsg?.toLowerCase().includes('version') || serverMsg?.toLowerCase().includes('modificado')) {
         this.backendError.set('El registro fue modificado por otro usuario. Recarga y vuelve a intentarlo.');
       } else {
@@ -646,4 +757,57 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   }
 
   protected readonly selectedStatus = computed(() => this.selectedCarrier()?.status ?? null);
+
+  // ─── Helpers de Formato para Línea de Tiempo Homologada ─────────────────────────
+
+  protected getAuditIcon(action?: string, fallbackIcon?: string): string {
+    if (fallbackIcon && fallbackIcon !== 'info') return fallbackIcon;
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'add_circle';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'delete_forever';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('ACTIVE') || a.includes('LOCK')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action?: string, fallbackColor?: string): string {
+    if (fallbackColor && (fallbackColor === 'amber' || fallbackColor === 'blue' || fallbackColor === 'purple' || fallbackColor === 'emerald' || fallbackColor === 'red' || fallbackColor === 'indigo' || fallbackColor === 'update' || fallbackColor === 'create' || fallbackColor === 'status' || fallbackColor === 'delete')) {
+      return `carriers-tl-node--${fallbackColor}`;
+    }
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'carriers-tl-node--red';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('LOCK')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      legalName: 'Razón Social',
+      tradeName: 'Nombre Comercial',
+      code: 'Código / Clave',
+      rfc: 'RFC / Identificación Fiscal',
+      carrierType: 'Tipo de Transportista',
+      status: 'Estado Operativo',
+      contactName: 'Nombre de Contacto',
+      phone: 'Teléfono Principal',
+      email: 'Correo Electrónico',
+      notes: 'Notas Operativas',
+      observations: 'Observaciones',
+      statusChangeReason: 'Motivo de Estado'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activo';
+      if (s === 'INACTIVE') return 'Inactivo';
+      if (s === 'SUSPENDED') return 'Suspendido';
+    }
+    return String(value);
+  }
 }

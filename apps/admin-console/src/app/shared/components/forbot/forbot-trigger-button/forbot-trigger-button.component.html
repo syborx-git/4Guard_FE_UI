@@ -1,0 +1,26 @@
+<div
+  class="relative flex items-center justify-center transition-all duration-300"
+  [class.opacity-0]="forbotEngine.isDrawerOpen()"
+  [class.pointer-events-none]="forbotEngine.isDrawerOpen()"
+  [class.scale-75]="forbotEngine.isDrawerOpen()"
+>
+
+  <!-- Tooltip Inteligente al Hover (Desplegado a la izquierda) -->
+  <div class="absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 transform translate-x-2 group-hover:translate-x-0 whitespace-nowrap z-50">
+    <div class="px-3.5 py-2 rounded-xl bg-slate-900/95 text-slate-100 border border-amber-400/40 shadow-[0_4px_20px_rgba(0,0,0,0.3)] text-xs font-bold flex items-center gap-2 font-sans backdrop-blur-md">
+      <span class="text-amber-400">🤖 ForBot AI</span>
+      <span class="text-slate-400 font-mono text-[10px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-700">Ctrl + K</span>
+    </div>
+  </div>
+
+  <!-- Botón Flotante Circular Luminoso (FAB) 4GUARD con Avatar Oficial -->
+  <button
+    type="button"
+    (click)="onToggleForbot()"
+    title="Abrir ForBot AI (Ctrl + K)"
+    class="relative rounded-full p-1 bg-gradient-to-br from-[#172033]/90 via-[#25324a]/90 to-[#172033]/90 border border-[#c5a86b]/70 hover:border-[#e5c158] shadow-[0_8px_25px_rgba(23,32,51,0.35),0_0_15px_rgba(197,168,107,0.25)] hover:shadow-[0_10px_30px_rgba(23,32,51,0.45),0_0_22px_rgba(229,193,88,0.45)] transition-all duration-300 transform hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer"
+  >
+    <!-- Avatar Oficial ForBot AI con Halo Dorado, Logo 4GUARD e Indicador En Vivo -->
+    <fg-forbot-avatar [size]="46"></fg-forbot-avatar>
+  </button>
+</div>

@@ -1,0 +1,2205 @@
+<!-- ════════════════════════════════════════════════════════════════
+     CASETA DE SEGURIDAD & CENTRO DE CONTROL DE VIGILANCIA — 4GUARD WMS
+     HOMOLOGADO CON SYNEXIA THEME ENGINE (LIGHT & DARK DUAL MODE)
+     CONFORME A: ui-design-system-light.sdd.md & ui-design-system-dark.sdd.md
+     ════════════════════════════════════════════════════════════════ -->
+<div class="security-page" id="security-page-top">
+
+  <!-- ── 1. CABECERA PRINCIPAL HERO (GOLDEN STANDARD) ── -->
+  <header class="security-header">
+    <div class="security-header__top">
+      <div class="security-header__left">
+        <div class="security-header__icon-wrap">
+          <span class="material-symbols-outlined security-header__icon">local_police</span>
+        </div>
+        <div class="security-header__copy">
+          <div class="security-header__eyebrow">
+            @if (authState.canAccessModule('dashboard')) {
+              <a routerLink="/dashboard" class="security-header__eyebrow-tag">
+                <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+                <span>Dashboard</span>
+              </a>
+              <span class="security-header__eyebrow-sep">·</span>
+            }
+            <span>Seguridad Patrimonial</span>
+            <span class="security-header__eyebrow-sep">·</span>
+            <span class="badge-gold">Formato F01</span>
+          </div>
+          <h1 class="security-header__title">Centro de Control de Vigilancia &amp; Caseta</h1>
+          <p class="security-header__subtitle">
+            Control integral de accesos vehiculares, auto-registro QR para Check List de Transporte (F01) desde smartphone, monitoreo en patio y check-out de salida.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones de Cabecera y Badges de Control (Acomodados al borde izquierdo) -->
+    <div class="flex items-center gap-2.5 flex-wrap">
+      <!-- Imprimir Cartel Oficial QR para Entrada (Formato F01 Tamaño Carta) -->
+      <button
+        type="button"
+        (click)="openPosterPrintModal()"
+        class="btn-primary-gold flex items-center gap-1.5 shadow-sm"
+        style="background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%); border-color: rgba(234, 195, 73, 0.45); color: #f8fafc;"
+        aria-label="Imprimir Cartel QR de Entrada"
+        title="Imprimir cartel oficial tamaño Carta con código QR para colocar en la entrada de caseta"
+      >
+        <span class="material-symbols-outlined text-base text-amber-400">print</span>
+        <span>Imprimir Cartel QR</span>
+      </button>
+
+      <!-- Ver Código QR Rápido / Configuración de Túnel -->
+      <button
+        type="button"
+        (click)="openQrModal()"
+        [disabled]="isGeneratingPass()"
+        class="btn-secondary-outline"
+        aria-label="Ver Código QR o Configurar Túnel"
+        title="Ver código QR rápido y verificar URL pública o túnel Ngrok"
+      >
+        <span class="material-symbols-outlined text-base">qr_code_scanner</span>
+        <span>{{ isGeneratingPass() ? 'Generando Pase...' : 'Ver QR / Configurar Túnel' }}</span>
+      </button>
+
+      <!-- Refrescar Datos -->
+      <button
+        type="button"
+        (click)="reloadAllData()"
+        class="btn-secondary-outline"
+        title="Actualizar datos de patio y caseta"
+      >
+        <span class="material-symbols-outlined text-base">refresh</span>
+        <span>Actualizar</span>
+      </button>
+
+      <div class="security-status-badge">
+        <span class="security-status-badge__dot"></span>
+        <span>CASETA EN SERVICIO</span>
+      </div>
+    </div>
+
+    <!-- ── 2. BARRA DE PESTAÑAS DE NAVEGACIÓN (3 PESTAÑAS ENFOCADAS) ── -->
+    <div class="security-tabs-bar flex items-center justify-between gap-2 flex-wrap">
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Tab 1: Registro & Pases QR -->
+        <button
+          type="button"
+          (click)="setTab('REGISTRATION')"
+          [class.active]="activeTab() === 'REGISTRATION'"
+          class="security-tab-btn"
+        >
+          <span class="material-symbols-outlined text-base">how_to_reg</span>
+          <span>1. Nuevo Registro &amp; Pases QR</span>
+          @if (pendingDriverCount() > 0) {
+            <span class="security-tab-badge bg-[#b8860b] text-white animate-pulse">
+              {{ pendingDriverCount() }}
+            </span>
+          }
+        </button>
+
+        <!-- Tab 2: Unidades en Planta & Salidas -->
+        <button
+          type="button"
+          (click)="setTab('IN_YARD')"
+          [class.active]="activeTab() === 'IN_YARD'"
+          class="security-tab-btn"
+        >
+          <span class="material-symbols-outlined text-base">local_shipping</span>
+          <span>2. Unidades en Planta &amp; Salidas</span>
+          @if (inYardCount() > 0) {
+            <span class="security-tab-badge bg-[#b8860b] text-white">
+              {{ inYardCount() }}
+            </span>
+          }
+          @if (readyForExitCount() > 0) {
+            <span class="security-tab-badge bg-emerald-500 text-white animate-pulse">
+              {{ readyForExitCount() }} listos
+            </span>
+          }
+        </button>
+
+        <!-- Tab 3: Historial del Turno -->
+        <button
+          type="button"
+          (click)="setTab('HISTORY')"
+          [class.active]="activeTab() === 'HISTORY'"
+          class="security-tab-btn"
+        >
+          <span class="material-symbols-outlined text-base">receipt_long</span>
+          <span>3. Historial del Turno</span>
+        </button>
+      </div>
+
+      <!-- Control Visual de Alternancia del Panel Lateral ("Choferes en Espera") -->
+      @if (activeTab() === 'REGISTRATION') {
+        <button
+          type="button"
+          (click)="toggleQueueCollapse()"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-black transition-all duration-300 flex items-center gap-2 shadow-sm"
+          [ngClass]="isQueueCollapsed()
+            ? 'bg-gradient-to-r from-[#c5a86b] to-[#b8860b] hover:from-[#e0c87a] hover:to-[#c5a86b] text-slate-950 border border-[#b8860b] shadow-md font-extrabold'
+            : 'security-toggle-sidebar-btn'"
+          [title]="isQueueCollapsed() ? 'Mostrar el panel lateral de Choferes en Espera' : 'Ocultar el panel lateral para expandir el formulario al 100%'"
+        >
+          <span class="material-symbols-outlined text-sm font-bold">{{ isQueueCollapsed() ? 'dock_to_right' : 'dock_to_left' }}</span>
+          <span>{{ isQueueCollapsed() ? 'Mostrar Choferes (' + activePasses().length + ')' : 'Ocultar Panel Lateral' }}</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- ── 2.5 BANNER EN VIVO: RAMPAS ASIGNADAS POR ALMACÉN (RECEPCIÓN / SALIDA) ── -->
+  @if (pendingRampAssignments().length > 0) {
+    <section class="security-ramp-alerts-container mb-4 space-y-2 animate-fade-in" aria-label="Avisos de Rampas Asignadas por Almacén">
+      @for (ramp of pendingRampAssignments(); track ramp.folio) {
+        <div class="security-ramp-alert-card flex items-center justify-between gap-3 p-3.5 rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 shadow-lg">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shrink-0 animate-bounce">
+              <span class="material-symbols-outlined text-2xl">dock</span>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 uppercase tracking-wide">
+                  🎯 Rampa Asignada por Almacén
+                </span>
+                <span class="font-mono font-bold text-xs text-amber-400">Folio #{{ ramp.folio }}</span>
+                <span class="text-[11px] text-slate-400 font-mono">{{ ramp.time }}</span>
+              </div>
+              <h3 class="text-xs sm:text-sm font-bold text-slate-100 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                <span>Rampa <strong>R-{{ ramp.rampNumber }}</strong> asignada a</span>
+                <span class="text-emerald-300">{{ ramp.carrierLine || 'Transportista' }}</span>
+                <span class="text-slate-400">· Chofer:</span>
+                <span class="text-slate-200">{{ ramp.driverName }}</span>
+                <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono text-[10px] border border-slate-700">Placas: {{ ramp.tractorPlates }}</span>
+              </h3>
+              <p class="text-[11px] text-emerald-400/90 font-medium">
+                Indique verbalmente al operador transportista avanzar de inmediato a la <strong>Rampa {{ ramp.rampNumber }}</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              (click)="attendRampAssignment(ramp)"
+              class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all cursor-pointer"
+              title="Localizar unidad en el listado de patio"
+            >
+              <span class="material-symbols-outlined text-sm">local_shipping</span>
+              <span>Ver en Patio</span>
+            </button>
+            <button
+              type="button"
+              (click)="dismissRampNotice(ramp.folio, $event)"
+              class="w-7 h-7 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-all cursor-pointer"
+              title="Descartar aviso de rampa"
+            >
+              <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ── 3. TARJETAS DE MÉTRICAS KPI (CON VISTA COMPACTA COLAPSABLE) ── -->
+  <section aria-label="Métricas de Caseta">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-sm text-[#c5a86b]">analytics</span>
+        <span>Métricas Operativas del Turno</span>
+      </span>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="inline-flex items-center gap-1 text-[11px] font-bold text-[#9b7626] dark:text-[#e0c87a] hover:text-[#845d17] dark:hover:text-white transition-colors py-0.5 px-2 rounded-md hover:bg-[#c5a86b]/10"
+        title="Colapsar/Expandir panel de métricas"
+      >
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
+    </div>
+
+    @if (isKpiCollapsed()) {
+      <!-- Vista Compacta Resumida Homologada -->
+      <div class="security-kpi-summary-bar animate-fade-in">
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-blue-500"></span>
+          <span class="security-kpi-summary-label">En Planta:</span>
+          <span class="security-kpi-summary-value">{{ inYardCount() }}</span>
+        </div>
+
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-[#c5a86b]"></span>
+          <span class="security-kpi-summary-label">QR Pendientes:</span>
+          <span class="security-kpi-summary-value">{{ pendingDriverCount() }}</span>
+        </div>
+
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-emerald-500"></span>
+          <span class="security-kpi-summary-label">Listos Salida:</span>
+          <span class="security-kpi-summary-value">{{ readyForExitCount() }}</span>
+        </div>
+
+        <div class="security-kpi-summary-item">
+          <span class="security-kpi-summary-dot bg-sky-500"></span>
+          <span class="security-kpi-summary-label">Salidas Turno:</span>
+          <span class="security-kpi-summary-value">{{ completedShiftExitsCount() }}</span>
+        </div>
+      </div>
+    } @else {
+      <!-- Grid Completo de KPIs (4 Tarjetas) -->
+      <div class="module-kpi-grid animate-fade-in">
+        <!-- KPI 1: Unidades en Planta -->
+        <div class="module-kpi-card module-kpi-card--primary">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">local_shipping</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">Unidades en Planta</span>
+            <span class="module-kpi-card__value">{{ inYardCount() }}</span>
+            <span class="module-kpi-card__sub">En patios y andenes</span>
+          </div>
+        </div>
+
+        <!-- KPI 2: QR Pendientes / Espera -->
+        <div class="module-kpi-card module-kpi-card--warning">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">qr_code_scanner</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">QR Pendientes / Espera</span>
+            <span class="module-kpi-card__value">{{ pendingDriverCount() }}</span>
+            <span class="module-kpi-card__sub">Choferes por autorizar</span>
+          </div>
+        </div>
+
+        <!-- KPI 3: Listos para Check-Out -->
+        <div class="module-kpi-card module-kpi-card--success">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">verified</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">Listos para Salida</span>
+            <span class="module-kpi-card__value">{{ readyForExitCount() }}</span>
+            <span class="module-kpi-card__sub">Descarga/Carga autorizada</span>
+          </div>
+        </div>
+
+        <!-- KPI 4: Salidas Concluidas del Turno -->
+        <div class="module-kpi-card module-kpi-card--info">
+          <div class="module-kpi-card__icon">
+            <span class="material-symbols-outlined">task_alt</span>
+          </div>
+          <div class="module-kpi-card__info">
+            <span class="module-kpi-card__label">Salidas del Turno</span>
+            <span class="module-kpi-card__value">{{ completedShiftExitsCount() }}</span>
+            <span class="module-kpi-card__sub">Inspecciones concluidas</span>
+          </div>
+        </div>
+      </div>
+    }
+  </section>
+
+  <!-- ── 4. NOTIFICACIONES Y ALERTAS ── -->
+  @if (scanSuccessMessage()) {
+    <div class="security-alert security-alert--success animate-fade-in">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-2xl text-emerald-600 dark:text-emerald-400">check_circle</span>
+        <div>
+          <h4 class="font-extrabold text-sm text-slate-900 dark:text-slate-100">Pase Digital Cargado</h4>
+          <p class="text-xs text-slate-700 dark:text-slate-300 mt-0.5">{{ scanSuccessMessage() }}</p>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (checkOutSuccessNotice()) {
+    <div class="security-alert security-alert--success animate-fade-in">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-2xl text-emerald-600 dark:text-emerald-400">verified</span>
+        <div>
+          <h4 class="font-extrabold text-sm text-slate-900 dark:text-slate-100">Salida Autorizada</h4>
+          <p class="text-xs text-slate-700 dark:text-slate-300 mt-0.5">{{ checkOutSuccessNotice() }}</p>
+        </div>
+      </div>
+    </div>
+  }
+
+
+
+  @if (errorMessage()) {
+    <div class="security-alert security-alert--error animate-fade-in">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-2xl text-rose-500">error</span>
+        <div>
+          <h4 class="font-extrabold text-sm text-rose-900 dark:text-rose-200">Error en Operación</h4>
+          <p class="text-xs text-rose-700 dark:text-rose-300 mt-0.5">{{ errorMessage() }}</p>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       PESTAÑA 1: NUEVO REGISTRO & PASES QR
+  ══════════════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'REGISTRATION') {
+    <div [class]="isQueueCollapsed() ? 'flex gap-4 animate-fade-in w-full items-stretch' : 'grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in w-full'">
+      
+      <!-- Columna Lateral: Choferes en Espera & Solicitudes Móviles -->
+      @if (isQueueCollapsed()) {
+        <!-- Tira / Pestaña Flotante Vertical en el Borde Izquierdo -->
+        <aside
+          (click)="toggleQueueCollapse()"
+          class="hidden lg:flex flex-col items-center justify-start py-5 px-1.5 rounded-2xl border-2 border-dashed border-[#c5a86b]/40 bg-[#c5a86b]/10 hover:bg-[#c5a86b]/20 text-[#9b7626] dark:text-[#e0c87a] transition-all duration-300 cursor-pointer shrink-0 shadow-sm self-stretch group z-20 min-h-[500px] sidebar-collapsed-handle gap-4"
+          title="Haga clic aquí para desplegar Choferes en Espera"
+        >
+          <!-- Elemento Superior: Icono de Despliegue & Botón ABRIR -->
+          <div class="flex flex-col items-center gap-1 shrink-0">
+            <div class="p-2 rounded-xl bg-gradient-to-br from-[#c5a86b] to-[#b8860b] text-slate-950 font-black shadow-md group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined text-lg">dock_to_right</span>
+            </div>
+            <span class="text-[9px] font-black uppercase tracking-widest text-[#9b7626] dark:text-[#e0c87a] opacity-90">Abrir</span>
+          </div>
+
+          <!-- Elemento Posicionado Justo Debajo del Botón ABRIR -->
+          <div class="flex flex-col items-center justify-start gap-3 pt-1 pb-4">
+            <!-- Badge circular dorado con cantidad -->
+            <span class="w-6 h-6 rounded-full bg-[#b8860b] text-white text-[11px] font-mono font-black shadow-sm shrink-0 flex items-center justify-center">
+              {{ activePasses().length }}
+            </span>
+
+            <!-- Texto Vertical CHOFERES EN ESPERA -->
+            <div class="sidebar-collapsed-text-vertical">
+              CHOFERES EN ESPERA
+            </div>
+          </div>
+        </aside>
+      } @else {
+        <!-- Panel Completo Desplegado -->
+        <aside class="lg:col-span-4 space-y-5 transition-all duration-300 ease-in-out">
+          <!-- Tarjeta de Choferes en Espera / Solicitudes Móviles -->
+          <div class="security-card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-black text-sm flex items-center gap-2" style="color: var(--text-primary);">
+                <span class="material-symbols-outlined" style="color: var(--c-info);">pending_actions</span>
+                <span>Choferes en Espera</span>
+              </h3>
+
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black" style="background: var(--c-info-bg); color: var(--c-info); border: 1px solid var(--c-info-bdr);">
+                  {{ activePasses().length }}
+                </span>
+                <button
+                  type="button"
+                  (click)="toggleQueueCollapse()"
+                  class="security-toggle-queue-btn"
+                  title="Ocultar panel lateral para maximizar el formulario al 100%"
+                >
+                  <span class="material-symbols-outlined text-base">dock_to_left</span>
+                  <span class="hidden xl:inline">Ocultar</span>
+                </button>
+              </div>
+            </div>
+
+            @if (passActionNotice()) {
+              <div class="pass-notice-banner animate-fade-in">
+                <span class="material-symbols-outlined text-sm">check_circle</span>
+                <span>{{ passActionNotice() }}</span>
+              </div>
+            }
+
+            @if (activePasses().length === 0) {
+              <div class="pass-empty-state">
+                <span class="material-symbols-outlined text-3xl mb-1" style="color: var(--text-muted);">hourglass_empty</span>
+                <p class="text-xs font-bold" style="color: var(--text-primary);">No hay choferes en espera</p>
+                <p class="text-[11px] mt-0.5" style="color: var(--text-secondary);">Los pases QR generados y auto-registros aparecerán aquí en tiempo real.</p>
+              </div>
+            } @else {
+              <div class="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+                @for (pass of activePasses(); track pass.id || pass.token) {
+                  <div class="driver-pass-card group">
+                    
+                    <!-- Barra indicadora superior según operación/estatus -->
+                    <div class="driver-pass-card__top-bar"
+                         [ngClass]="pass.status === 'SUBMITTED' 
+                           ? 'driver-pass-card__top-bar--submitted' 
+                           : ((pass.operationType === 'CARGA' || pass.operacion === 'CARGA') 
+                             ? 'driver-pass-card__top-bar--carga' 
+                             : 'driver-pass-card__top-bar--descarga')">
+                    </div>
+
+                    <!-- Fila 1: Badges de Operación, Token y Estado -->
+                    <div class="flex items-center justify-between gap-2 pt-0.5">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="pass-op-badge"
+                              [ngClass]="(pass.operationType === 'CARGA' || pass.operacion === 'CARGA')
+                                ? 'pass-op-badge--carga'
+                                : 'pass-op-badge--descarga'">
+                          {{ pass.operationType || pass.operacion || 'DESCARGA' }}
+                        </span>
+                        <span class="pass-token-pill">
+                          #{{ pass.token }}
+                        </span>
+                      </div>
+
+                      <div class="flex items-center gap-1 shrink-0">
+                        <span class="pass-status-pill"
+                              [ngClass]="pass.status === 'SUBMITTED' ? 'pass-status-pill--submitted' : 'pass-status-pill--active'">
+                          @if (pass.status === 'SUBMITTED') {
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            <span>✓ Enviado</span>
+                          } @else {
+                            <span class="material-symbols-outlined text-[12px] animate-spin" style="animation-duration: 3.5s;">hourglass_top</span>
+                            <span>QR Activo</span>
+                          }
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Fila 2: Título e Identidad del Chofer -->
+                    <div class="px-0.5">
+                      @if (pass.status === 'SUBMITTED' || pass.driverName || pass.nombreOperador) {
+                        <div class="flex items-center justify-between gap-1">
+                          <h4 class="pass-driver-title truncate">
+                            <span class="material-symbols-outlined text-base" style="color: var(--c-success);">person_check</span>
+                            <span class="truncate">{{ pass.driverName || pass.nombreOperador || pass.operatorName || 'Chofer Registrado' }}</span>
+                          </h4>
+                          @if (pass.driverPhone || pass.telefonoChofer) {
+                            <a [href]="'tel:' + (pass.driverPhone || pass.telefonoChofer)" 
+                               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold text-[#845d17] dark:text-[#e0c87a] bg-[#c5a86b]/15 hover:bg-[#c5a86b]/25 border border-[#c5a86b]/35 transition-all shrink-0" 
+                               title="Llamar al chofer"
+                               (click)="$event.stopPropagation()">
+                              <span class="material-symbols-outlined text-xs text-[#9b7626] dark:text-[#e0c87a]">call</span>
+                              <span>{{ pass.driverPhone || pass.telefonoChofer }}</span>
+                            </a>
+                          }
+                        </div>
+                        <p class="pass-driver-desc pass-driver-desc--submitted">
+                          ✓ Formulario F01 completado por el transportista
+                        </p>
+                      } @else {
+                        <div class="flex items-center justify-between gap-1">
+                          <h4 class="pass-driver-title">
+                            <span class="material-symbols-outlined text-base animate-pulse" style="color: #c5a86b;">phonelink_ring</span>
+                            <span>QR esperando captura</span>
+                          </h4>
+                          @if (pass.driverPhone || pass.telefonoChofer) {
+                            <a [href]="'tel:' + (pass.driverPhone || pass.telefonoChofer)" 
+                               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold text-[#845d17] dark:text-[#e0c87a] bg-[#c5a86b]/15 hover:bg-[#c5a86b]/25 border border-[#c5a86b]/35 transition-all shrink-0" 
+                               title="Llamar al chofer"
+                               (click)="$event.stopPropagation()">
+                              <span class="material-symbols-outlined text-xs text-[#9b7626] dark:text-[#e0c87a]">call</span>
+                              <span>{{ pass.driverPhone || pass.telefonoChofer }}</span>
+                            </a>
+                          }
+                        </div>
+                        <p class="pass-driver-desc">
+                          El transportista está completando el formulario desde su smartphone.
+                        </p>
+                      }
+                    </div>
+
+                    <!-- Fila 3: Micro-Grid de Placas y Transporte -->
+                    <div class="pass-meta-grid">
+                      <div class="pass-meta-item">
+                        <span class="pass-meta-label">Placas Unidad</span>
+                        <span class="pass-meta-val pass-meta-val--mono">
+                          {{ pass.tractorPlates || pass.placasTracto || pass.truckPlates || 'S/P' }}
+                        </span>
+                      </div>
+                      <div class="pass-meta-item">
+                        <span class="pass-meta-label">Línea Transporte</span>
+                        <span class="pass-meta-val" [title]="pass.carrierLine || pass.carrier || pass.carrierName || 'General'">
+                          {{ pass.carrierLine || pass.carrier || pass.carrierName || 'General' }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Fila 4: Botones de Acción -->
+                    <div class="pass-actions-row">
+                      <button
+                        type="button"
+                        (click)="openPassQr(pass, $event)"
+                        class="pass-btn-qr"
+                        title="Ver Código QR de este pase"
+                      >
+                        <span class="material-symbols-outlined text-sm">qr_code</span>
+                        <span>QR</span>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        (click)="loadDriverSubmission(pass)"
+                        class="pass-btn-load"
+                      >
+                        <span class="material-symbols-outlined text-base font-bold">{{ pass.status === 'SUBMITTED' ? 'download_done' : 'check_circle' }}</span>
+                        <span>{{ pass.status === 'SUBMITTED' ? 'Cargar en Caseta' : 'Cargar / Usar' }}</span>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        (click)="deleteDriverPass(pass, $event)"
+                        class="pass-btn-del"
+                        title="Descartar pase"
+                      >
+                        <span class="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    </div>
+
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </aside>
+      }
+
+      <!-- Columna Principal: Formulario Oficial F01 -->
+      <main [class]="isQueueCollapsed() ? 'flex-1 min-w-0 space-y-5 transition-all duration-300 ease-in-out' : 'lg:col-span-8 w-full space-y-5 transition-all duration-300 ease-in-out'">
+        
+        <!-- Barra Flotante de Navegación Rápida por Pasos del Formulario (Stepper) -->
+        <div class="form-stepper-bar">
+          <div class="form-stepper-group">
+            @if (isQueueCollapsed()) {
+              <!-- Botón para Re-expandir la Cola de Espera cuando el panel está oculto -->
+              <button
+                type="button"
+                (click)="toggleQueueCollapse()"
+                class="stepper-expand-btn"
+                title="Expandir panel de choferes en espera"
+              >
+                <span class="material-symbols-outlined text-sm">dock_to_right</span>
+                <span>Choferes en Espera ({{ activePasses().length }})</span>
+              </button>
+            }
+
+            <button
+              type="button"
+              (click)="scrollToFormSection('form-step-1', 'STEP1')"
+              class="stepper-btn"
+              [class.stepper-btn--active]="activeFormStep() === 'STEP1'"
+            >
+              <span class="material-symbols-outlined text-sm">description</span>
+              <span>1. Operación</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="scrollToFormSection('form-step-2', 'STEP2')"
+              class="stepper-btn"
+              [class.stepper-btn--active]="activeFormStep() === 'STEP2'"
+            >
+              <span class="material-symbols-outlined text-sm">local_shipping</span>
+              <span>2. Transporte &amp; Unidad</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="scrollToFormSection('form-step-3', 'STEP3')"
+              class="stepper-btn"
+              [class.stepper-btn--active]="activeFormStep() === 'STEP3'"
+            >
+              <span class="material-symbols-outlined text-sm">fact_check</span>
+              <span>3. Check List (F01)</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="scrollToFormSection('form-step-4', 'STEP4')"
+              class="stepper-btn"
+              [class.stepper-btn--active]="activeFormStep() === 'STEP4'"
+            >
+              <span class="material-symbols-outlined text-sm">draw</span>
+              <span>4. Firmas &amp; Rampa</span>
+            </button>
+          </div>
+
+          @if (activeToken()) {
+            <div class="stepper-token-chip">
+              <span class="material-symbols-outlined text-xs">qr_code</span>
+              <span>#{{ activeToken() }}</span>
+            </div>
+          }
+        </div>
+
+        <form [formGroup]="checkInForm" (ngSubmit)="submitCheckIn()" class="security-card p-5 sm:p-6 space-y-6">
+          
+          <!-- Encabezado del Formato Oficial -->
+          <div class="border-b border-slate-200 dark:border-slate-700/80 pb-4">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2.5">
+                <span class="badge-gold">
+                  FORMATO OFICIAL
+                </span>
+                <h2 class="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                  Check List de Transporte
+                </h2>
+              </div>
+              <div class="text-right text-[10px] text-slate-500 font-mono">
+                <span>No. Control: <strong>F01-PO-CP-7.1.3-03</strong></span>
+                <span class="mx-1.5">·</span>
+                <span>Rev. 01 (19/08/2025)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── SECCIÓN 1: DATOS GENERALES ── -->
+          <div id="form-step-1" class="form-section">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined text-base">description</span>
+              <span>1. Datos Generales de la Operación</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <!-- Fecha -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Fecha *</label>
+                <input type="date" formControlName="fecha" class="form-input text-xs font-mono" />
+              </div>
+
+              <!-- Tipo de Operación (Bimodal) -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Operación *</label>
+                <div class="operation-toggle-group">
+                  <button
+                    type="button"
+                    (click)="onOperationChange('DESCARGA')"
+                    [class.active-descarga]="checkInForm.get('operacion')?.value === 'DESCARGA'"
+                    class="operation-toggle-btn"
+                  >
+                    <span class="material-symbols-outlined text-sm">download</span>
+                    <span>Descarga</span>
+                  </button>
+                  <button
+                    type="button"
+                    (click)="onOperationChange('CARGA')"
+                    [class.active-carga]="checkInForm.get('operacion')?.value === 'CARGA'"
+                    class="operation-toggle-btn"
+                  >
+                    <span class="material-symbols-outlined text-sm">upload</span>
+                    <span>Carga</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- No. Carta Porte (Obligatorio en Carga) -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  No. Carta Porte {{ checkInForm.get('operacion')?.value === 'CARGA' ? '*' : '' }}
+                </label>
+                <input
+                  type="text"
+                  formControlName="noCartaPorte"
+                  placeholder="Ej. CP-88492-MX"
+                  class="form-input text-xs font-mono"
+                />
+              </div>
+
+              <!-- No. Remisión / Factura (Obligatorio en Descarga) -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  No. Remisión / Factura {{ checkInForm.get('operacion')?.value === 'DESCARGA' ? '*' : '' }}
+                </label>
+                <input
+                  type="text"
+                  formControlName="remision"
+                  placeholder="Ej. REM-99482-4G"
+                  class="form-input text-xs font-mono"
+                />
+              </div>
+
+              <!-- Banner de Auto-Detección Inteligente de Retorno (Logística Inversa) -->
+              @if (detectedReturn(); as ret) {
+                <div class="col-span-1 sm:col-span-2 p-3.5 rounded-xl border border-indigo-500/40 bg-indigo-500/10 dark:bg-indigo-950/40 animate-fade-in flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/40 shrink-0">
+                      <span class="material-symbols-outlined text-xl">assignment_return</span>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-black uppercase text-indigo-700 dark:text-indigo-300">⚡ Retorno Detectado Automáticamente</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-800 dark:text-indigo-200 border border-indigo-500/30">
+                          Salida Previa: #{{ ret.sourceOutboundFolio }}
+                        </span>
+                      </div>
+                      <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+                        Cliente: <strong>{{ ret.clientName || 'General' }}</strong> · Chofer: <strong>{{ ret.driverName || 'N/A' }}</strong> · Placas: <strong>{{ ret.tractorPlates || 'S/P' }}</strong>
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="applyDetectedReturn(ret)"
+                    class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow transition-all shrink-0 cursor-pointer"
+                  >
+                    <span class="material-symbols-outlined text-sm">auto_fix_high</span>
+                    <span>Precargar Datos</span>
+                  </button>
+                </div>
+              }
+
+              <!-- Cliente -->
+              <div class="sm:col-span-2">
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Cliente *</label>
+                <select
+                  formControlName="clientCode"
+                  (change)="onClientSelect(checkInForm.get('clientCode')?.value)"
+                  class="form-select text-xs font-semibold"
+                >
+                  <option value="">-- Seleccionar Cliente --</option>
+                  @for (cli of clients(); track cli.code) {
+                    <option [value]="cli.code">{{ cli.name }}</option>
+                  }
+                  <option value="OTRO">Otro (Especificar)</option>
+                </select>
+              </div>
+
+              <!-- Campo condicional cuando se selecciona 'Otro' cliente -->
+              @if (checkInForm.get('clientCode')?.value === 'OTRO') {
+                <div class="sm:col-span-2 animate-fade-in">
+                  <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <span class="text-amber-500 font-bold">*</span> Especificar Nombre del Cliente
+                  </label>
+                  <input
+                    type="text"
+                    formControlName="clientNameCustom"
+                    (input)="onCustomClientInput($any($event.target).value)"
+                    placeholder="Ingrese el nombre o razón social del cliente..."
+                    class="form-input text-xs font-bold text-amber-700 dark:text-amber-300"
+                  />
+                </div>
+              }
+
+              <!-- Hora Entrada -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Hora Entrada *</label>
+                <input type="time" formControlName="horaEntrada" class="form-input text-xs font-mono" />
+              </div>
+
+              <!-- Rampa / Andén (Asignación en Almacén) -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Andén / Rampa</label>
+                <div class="security-ramp-locked-badge" title="La rampa es asignada automáticamente por el personal de Recepción / Almacén">
+                  <span class="material-symbols-outlined text-sm text-amber-500">lock_clock</span>
+                  <span class="truncate text-[11px]">Pendiente de asignación por Almacén</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── SECCIÓN 2: DATOS DEL TRANSPORTE ── -->
+          <div id="form-step-2" class="form-section">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined text-base">rv_hookup</span>
+              <span>2. Datos del Transporte &amp; Unidad</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <!-- Línea Transportista -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Línea Transportista *</label>
+                <select
+                  formControlName="carrierLineCode"
+                  (change)="onCarrierLineSelect(checkInForm.get('carrierLineCode')?.value)"
+                  class="form-select text-xs font-semibold"
+                >
+                  <option value="">-- Seleccionar Línea --</option>
+                  @for (c of carrierLines(); track c.code) {
+                    <option [value]="c.code">{{ c.name }}</option>
+                  }
+                  <option value="OTRO">Otro (Especificar)</option>
+                </select>
+              </div>
+
+              <!-- Campo condicional cuando se selecciona 'Otro' transportista -->
+              @if (checkInForm.get('carrierLineCode')?.value === 'OTRO') {
+                <div class="animate-fade-in">
+                  <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <span class="text-amber-500 font-bold">*</span> Especificar Transportista
+                  </label>
+                  <input
+                    type="text"
+                    formControlName="carrierLineCustom"
+                    (input)="onCustomCarrierLineInput($any($event.target).value)"
+                    placeholder="Nombre de la línea..."
+                    class="form-input text-xs font-bold text-amber-700 dark:text-amber-300"
+                  />
+                </div>
+              }
+
+              <!-- Nombre del Operador / Chofer -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Nombre Operador *</label>
+                <input
+                  type="text"
+                  formControlName="nombreOperador"
+                  placeholder="Nombre completo del chofer"
+                  class="form-input text-xs"
+                />
+              </div>
+
+              <!-- Teléfono / Celular del Chofer (Uso Exclusivo Vigilancia) -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                  <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[13px] text-amber-500">phone_android</span>
+                    <span>Teléfono Chofer</span>
+                  </span>
+                  <span class="text-[9.5px] text-amber-600 dark:text-amber-400 font-semibold font-mono">(Uso Caseta)</span>
+                </label>
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">call</span>
+                  <input
+                    type="tel"
+                    formControlName="driverPhone"
+                    maxlength="10"
+                    placeholder="10 dígitos (ej. 5512345678)"
+                    class="form-input text-xs pl-8 font-mono"
+                  />
+                </div>
+              </div>
+
+              <!-- Tipo de Transporte -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Tipo de Transporte *</label>
+                <select
+                  (change)="onTransportTypeSelect($any($event.target).value)"
+                  class="form-select text-xs font-semibold"
+                >
+                  <option value="" disabled [selected]="!checkInForm.get('tipoTransporte')?.value">-- Seleccione Tipo de Transporte --</option>
+                  @for (t of transportTypesList(); track t) {
+                    <option [value]="t" [selected]="checkInForm.get('tipoTransporte')?.value === t">{{ t }}</option>
+                  }
+                </select>
+                @if (isCustomTransportType()) {
+                  <input
+                    type="text"
+                    [ngModel]="customTransportInput()"
+                    (ngModelChange)="onCustomTransportInput($event)"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Especifique tipo de transporte"
+                    class="form-input text-xs mt-1.5 animate-fade-in border-amber-500"
+                  />
+                }
+              </div>
+
+              <!-- Placas Tracto -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Placas Tracto *</label>
+                <input
+                  type="text"
+                  formControlName="placasTracto"
+                  placeholder="Ej. 88-AB-4G"
+                  class="form-input text-xs font-mono uppercase"
+                />
+              </div>
+
+              <!-- No. Eco Tracto -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">No. Eco Tracto *</label>
+                <input
+                  type="text"
+                  formControlName="noEcoTractor"
+                  placeholder="Ej. ECO-7742"
+                  class="form-input text-xs font-mono uppercase"
+                />
+              </div>
+
+              <!-- Placas Caja -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Placas Caja *</label>
+                <input
+                  type="text"
+                  formControlName="placasCaja"
+                  placeholder="Ej. 99-XX-4G"
+                  class="form-input text-xs font-mono uppercase"
+                />
+              </div>
+
+              <!-- No. Eco Caja -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">No. Eco Caja</label>
+                <input
+                  type="text"
+                  formControlName="noEcoCaja"
+                  placeholder="Ej. BOX-402"
+                  class="form-input text-xs font-mono uppercase"
+                />
+              </div>
+
+              <!-- Medidas Caja -->
+              <div class="sm:col-span-2 md:col-span-2">
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Medidas Caja / Capacidad *</label>
+                <select
+                  (change)="onBoxDimensionSelect($any($event.target).value)"
+                  class="form-select text-xs font-semibold"
+                >
+                  <option value="" disabled [selected]="!checkInForm.get('medidasCaja')?.value">-- Seleccione Medidas de Caja --</option>
+                  @for (d of boxDimensionsList(); track d) {
+                    <option [value]="d" [selected]="checkInForm.get('medidasCaja')?.value === d">{{ d }}</option>
+                  }
+                  <option value="Otra Medida">➕ Otra Medida</option>
+                </select>
+                @if (isCustomBoxDimension()) {
+                  <input
+                    type="text"
+                    [ngModel]="customBoxDimensionInput()"
+                    (ngModelChange)="onCustomBoxDimensionInput($event)"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Especifique medidas / capacidad"
+                    class="form-input text-xs mt-1.5 animate-fade-in border-amber-500"
+                  />
+                }
+              </div>
+
+              <!-- Sellos de Seguridad (Cinchos) -->
+              <div class="col-span-full w-full">
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Sellos / Cinchos de Seguridad
+                  @if (checkInForm.get('operacion')?.value === 'CARGA') {
+                    <span class="text-amber-600 dark:text-amber-400 font-medium font-sans ml-1">(Bloqueado — Se asignan en andén de salida)</span>
+                  } @else {
+                    <span class="text-rose-500 font-bold ml-0.5">* (Obligatorio en Descarga)</span>
+                  }
+                </label>
+
+                @if (checkInForm.get('operacion')?.value === 'CARGA') {
+                  <div class="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                      <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">lock</span>
+                      <div>
+                        <span class="font-bold text-xs">🔒 No requiere captura de sellos en Caseta para maniobra de CARGA</span>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          La unidad ingresa vacía. Los sellos de seguridad oficiales serán colocados y registrados en el <strong>Andén de Salida / Embarque</strong> al concluir la estiba física de la mercancía.
+                        </p>
+                      </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 font-mono text-[11px] font-bold border border-amber-500/40 whitespace-nowrap">
+                      PENDIENTE_ANDEN
+                    </span>
+                  </div>
+                } @else {
+                  <div class="flex gap-2">
+                    <input
+                      type="text"
+                      [ngModel]="tempSealInput()"
+                      (ngModelChange)="tempSealInput.set($event)"
+                      [ngModelOptions]="{standalone: true}"
+                      (keyup.enter)="addSeal()"
+                      placeholder="Ingresar número de sello y presionar Enter..."
+                      class="form-input text-xs font-mono uppercase flex-1"
+                    />
+                    <button
+                      type="button"
+                      (click)="addSeal()"
+                      class="btn-secondary-outline"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+
+                  @if (sealList().length > 0) {
+                    <div class="flex flex-wrap gap-1.5 mt-2">
+                      @for (seal of sealList(); track seal; let i = $index) {
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 font-mono text-xs font-bold border border-amber-500/20">
+                          <span>{{ seal }}</span>
+                          <button type="button" (click)="removeSeal(i)" class="hover:text-rose-500 text-xs font-bold">✕</button>
+                        </span>
+                      }
+                    </div>
+                  } @else {
+                    <p class="text-[11px] text-rose-500 font-medium mt-1">
+                      ⚠️ Es obligatorio ingresar al menos 1 número de sello o cincho de seguridad que trae el transporte de llegada.
+                    </p>
+                  }
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- ── SECCIÓN 3: REVISIÓN DEL TRANSPORTE (CHECKLIST) ── -->
+          <div id="form-step-3" class="form-section">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined text-base">fact_check</span>
+              <span>3. Revisión del Transporte (Check List de Seguridad)</span>
+            </div>
+
+            <!-- Tabla de Inspección F01 -->
+            <div class="overflow-x-auto border border-slate-200 dark:border-slate-700/80 rounded-xl">
+              <table class="w-full text-left text-xs">
+                <thead class="checklist-thead">
+                  <tr>
+                    <th class="py-2.5 px-3 w-[40%]">Criterio de Inspección</th>
+                    <th class="py-2.5 px-2 text-center w-[15%]">Cumple (Sí / No)</th>
+                    <th class="py-2.5 px-3 w-[45%]">Observaciones (Manual)</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                  
+                  <!-- Grupo EPP -->
+                  <tr class="checklist-section-header">
+                    <td colspan="3" class="py-1.5 px-3 uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      EPP (Equipo de Protección Personal)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-medium">Zapatos de seguridad</td>
+                    <td class="py-2 px-2 text-center">
+                      <div class="inline-flex gap-1 justify-center">
+                        <button type="button" (click)="setCriterion('eppZapatos', 'SI')" [class.btn-active-si]="checkInForm.get('eppZapatos')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('eppZapatos', 'NO')" [class.btn-active-no]="checkInForm.get('eppZapatos')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="py-2 px-3"><input type="text" formControlName="eppZapatosObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-medium">Cofia</td>
+                    <td class="py-2 px-2 text-center">
+                      <div class="inline-flex gap-1 justify-center">
+                        <button type="button" (click)="setCriterion('eppCofia', 'SI')" [class.btn-active-si]="checkInForm.get('eppCofia')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('eppCofia', 'NO')" [class.btn-active-no]="checkInForm.get('eppCofia')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="py-2 px-3"><input type="text" formControlName="eppCofiaObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-medium">Cubrebocas</td>
+                    <td class="py-2 px-2 text-center">
+                      <div class="inline-flex gap-1 justify-center">
+                        <button type="button" (click)="setCriterion('eppCubrebocas', 'SI')" [class.btn-active-si]="checkInForm.get('eppCubrebocas')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('eppCubrebocas', 'NO')" [class.btn-active-no]="checkInForm.get('eppCubrebocas')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="py-2 px-3"><input type="text" formControlName="eppCubrebocasObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-medium">Chaleco con reflejante</td>
+                    <td class="py-2 px-2 text-center">
+                      <div class="inline-flex gap-1 justify-center">
+                        <button type="button" (click)="setCriterion('eppChaleco', 'SI')" [class.btn-active-si]="checkInForm.get('eppChaleco')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('eppChaleco', 'NO')" [class.btn-active-no]="checkInForm.get('eppChaleco')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="py-2 px-3"><input type="text" formControlName="eppChalecoObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
+                  </tr>
+
+                  <!-- Grupo Documentos -->
+                  <tr class="checklist-section-header">
+                    <td colspan="3" class="py-1.5 px-3 uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      Documentos Obligatorios
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-medium">
+                      <div class="flex items-center gap-2">
+                        <span>Carta porte</span>
+                        @if (checkInForm.get('operacion')?.value === 'CARGA') {
+                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">Obligatorio</span>
+                        } @else {
+                          <span class="checklist-na-badge">N/A en Descarga</span>
+                        }
+                      </div>
+                    </td>
+                    <td class="py-2 px-2 text-center">
+                      <div class="inline-flex gap-1 justify-center">
+                        <button type="button" (click)="setCriterion('docCartaPorte', 'SI')" [class.btn-active-si]="checkInForm.get('docCartaPorte')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('docCartaPorte', 'NO')" [class.btn-active-no]="checkInForm.get('docCartaPorte')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="py-2 px-3"><input type="text" formControlName="docCartaPorteObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-medium">
+                      <div class="flex items-center gap-2">
+                        <span>Remisión</span>
+                        @if (checkInForm.get('operacion')?.value === 'DESCARGA') {
+                          <span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">Obligatorio</span>
+                        } @else {
+                          <span class="checklist-na-badge">N/A en Carga</span>
+                        }
+                      </div>
+                    </td>
+                    <td class="py-2 px-2 text-center">
+                      <div class="inline-flex gap-1 justify-center">
+                        <button type="button" (click)="setCriterion('docRemision', 'SI')" [class.btn-active-si]="checkInForm.get('docRemision')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('docRemision', 'NO')" [class.btn-active-no]="checkInForm.get('docRemision')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="py-2 px-3"><input type="text" formControlName="docRemisionObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
+                  </tr>
+
+                  <!-- Grupo Revisión Unidad -->
+                  <tr class="checklist-section-header">
+                    <td colspan="3" class="py-1.5 px-3 uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      Revisión Física de la Unidad
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-medium">Interior de Caja</td>
+                    <td class="py-2 px-2 text-center">
+                      <div class="inline-flex gap-1 justify-center">
+                        <button type="button" (click)="setCriterion('revInteriorCaja', 'SI')" [class.btn-active-si]="checkInForm.get('revInteriorCaja')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('revInteriorCaja', 'NO')" [class.btn-active-no]="checkInForm.get('revInteriorCaja')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="py-2 px-3"><input type="text" formControlName="revInteriorCajaObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-medium">Daños a la caja</td>
+                    <td class="py-2 px-2 text-center">
+                      <div class="inline-flex gap-1 justify-center">
+                        <button type="button" (click)="setCriterion('revDanosCaja', 'SI')" [class.btn-active-si]="checkInForm.get('revDanosCaja')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('revDanosCaja', 'NO')" [class.btn-active-no]="checkInForm.get('revDanosCaja')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="py-2 px-3"><input type="text" formControlName="revDanosCajaObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-medium">Daños en puertas</td>
+                    <td class="py-2 px-2 text-center">
+                      <div class="inline-flex gap-1 justify-center">
+                        <button type="button" (click)="setCriterion('revDanosPuertas', 'SI')" [class.btn-active-si]="checkInForm.get('revDanosPuertas')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('revDanosPuertas', 'NO')" [class.btn-active-no]="checkInForm.get('revDanosPuertas')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="py-2 px-3"><input type="text" formControlName="revDanosPuertasObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-medium">Olores extraños</td>
+                    <td class="py-2 px-2 text-center">
+                      <div class="inline-flex gap-1 justify-center">
+                        <button type="button" (click)="setCriterion('revOloresExtranos', 'SI')" [class.btn-active-si]="checkInForm.get('revOloresExtranos')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('revOloresExtranos', 'NO')" [class.btn-active-no]="checkInForm.get('revOloresExtranos')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="py-2 px-3"><input type="text" formControlName="revOloresExtranosObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-medium">Indicios de plagas</td>
+                    <td class="py-2 px-2 text-center">
+                      <div class="inline-flex gap-1 justify-center">
+                        <button type="button" (click)="setCriterion('revIndiciosPlagas', 'SI')" [class.btn-active-si]="checkInForm.get('revIndiciosPlagas')?.value === 'SI'" class="crit-btn">SÍ</button>
+                        <button type="button" (click)="setCriterion('revIndiciosPlagas', 'NO')" [class.btn-active-no]="checkInForm.get('revIndiciosPlagas')?.value === 'NO'" class="crit-btn">NO</button>
+                      </div>
+                    </td>
+                    <td class="py-2 px-3"><input type="text" formControlName="revIndiciosPlagasObs" placeholder="Observaciones..." class="form-input text-xs py-1" /></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ── SECCIÓN 4: RESPONSABLES Y FIRMAS ── -->
+          <div id="form-step-4" class="form-section">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined text-base">draw</span>
+              <span>4. Responsables &amp; Firmas de Conformidad</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Responsable Vigilancia -->
+              <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-800/30">
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Responsable Vigilancia *</label>
+                <input
+                  type="text"
+                  formControlName="responsableVigilanciaNombre"
+                  class="form-input text-xs mb-2"
+                />
+                <div class="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <span class="material-symbols-outlined text-base">verified_user</span>
+                  <span>Firma Autorizada de Caseta</span>
+                </div>
+              </div>
+
+              <!-- Transportista -->
+              <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-800/30">
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Transportista (Chofer) *</label>
+                <input
+                  type="text"
+                  formControlName="transportistaNombre"
+                  placeholder="Nombre de quien entrega / recibe"
+                  class="form-input text-xs mb-2"
+                />
+                <label class="flex items-center gap-2 text-xs font-bold cursor-pointer text-slate-800 dark:text-slate-200">
+                  <input type="checkbox" formControlName="transportistaFirma" class="rounded text-amber-500" />
+                  <span>Transportista Acepta y Firma de Conformidad</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botonera de Acción Principal Flotante (Sticky Footer Bar) -->
+          <div class="form-floating-footer">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-amber-500 text-xl">verified_user</span>
+              <div class="flex flex-col">
+                <span class="form-floating-footer__title">Autorización y Envío de Formato F01</span>
+                <span class="form-floating-footer__subtitle font-mono">
+                  {{ activeToken() ? 'Pase vinculado: #' + activeToken() : 'Listo para enviar a Operaciones (Asignación de Rampa)' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 ms-auto">
+              <button
+                type="button"
+                (click)="resetForm()"
+                class="btn-secondary-outline"
+              >
+                Cancelar / Limpiar
+              </button>
+              <button
+                type="submit"
+                [disabled]="isSaving()"
+                class="btn-primary-gold px-6 py-2.5 text-sm shadow-md hover:shadow-lg transition-all"
+              >
+                <span class="material-symbols-outlined text-base">forward_to_inbox</span>
+                <span>{{ isSaving() ? 'Enviando a Operaciones...' : 'Mandar Información Corroborada a Operaciones' }}</span>
+              </button>
+            </div>
+          </div>
+
+        </form>
+      </main>
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       PESTAÑA 2: UNIDADES EN PLANTA & CONTROL DE SALIDAS (CHECK-OUT)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'IN_YARD') {
+    <div class="security-card p-5 sm:p-6 animate-fade-in space-y-4">
+      <!-- Cabecera de la mesa de control -->
+      <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+        <div>
+          <h2 class="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[#c5a86b]">local_shipping</span>
+            <span>Unidades en Planta &amp; Control de Salidas</span>
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Monitoreo en tiempo real de vehículos en patio y registro de salida (Check-Out) una vez autorizada la operación por almacén.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Buscador Rápido -->
+          <div class="relative w-56 sm:w-64">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+            <input
+              type="text"
+              [ngModel]="inYardSearch()"
+              (ngModelChange)="inYardSearch.set($event)"
+              placeholder="Filtrar por placas, chofer, rampa..."
+              class="form-input text-xs pl-9 py-1.5 rounded-xl w-full"
+            />
+          </div>
+
+          <!-- Botón Refrescar -->
+          <button
+            type="button"
+            (click)="reloadInYardPasses()"
+            class="btn-secondary-outline text-xs px-3 py-1.5"
+            title="Refrescar estatus de unidades"
+          >
+            <span class="material-symbols-outlined text-sm">refresh</span>
+            <span>Refrescar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros Segmentados Homologada -->
+      <div class="security-filters-container">
+        <button
+          type="button"
+          (click)="inYardFilter.set('ALL')"
+          class="security-filter-btn"
+          [class.security-filter-btn--active-all]="inYardFilter() === 'ALL'"
+        >
+          <span>Todas en Planta</span>
+          <span class="security-filter-badge">
+            {{ inYardCount() }}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          (click)="inYardFilter.set('IN_MANEUVER')"
+          class="security-filter-btn"
+          [class.security-filter-btn--active-maneuver]="inYardFilter() === 'IN_MANEUVER'"
+        >
+          <span class="material-symbols-outlined text-xs animate-spin">sync</span>
+          <span>En Descarga / Maniobra</span>
+          <span class="security-filter-badge">
+            {{ inManeuverCount() }}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          (click)="inYardFilter.set('READY_EXIT')"
+          class="security-filter-btn"
+          [class.security-filter-btn--active-ready]="inYardFilter() === 'READY_EXIT'"
+        >
+          <span class="material-symbols-outlined text-xs">check_circle</span>
+          <span>Listas para Salida</span>
+          <span class="security-filter-badge">
+            {{ readyForExitCount() }}
+          </span>
+        </button>
+      </div>
+
+      <!-- Estado de Carga o Vacío -->
+      @if (isLoadingInYard()) {
+        <div class="text-center py-12">
+          <span class="material-symbols-outlined text-4xl text-amber-500 animate-spin">progress_activity</span>
+          <p class="text-xs font-semibold text-slate-500 mt-2">Consultando unidades en planta...</p>
+        </div>
+      } @else if (filteredInYardPasses().length === 0) {
+        <div class="security-empty-state my-4">
+          <span class="material-symbols-outlined text-4xl text-slate-400 mb-2">garage</span>
+          <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300">No hay unidades en esta categoría</h3>
+          <p class="text-xs text-slate-500 mt-1">
+            {{ inYardFilter() === 'READY_EXIT' ? 'No hay unidades autorizadas pendientes de salida en este momento.' : 'No se encontraron vehículos operando en planta.' }}
+          </p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Folio / Pase</th>
+                <th>Operación</th>
+                <th>Rampa</th>
+                <th>Transporte &amp; Placas</th>
+                <th>Operador</th>
+                <th>Hora Entrada</th>
+                <th>Estatus en Almacén</th>
+                <th class="text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of filteredInYardPasses(); track item.id || item.token) {
+                <tr [ngClass]="{ 'tr-ready-exit': item.isReadyForExit }">
+                  <td>
+                    <div class="cell-folio-title">
+                      {{ item.generatedFolio || item.token }}
+                    </div>
+                    <div class="cell-token-sub">
+                      Token: <strong class="cell-token-strong">{{ item.token }}</strong>
+                    </div>
+                  </td>
+                  <td>
+                    <span [ngClass]="item.operationType === 'CARGA' ? 'cell-op-badge-outbound' : 'cell-op-badge-inbound'" class="whitespace-nowrap font-mono font-bold">
+                      {{ item.operationType || 'DESCARGA' }} #{{ item.generatedFolio || item.token }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (hasRampAssigned(item)) {
+                      <span class="cell-ramp-badge cell-ramp-badge--assigned animate-pulse" title="Rampa asignada en almacén. Notificar verbalmente al transportista.">
+                        🔔 {{ formatRampDisplay(item) }}
+                      </span>
+                    } @else {
+                      <span class="cell-ramp-badge cell-ramp-badge--pending" title="En espera de asignación de rampa en almacén">
+                        ⏳ Por Asignar
+                      </span>
+                    }
+                  </td>
+                  <td>
+                    <div class="cell-carrier-title">
+                      {{ item.carrierLine || 'Transportista General' }}
+                    </div>
+                    <div class="cell-plates-sub">
+                      <span class="cell-plates-label">Tracto:</span> {{ item.tractorPlates || '-' }} &nbsp;|&nbsp; <span class="cell-plates-label">Caja:</span> {{ item.boxPlates || '-' }}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="cell-driver-name">
+                      {{ item.driverName || 'S/N' }}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="cell-time-val">
+                      {{ formatTimeString(item.receptionTime || item.horaEntrada || item.createdAt) }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (item.warehouseStatus === 'CANCELLED' || item.status === 'CANCELLED') {
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-rose-100 text-rose-950 border border-rose-300">
+                        <span class="material-symbols-outlined text-sm text-rose-700">cancel</span>
+                        <span>Cancelado (Salida Autorizada)</span>
+                      </span>
+                    } @else if (item.isReadyForExit) {
+                      <span class="cell-status-ready animate-pulse">
+                        <span class="material-symbols-outlined text-sm text-emerald-800">verified</span>
+                        <span>Autorizado / Listo Salida</span>
+                      </span>
+                    } @else {
+                      <span class="cell-status-maneuver">
+                        <span class="material-symbols-outlined text-sm text-amber-800" [ngClass]="{ 'animate-spin': item.warehouseStatus === 'IN_PROGRESS' }">
+                          {{ getWarehouseStatusIcon(item) }}
+                        </span>
+                        <span>{{ getWarehouseStatusLabel(item) }}</span>
+                      </span>
+                    }
+                  </td>
+                  <td class="text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        (click)="openF01Print(item)"
+                        class="btn-secondary-outline text-xs font-bold px-2.5 py-1.5 rounded-lg"
+                        title="Ver / Imprimir boleta F01"
+                      >
+                        <span class="material-symbols-outlined text-sm">print</span>
+                        <span>F01</span>
+                      </button>
+
+                      @if (item.isReadyForExit) {
+                        <button
+                          type="button"
+                          (click)="openCheckOutModal(item)"
+                          class="btn-primary-gold text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm"
+                          title="Registrar salida de unidad"
+                        >
+                          <span class="material-symbols-outlined text-sm">logout</span>
+                          <span>Check-Out</span>
+                        </button>
+                      } @else {
+                        <span
+                          class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700 cursor-not-allowed select-none opacity-80"
+                          [title]="getWarehouseLockTooltip(item)"
+                        >
+                          <span class="material-symbols-outlined text-xs">lock</span>
+                          <span>{{ item.warehouseStatus === 'DISCHARGED' ? 'En Auditoría' : (item.operacion === 'CARGA' || item.operationType === 'CARGA' ? 'En Carga' : 'En Descarga') }}</span>
+                        </span>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       PESTAÑA 3: HISTORIAL DEL TURNO
+  ══════════════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'HISTORY') {
+    <div class="security-card p-5 sm:p-6 animate-fade-in space-y-4">
+      <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+        <div>
+          <h2 class="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-500">receipt_long</span>
+            <span>Historial de Movimientos en Caseta</span>
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Auditoría de ingresos y salidas con cálculo de estancia y reimpresión de boleta oficial F01-PO-CP-7.1.3-03.
+          </p>
+        </div>
+
+        <!-- Buscador en Vivo -->
+        <div class="flex items-center gap-2">
+          <div class="relative w-64">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+            <input
+              type="text"
+              [ngModel]="historySearch()"
+              (ngModelChange)="historySearch.set($event); reloadHistoryPasses()"
+              placeholder="Buscar por placas, folio, chofer..."
+              class="form-input text-xs pl-9 py-1.5 rounded-xl w-full"
+            />
+          </div>
+
+          <button
+            type="button"
+            (click)="reloadHistoryPasses()"
+            class="btn-secondary-outline text-xs px-3 py-1.5"
+            title="Refrescar historial"
+          >
+            <span class="material-symbols-outlined text-sm">refresh</span>
+          </button>
+        </div>
+      </div>
+
+      @if (isLoadingHistory()) {
+        <div class="text-center py-12">
+          <span class="material-symbols-outlined text-4xl text-amber-500 animate-spin">progress_activity</span>
+          <p class="text-xs font-semibold text-slate-500 mt-2">Consultando historial de auditoría...</p>
+        </div>
+      } @else if (historyPasses().length === 0) {
+        <div class="security-empty-state my-4">
+          <span class="material-symbols-outlined text-4xl text-slate-400 mb-2">history</span>
+          <h3 class="font-bold text-sm text-slate-700 dark:text-slate-300">No se encontraron registros finalizados</h3>
+          <p class="text-xs text-slate-500 mt-1">Las salidas con Check-Out concluido aparecerán listadas aquí.</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Fecha &amp; Folio</th>
+                <th>Operación</th>
+                <th>Cliente</th>
+                <th>Transportista &amp; Placas</th>
+                <th>Operador Chofer</th>
+                <th>Entrada / Salida</th>
+                <th>Estancia</th>
+                <th>Estado</th>
+                <th class="text-right">Boleta F01</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of historyPasses(); track item.id || item.token) {
+                <tr>
+                  <td class="td-mono">
+                    <div class="cell-folio-title">
+                      {{ item.generatedFolio || item.token }}
+                    </div>
+                    <div class="cell-token-sub">{{ item.docDate || (item.createdAt | slice:0:10) }}</div>
+                  </td>
+                  <td>
+                    <span [ngClass]="item.operationType === 'CARGA' ? 'cell-op-badge-outbound' : 'cell-op-badge-inbound'">
+                      {{ item.operationType || 'DESCARGA' }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="cell-carrier-title">{{ item.clientName || 'General' }}</div>
+                  </td>
+                  <td>
+                    <div class="cell-carrier-title">{{ item.carrierLine || 'Transporte' }}</div>
+                    <div class="cell-plates-sub"><span class="cell-plates-label">T:</span> {{ item.tractorPlates || '-' }} | <span class="cell-plates-label">C:</span> {{ item.boxPlates || '-' }}</div>
+                  </td>
+                  <td>
+                    <div class="cell-driver-name">{{ item.driverName || 'S/N' }}</div>
+                  </td>
+                  <td class="td-mono">
+                    <div class="cell-time-val"><span class="cell-plates-label">In:</span> {{ formatTimeString(item.receptionTime || item.horaEntrada || item.createdAt) }}</div>
+                    <div class="cell-time-val"><span class="cell-plates-label">Out:</span> {{ formatTimeString(item.departureTime || item.horaSalida || item.exitedAt) }}</div>
+                  </td>
+                  <td class="td-mono">
+                    <div class="cell-time-val cell-time-val--duration">
+                      {{ calculateDuration(item.receptionTime, item.departureTime) }}
+                    </div>
+                  </td>
+                  <td>
+                    @if (item.status === 'COMPLETED_EXIT') {
+                      <span class="cell-status-ready">
+                        ✓ Salida Concluida
+                      </span>
+                    } @else if (item.status === 'COMPLETED') {
+                      <span class="cell-op-badge-inbound">
+                        En Planta
+                      </span>
+                    } @else {
+                      <span class="cell-status-maneuver">
+                        {{ item.status }}
+                      </span>
+                    }
+                  </td>
+                  <td class="text-right">
+                    <button
+                      type="button"
+                      (click)="openF01Print(item)"
+                      class="btn-primary-gold text-[11px] px-3 py-1.5"
+                    >
+                      <span class="material-symbols-outlined text-sm">print</span>
+                      <span>Imprimir F01</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     MODAL A: PASE QR DINÁMICO PARA SMARTPHONE DEL CHOFER (ALTA LEGIBILIDAD)
+════════════════════════════════════════════════════════════════════════════ -->
+@if (showQrModal()) {
+  <div class="modal-overlay animate-fade-in" (click)="closeQrModal()">
+    <div class="modal-card modal-card--qr-compact text-center relative shadow-2xl" (click)="$event.stopPropagation()">
+      
+      <!-- Encabezado Compacto con Avatar ForBot -->
+      <div class="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-200 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-amber-400/80 shrink-0 p-0.5 shadow-sm">
+            <img src="assets/forbot-avatar.png" alt="ForBot AI" class="w-full h-full object-contain" />
+          </div>
+          <div class="text-left">
+            <h3 class="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
+              <span>Pase Digital QR</span>
+              <span class="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20">4GUARD</span>
+            </h3>
+            <p class="text-[10px] text-slate-500">Auto-registro Chofer F01</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          (click)="closeQrModal()"
+          class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-base font-bold cursor-pointer p-1 leading-none rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          aria-label="Cerrar modal QR"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Render Visual Ampliado del QR (Alta Legibilidad & Error Correction Level H: 30%) -->
+      <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-md inline-block mx-auto mb-2">
+        <div class="relative inline-flex items-center justify-center">
+          <img
+            [src]="getEncodedQrDataUrl()"
+            alt="QR Pase Acceso Chofer"
+            class="w-44 h-44 sm:w-48 sm:h-48 object-contain rounded bg-white"
+          />
+          <!-- Avatar Central ForBot con Zona de Aislamiento Blanco (Quiet Buffer) -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-10 h-10 rounded-full bg-white p-0.5 shadow-md border-2 border-white ring-1 ring-amber-400/80 flex items-center justify-center overflow-hidden">
+              <img src="assets/forbot-avatar.png" alt="4GUARD ForBot" class="w-full h-full object-contain" />
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-1.5 font-mono font-extrabold text-[11px] text-slate-900 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200 flex items-center justify-center gap-1.5">
+          <span class="text-[10px] text-amber-700 font-bold uppercase tracking-wider">Folio:</span>
+          <span>{{ qrModalToken() }}</span>
+        </div>
+      </div>
+
+      <!-- Acciones de Enlace Compactas -->
+      <div class="space-y-1.5">
+        <div class="grid grid-cols-2 gap-1.5">
+          <button
+            type="button"
+            (click)="openDriverPortalInNewTab()"
+            class="btn-primary-gold justify-center py-1.5 px-2 text-[11px] shadow w-full"
+            title="Abrir en pestaña nueva"
+          >
+            <span class="material-symbols-outlined text-sm">open_in_new</span>
+            <span>Abrir Portal</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="copyQrUrl()"
+            class="btn-secondary-outline justify-center py-1.5 px-2 text-[11px] w-full"
+            title="Copiar enlace al portapapeles"
+          >
+            <span class="material-symbols-outlined text-sm">content_copy</span>
+            <span>Copiar Enlace</span>
+          </button>
+        </div>
+
+        <!-- Acceso directo al Cartel de Entrada -->
+        <button
+          type="button"
+          (click)="openPosterPrintModal()"
+          class="w-full py-1.5 px-2 text-[11px] font-bold rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          title="Ver o imprimir el cartel oficial en hoja tamaño Carta"
+        >
+          <span class="material-symbols-outlined text-sm">print</span>
+          <span>Imprimir Cartel en Hoja Completa (Carta)</span>
+        </button>
+
+        <div class="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-slate-200 dark:border-slate-800">
+          <button
+            type="button"
+            (click)="generateNewDriverPass()"
+            class="btn-modal-secondary py-1 px-2 text-[11px]"
+          >
+            <span class="material-symbols-outlined text-sm">restart_alt</span>
+            <span>Nuevo QR</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="discardCurrentQrPass()"
+            class="btn-modal-danger py-1 px-2 text-[11px]"
+          >
+            <span class="material-symbols-outlined text-sm">delete_outline</span>
+            <span>Descartar</span>
+          </button>
+        </div>
+
+        @if (copyNotice()) {
+          <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold animate-fade-in">{{ copyNotice() }}</p>
+        }
+      </div>
+
+      <!-- Configuración de Túnel Ngrok para Escaneo Móvil -->
+      <div class="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 text-left bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl">
+        <div class="flex items-center justify-between gap-1 mb-1">
+          <label class="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1">
+            <span class="material-symbols-outlined text-xs text-amber-500">cell_tower</span>
+            <span>URL Pública para Móviles (ngrok)</span>
+          </label>
+          @if (tunnelUrl()) {
+            <span class="text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded border border-emerald-500/20">
+              Túnel Activo
+            </span>
+          } @else if (isLocalhost()) {
+            <span class="text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.2 rounded border border-amber-500/20">
+              Localhost
+            </span>
+          }
+        </div>
+
+        <div class="flex items-center gap-1">
+          <input
+            type="text"
+            [ngModel]="tunnelInputUrl()"
+            (ngModelChange)="tunnelInputUrl.set($event)"
+            (keyup.enter)="saveTunnelUrl()"
+            (blur)="saveTunnelUrl()"
+            placeholder="https://xyz.ngrok-free.app"
+            class="flex-1 text-[10px] py-1 px-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono focus:ring-1 focus:ring-amber-500 focus:outline-none"
+          />
+          <button
+            type="button"
+            (click)="saveTunnelUrl()"
+            class="px-2 py-1 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 rounded transition-colors"
+            title="Guardar URL del túnel"
+          >
+            Guardar
+          </button>
+          @if (tunnelUrl()) {
+            <button
+              type="button"
+              (click)="clearTunnelUrl()"
+              class="px-1.5 py-1 text-[10px] text-slate-500 hover:text-red-500 rounded transition-colors"
+              title="Restablecer a URL por defecto"
+            >
+              <span class="material-symbols-outlined text-xs">close</span>
+            </button>
+          }
+        </div>
+
+        @if (isLocalhost() && !tunnelUrl()) {
+          <p class="text-[9px] text-amber-700 dark:text-amber-400 mt-1 leading-tight">
+            💡 <strong>Sugerencia:</strong> Si escaneas desde un celular en desarrollo local, pega la URL de tu túnel ngrok para resolver la conexión.
+          </p>
+        }
+        <div class="text-[9px] text-slate-400 mt-1 truncate font-mono">
+          Base URL: {{ getPublicBaseUrl() }}
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     MODAL B: CHECK-OUT Y REGISTRO DE SALIDA DE CASETA
+════════════════════════════════════════════════════════════════════════════ -->
+@if (showCheckOutModal() && selectedCheckOutPass()) {
+  <div class="modal-overlay animate-fade-in" (click)="closeCheckOutModal()">
+    <div class="modal-card modal-card--checkout relative" (click)="$event.stopPropagation()">
+      <!-- Accent top bar -->
+      <div class="checkout-modal-accent-bar"></div>
+
+      <!-- Close Button -->
+      <button
+        type="button"
+        (click)="closeCheckOutModal()"
+        class="modal-close-btn"
+        aria-label="Cerrar modal check-out"
+      >
+        ✕
+      </button>
+
+      <!-- Compact Header -->
+      <div class="checkout-header">
+        <div class="checkout-header-icon">
+          <span class="material-symbols-outlined text-xl">output</span>
+        </div>
+        <div class="checkout-header-info min-w-0 flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="checkout-title">
+              Salida de Planta (Check-Out)
+            </h3>
+            <span class="checkout-folio-badge">
+              #{{ selectedCheckOutPass().generatedFolio || selectedCheckOutPass().token }}
+            </span>
+          </div>
+          <div class="checkout-unit-subtitle">
+            <span class="material-symbols-outlined text-xs text-amber-500">local_shipping</span>
+            <span>Unidad:</span>
+            <strong class="font-mono text-slate-900 dark:text-slate-100 font-bold tracking-wider">
+              {{ selectedCheckOutPass().tractorPlates || 'S/P' }}
+            </strong>
+            @if (selectedCheckOutPass().noEcoTractor) {
+              <span class="text-slate-300 dark:text-slate-600">•</span>
+              <span class="text-slate-600 dark:text-slate-300">Eco: {{ selectedCheckOutPass().noEcoTractor }}</span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Compact 4-Chip Summary Grid -->
+      <div class="checkout-summary-grid">
+        <div class="checkout-chip">
+          <span class="checkout-chip-label">
+            <span class="material-symbols-outlined text-[13px]">person</span>
+            Chofer
+          </span>
+          <span class="checkout-chip-val" [title]="selectedCheckOutPass().driverName || 'S/N'">
+            {{ selectedCheckOutPass().driverName || 'S/N' }}
+          </span>
+        </div>
+
+        <div class="checkout-chip">
+          <span class="checkout-chip-label">
+            <span class="material-symbols-outlined text-[13px]">domain</span>
+            Transporte
+          </span>
+          <span class="checkout-chip-val" [title]="selectedCheckOutPass().carrierLine || 'General'">
+            {{ selectedCheckOutPass().carrierLine || 'General' }}
+          </span>
+        </div>
+
+        <div class="checkout-chip">
+          <span class="checkout-chip-label">
+            <span class="material-symbols-outlined text-[13px]">login</span>
+            Entrada
+          </span>
+          <span class="checkout-chip-val font-mono">
+            {{ formatTimeString(selectedCheckOutPass().receptionTime || selectedCheckOutPass().horaEntrada || selectedCheckOutPass().createdAt) }}
+          </span>
+        </div>
+
+        <div class="checkout-chip checkout-chip--ramp">
+          <span class="checkout-chip-label text-amber-700 dark:text-amber-400">
+            <span class="material-symbols-outlined text-[13px]">warehouse</span>
+            Rampa
+          </span>
+          <span class="checkout-chip-val font-mono font-bold text-amber-800 dark:text-amber-300">
+            {{ formatRampDisplay(selectedCheckOutPass()) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Formulario de Check-Out (High-Density 2-Column) -->
+      <form [formGroup]="checkOutForm" (ngSubmit)="confirmCheckOut()" class="checkout-form">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div class="checkout-field-group">
+            <label class="checkout-form-label">
+              <span class="material-symbols-outlined text-xs text-amber-500">schedule</span>
+              <span>Hora de Salida *</span>
+            </label>
+            <div class="checkout-input-wrapper">
+              <input
+                type="time"
+                formControlName="departureTime"
+                class="checkout-form-input text-xs font-mono font-bold"
+              />
+            </div>
+          </div>
+
+          <div class="checkout-field-group">
+            <label class="checkout-form-label">
+              <span class="material-symbols-outlined text-xs text-slate-400">lock</span>
+              <span>Sellos de Salida <span class="checkout-optional-tag">(Opcional)</span></span>
+            </label>
+            <div class="checkout-input-wrapper">
+              <input
+                type="text"
+                formControlName="exitSealNumbers"
+                placeholder="Ej. S-9921 / Vacío"
+                class="checkout-form-input text-xs font-mono uppercase"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="checkout-field-group">
+          <label class="checkout-form-label">
+            <span class="material-symbols-outlined text-xs text-slate-400">edit_note</span>
+            <span>Observaciones de Salida</span>
+          </label>
+          <textarea
+            formControlName="exitObservations"
+            rows="2"
+            placeholder="Condiciones de la unidad al retirarse de planta (opcional)..."
+            class="checkout-form-textarea text-xs"
+          ></textarea>
+        </div>
+
+        <div class="checkout-footer">
+          <button
+            type="button"
+            (click)="closeCheckOutModal()"
+            class="btn-checkout-cancel"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="isCheckingOut()"
+            class="btn-checkout-submit"
+          >
+            <span class="material-symbols-outlined text-base">verified</span>
+            <span>{{ isCheckingOut() ? 'Registrando...' : 'Confirmar Salida y Boleta F01' }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     MODAL C: VISOR E IMPRESIÓN OFICIAL DEL FORMATO F01-PO-CP-7.1.3-03
+     (Diseño UI/UX Document Inspector: Lienzo de escritorio centrado con hoja Carta)
+════════════════════════════════════════════════════════════════════════════ -->
+@if (showF01PrintModal() && currentPrintData()) {
+  <div
+    class="fixed top-16 inset-x-0 bottom-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 md:p-6 animate-fade-in"
+    (click)="closeF01Print()"
+  >
+    <div
+      class="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col w-full max-w-[760px] overflow-hidden text-slate-100 animate-scale-in"
+      style="max-height: min(75vh, 650px);"
+      (click)="$event.stopPropagation()"
+    >
+      
+      <!-- Top Action Bar (Document Inspector Toolbar) -->
+      <div class="px-4 py-2.5 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
+            <span class="material-symbols-outlined text-base">description</span>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-xs sm:text-sm text-white truncate leading-none">
+                Formato F01-PO-CP-7.1.3-03
+              </h3>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold shrink-0">
+                {{ currentPrintData()?.folio || 'OFICIAL' }}
+              </span>
+            </div>
+            <p class="text-[10px] text-slate-400 truncate mt-0.5">
+              Check List de Transporte • Auditoría de Seguridad Patrimonial
+            </p>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            (click)="printF01()"
+            class="btn-primary-gold text-[11px] px-3.5 py-1.5 flex items-center gap-1.5 font-bold shadow-sm"
+          >
+            <span class="material-symbols-outlined text-sm">print</span>
+            <span>Imprimir Hoja</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="downloadF01Pdf()"
+            class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition-colors cursor-pointer"
+          >
+            <span class="material-symbols-outlined text-sm">download</span>
+            <span>Descargar PDF</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="closeF01Print()"
+            class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center text-sm font-bold transition-colors cursor-pointer ml-1"
+            aria-label="Cerrar visor F01"
+            title="Cerrar visor (Esc)"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Lienzo de Escritorio / Desk Canvas con la Hoja Oficial Centrada -->
+      <div class="flex-1 overflow-y-auto bg-slate-950/60 p-3 sm:p-5 flex justify-center items-start">
+        <div id="f01-print-target" class="w-full flex justify-center">
+          <fg-print-transport-checklist-layout [data]="currentPrintData()!"></fg-print-transport-checklist-layout>
+        </div>
+      </div>
+
+      <!-- Footer Info Bar -->
+      <div class="px-4 py-2 bg-slate-900 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span>Vista preliminar de impresión • Tamaño Carta (Letter 8.5" × 11")</span>
+        </div>
+        <span class="font-mono text-slate-500">4GUARD WMS SGC</span>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- ══════════════════════════════════════════════════════════════════════════════
+     MODAL VISOR DE IMPRESIÓN — CARTEL OFICIAL QR TAMAÑO CARTA HORIZONTAL (F01-PO-CP-7.1.3-03-QR)
+     ══════════════════════════════════════════════════════════════════════════════ -->
+@if (showPosterModal()) {
+  <div 
+    class="print-modal-overlay fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden animate-fade-in"
+    (click)="closePosterPrintModal()"
+    aria-modal="true"
+    role="dialog"
+  >
+    <!-- Contenedor Modal de Alta Definición (Landscape Optimizado) -->
+    <div 
+      class="print-modal-card w-[96vw] max-w-[1160px] h-[86vh] max-h-[740px] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden text-slate-100 animate-scale-in my-auto"
+      (click)="$event.stopPropagation()"
+    >
+      <!-- Top Bar / Acciones de Impresión y Controles de Zoom -->
+      <div class="px-4 py-2.5 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0 flex-wrap sm:flex-nowrap">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400">
+            <span class="material-symbols-outlined text-lg">qr_code_2</span>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h3 class="text-xs sm:text-sm font-bold text-white uppercase tracking-wide truncate">
+                Cartel Oficial de Entrada — Auto-Registro
+              </h3>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold shrink-0">
+                11" × 8.5" Paisaje
+              </span>
+            </div>
+            <p class="text-[10px] text-slate-400 truncate mt-0.5">
+              Formato Apaisado F01-PO-CP-7.1.3-03-QR • Escaneable a 3 metros
+            </p>
+          </div>
+        </div>
+
+        <!-- Controles Centrales de Zoom y Escala Responsiva -->
+        <div class="flex items-center gap-1.5 bg-slate-950/70 border border-slate-800 px-2 py-1 rounded-xl shrink-0">
+          <button
+            type="button"
+            (click)="zoomOutPoster()"
+            class="w-7 h-7 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+            title="Alejar (-)"
+            aria-label="Alejar"
+          >
+            <span class="material-symbols-outlined text-base">remove</span>
+          </button>
+
+          <span class="text-[11px] font-mono font-bold text-slate-200 min-w-[42px] text-center select-none">
+            {{ posterZoomPercent() }}
+          </span>
+
+          <button
+            type="button"
+            (click)="zoomInPoster()"
+            class="w-7 h-7 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+            title="Acercar (+)"
+            aria-label="Acercar"
+          >
+            <span class="material-symbols-outlined text-base">add</span>
+          </button>
+
+          <div class="w-px h-4 bg-slate-800 mx-0.5"></div>
+
+          <button
+            type="button"
+            (click)="toggleFitToScreen()"
+            [ngClass]="isFitToScreen() ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'text-slate-300 hover:text-white hover:bg-slate-800 border-transparent'"
+            class="text-[10px] font-semibold px-2 py-1 rounded-lg border flex items-center gap-1 transition-colors cursor-pointer"
+            title="Ajustar automáticamente al tamaño de la pantalla"
+          >
+            <span class="material-symbols-outlined text-sm">fit_screen</span>
+            <span class="hidden md:inline">Ajustar</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="resetPosterZoom()"
+            [ngClass]="(!isFitToScreen() && posterZoom() === 1) ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'text-slate-300 hover:text-white hover:bg-slate-800 border-transparent'"
+            class="text-[10px] font-semibold px-2 py-1 rounded-lg border transition-colors cursor-pointer"
+            title="Ver al 100% de tamaño físico"
+          >
+            100%
+          </button>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            (click)="printPoster()"
+            class="btn-primary-gold text-[11px] px-3.5 py-1.5 flex items-center gap-1.5 font-bold shadow-sm cursor-pointer"
+          >
+            <span class="material-symbols-outlined text-sm">print</span>
+            <span>Imprimir Cartel</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="downloadPosterPdf()"
+            class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition-colors cursor-pointer"
+          >
+            <span class="material-symbols-outlined text-sm">download</span>
+            <span>Descargar PDF</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="closePosterPrintModal()"
+            class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center text-sm font-bold transition-colors cursor-pointer ml-1"
+            aria-label="Cerrar visor Cartel"
+            title="Cerrar y volver a Caseta (Esc)"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Lienzo con el Cartel Centrado en Hoja Carta Horizontal -->
+      <div 
+        id="poster-canvas-container" 
+        class="flex-1 min-h-0 overflow-auto bg-[#070b14] p-3 sm:p-5 flex items-center justify-center relative select-none"
+      >
+        <!-- Envoltorio escalado responsivo centrado -->
+        <div 
+          class="poster-scalable-wrapper flex items-center justify-center m-auto transition-all duration-150 ease-out"
+          [style.width.px]="1056 * posterZoom()"
+          [style.height.px]="816 * posterZoom()"
+          style="flex-shrink: 0;"
+        >
+          <div 
+            id="gate-qr-poster-target" 
+            class="origin-center transition-transform duration-150 ease-out flex items-center justify-center"
+            [style.width.px]="1056"
+            [style.height.px]="816"
+            [style.transform]="'scale(' + posterZoom() + ')'"
+            style="flex-shrink: 0;"
+          >
+            <fg-print-gate-qr-poster-layout [data]="posterPrintData()"></fg-print-gate-qr-poster-layout>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Info Bar -->
+      <div class="px-4 py-2 bg-slate-900 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span>Vigencia: <strong>{{ posterPrintData().periodLabel }}</strong> • Sucursal: <strong>{{ posterPrintData().branchName }}</strong> ({{ posterPrintData().branchCode }})</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-[9px] text-slate-400">Clic fuera o tecla <strong>Esc</strong> para volver</span>
+          <span class="font-mono text-slate-500 text-[9px]">4GUARD WMS • SEGURIDAD PATRIMONIAL</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}
+
+

@@ -1,0 +1,2509 @@
+/**
+ * @file security-gate.component.ts
+ * @description Centro de Control de Vigilancia y Caseta de Seguridad — 4GUARD WMS.
+ *
+ * Arquitectura Integral (Homologada a ADR-015, ADR-017 y ADR-018):
+ * - Gestión Multi-Pestaña: 📋 Nuevo Registro/Pases QR, 🚛 Unidades en Planta, 🏁 Salidas (Check-Out), 🗄️ Historial & Auditoría.
+ * - Formato Oficial Físico F01-PO-CP-7.1.3-03 replicado con PrintService e impresión directa/descarga PDF.
+ * - Ciclo de salida con registro de Hora de Salida, sellos finales y auditoría.
+ * - Campos de observaciones vacíos por defecto para llenado manual.
+ */
+
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, HostListener } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
+import {
+  CheckInCasetaData,
+  RampItem,
+  CarrierLineItem,
+  ClientItem,
+  STANDARD_WAREHOUSE_RAMPS,
+  STANDARD_CLIENTS,
+  STANDARD_CARRIERS,
+  ReturnDetectionResponse,
+} from '../../warehouse-movements/models/warehouse-movements.models';
+import { PrintService } from '../../../core/services/print.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { SmartNotificationService } from '../../../core/services/smart-notification.service';
+import {
+  PrintTransportChecklistLayoutComponent,
+  TransportChecklistPrintData
+} from '../../warehouse-movements/components/print-layouts/print-transport-checklist-layout.component';
+import {
+  PrintGateQrPosterLayoutComponent,
+  GateQrPosterPrintData
+} from '../components/print-gate-qr-poster-layout/print-gate-qr-poster-layout.component';
+import { AuthState } from '../../../core/auth/auth.state';
+import { environment } from '../../../../environments/environment';
+
+export type SecurityGateTab = 'REGISTRATION' | 'IN_YARD' | 'HISTORY';
+
+@Component({
+  selector: 'fg-security-gate',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    PrintTransportChecklistLayoutComponent,
+    PrintGateQrPosterLayoutComponent
+  ],
+  templateUrl: './security-gate.component.html',
+  styleUrl: './security-gate.component.css',
+})
+export class SecurityGateComponent implements OnInit, OnDestroy {
+  protected readonly authState = inject(AuthState);
+  private readonly fb = inject(FormBuilder);
+  private readonly movementsService = inject(WarehouseMovementsService);
+  protected readonly smartNotification = inject(SmartNotificationService);
+  protected readonly pendingRampAssignments = this.smartNotification.pendingRampAssignments;
+  protected readonly pendingRampAssignmentsCount = this.smartNotification.pendingRampAssignmentsCount;
+  private readonly printService = inject(PrintService);
+  private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private refreshIntervalId: any = null;
+
+  constructor() {
+    effect(() => {
+      const passToLoad = this.smartNotification.requestedPassToLoad();
+      if (passToLoad) {
+        this.setTab('REGISTRATION');
+        this.loadDriverSubmission(passToLoad);
+        this.smartNotification.clearRequestedPassToLoad();
+      }
+    }, { allowSignalWrites: true });
+
+    // Auto-asignar el nombre del guardia autenticado si está disponible en la sesión activa
+    effect(() => {
+      const guardName = this.getLoggedGuardName();
+      if (guardName && guardName !== 'Guardia de Turno - Caseta Principal') {
+        const currentVal = this.checkInForm.get('responsableVigilanciaNombre')?.value;
+        if (!currentVal || currentVal === 'Guardia de Turno - Caseta Principal') {
+          this.checkInForm.patchValue({ responsableVigilanciaNombre: guardName });
+        }
+      }
+    }, { allowSignalWrites: true });
+
+    // Notificar al guardia en tiempo real cuando una unidad concluye maniobra y queda autorizada para salida
+    effect(() => {
+      const yardList = this.inYardPasses();
+      this.smartNotification.updateReadyForExitPasses(yardList);
+
+      const isBackendLoading = this.isLoadingInYard();
+
+      // No evaluar notificaciones durante la carga inicial del backend
+      if (isBackendLoading && !this.isInitialYardHydrated) {
+        return;
+      }
+
+      // Primera hidratación de la sesión: Registrar las unidades que YA estaban listas para salida al entrar
+      // para evitar disparar una ráfaga de notificaciones/toasts de eventos que ya ocurrieron en el pasado
+      if (!this.isInitialYardHydrated) {
+        for (const p of yardList) {
+          if (p && p.isReadyForExit) {
+            const key = (p.token || p.generatedFolio || p.id || '').trim().toUpperCase();
+            if (key) {
+              this.notifiedReadyExitTokens.add(key);
+            }
+          }
+        }
+        this.persistNotifiedExitTokensToStorage();
+        this.isInitialYardHydrated = true;
+        return;
+      }
+
+      // Durante la sesión activa: solo alertar cuando una NUEVA unidad concluye maniobra
+      for (const p of yardList) {
+        if (p && p.isReadyForExit) {
+          const key = (p.token || p.generatedFolio || p.id || '').trim().toUpperCase();
+          if (key && !this.notifiedReadyExitTokens.has(key)) {
+            this.notifiedReadyExitTokens.add(key);
+            this.persistNotifiedExitTokensToStorage();
+
+            // Alerta acústica y visual en caseta
+            this.playCheckinChime();
+
+            const unitLabel = p.noEcoTractor ? `Eco ${p.noEcoTractor}` : (p.tractorPlates ? `Placas ${p.tractorPlates}` : 'Unidad');
+            const rampLabel = this.getFormattedRampLabel(p.rampCode, p.rampNumber);
+            const chofer = p.driverName || 'Chofer';
+            const carrier = p.carrierLine || 'Transportista';
+            const folio = p.token || p.generatedFolio || 'S/F';
+
+            this.toast.info(
+              `🏁 ¡Unidad Lista para Salida! ${unitLabel} (${carrier} - ${chofer}) concluyó maniobra en ${rampLabel}. Proceda a registrar su Salida en Caseta.`
+            );
+
+            this.smartNotification.dispatch({
+              category: 'SECURITY',
+              title: '🏁 Unidad Lista para Salida (Check-Out)',
+              message: `La unidad ${unitLabel} (${carrier} - Chofer: ${chofer}) concluyó maniobra en ${rampLabel}. Registre su Salida física y sellos de salida.`,
+              referenceFolio: folio,
+              route: '/security',
+              targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA', 'GUARD'],
+              targetRoutes: ['/security'],
+              severity: 'WARNING',
+              data: p
+            });
+          }
+        }
+      }
+    }, { allowSignalWrites: true });
+  }
+
+  protected dismissRampNotice(folio: string, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.smartNotification.dismissRampAssignment(folio);
+  }
+
+  protected attendRampAssignment(ramp: any): void {
+    this.setTab('IN_YARD');
+    if (ramp.tractorPlates) {
+      this.inYardSearch.set(ramp.tractorPlates);
+    } else if (ramp.folio) {
+      this.inYardSearch.set(ramp.folio);
+    }
+    this.toast.info(`🔔 Mostrando unidad en patio: Folio #${ramp.folio} (Rampa ${ramp.rampNumber}) — Avise al transportista avanzar a rampa.`);
+  }
+
+  protected getLoggedGuardName(): string {
+    const fullName = this.authState.userFullName()?.trim();
+    if (fullName) return fullName;
+    const user = this.authState.currentUser();
+    if (user?.fullName?.trim()) return user.fullName.trim();
+    if (user?.username?.trim()) return user.username.trim();
+    return 'Guardia de Turno - Caseta Principal';
+  }
+
+  // ── Navegación por Pestañas ───────────────────────────────────────────────
+  protected readonly activeTab = signal<SecurityGateTab>('REGISTRATION');
+
+  // ── Catálogos desde WarehouseMovementsService ──────────────────────────────
+  protected readonly carrierLines      = computed<CarrierLineItem[]>(() => {
+    const list = this.movementsService.carrierLines();
+    return list && list.length > 0 ? list : STANDARD_CARRIERS;
+  });
+  protected readonly clients           = computed<ClientItem[]>(() => {
+    const list = this.movementsService.clients();
+    return list && list.length > 0 ? list : STANDARD_CLIENTS;
+  });
+  protected readonly ramps             = this.movementsService.ramps;
+  protected readonly forkliftOperators = this.movementsService.forkliftOperators;
+  protected readonly rampOccupancy     = this.movementsService.rampOccupancyStatus;
+
+  // ── Signals de Estado Local ────────────────────────────────────────────────
+  protected readonly sealList           = signal<string[]>([]);
+  protected readonly tempSealInput      = signal<string>('');
+  protected readonly scanSuccessMessage = signal<string | null>(null);
+  protected readonly isSaving           = signal<boolean>(false);
+  protected readonly saveSuccess        = signal<boolean>(false);
+  protected readonly createdFolio       = signal<string | null>(null);
+  protected readonly assignedRampLabel  = signal<string | null>(null);
+  protected readonly errorMessage       = signal<string | null>(null);
+  protected readonly lastCompletedPrintItem = signal<any | null>(null);
+  protected readonly showQrModal        = signal<boolean>(false);
+  protected readonly showPassListModal  = signal<boolean>(false);
+
+  // ── Auto-Detección Inteligente de Retornos (ADR-021) ──
+  protected readonly detectedReturn     = signal<ReturnDetectionResponse | null>(null);
+  protected readonly isDetectingReturn  = signal<boolean>(false);
+
+  // ── Catálogos Flexibles de Tipos de Transporte y Medidas ──
+  protected readonly transportTypesList = signal<string[]>([
+    'Camioneta',
+    'Tortón',
+    'Tráiler',
+    'Otro (Especificar)'
+  ]);
+
+  protected readonly boxDimensionsList = signal<string[]>([
+    '53 Pies',
+    '48 Pies',
+    '40 Pies',
+    '20 Pies',
+    'Tortón',
+    'Rabón',
+    '3.5 Toneladas',
+    'N/A - Plataforma',
+    'Otra Medida'
+  ]);
+
+  protected readonly isCustomTransportType = signal<boolean>(false);
+  protected readonly isCustomBoxDimension = signal<boolean>(false);
+  protected readonly customTransportInput = signal<string>('');
+  protected readonly customBoxDimensionInput = signal<string>('');
+
+  // ── Pases QR Dinámicos y Choferes en Espera ──
+  protected readonly activePasses       = signal<any[]>([]);
+  protected readonly backendInYardPasses = signal<any[]>([]);
+  protected readonly historyPasses      = signal<any[]>([]);
+  protected readonly historySearch      = signal<string>('');
+  protected readonly isLoadingHistory   = signal<boolean>(false);
+  protected readonly isLoadingInYard    = signal<boolean>(false);
+
+  /**
+   * Señal computada reactiva y pura para las unidades en patio (In-Yard).
+   * Combina automáticamente los pases de caseta, recepciones WMS y salidas WMS,
+   * excluyendo las unidades que ya concluyeron su salida en historial.
+   */
+  protected readonly inYardPasses = computed<any[]>(() => {
+    const mergedMap = new Map<string, any>();
+    const exitTokensOrFolios = new Set<string>();
+
+    // 1. Folios que ya salieron de la planta (desde historial en memoria)
+    for (const h of this.historyPasses()) {
+      if (h.token) exitTokensOrFolios.add(h.token.trim().toUpperCase());
+      if (h.generatedFolio) exitTokensOrFolios.add(h.generatedFolio.trim().toUpperCase());
+      if (h.id) exitTokensOrFolios.add(h.id.trim().toUpperCase());
+    }
+
+    // 2. Pases devueltos por el backend como en patio (In-Yard)
+    for (const p of this.backendInYardPasses()) {
+      if (p.status === 'COMPLETED_EXIT') continue;
+      const key = (p.generatedFolio || p.token || p.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+
+      const ws = (p.warehouseStatus || '').toUpperCase();
+      const isCancelled = ws === 'CANCELLED' || p.status === 'CANCELLED';
+      const isReady = p.isReadyForExit === true || ws === 'COMPLETED' || ws === 'DISPATCHED' || isCancelled || p.status === 'READY_FOR_EXIT';
+      const timeVal = p.receptionTime || p.horaEntrada || (p.createdAt ? this.formatTimeString(p.createdAt) : this.getCurrentTimeString());
+      mergedMap.set(key, {
+        ...p,
+        isReadyForExit: isReady,
+        receptionTime: timeVal,
+        horaEntrada: timeVal,
+        cancellationReason: p.cancellationReason || '',
+        rampCode: this.getFormattedRampLabel(p.rampCode, p.rampNumber)
+      });
+    }
+
+    const hasBackendInYard = this.backendInYardPasses().length > 0;
+
+    // 3. Recepciones registradas en el WMS (Inbound) - Solo si están en patio activo y no han salido
+    const activeReceptions = this.movementsService.receptions();
+    for (const r of activeReceptions) {
+      const key = (r.folio || r.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+
+      // Si ya está en mergedMap, sincronizar con el estatus más reciente de la recepción WMS
+      if (mergedMap.has(key)) {
+        const existing = mergedMap.get(key);
+        const isCancelled = (r.status as string) === 'CANCELLED';
+        const isCompleted = (r.status as string) === 'COMPLETED';
+        if (isCancelled || isCompleted || r.status !== existing.warehouseStatus) {
+          mergedMap.set(key, {
+            ...existing,
+            warehouseStatus: r.status,
+            status: isCancelled ? 'CANCELLED' : (isCompleted ? 'COMPLETED' : existing.status),
+            isReadyForExit: isCancelled || isCompleted || existing.isReadyForExit,
+            cancellationReason: r.cancellationReason || existing.cancellationReason,
+            cancelledBy: r.cancelledBy || existing.cancelledBy,
+            rampNumber: r.checkIn?.rampNumber ?? existing.rampNumber,
+            rampCode: this.getFormattedRampLabel(r.checkIn?.rampCode ?? existing.rampCode, r.checkIn?.rampNumber ?? existing.rampNumber)
+          });
+        }
+        continue;
+      }
+
+      // Si el backend ya devolvió la lista oficial de patio, no re-inyectar recepciones que el backend omitió
+      if (hasBackendInYard && !key.startsWith('LOCAL-') && !key.startsWith('TEMP-') && (r.status === 'COMPLETED' || !r.id)) {
+        continue;
+      }
+
+      // Solo incluir si la recepción está en estado activo de patio (REGISTERED, ASSIGNED, IN_PROGRESS, DISCHARGED, COMPLETED, CANCELLED)
+      if (r.status === 'REGISTERED' || r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED' || (r.status as string) === 'COMPLETED' || (r.status as string) === 'CANCELLED') {
+        const seals = r.checkIn?.sealNumbers && r.checkIn.sealNumbers.length > 0
+          ? r.checkIn.sealNumbers
+          : (r.checkIn?.sealNumber ? [r.checkIn.sealNumber] : []);
+
+        const isReady = (r.status as string) === 'COMPLETED' || (r.status as string) === 'CANCELLED' || (r as any).isReadyForExit === true;
+        const timeVal = r.checkIn?.receptionTime || (r.createdAt ? this.formatTimeString(r.createdAt) : this.getCurrentTimeString());
+
+        mergedMap.set(key, {
+          id: r.id || ('rec-' + r.folio),
+          token: r.folio,
+          generatedFolio: r.folio,
+          status: r.status,
+          operationType: 'DESCARGA',
+          operacion: 'DESCARGA',
+          clientCode: r.checkIn?.clientCode || '',
+          clientName: r.checkIn?.client || 'Cliente General',
+          carrierLineCode: r.checkIn?.carrierLineCode || '',
+          carrierLine: r.checkIn?.carrierLine || 'Transportista',
+          driverName: r.checkIn?.driverName || 'Operador Transportista',
+          tractorPlates: r.checkIn?.tractorPlates || '-',
+          boxPlates: r.checkIn?.boxPlates || '-',
+          noEcoTractor: r.checkIn?.noEcoTractor || '',
+          noEcoCaja: r.checkIn?.noEcoCaja || '',
+          boxDimensions: r.checkIn?.medidasCaja || '53 Pies',
+          transportType: r.checkIn?.transportType || 'Caja Seca',
+          sealNumbers: seals,
+          docNumber: r.checkIn?.docNumber || ('REM-' + r.folio),
+          docDate: r.checkIn?.docDate || r.createdAt,
+          receptionTime: timeVal,
+          horaEntrada: timeVal,
+          rampNumber: r.checkIn?.rampNumber || 1,
+          rampCode: this.getFormattedRampLabel(r.checkIn?.rampCode, r.checkIn?.rampNumber),
+          observations: r.observations || r.checkIn?.observations || '',
+          driverSignature: r.checkIn?.driverSignature || (r as any).driverSignature || (r as any).preCheckin?.driverSignature,
+          driverSignedAt: r.checkIn?.driverSignedAt || (r as any).driverSignedAt || (r as any).preCheckin?.driverSignedAt,
+          warehouseStatus: r.status || 'REGISTERED',
+          isReadyForExit: isReady,
+          cancellationReason: r.cancellationReason || (r as any).reason || '',
+          createdAt: r.createdAt
+        });
+      }
+    }
+
+    // 4. Salidas registradas en el WMS (Outbound) - Solo si están en patio activo y no han salido
+    const activeOutbounds = this.movementsService.outbounds();
+    for (const o of activeOutbounds) {
+      const key = (o.folio || o.id || '').trim().toUpperCase();
+      if (!key || exitTokensOrFolios.has(key)) continue;
+
+      if (mergedMap.has(key)) {
+        const existing = mergedMap.get(key);
+        const isCancelled = (o.status as string) === 'CANCELLED';
+        const isCompleted = (o.status as string) === 'COMPLETED';
+        if (isCancelled || isCompleted || o.status !== existing.warehouseStatus) {
+          mergedMap.set(key, {
+            ...existing,
+            warehouseStatus: o.status,
+            status: isCancelled ? 'CANCELLED' : (isCompleted ? 'COMPLETED' : existing.status),
+            isReadyForExit: isCancelled || isCompleted || existing.isReadyForExit,
+            rampNumber: o.rampNumber ?? existing.rampNumber,
+            rampCode: this.getFormattedRampLabel(o.rampCode ?? existing.rampCode, o.rampNumber ?? existing.rampNumber)
+          });
+        }
+        continue;
+      }
+
+      if (hasBackendInYard && !key.startsWith('LOCAL-') && !key.startsWith('TEMP-') && (o.status === 'COMPLETED' || !o.id)) {
+        continue;
+      }
+
+      if (o.status === 'REGISTERED' || o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED' || (o.status as string) === 'COMPLETED' || (o.status as string) === 'CANCELLED') {
+        const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
+        const isReady = (o.status as string) === 'COMPLETED' || (o.status as string) === 'CANCELLED' || (o as any).isReadyForExit === true;
+        const timeVal = o.timestamp || (o.dispatchedAt ? this.formatTimeString(o.dispatchedAt) : (o as any).createdAt ? this.formatTimeString((o as any).createdAt) : this.getCurrentTimeString());
+
+        mergedMap.set(key, {
+          id: o.id || ('out-' + o.folio),
+          token: o.folio,
+          generatedFolio: o.folio,
+          status: o.status,
+          operationType: 'CARGA',
+          operacion: 'CARGA',
+          clientCode: o.clientCode || '',
+          clientName: o.clientName || 'Cliente General',
+          carrierCode: o.carrierCode || '',
+          carrierLineCode: o.carrierCode || '',
+          carrierLine: o.carrierName || 'Transportista',
+          driverName: o.driverName || 'Operador Transportista',
+          tractorPlates: o.tractorPlates || '-',
+          boxPlates: o.boxPlates || '-',
+          noEcoTractor: o.noEcoTractor || '',
+          noEcoCaja: o.noEcoCaja || '',
+          boxDimensions: '53 Pies',
+          transportType: o.transportType || 'TRAILER',
+          sealNumbers: seals,
+          docNumber: o.remisionNo || ('SAL-' + o.folio),
+          docDate: o.dispatchedAt || this.getCurrentDateString(),
+          receptionTime: timeVal,
+          horaEntrada: timeVal,
+          rampNumber: o.rampNumber || 1,
+          rampCode: this.getFormattedRampLabel(o.rampCode, o.rampNumber),
+          observations: o.observations || '',
+          driverSignature: o.driverSignature || (o as any).preCheckin?.driverSignature,
+          driverSignedAt: o.driverSignedAt || (o as any).preCheckin?.driverSignedAt,
+          warehouseStatus: o.status || 'REGISTERED',
+          isReadyForExit: isReady,
+          createdAt: o.dispatchedAt || new Date().toISOString()
+        });
+      }
+    }
+
+    return Array.from(mergedMap.values());
+  });
+
+  protected readonly activeToken           = signal<string | null>(null);
+  protected readonly activeDriverSignature = signal<string | null>(null);
+  protected readonly activeDriverSignedAt  = signal<string | null>(null);
+  protected readonly qrModalToken          = signal<string>('PORTAL-DIRECTO');
+  protected readonly qrModalUrl         = signal<string>('');
+  protected readonly isGeneratingPass   = signal<boolean>(false);
+  protected readonly copyNotice         = signal<string | null>(null);
+  protected readonly passActionNotice   = signal<string | null>(null);
+
+
+  // ── Configuración Dinámica de Túnel (ngrok / móvil) ──
+  protected readonly tunnelUrl          = signal<string>('https://faster-treadmill-oppose.ngrok-free.dev');
+  protected readonly tunnelInputUrl     = signal<string>('https://faster-treadmill-oppose.ngrok-free.dev');
+  protected readonly isLocalhost        = computed(() => {
+    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+      return window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1');
+    }
+    return false;
+  });
+
+  // ── Cartel Oficial QR para Entrada ──
+  protected getCurrentPeriodLabel(): string {
+    const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+    const now = new Date();
+    return `${months[now.getMonth()]} ${now.getFullYear()}`;
+  }
+
+  protected getCurrentPeriodCode(): string {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${now.getFullYear()}-${month}`;
+  }
+
+  protected getFixedPortalUrl(): string {
+    const baseUrl = this.getPublicBaseUrl();
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const branch = session.branchId || 'BR-TOL-01';
+    const org = session.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+    const isNgrok = baseUrl.includes('ngrok');
+    const skipParam = isNgrok ? '&ngrok-skip-browser-warning=true' : '';
+    // URL optimizada y compacta para escaneo instantáneo
+    return `${baseUrl}/carrier-checkin?org=${org}&branch=${branch}${skipParam}`;
+  }
+
+  protected getPosterQrDataUrl(): string {
+    const url = this.getFixedPortalUrl();
+    // 500x500 px, margen 2 y ecc=Q para escaneo ultra rápido y nítido
+    return `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=2&ecc=Q&data=${encodeURIComponent(url)}`;
+  }
+
+  protected readonly posterPrintData = computed<GateQrPosterPrintData>(() => {
+    return {
+      title: 'AUTO-REGISTRO DE TRANSPORTE Y VIGILANCIA',
+      branchName: 'TOLUCA',
+      branchCode: 'BR-TOL-01',
+      periodLabel: this.getCurrentPeriodLabel(),
+      targetUrl: this.getFixedPortalUrl(),
+      qrDataUrl: this.getPosterQrDataUrl(),
+      emergencyPhone: '722-442-4827'
+    };
+  });
+
+  // ── Cartel Oficial QR para Entrada (Impresión Tamaño Carta) ──
+  protected readonly showPosterModal = signal<boolean>(false);
+  protected readonly posterZoom = signal<number>(1);
+  protected readonly isFitToScreen = signal<boolean>(true);
+  protected readonly posterZoomPercent = computed<string>(() => `${Math.round(this.posterZoom() * 100)}%`);
+
+  protected openPosterPrintModal(): void {
+    this.showPosterModal.set(true);
+    // Calcular automáticamente la escala óptima una vez renderizado el canvas
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        this.recalculatePosterFit();
+      }, 70);
+    });
+  }
+
+  protected closePosterPrintModal(): void {
+    this.showPosterModal.set(false);
+  }
+
+  protected recalculatePosterFit(): void {
+    const canvas = document.getElementById('poster-canvas-container');
+    if (!canvas) return;
+
+    // Medidas útiles del canvas restando márgenes y paddings
+    const paddingX = window.innerWidth < 640 ? 16 : 40;
+    const paddingY = window.innerWidth < 640 ? 16 : 40;
+    const availableWidth = Math.max(100, canvas.clientWidth - paddingX);
+    const availableHeight = Math.max(100, canvas.clientHeight - paddingY);
+
+    // Dimensiones base de Hoja Carta Paisaje a 96 DPI: 1056 x 816 px (279.4mm x 215.9mm)
+    const baseWidth = 1056;
+    const baseHeight = 816;
+
+    const scaleX = availableWidth / baseWidth;
+    const scaleY = availableHeight / baseHeight;
+    // Escala que permite ver la hoja COMPLETA sin scroll con margen confortable
+    const optimalScale = Math.min(scaleX, scaleY) * 0.96;
+
+    const safeScale = Math.min(1.0, Math.max(0.35, Math.round(optimalScale * 100) / 100));
+    this.posterZoom.set(safeScale);
+    this.isFitToScreen.set(true);
+  }
+
+  @HostListener('window:resize')
+  protected onWindowResize(): void {
+    if (this.showPosterModal() && this.isFitToScreen()) {
+      this.recalculatePosterFit();
+    }
+  }
+
+  protected zoomInPoster(): void {
+    this.isFitToScreen.set(false);
+    this.posterZoom.update(z => Math.min(1.5, Math.round((z + 0.1) * 10) / 10));
+  }
+
+  protected zoomOutPoster(): void {
+    this.isFitToScreen.set(false);
+    this.posterZoom.update(z => Math.max(0.35, Math.round((z - 0.1) * 10) / 10));
+  }
+
+  protected resetPosterZoom(): void {
+    this.isFitToScreen.set(false);
+    this.posterZoom.set(1);
+  }
+
+  protected toggleFitToScreen(): void {
+    this.recalculatePosterFit();
+  }
+
+  @HostListener('window:keydown.escape')
+  protected onEscapePressed(): void {
+    if (this.showPosterModal()) {
+      this.closePosterPrintModal();
+    }
+  }
+
+  protected printPoster(): void {
+    this.printService.printElement('#gate-qr-poster-target', `Cartel_Acceso_Caseta_${this.getCurrentPeriodCode()}`, { orientation: 'landscape' });
+  }
+
+  protected async downloadPosterPdf(): Promise<void> {
+    const prevZoom = this.posterZoom();
+    try {
+      // Temporalmente escalar a 1 para captura de ultra alta resolución limpia
+      this.posterZoom.set(1);
+      await new Promise(resolve => setTimeout(resolve, 60));
+      await this.printService.downloadPdf('#gate-qr-poster-target', `Cartel_Acceso_Caseta_${this.getCurrentPeriodCode()}.pdf`, { orientation: 'landscape', margin: 0 });
+    } finally {
+      this.posterZoom.set(prevZoom);
+    }
+  }
+
+  // ── Check-Out (Salida de Planta) ──
+  protected readonly showCheckOutModal       = signal<boolean>(false);
+  protected readonly selectedCheckOutPass    = signal<any | null>(null);
+  protected readonly isCheckingOut           = signal<boolean>(false);
+  protected readonly checkOutSuccessNotice   = signal<string | null>(null);
+
+  // ── Modos de Visualización UX/UI (Colapsable y Navegación Rápida) ──────────
+  protected readonly isQueueCollapsed = signal<boolean>(this.loadStorageBool('4g_security_queue_collapsed', false));
+  protected readonly isKpiCollapsed   = signal<boolean>(this.loadStorageBool('4g_security_kpis_collapsed', false));
+  protected readonly activeFormStep   = signal<'STEP1' | 'STEP2' | 'STEP3' | 'STEP4'>('STEP1');
+
+  private loadStorageBool(key: string, defaultValue: boolean): boolean {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const val = localStorage.getItem(key);
+        if (val !== null) return val === 'true';
+      }
+    } catch {}
+    return defaultValue;
+  }
+
+  protected toggleQueueCollapse(): void {
+    const next = !this.isQueueCollapsed();
+    this.isQueueCollapsed.set(next);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('4g_security_queue_collapsed', String(next));
+      }
+    } catch {}
+  }
+
+  protected toggleKpiCollapse(): void {
+    const next = !this.isKpiCollapsed();
+    this.isKpiCollapsed.set(next);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('4g_security_kpis_collapsed', String(next));
+      }
+    } catch {}
+  }
+
+  protected scrollToFormSection(sectionId: string, stepName: 'STEP1' | 'STEP2' | 'STEP3' | 'STEP4'): void {
+    this.activeFormStep.set(stepName);
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  // ── Formato F01 Impresión y Descarga ──
+  protected readonly showF01PrintModal       = signal<boolean>(false);
+  protected readonly currentPrintData        = signal<TransportChecklistPrintData | null>(null);
+
+  // ── Formulario de Check-Out ──
+  protected readonly checkOutForm: FormGroup = this.fb.group({
+    departureTime: [this.getCurrentTimeString(), Validators.required],
+    exitSealNumbers: [''],
+    exitObservations: [''],
+    guardNotes: ['']
+  });
+
+  // ── Formulario Reactivo F01 (con observaciones vacías por defecto) ─────────
+  protected readonly checkInForm: FormGroup = this.fb.group({
+    // Header Metadatos
+    controlNumber: ['F01-PO-CP-7.1.3-03'],
+    revisionNumber: ['01'],
+    revisionDate: ['19/08/2025'],
+    processOwner: ['Seguridad Patrimonial'],
+
+    // 1. DATOS GENERALES
+    fecha: [this.getCurrentDateString(), Validators.required],
+    noCartaPorte: [''], // Requerido dinámicamente si es CARGA
+    remision: ['', Validators.required], // Requerido dinámicamente si es DESCARGA
+    clientCode: ['', Validators.required],
+    client: ['', Validators.required],
+    clientNameCustom: [''],
+    procedimiento: ['Recepción', Validators.required],
+    operacion: ['DESCARGA', Validators.required], // CARGA | DESCARGA
+    horaEntrada: [this.getCurrentTimeString(), Validators.required],
+    horaSalida: [''],
+
+    // 2. DATOS DEL TRANSPORTE
+    carrierLineCode: ['', Validators.required],
+    carrierLine: ['', Validators.required],
+    carrierLineCustom: [''],
+    nombreOperador: ['', Validators.required],
+    driverPhone: [''],
+    rampCode: [''],
+    rampNumber: [null as number | null],
+    placasTracto: ['', Validators.required],
+    noEcoTractor: ['', Validators.required],
+    placasCaja: ['', Validators.required],
+    noEcoCaja: [''],
+    medidasCaja: ['', Validators.required],
+    noSello: [''],
+    tipoTransporte: ['', Validators.required],
+
+    // 3. REVISIÓN DEL TRANSPORTE — EPP (Observaciones en blanco por defecto)
+    eppZapatos: ['SI', Validators.required],
+    eppZapatosObs: [''],
+    eppCofia: ['SI', Validators.required],
+    eppCofiaObs: [''],
+    eppCubrebocas: ['SI', Validators.required],
+    eppCubrebocasObs: [''],
+    eppChaleco: ['SI', Validators.required],
+    eppChalecoObs: [''],
+
+    // 3. REVISIÓN DEL TRANSPORTE — Documentos
+    docCartaPorte: ['NO', Validators.required],
+    docCartaPorteObs: ['N/A - Operación de Descarga/Recepción'],
+    docRemision: ['SI', Validators.required],
+    docRemisionObs: [''],
+
+    // 4. REVISIÓN DE LA UNIDAD (5 Puntos Oficiales de Caseta)
+    revInteriorCaja: ['SI', Validators.required],
+    revInteriorCajaObs: [''],
+    revDanosCaja: ['NO', Validators.required],
+    revDanosCajaObs: [''],
+    revDanosPuertas: ['NO', Validators.required],
+    revDanosPuertasObs: [''],
+    revOloresExtranos: ['NO', Validators.required],
+    revOloresExtranosObs: [''],
+    revIndiciosPlagas: ['NO', Validators.required],
+    revIndiciosPlagasObs: [''],
+
+    // 5. FIRMAS Y RESPONSABLES
+    responsableVigilanciaNombre: [this.getLoggedGuardName(), Validators.required],
+    responsableVigilanciaFirma: [true, Validators.requiredTrue],
+    transportistaNombre: ['', Validators.required],
+    transportistaFirma: [false, Validators.requiredTrue]
+  });
+
+  // ── Notificaciones de Caseta / Comanda en Vivo ───────────────────────────
+  private readonly notifiedSubmittedTokens = new Set<string>();
+  private readonly notifiedReadyExitTokens: Set<string> = this.loadNotifiedExitTokensFromStorage();
+  private isInitialYardHydrated = false;
+  private lastHandledToken: string | null = null;
+
+  private loadNotifiedExitTokensFromStorage(): Set<string> {
+    const s = new Set<string>();
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const raw = sessionStorage.getItem('4g_notified_ready_exit_tokens');
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) list.forEach(k => s.add(k));
+        }
+      }
+    } catch {}
+    return s;
+  }
+
+  private persistNotifiedExitTokensToStorage(): void {
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        sessionStorage.setItem('4g_notified_ready_exit_tokens', JSON.stringify(Array.from(this.notifiedReadyExitTokens)));
+      }
+    } catch {}
+  }
+
+  protected getFormattedRampLabel(rampCode?: string | null, rampNumber?: number | string | null): string {
+    if (rampCode && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rampCode)) {
+      return rampCode.startsWith('LOC-') || rampCode.startsWith('R-') || rampCode.startsWith('RAMP')
+        ? rampCode
+        : `Andén ${rampCode}`;
+    }
+    if (rampCode) {
+      const match = (this.ramps() || []).find((r: any) => r.id === rampCode || r.code === rampCode);
+      if (match) return match.code || match.name || `Andén ${match.rampNumber || ''}`.trim();
+    }
+    if (rampNumber != null && rampNumber !== '') {
+      return `Andén R-${rampNumber}`;
+    }
+    return 'Andén Principal';
+  }
+
+  private playCheckinChime(): void {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      const playTone = (freq: number, start: number, dur: number, vol = 0.35, type: OscillatorType = 'triangle') => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(vol, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur);
+      };
+
+      // 🔔 Secuencia Sonora de Timbre / Caseta de Vigilancia "Rin-Rin"
+      // Repique 1 (campanilla 1): E5 (659Hz) -> G5 (784Hz) -> E5 -> G5
+      playTone(659.25, 0.00, 0.14, 0.35, 'triangle');
+      playTone(783.99, 0.12, 0.16, 0.40, 'sine');
+      playTone(659.25, 0.26, 0.14, 0.35, 'triangle');
+      playTone(783.99, 0.38, 0.22, 0.45, 'sine');
+
+      // Breve pausa y Repique 2 (campanilla 2 con aviso mayor y resonancia de campana)
+      playTone(659.25, 0.65, 0.14, 0.35, 'triangle');
+      playTone(783.99, 0.77, 0.16, 0.40, 'sine');
+      playTone(659.25, 0.91, 0.14, 0.35, 'triangle');
+      playTone(1046.50, 1.05, 0.50, 0.50, 'sine'); // C6 Campana resonante final
+    } catch {
+      // AudioContext fallback silencioso
+    }
+  }
+
+  // ── Conteo Computado de Pestañas & Filtros de Patio ───────────────────────
+  protected readonly inYardFilter = signal<'ALL' | 'IN_MANEUVER' | 'READY_EXIT'>('ALL');
+  protected readonly inYardSearch = signal<string>('');
+
+  protected readonly pendingDriverCount = computed(() => {
+    return this.activePasses().filter(p => p.status === 'SUBMITTED' || p.status === 'PENDING_DRIVER').length;
+  });
+
+  protected readonly inYardCount = computed(() => {
+    return this.inYardPasses().length;
+  });
+
+  protected readonly inManeuverCount = computed(() => {
+    return this.inYardPasses().filter(p => !p.isReadyForExit).length;
+  });
+
+  protected readonly readyForExitCount = computed(() => {
+    return this.inYardPasses().filter(p => p.isReadyForExit === true).length;
+  });
+
+  protected readonly completedShiftExitsCount = computed(() => {
+    return this.historyPasses().length;
+  });
+
+  protected calculateDuration(inTime: any, outTime: any): string {
+    const cleanIn = this.formatTimeString(inTime);
+    const cleanOut = this.formatTimeString(outTime);
+    if (!cleanIn || cleanIn === '--:--' || !cleanOut || cleanOut === '--:--') return '--';
+
+    const inParts = cleanIn.split(':').map(Number);
+    const outParts = cleanOut.split(':').map(Number);
+    if (inParts.length < 2 || outParts.length < 2) return '--';
+    if (isNaN(inParts[0]) || isNaN(inParts[1]) || isNaN(outParts[0]) || isNaN(outParts[1])) return '--';
+
+    let diffMins = (outParts[0] * 60 + outParts[1]) - (inParts[0] * 60 + inParts[1]);
+    if (diffMins < 0) diffMins += 24 * 60;
+
+    const hrs = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    if (hrs === 0) return `${mins} min`;
+    return `${hrs}h ${mins}m`;
+  }
+
+  protected hasRampAssigned(item: any): boolean {
+    if (!item) return false;
+    if (item.rampNumber != null && Number(item.rampNumber) > 0 && Number(item.rampNumber) <= 50) {
+      return true;
+    }
+    const code = String(item.rampCode || item.ramp || item.rampName || item.rampId || '').trim();
+    return !!code && code !== '0' && code !== 'null' && code !== 'undefined';
+  }
+
+  protected formatRampDisplay(item: any): string {
+    if (!item) return 'Por Asignar';
+
+    // 1. Si viene rampNumber numérico explícito y válido (1 a 50)
+    if (item.rampNumber != null && Number(item.rampNumber) > 0 && Number(item.rampNumber) <= 50) {
+      const num = Number(item.rampNumber);
+      return `R-${String(num).padStart(2, '0')}`;
+    }
+
+    // 2. Extraer cualquier código o ID disponible
+    const code = String(item.rampCode || item.ramp || item.rampName || item.rampId || '').trim();
+    if (code && code !== '0' && code !== 'null' && code !== 'undefined') {
+      // Si es un código con prefijo conocido o formato legible (LOC-RAMP-06, RAMPA-02, R-03)
+      if (code.toUpperCase().includes('RAMP') || code.toUpperCase().startsWith('R-') || code.toUpperCase().startsWith('LOC-RAMP-') || code.toLowerCase().startsWith('rampa')) {
+        const digitMatch = code.match(/(\d+)/);
+        if (digitMatch) {
+          const num = parseInt(digitMatch[1], 10);
+          if (!isNaN(num) && num > 0 && num <= 50) {
+            return `R-${String(num).padStart(2, '0')}`;
+          }
+        }
+      }
+
+      // Si es un UUID (36 caracteres con guiones)
+      if (/^[0-9a-fA-F-]{36}$/.test(code)) {
+        // Buscar coincidencia en catálogo activo de rampas
+        const found = this.ramps().find(r => r.id === code || r.code === code);
+        if (found) {
+          return found.name || `R-${String(found.rampNumber).padStart(2, '0')}`;
+        }
+        // Buscar en catálogo estándar de rampas
+        const std = STANDARD_WAREHOUSE_RAMPS.find(r => r.id === code || r.code === code);
+        if (std) {
+          return `R-${String(std.rampNumber).padStart(2, '0')}`;
+        }
+      }
+
+      // Si es un texto corto libre legible
+      if (code.length <= 15 && !code.includes('-')) {
+        return code;
+      }
+    }
+
+    return 'Por Asignar';
+  }
+
+  protected readonly filteredInYardPasses = computed(() => {
+    let list = this.inYardPasses();
+    const filter = this.inYardFilter();
+    const search = this.inYardSearch().trim().toLowerCase();
+
+    if (filter === 'IN_MANEUVER') {
+      list = list.filter(p => !p.isReadyForExit);
+    } else if (filter === 'READY_EXIT') {
+      list = list.filter(p => p.isReadyForExit === true);
+    }
+
+    if (search) {
+      list = list.filter(p =>
+        (p.generatedFolio && p.generatedFolio.toLowerCase().includes(search)) ||
+        (p.token && p.token.toLowerCase().includes(search)) ||
+        (p.carrierLine && p.carrierLine.toLowerCase().includes(search)) ||
+        (p.driverName && p.driverName.toLowerCase().includes(search)) ||
+        (p.tractorPlates && p.tractorPlates.toLowerCase().includes(search)) ||
+        (p.boxPlates && p.boxPlates.toLowerCase().includes(search)) ||
+        (p.rampCode && p.rampCode.toLowerCase().includes(search))
+      );
+    }
+
+    return list;
+  });
+
+  protected cleanTunnelUrl(rawUrl: string): string {
+    if (!rawUrl || typeof rawUrl !== 'string') return '';
+    let cleaned = rawUrl.trim();
+    cleaned = cleaned.replace(/[\[\]'"`]/g, '');
+    cleaned = cleaned.replace(/^(https?:\/\/)+/gi, '');
+    cleaned = cleaned.split('/carrier-checkin')[0];
+    cleaned = cleaned.replace(/\/+$/, '');
+    // Auto-corregir extensión desactualizada .ngrok-free.app a la extensión activa .ngrok-free.dev
+    cleaned = cleaned.replace(/\.ngrok-free\.app$/i, '.ngrok-free.dev');
+    if (!cleaned) return '';
+    return `https://${cleaned}`;
+  }
+
+  protected autoDetectNgrok(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 600);
+      fetch('http://127.0.0.1:4040/api/tunnels', { signal: controller.signal })
+        .then(res => res.json())
+        .then(data => {
+          clearTimeout(timeoutId);
+          if (data && data.tunnels && data.tunnels.length > 0) {
+            const publicUrl = data.tunnels[0].public_url;
+            if (publicUrl) {
+              const cleaned = this.cleanTunnelUrl(publicUrl);
+              this.tunnelUrl.set(cleaned);
+              this.tunnelInputUrl.set(cleaned);
+              if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('4g_security_tunnel_url', cleaned);
+              }
+              this.updateQrModalUrl();
+            }
+          }
+        })
+        .catch(() => {
+          clearTimeout(timeoutId);
+          // ngrok no detectado localmente — fallback normal a URL local
+        });
+    } catch (_) {}
+  }
+
+  protected getPublicBaseUrl(): string {
+    // 1. En Producción / Netlify (cualquier host público que no sea localhost):
+    // Usar automáticamente el dominio público de la app sin requerir ngrok ni configuración manual
+    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+      const origin = window.location.origin;
+      const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+      if (!isLocal) {
+        return origin;
+      }
+    }
+
+    // 2. En Desarrollo Local (localhost):
+    // Priorizar el túnel de ngrok activo para permitir pruebas desde dispositivos móviles
+    const localTunnel = this.tunnelUrl();
+    if (localTunnel && localTunnel.trim()) {
+      return this.cleanTunnelUrl(localTunnel);
+    }
+
+    // 3. Fallback: URL pública configurada en environment
+    const envUrl = (environment as any).publicAppUrl;
+    if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+      return this.cleanTunnelUrl(envUrl);
+    }
+
+    // 4. Fallback final local
+    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+      return window.location.origin;
+    }
+    return '';
+  }
+
+  protected getEncodedQrDataUrl(): string {
+    let targetUrl = this.qrModalUrl() || `${this.getPublicBaseUrl()}/carrier-checkin`;
+    if (targetUrl.includes('ngrok') && !targetUrl.includes('ngrok-skip-browser-warning')) {
+      const sep = targetUrl.includes('?') ? '&' : '?';
+      targetUrl = `${targetUrl}${sep}ngrok-skip-browser-warning=true`;
+    }
+    return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&ecc=H&data=${encodeURIComponent(targetUrl)}`;
+  }
+
+  ngOnInit(): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('4g_local_passes');
+      localStorage.removeItem('4g_exited_passes');
+      localStorage.removeItem('4g_deleted_passes');
+      const savedTunnel = localStorage.getItem('4g_security_tunnel_url');
+      if (savedTunnel && savedTunnel.trim()) {
+        const cleaned = this.cleanTunnelUrl(savedTunnel);
+        this.tunnelUrl.set(cleaned);
+        this.tunnelInputUrl.set(cleaned);
+      }
+    }
+
+    this.movementsService.loadInitialBackendData();
+    this.loadPublicCatalogs();
+    this.reloadAllData();
+
+    // Escuchar parámetros de consulta (token o tab) desde notificaciones o links directos
+    this.route.queryParams.subscribe(params => {
+      const tab = params['tab'];
+      if ((tab === 'IN_YARD' || tab === 'HISTORY' || tab === 'REGISTRATION') && this.activeTab() !== tab) {
+        this.setTab(tab);
+      }
+      const token = params['token'] || params['folio'];
+      if (token && token !== this.lastHandledToken) {
+        this.lastHandledToken = token;
+        this.handleIncomingPassToken(token);
+      }
+    });
+
+    // Auto-refresco en tiempo real silencioso (no bloqueante y sin destruir el DOM ni el scroll)
+    this.refreshIntervalId = setInterval(() => {
+      this.reloadActivePasses();
+      this.reloadInYardPasses(true);
+      if (this.activeTab() === 'HISTORY') {
+        this.reloadHistoryPasses(true);
+      }
+    }, 5000);
+
+    // Auto-detección reactiva con debounce de retornos al escribir No. de Remisión / Documento
+    this.checkInForm.get('remision')?.valueChanges.pipe(
+      debounceTime(350),
+      distinctUntilChanged()
+    ).subscribe(val => {
+      if (!val || val.trim().length < 3) {
+        this.detectedReturn.set(null);
+        return;
+      }
+      this.isDetectingReturn.set(true);
+      this.movementsService.movementsApi.detectReturn(val.trim()).subscribe({
+        next: (res) => {
+          this.isDetectingReturn.set(false);
+          if (res && res.isReturn) {
+            this.detectedReturn.set(res);
+            this.toast.info(`⚡ Retorno detectado para remisión '${val}': Corresponde a salida #${res.sourceOutboundFolio}`);
+          } else {
+            this.detectedReturn.set(null);
+          }
+        },
+        error: () => {
+          this.isDetectingReturn.set(false);
+          this.detectedReturn.set(null);
+        }
+      });
+    });
+
+    this.setupUppercaseTransform();
+  }
+
+  private setupUppercaseTransform(): void {
+    const textFields = [
+      'noCartaPorte',
+      'remision',
+      'client',
+      'clientNameCustom',
+      'carrierLine',
+      'carrierLineCustom',
+      'nombreOperador',
+      'placasTracto',
+      'noEcoTractor',
+      'placasCaja',
+      'noEcoCaja',
+      'noSello',
+      'tipoTransporte',
+      'medidasCaja',
+      'eppZapatosObs',
+      'eppCofiaObs',
+      'eppCubrebocasObs',
+      'eppChalecoObs',
+      'docCartaPorteObs',
+      'docRemisionObs',
+      'revInteriorCajaObs',
+      'revDanosCajaObs',
+      'revDanosPuertasObs',
+      'revOloresExtranosObs',
+      'revIndiciosPlagasObs',
+      'responsableVigilanciaNombre',
+      'transportistaNombre'
+    ];
+
+    for (const field of textFields) {
+      const ctrl = this.checkInForm.get(field);
+      if (ctrl) {
+        ctrl.valueChanges.subscribe((val) => {
+          if (typeof val === 'string' && val !== val.toUpperCase()) {
+            ctrl.setValue(val.toUpperCase(), { emitEvent: false });
+          }
+        });
+      }
+    }
+  }
+
+  protected applyDetectedReturn(ret: ReturnDetectionResponse): void {
+    if (!ret) return;
+    this.checkInForm.patchValue({
+      client: ret.clientName || this.checkInForm.value.client,
+      clientCode: ret.clientId || this.checkInForm.value.clientCode,
+      carrierLine: ret.carrierName || this.checkInForm.value.carrierLine,
+      carrierLineCode: ret.carrierId || this.checkInForm.value.carrierLineCode,
+      nombreOperador: ret.driverName || this.checkInForm.value.nombreOperador,
+      placasTracto: ret.tractorPlates || this.checkInForm.value.placasTracto,
+      placasCaja: ret.boxPlates || this.checkInForm.value.placasCaja,
+      remision: ret.remisionNo || this.checkInForm.value.remision,
+      operacion: 'DESCARGA',
+    });
+    this.toast.success(`Datos del retorno #${ret.sourceOutboundFolio} aplicados al pase de caseta.`);
+  }
+
+  ngOnDestroy(): void {
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
+    }
+  }
+
+  protected loadPublicCatalogs(): void {
+    this.movementsService.movementsApi.getPublicCatalogs().subscribe({
+      next: (data) => {
+        if (data) {
+          if (data.transportTypes && data.transportTypes.length > 0) {
+            this.transportTypesList.set(data.transportTypes);
+          }
+          if (data.boxDimensions && data.boxDimensions.length > 0) {
+            this.boxDimensionsList.set(data.boxDimensions);
+          }
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  // ── Scroll Automático al Inicio de la Página ──────────────────────────────
+  protected scrollToTop(): void {
+    const doScroll = () => {
+      // 1. Contenedor principal con scroll de la Shell (#main-content / .shell__content)
+      const mainContent = document.getElementById('main-content') || document.querySelector('.shell__content');
+      if (mainContent) {
+        mainContent.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        mainContent.scrollTop = 0;
+      }
+
+      // 2. Anclaje de la cabecera del módulo de caseta
+      const pageTop = document.getElementById('security-page-top') || document.querySelector('.security-header') || document.querySelector('.security-page');
+      if (pageTop && typeof pageTop.scrollIntoView === 'function') {
+        pageTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      // 3. Fallbacks del navegador para window, documentElement y body
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      if (document.documentElement) {
+        document.documentElement.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        document.documentElement.scrollTop = 0;
+      }
+      if (document.body) {
+        document.body.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        document.body.scrollTop = 0;
+      }
+    };
+
+    doScroll();
+    setTimeout(doScroll, 80);
+    setTimeout(doScroll, 220);
+  }
+
+  // ── Cambio de Pestaña ─────────────────────────────────────────────────────
+  protected setTab(tab: SecurityGateTab): void {
+    if (this.activeTab() === tab) {
+      return;
+    }
+    this.activeTab.set(tab);
+    if (tab === 'IN_YARD') {
+      this.reloadInYardPasses(true);
+      this.reloadHistoryPasses(true);
+    } else if (tab === 'HISTORY') {
+      this.reloadHistoryPasses(false);
+    } else {
+      this.reloadActivePasses();
+    }
+  }
+
+  protected reloadAllData(): void {
+    this.movementsService.reloadReceptions();
+    this.reloadActivePasses();
+    this.reloadInYardPasses(true);
+    this.reloadHistoryPasses(true);
+  }
+
+  // ── REGLA DE NEGOCIO DINÁMICA: CARGA vs DESCARGA ───────────────────────────
+  protected onOperationChange(val: 'CARGA' | 'DESCARGA'): void {
+    this.checkInForm.patchValue({ operacion: val });
+
+    const cartaControl = this.checkInForm.get('noCartaPorte');
+    const remisionControl = this.checkInForm.get('remision');
+
+    if (val === 'CARGA') {
+      cartaControl?.setValidators([Validators.required]);
+      remisionControl?.clearValidators();
+      this.checkInForm.patchValue({
+        procedimiento: 'Embarque',
+        docCartaPorte: 'SI',
+        docCartaPorteObs: '',
+        docRemision: 'NO',
+        docRemisionObs: 'N/A - Operación de Carga/Embarque',
+        noSello: 'PENDIENTE_ANDEN'
+      });
+      this.sealList.set(['PENDIENTE_ANDEN']);
+      this.tempSealInput.set('');
+    } else {
+      remisionControl?.setValidators([Validators.required]);
+      cartaControl?.clearValidators();
+      this.checkInForm.patchValue({
+        procedimiento: 'Recepción',
+        docRemision: 'SI',
+        docRemisionObs: '',
+        docCartaPorte: 'NO',
+        docCartaPorteObs: 'N/A - Operación de Descarga/Recepción',
+        noSello: ''
+      });
+      if (this.sealList().some(s => s === 'PENDIENTE_ANDEN')) {
+        this.sealList.set([]);
+      }
+    }
+
+    cartaControl?.updateValueAndValidity();
+    remisionControl?.updateValueAndValidity();
+  }
+
+  protected getQrBaseUrl(): string {
+    return this.getPublicBaseUrl();
+  }
+
+  protected updateQrModalUrl(): void {
+    const token = this.qrModalToken();
+    const baseUrl = this.getPublicBaseUrl();
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
+    if (token && token !== 'PORTAL-DIRECTO') {
+      this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}&${orgQuery}`);
+    } else {
+      this.qrModalUrl.set(`${baseUrl}/carrier-checkin?${orgQuery}`);
+    }
+  }
+
+  protected saveTunnelUrl(): void {
+    const raw = (this.tunnelInputUrl() || '').trim();
+    if (raw) {
+      const cleaned = this.cleanTunnelUrl(raw);
+      this.tunnelUrl.set(cleaned);
+      this.tunnelInputUrl.set(cleaned);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('4g_security_tunnel_url', cleaned);
+      }
+      this.toast.success('URL de túnel ngrok configurada correctamente');
+      this.updateQrModalUrl();
+    }
+  }
+
+  protected clearTunnelUrl(): void {
+    this.tunnelUrl.set('');
+    this.tunnelInputUrl.set('');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('4g_security_tunnel_url');
+    }
+    this.toast.info('Se restableció la URL base por defecto');
+    this.updateQrModalUrl();
+  }
+
+  // ── GENERACIÓN DE PASE QR DINÁMICO PARA CHOFER ─────────────────────────────
+  protected generateDriverPass(): void {
+    this.isGeneratingPass.set(true);
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const formVal = this.checkInForm.value;
+
+    const payload = {
+      organizationId: session.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
+      branchId: session.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
+      operationType: formVal.operacion || 'DESCARGA',
+      clientCode: formVal.clientCode || '',
+      clientName: formVal.client || '',
+      carrierLineCode: formVal.carrierLineCode || '',
+      carrierLine: formVal.carrierLine || '',
+      driverName: formVal.nombreOperador || '',
+      tractorPlates: formVal.placasTracto || '',
+      docNumber: formVal.operacion === 'CARGA' ? formVal.noCartaPorte : formVal.remision,
+    };
+
+    this.movementsService.movementsApi.generatePass(payload).subscribe({
+      next: (res: any) => {
+        this.isGeneratingPass.set(false);
+        const token = res.token || res.generatedFolio || ('PASS-4G-' + Date.now());
+        this.qrModalToken.set(token);
+        const baseUrl = this.getPublicBaseUrl();
+        const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}&${orgQuery}`);
+        this.showQrModal.set(true);
+        this.reloadActivePasses();
+      },
+      error: () => {
+        this.isGeneratingPass.set(false);
+        const fallbackToken = 'PASS-4G-' + Date.now();
+        this.qrModalToken.set(fallbackToken);
+        const baseUrl = this.getPublicBaseUrl();
+        const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${fallbackToken}&${orgQuery}`);
+        this.showQrModal.set(true);
+        this.reloadActivePasses();
+      }
+    });
+  }
+
+  protected copyQrUrl(): void {
+    if (this.qrModalUrl()) {
+      navigator.clipboard.writeText(this.qrModalUrl()).then(() => {
+        this.copyNotice.set('¡Enlace copiado al portapapeles!');
+        setTimeout(() => this.copyNotice.set(null), 3000);
+      });
+    }
+  }
+
+  protected openDriverPortalInNewTab(): void {
+    if (this.qrModalUrl()) {
+      window.open(this.qrModalUrl(), '_blank');
+    }
+  }
+
+  protected reloadActivePasses(): void {
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const role = (this.authState.role() || '').toUpperCase();
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const branchToQuery = isAdminOrManager ? undefined : session.branchId;
+
+    this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: branchToQuery }).subscribe({
+      next: (passes) => {
+        this.updateActivePasses(passes || []);
+      },
+      error: () => {
+        this.updateActivePasses([]);
+      }
+    });
+  }
+
+  private updateActivePasses(backendPasses: any[]): void {
+    const cleanList = backendPasses || [];
+    this.activePasses.set(cleanList);
+    this.smartNotification.updateSubmittedDriverPasses(cleanList);
+
+    // Detectar y notificar en vivo cuando un pase cambia a SUBMITTED
+    for (const p of cleanList) {
+      if (p && p.status === 'SUBMITTED' && p.token && !this.notifiedSubmittedTokens.has(p.token)) {
+        this.notifiedSubmittedTokens.add(p.token);
+        this.playCheckinChime();
+        this.smartNotification.openDropdown();
+
+        const chofer = p.driverName || p.nombreOperador || 'Transportista';
+        const unidad = p.tractorPlates || p.placasTracto || p.placasUnidad || 'Unidad';
+        this.toast.success(`🔔 ¡Registro recibido en Caseta! ${chofer} (${unidad}) completó el Pase #${p.token}.`);
+      }
+    }
+  }
+
+  protected reloadInYardPasses(silent: boolean = false): void {
+    if (!silent && this.backendInYardPasses().length === 0) {
+      this.isLoadingInYard.set(true);
+    }
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const role = (this.authState.role() || '').toUpperCase();
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const branchToQuery = isAdminOrManager ? undefined : session.branchId;
+
+    this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: branchToQuery }).subscribe({
+      next: (passes) => {
+        this.isLoadingInYard.set(false);
+        this.backendInYardPasses.set(passes || []);
+      },
+      error: () => {
+        this.isLoadingInYard.set(false);
+        this.backendInYardPasses.set([]);
+      }
+    });
+  }
+
+  protected reloadHistoryPasses(silent: boolean = false): void {
+    if (!silent && this.historyPasses().length === 0) {
+      this.isLoadingHistory.set(true);
+    }
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const role = (this.authState.role() || '').toUpperCase();
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const branchToQuery = isAdminOrManager ? undefined : session.branchId;
+
+    this.movementsService.movementsApi.getPassHistory({
+      organizationId: session.organizationId,
+      branchId: branchToQuery,
+      search: this.historySearch()
+    }).subscribe({
+      next: (passes) => {
+        this.isLoadingHistory.set(false);
+        const exitOnly = (passes || []).filter(p => p.status === 'COMPLETED_EXIT');
+        this.historyPasses.set(exitOnly);
+      },
+      error: () => {
+        this.isLoadingHistory.set(false);
+      }
+    });
+  }
+
+  private normalizeSearchStr(str: string): string {
+    return (str || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\b(s\.?a\.?|d\.?e\.?|c\.?v\.?|s\.?r\.?l\.?|de|del|los|las|la|el)\b/gi, '')
+      .replace(/[^a-z0-9]/g, '')
+      .trim();
+  }
+
+  protected handleIncomingPassToken(token: string): void {
+    if (!token) return;
+    const cleanToken = token.trim();
+
+    // 1. Si ya se solicitó un pase directamente por signal, procesarlo
+    const requested = this.smartNotification.requestedPassToLoad();
+    if (requested && (requested.token === cleanToken || requested.id === cleanToken)) {
+      this.setTab('REGISTRATION');
+      this.loadDriverSubmission(requested);
+      this.smartNotification.clearRequestedPassToLoad();
+      return;
+    }
+
+    // 2. Buscar en activePasses locales en memoria
+    const foundInActive = this.activePasses().find(p => p.token === cleanToken || p.id === cleanToken);
+    if (foundInActive) {
+      this.setTab('REGISTRATION');
+      this.loadDriverSubmission(foundInActive);
+      return;
+    }
+
+    // 3. Buscar en pendingDriverPasses de smartNotification
+    const foundInPending = this.smartNotification.pendingDriverPasses().find(p => p.token === cleanToken || p.id === cleanToken);
+    if (foundInPending) {
+      this.setTab('REGISTRATION');
+      this.loadDriverSubmission(foundInPending);
+      return;
+    }
+
+    // 4. Cargar desde el backend consultando el pase directamente por Token
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    this.movementsService.movementsApi.getPublicPass(cleanToken).subscribe({
+      next: (pass) => {
+        if (pass) {
+          this.setTab('REGISTRATION');
+          this.loadDriverSubmission(pass);
+          return;
+        }
+        // Fallback en lista activa de la organización
+        this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId }).subscribe({
+          next: (passes) => {
+            const match = (passes || []).find(p => p.token === cleanToken || p.id === cleanToken);
+            if (match) {
+              this.setTab('REGISTRATION');
+              this.loadDriverSubmission(match);
+            }
+          }
+        });
+      },
+      error: () => {
+        this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId }).subscribe({
+          next: (passes) => {
+            const match = (passes || []).find(p => p.token === cleanToken || p.id === cleanToken);
+            if (match) {
+              this.setTab('REGISTRATION');
+              this.loadDriverSubmission(match);
+            }
+          }
+        });
+      }
+    });
+  }
+
+  protected loadDriverSubmission(pass: any): void {
+    if (!pass) return;
+
+    this.activeTab.set('REGISTRATION');
+    const passData = { ...pass };
+
+    // Limpiar formulario previo
+    this.resetFormFieldsOnly();
+    this.activeToken.set(passData.token || passData.id);
+    this.activeDriverSignature.set(passData.driverSignature || null);
+    this.activeDriverSignedAt.set(passData.driverSignedAt ? String(passData.driverSignedAt) : null);
+
+    // Tipo de Operación
+    const opVal = (passData.operationType || passData.operacion || 'DESCARGA').toUpperCase();
+    this.onOperationChange(opVal as 'CARGA' | 'DESCARGA');
+
+    // 4. Extraer valores del pase
+    const driverNameVal     = passData.driverName     || passData.nombreOperador  || passData.operatorName   || passData.driver_name  || '';
+    const tractorPlatesVal  = passData.tractorPlates  || passData.placasTracto    || passData.truckPlates    || passData.plates        || '';
+    const boxPlatesVal      = passData.boxPlates      || passData.placasCaja      || passData.trailerPlates  || '';
+    const boxDimensionsVal  = passData.boxDimensions  || passData.medidasCaja     || passData.boxSize        || '53 Pies';
+    const transportTypeVal  = passData.transportType  || passData.tipoTransporte  || passData.vehicleType    || 'Tráiler';
+    const ecoNumberVal      = passData.noEcoTractor || '';
+    const boxEcoVal         = passData.noEcoCaja || '';
+    const docNumberVal      = passData.docNumber      || passData.remision        || passData.noCartaPorte   || '';
+    const isSubmitted       = passData.status === 'SUBMITTED';
+
+    // 5. Resolver Cliente en el catálogo
+    const rawClientCode = (passData.clientCode || '').trim();
+    const rawClientName = (passData.clientName || passData.client || '').trim();
+    let matchedClientCode = '';
+    let matchedClientName = '';
+    let matchedClientCustom = '';
+
+    if (rawClientCode || rawClientName) {
+      const allClients = this.clients().length > 0 ? this.clients() : STANDARD_CLIENTS;
+
+      // 1. Coincidencia exacta por código o ID
+      let foundClient = allClients.find(c =>
+        rawClientCode && (c.code === rawClientCode || (c as any).id === rawClientCode)
+      );
+
+      // 2. Coincidencia exacta por nombre (case-insensitive)
+      if (!foundClient && rawClientName) {
+        foundClient = allClients.find(c =>
+          c.name.trim().toLowerCase() === rawClientName.toLowerCase()
+        );
+      }
+
+      // 3. Coincidencia normalizada
+      if (!foundClient) {
+        const normInputCode = this.normalizeSearchStr(rawClientCode);
+        const normInputName = this.normalizeSearchStr(rawClientName);
+
+        foundClient = allClients.find(c => {
+          const normCCode = this.normalizeSearchStr(c.code);
+          const normCName = this.normalizeSearchStr(c.name);
+
+          if (normInputCode && normCCode && normInputCode === normCCode) return true;
+          if (normInputName && normCName && (normCName === normInputName || normCName.includes(normInputName) || normInputName.includes(normCName))) return true;
+          return false;
+        });
+      }
+
+      if (foundClient) {
+        matchedClientCode = foundClient.code;
+        matchedClientName = foundClient.name;
+        matchedClientCustom = '';
+        if (!this.clients().some(c => c.code === foundClient.code)) {
+          this.movementsService.addClient({ code: foundClient.code, name: foundClient.name });
+        }
+      } else {
+        matchedClientCode = 'OTRO';
+        matchedClientName = rawClientName || rawClientCode;
+        matchedClientCustom = rawClientName || rawClientCode;
+      }
+    }
+
+    // 6. Resolver Línea Transportista en el catálogo
+    const rawCarrierCode = (passData.carrierLineCode || '').trim();
+    const rawCarrierName = (passData.carrierLine || passData.carrier || passData.carrierName || '').trim();
+    let matchedCarrierCode = '';
+    let matchedCarrierName = '';
+    let matchedCarrierCustom = '';
+
+    if (rawCarrierCode || rawCarrierName) {
+      const allCarriers = this.carrierLines().length > 0 ? this.carrierLines() : STANDARD_CARRIERS;
+
+      // 1. Coincidencia exacta por código o ID
+      let foundCarrier = allCarriers.find(c =>
+        rawCarrierCode && (c.code === rawCarrierCode || (c as any).id === rawCarrierCode)
+      );
+
+      // 2. Coincidencia exacta por nombre (case-insensitive)
+      if (!foundCarrier && rawCarrierName) {
+        foundCarrier = allCarriers.find(c =>
+          c.name.trim().toLowerCase() === rawCarrierName.toLowerCase()
+        );
+      }
+
+      // 3. Coincidencia normalizada
+      if (!foundCarrier) {
+        const normInputCode = this.normalizeSearchStr(rawCarrierCode);
+        const normInputName = this.normalizeSearchStr(rawCarrierName);
+
+        foundCarrier = allCarriers.find(c => {
+          const normCCode = this.normalizeSearchStr(c.code);
+          const normCName = this.normalizeSearchStr(c.name);
+
+          if (normInputCode && normCCode && normInputCode === normCCode) return true;
+          if (normInputName && normCName && (normCName === normInputName || normCName.includes(normInputName) || normInputName.includes(normCName))) return true;
+          return false;
+        });
+      }
+
+      if (foundCarrier) {
+        matchedCarrierCode = foundCarrier.code;
+        matchedCarrierName = foundCarrier.name;
+        matchedCarrierCustom = '';
+        if (!this.carrierLines().some(c => c.code === foundCarrier.code)) {
+          this.movementsService.addCarrierLine({ code: foundCarrier.code, name: foundCarrier.name });
+        }
+      } else {
+        matchedCarrierCode = 'OTRO';
+        matchedCarrierName = rawCarrierName || rawCarrierCode;
+        matchedCarrierCustom = rawCarrierName || rawCarrierCode;
+      }
+    }
+
+    // 7. Resolver Tipo de Transporte y Medidas si vienen personalizados
+    if (transportTypeVal && !this.transportTypesList().includes(transportTypeVal)) {
+      this.transportTypesList.update(list => [...list.filter(x => x !== 'Otro (Especificar)'), transportTypeVal, 'Otro (Especificar)']);
+    }
+    if (boxDimensionsVal && !this.boxDimensionsList().includes(boxDimensionsVal)) {
+      this.boxDimensionsList.update(list => [...list.filter(x => x !== 'Otra Medida'), boxDimensionsVal, 'Otra Medida']);
+    }
+
+    // 8. Poblar formulario del guardia con datos del chofer al 100%
+    this.checkInForm.patchValue({
+      clientCode:          matchedClientCode || 'OTRO',
+      client:              matchedClientName || rawClientName,
+      clientNameCustom:    matchedClientCode === 'OTRO' ? (matchedClientCustom || rawClientName) : '',
+      carrierLineCode:     matchedCarrierCode || 'OTRO',
+      carrierLine:         matchedCarrierName || rawCarrierName,
+      carrierLineCustom:   matchedCarrierCode === 'OTRO' ? (matchedCarrierCustom || rawCarrierName) : '',
+      nombreOperador:      driverNameVal,
+      driverPhone:         passData.driverPhone || passData.telefonoChofer || passData.telefonoOperador || passData.phone || '',
+      placasTracto:        tractorPlatesVal,
+      noEcoTractor:        ecoNumberVal,
+      placasCaja:          boxPlatesVal,
+      noEcoCaja:           boxEcoVal,
+      medidasCaja:         boxDimensionsVal,
+      tipoTransporte:      transportTypeVal,
+      transportistaNombre: driverNameVal,
+      transportistaFirma:  true,
+      // 5 Puntos de Inspección Física con valores de CUMPLE por defecto
+      revInteriorCaja:     'SI',
+      revInteriorCajaObs:  '',
+      revDanosCaja:        'NO',
+      revDanosCajaObs:     '',
+      revDanosPuertas:     'NO',
+      revDanosPuertasObs:  '',
+      revOloresExtranos:   'NO',
+      revOloresExtranosObs:'',
+      revIndiciosPlagas:   'NO',
+      revIndiciosPlagasObs:'',
+      // EPP
+      eppZapatos:          'SI',
+      eppZapatosObs:       '',
+      eppCofia:            'SI',
+      eppCofiaObs:         '',
+      eppCubrebocas:       'SI',
+      eppCubrebocasObs:    '',
+      eppChaleco:          'SI',
+      eppChalecoObs:       '',
+      // Responsable Vigilancia
+      responsableVigilanciaNombre: this.checkInForm.get('responsableVigilanciaNombre')?.value || this.getLoggedGuardName(),
+      responsableVigilanciaFirma: true,
+      rampCode:            '',
+      rampNumber:          null
+    });
+
+    if (docNumberVal) {
+      if (opVal === 'CARGA') {
+        this.checkInForm.patchValue({
+          noCartaPorte: docNumberVal,
+          docCartaPorte: 'SI',
+          docCartaPorteObs: ''
+        });
+      } else {
+        this.checkInForm.patchValue({
+          remision: docNumberVal,
+          docRemision: 'SI',
+          docRemisionObs: ''
+        });
+      }
+    }
+
+    // 9. Sellos de seguridad
+    if (opVal === 'CARGA') {
+      this.sealList.set(['PENDIENTE_ANDEN']);
+      this.checkInForm.patchValue({ noSello: 'PENDIENTE_ANDEN' });
+    } else if (passData.sealNumbers && Array.isArray(passData.sealNumbers) && passData.sealNumbers.length > 0 && !passData.sealNumbers[0].includes('N/A')) {
+      this.sealList.set(passData.sealNumbers);
+      this.checkInForm.patchValue({ noSello: passData.sealNumbers[0] });
+    } else if (passData.sealNumber || passData.noSello) {
+      const s = passData.sealNumber || passData.noSello;
+      this.sealList.set([s]);
+      this.checkInForm.patchValue({ noSello: s });
+    } else {
+      this.sealList.set([]);
+    }
+
+    // 10. Toast de confirmación y cerrar panel
+    this.showPassListModal.set(false);
+    if (isSubmitted) {
+      this.toast.success(`¡Todos los datos del Chofer (${driverNameVal || 'Transportista'}) fueron cargados en Caseta!`);
+    } else {
+      this.toast.info(`Pase #${passData.token} vinculado. Puedes completar los campos pendientes manualmente.`);
+    }
+
+    // 11. Desplazar suavemente a la Sección 1 del formulario para que el guardia visualice todo
+    this.scrollToFormSection('form-step-1', 'STEP1');
+  }
+
+  // ── MÉTODOS DEL MODAL DE QR (ESTÁTICO PERMANENTE POR DEFECTO) ─────────────
+  protected openPassQr(pass: any, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (!pass || !pass.token) return;
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
+    this.qrModalToken.set(pass.token);
+    this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${pass.token}&view=pass&${orgQuery}`);
+    this.showQrModal.set(true);
+  }
+
+  protected openQrModal(): void {
+    const baseUrl = this.getPublicBaseUrl();
+    const session = this.movementsService.movementsApi.getSessionOrg();
+    const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
+    // Código QR permanente y estático por defecto apuntando a /carrier-checkin con contexto de sucursal
+    this.qrModalToken.set('PORTAL-DIRECTO');
+    this.qrModalUrl.set(`${baseUrl}/carrier-checkin?${orgQuery}`);
+    this.showQrModal.set(true);
+  }
+
+  protected generateNewDriverPass(): void {
+    this.generateDriverPass();
+  }
+
+  protected closeQrModal(): void {
+    this.showQrModal.set(false);
+  }
+
+  protected discardCurrentQrPass(): void {
+    const currentToken = this.qrModalToken();
+    const found = this.activePasses().find(p => p.token === currentToken);
+    if (found) {
+      this.deleteDriverPass(found);
+    } else if (currentToken) {
+      this.movementsService.movementsApi.deletePass(currentToken, currentToken).subscribe();
+      if (this.activeToken() === currentToken) {
+        this.resetForm();
+      }
+    }
+    this.qrModalUrl.set('');
+    this.qrModalToken.set('');
+    this.closeQrModal();
+  }
+
+  protected deleteDriverPass(pass: any, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (!pass) return;
+
+    const passId = pass.id || pass.token;
+    const passToken = pass.token || pass.id;
+
+    // Si el pase que se está eliminando es el que actualmente está cargado en caseta, limpiar el formulario
+    if (this.activeToken() === passToken || this.activeToken() === passId) {
+      this.resetForm();
+    }
+
+    this.movementsService.movementsApi.deletePass(passId, passToken).subscribe({
+      next: () => {
+        this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
+        if (this.qrModalToken() === passToken) {
+          this.qrModalUrl.set('');
+          this.qrModalToken.set('');
+        }
+        this.toast.info(`Pase #${passToken} descartado.`);
+      },
+      error: () => {
+        this.activePasses.update(list => list.filter(p => p.id !== passId && p.token !== passToken));
+        if (this.qrModalToken() === passToken) {
+          this.qrModalUrl.set('');
+          this.qrModalToken.set('');
+        }
+        this.toast.info(`Pase #${passToken} descartado.`);
+      }
+    });
+  }
+
+  // ── CHECK-OUT / SALIDA DE CASETA ──────────────────────────────────────────
+  protected openCheckOutModal(pass: any): void {
+    if (!pass) return;
+    if (!pass.isReadyForExit) {
+      this.toast.warning('Esta unidad aún se encuentra en proceso de maniobra/descarga en almacén. Requiere que Almacén autorice y finalice la recepción antes del Check-Out.');
+      return;
+    }
+    this.selectedCheckOutPass.set(pass);
+
+    const isCancelled = pass.status === 'CANCELLED' || pass.warehouseStatus === 'CANCELLED';
+    const reason = pass.cancellationReason || 'Cancelación de operación / Rechazo';
+    const defaultObs = isCancelled
+      ? `Salida autorizada por cancelación de folio. Motivo: ${reason}`
+      : '';
+
+    this.checkOutForm.reset({
+      departureTime: this.getCurrentTimeString(),
+      exitSealNumbers: '',
+      exitObservations: defaultObs,
+      guardNotes: isCancelled ? `Folio Cancelado: ${reason}` : ''
+    });
+    this.showCheckOutModal.set(true);
+  }
+
+  protected closeCheckOutModal(): void {
+    this.showCheckOutModal.set(false);
+    this.selectedCheckOutPass.set(null);
+  }
+
+  protected confirmCheckOut(): void {
+    const pass = this.selectedCheckOutPass();
+    if (!pass) return;
+
+    this.isCheckingOut.set(true);
+    const formVal = this.checkOutForm.value;
+
+    const exitSeals: string[] = formVal.exitSealNumbers
+      ? formVal.exitSealNumbers.split(',').map((s: string) => s.trim().toUpperCase()).filter((s: string) => s.length > 0)
+      : [];
+
+    const payload = {
+      departureTime: formVal.departureTime || this.getCurrentTimeString(),
+      exitObservations: formVal.exitObservations || 'Salida en orden y autorizada por caseta',
+      exitSealNumbers: exitSeals,
+      guardNotes: formVal.guardNotes
+    };
+
+    const token = pass.token || pass.generatedFolio;
+
+    this.movementsService.movementsApi.checkOutPass(token, payload).subscribe({
+      next: (res) => {
+        this.isCheckingOut.set(false);
+        this.closeCheckOutModal();
+        this.reloadAllData();
+        this.toast.success(`¡Salida de unidad (${pass.tractorPlates || pass.driverName}) registrada con éxito a las ${payload.departureTime}!`);
+        this.scrollToTop();
+
+        // Abrir inmediatamente la vista de impresión del Formato F01
+        this.openF01Print(res || pass);
+      },
+      error: (err) => {
+        this.isCheckingOut.set(false);
+        this.toast.error(err?.error?.message || 'Error al procesar la salida en el servidor.');
+      }
+    });
+  }
+
+  // ── IMPRESIÓN Y DESCARGA FORMATO F01 ──────────────────────────────────────
+  protected openF01Print(item: any): void {
+    if (!item) return;
+
+    const formVal = this.checkInForm.value;
+
+    let epp: any = {};
+    let caja: any = {};
+    if (item.checklistData) {
+      try {
+        const parsed = typeof item.checklistData === 'string' ? JSON.parse(item.checklistData) : item.checklistData;
+        epp = parsed.epp || {};
+        caja = parsed.caja || {};
+      } catch {}
+    }
+
+    const op = item.operacion || item.operationType || formVal.operacion || 'DESCARGA';
+    const docNo = item.remision || item.noCartaPorte || item.docNumber || (op === 'CARGA' ? formVal.noCartaPorte : formVal.remision) || '';
+    const tractor = item.placasTracto || item.tractorPlates || formVal.placasTracto || '-';
+    const box = item.placasCaja || item.boxPlates || formVal.placasCaja || '-';
+    const driver = item.nombreOperador || item.driverName || item.transportistaNombre || formVal.nombreOperador || formVal.transportistaNombre || 'OPERADOR CHOFER';
+    const carrier = item.carrierLine || item.carrierLineCode || formVal.carrierLine || 'TRANSPORTE GENERAL';
+    const client = item.client || item.clientName || formVal.client || 'CLIENTE GENERAL';
+    const eco = item.noEcoTractor || formVal.noEcoTractor || '-';
+    const dimensions = item.medidasCaja || item.boxDimensions || formVal.medidasCaja || '53 Pies';
+    const transType = item.tipoTransporte || item.transportType || formVal.tipoTransporte || 'Caja Seca';
+    const ramp = item.rampCode || (item.rampNumber ? `R-${item.rampNumber}` : (formVal.rampCode || (formVal.rampNumber ? `R-${formVal.rampNumber}` : 'R-01')));
+    const dateVal = item.fecha || item.docDate ? String(item.fecha || item.docDate) : this.getCurrentDateString();
+    const inTime = this.formatTimeString(item.horaEntrada || item.receptionTime || this.getCurrentTimeString());
+    const outTime = this.formatTimeString(item.horaSalida || item.departureTime || '');
+
+    let sealsString = '-';
+    if (item.sealNumbers && (Array.isArray(item.sealNumbers) ? item.sealNumbers.length > 0 : String(item.sealNumbers).trim().length > 0)) {
+      sealsString = Array.isArray(item.sealNumbers) ? item.sealNumbers.join(', ') : String(item.sealNumbers);
+    } else if (this.sealList().length > 0) {
+      sealsString = this.sealList().join(', ');
+    } else if (item.noSello || formVal.noSello) {
+      sealsString = item.noSello || formVal.noSello;
+    }
+
+    const printData: TransportChecklistPrintData = {
+      controlNumber: 'F01-PO-CP-7.1.3-03',
+      revisionNumber: '01',
+      revisionDate: '19/08/2025',
+      emissionDate: '19/08/2025',
+      processOwner: 'Seguridad Patrimonial',
+      elaboratedBy: 'Seguridad Patrimonial',
+      reviewedBy: 'Control de Gestión',
+      approvedBy: 'Dirección General',
+
+      fecha: dateVal,
+      noCartaPorte: op === 'CARGA' ? docNo : (item.noCartaPorte || formVal.noCartaPorte || ''),
+      remision: op === 'DESCARGA' ? docNo : (item.remision || formVal.remision || ''),
+      cliente: client,
+      procedimiento: op === 'CARGA' ? 'Embarque' : 'Recepción',
+      operacion: op as 'CARGA' | 'DESCARGA',
+      horaEntrada: inTime,
+      horaSalida: outTime,
+
+      lineaTransporte: carrier,
+      nombreOperador: driver,
+      noRampa: ramp,
+      placasTracto: tractor,
+      noEcoTractor: eco,
+      placasCaja: box,
+      medidasCaja: dimensions,
+      noSello: sealsString,
+      tipoTransporte: transType,
+
+      eppZapatos: epp.zapatos || item.eppZapatos || formVal.eppZapatos || 'SI',
+      eppZapatosObs: item.eppZapatosObs || formVal.eppZapatosObs || '',
+      eppCofia: epp.cofia || item.eppCofia || formVal.eppCofia || 'SI',
+      eppCofiaObs: item.eppCofiaObs || formVal.eppCofiaObs || '',
+      eppCubrebocas: epp.cubrebocas || item.eppCubrebocas || formVal.eppCubrebocas || 'SI',
+      eppCubrebocasObs: item.eppCubrebocasObs || formVal.eppCubrebocasObs || '',
+      eppChaleco: epp.chaleco || item.eppChaleco || formVal.eppChaleco || 'SI',
+      eppChalecoObs: item.eppChalecoObs || formVal.eppChalecoObs || '',
+
+      docCartaPorte: item.docCartaPorte || formVal.docCartaPorte || 'SI',
+      docCartaPorteObs: item.docCartaPorteObs || formVal.docCartaPorteObs || '',
+      docRemision: item.docRemision || formVal.docRemision || 'SI',
+      docRemisionObs: item.docRemisionObs || formVal.docRemisionObs || '',
+
+      revInteriorCaja: caja.interior || item.revInteriorCaja || formVal.revInteriorCaja || 'SI',
+      revInteriorCajaObs: item.revInteriorCajaObs || formVal.revInteriorCajaObs || '',
+      revDanosCaja: caja.danos || item.revDanosCaja || formVal.revDanosCaja || 'NO',
+      revDanosCajaObs: item.revDanosCajaObs || formVal.revDanosCajaObs || '',
+      revDanosPuertas: caja.puertas || item.revDanosPuertas || formVal.revDanosPuertas || 'NO',
+      revDanosPuertasObs: item.revDanosPuertasObs || formVal.revDanosPuertasObs || '',
+      revOloresExtranos: caja.olores || item.revOloresExtranos || formVal.revOloresExtranos || 'NO',
+      revOloresExtranosObs: item.revOloresExtranosObs || formVal.revOloresExtranosObs || '',
+      revIndiciosPlagas: caja.plagas || item.revIndiciosPlagas || formVal.revIndiciosPlagas || 'NO',
+      revIndiciosPlagasObs: item.revIndiciosPlagasObs || formVal.revIndiciosPlagasObs || '',
+
+      responsableVigilanciaNombre: item.responsableVigilanciaNombre || item.processedBy || formVal.responsableVigilanciaNombre || this.getLoggedGuardName(),
+      responsableVigilanciaFirma: true,
+      transportistaNombre: item.transportistaNombre || item.driverName || item.nombreOperador || formVal.transportistaNombre || formVal.nombreOperador || 'Chofer Transportista',
+      driverSignature: item.driverSignature || this.activeDriverSignature() || (item as any)?.preCheckin?.driverSignature || undefined,
+      driverSignedAt: item.driverSignedAt ? String(item.driverSignedAt) : (this.activeDriverSignedAt() || undefined),
+
+      folio: item.generatedFolio || item.folio || this.createdFolio() || 'N/A',
+      token: item.token || this.activeToken() || 'N/A'
+    };
+
+    this.currentPrintData.set(printData);
+    this.showF01PrintModal.set(true);
+  }
+
+  @HostListener('window:keydown.escape')
+  protected handleEscapeKey(): void {
+    if (this.showF01PrintModal()) {
+      this.closeF01Print();
+    } else if (this.showCheckOutModal()) {
+      this.closeCheckOutModal();
+    } else if (this.showQrModal()) {
+      this.closeQrModal();
+    }
+  }
+
+  protected closeF01Print(): void {
+    this.showF01PrintModal.set(false);
+  }
+
+  protected printF01(): void {
+    const data: TransportChecklistPrintData | null = this.currentPrintData();
+    const folio = data?.folio || 'F01';
+    this.printService.printElement('#f01-print-target', `Formato_F01_CheckList_${folio}`);
+  }
+
+  protected downloadF01Pdf(): void {
+    const data: TransportChecklistPrintData | null = this.currentPrintData();
+    const folio = data?.folio || 'F01';
+    this.printService.downloadPdf('#f01-print-target', `Formato_F01_CheckList_${folio}.pdf`);
+  }
+
+  // ── MANEJO DE SELECTS ──────────────────────────────────────────────────────
+  protected onCarrierLineSelect(code: string): void {
+    if (code === 'OTRO') {
+      const customVal = this.checkInForm.get('carrierLineCustom')?.value;
+      this.checkInForm.patchValue({
+        carrierLineCode: 'OTRO',
+        carrierLine: customVal || ''
+      });
+    } else {
+      const found = this.carrierLines().find((c) => c.code === code);
+      if (found) {
+        this.checkInForm.patchValue({
+          carrierLineCode: found.code,
+          carrierLine: found.name,
+          carrierLineCustom: ''
+        });
+      } else {
+        this.checkInForm.patchValue({
+          carrierLineCode: '',
+          carrierLine: '',
+          carrierLineCustom: ''
+        });
+      }
+    }
+  }
+
+  protected onCustomCarrierLineInput(val: string): void {
+    this.checkInForm.patchValue({
+      carrierLine: val
+    });
+  }
+
+  protected onClientSelect(code: string): void {
+    if (code === 'OTRO') {
+      const customVal = this.checkInForm.get('clientNameCustom')?.value;
+      this.checkInForm.patchValue({
+        clientCode: 'OTRO',
+        client: customVal || ''
+      });
+    } else {
+      const found = this.clients().find((c) => c.code === code);
+      if (found) {
+        this.checkInForm.patchValue({
+          clientCode: found.code,
+          client: found.name,
+          clientNameCustom: ''
+        });
+      } else {
+        this.checkInForm.patchValue({
+          clientCode: '',
+          client: '',
+          clientNameCustom: ''
+        });
+      }
+    }
+  }
+
+  protected onCustomClientInput(val: string): void {
+    this.checkInForm.patchValue({
+      client: val
+    });
+  }
+
+  protected onTransportTypeSelect(val: string): void {
+    if (val === 'Otro (Especificar)') {
+      this.isCustomTransportType.set(true);
+      this.checkInForm.patchValue({ tipoTransporte: this.customTransportInput() || 'Otro' });
+    } else {
+      this.isCustomTransportType.set(false);
+      this.checkInForm.patchValue({ tipoTransporte: val });
+    }
+  }
+
+  protected onCustomTransportInput(val: string): void {
+    this.customTransportInput.set(val);
+    this.checkInForm.patchValue({ tipoTransporte: val });
+  }
+
+  protected onBoxDimensionSelect(val: string): void {
+    if (val === 'Otra Medida') {
+      this.isCustomBoxDimension.set(true);
+      this.checkInForm.patchValue({ medidasCaja: this.customBoxDimensionInput() || 'Personalizada' });
+    } else {
+      this.isCustomBoxDimension.set(false);
+      this.checkInForm.patchValue({ medidasCaja: val });
+    }
+  }
+
+  protected onCustomBoxDimensionInput(val: string): void {
+    this.customBoxDimensionInput.set(val);
+    this.checkInForm.patchValue({ medidasCaja: val });
+  }
+
+  protected onRampSelect(code: string): void {
+    const found = this.ramps().find((r) => r.code === code);
+    if (found) {
+      this.checkInForm.patchValue({
+        rampCode: found.code,
+        rampNumber: found.rampNumber,
+      });
+    } else {
+      this.checkInForm.patchValue({
+        rampCode: '',
+        rampNumber: 0,
+      });
+    }
+  }
+
+  // ── MANEJO DE SELLOS DE SEGURIDAD ──────────────────────────────────────────
+  protected addSeal(): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return; // Bloqueado en Carga (Se asignan en andén de salida)
+    }
+    const val = this.tempSealInput().trim().toUpperCase();
+    if (val && !this.sealList().includes(val)) {
+      this.sealList.update((list) => [...list, val]);
+      this.tempSealInput.set('');
+    }
+  }
+
+  protected removeSeal(index: number): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return; // Bloqueado en Carga
+    }
+    this.sealList.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  protected setCriterion(controlName: string, val: 'SI' | 'NO'): void {
+    this.checkInForm.patchValue({ [controlName]: val });
+  }
+
+  protected toggleSignature(controlName: string): void {
+    const currentVal = this.checkInForm.get(controlName)?.value;
+    this.checkInForm.patchValue({ [controlName]: !currentVal });
+  }
+
+  protected getRampDisplayLabel(rm: RampItem): string {
+    const occ = this.rampOccupancy().find((r) => r.rampNumber === rm.rampNumber || r.code === rm.code);
+    if (!occ || occ.status === 'AVAILABLE') {
+      return `Rampa ${rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber} (Libre)`;
+    }
+    if (occ.status === 'OCCUPIED_INBOUND') {
+      return `Rampa ${rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber} (Ocupada - Folio #${occ.operationFolio})`;
+    }
+    return `Rampa ${rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber} (Ocupada - Salida #${occ.operationFolio})`;
+  }
+
+  // ── SUBMIT FORMULARIO (CHECK-IN REAL DE CASETA) ─────────────────────────────
+  protected submitCheckIn(): void {
+    if (this.tempSealInput().trim()) {
+      this.addSeal();
+    }
+
+    const formVal = this.checkInForm.value;
+
+    // Si seleccionó OTRO cliente, asegurar que tome el valor especificado
+    if (formVal.clientCode === 'OTRO') {
+      const customName = (formVal.clientNameCustom || formVal.client || '').trim();
+      formVal.client = customName;
+      this.checkInForm.patchValue({ client: customName });
+    }
+
+    // Si seleccionó OTRA línea transportista, asegurar que tome el valor especificado
+    if (formVal.carrierLineCode === 'OTRO') {
+      const customCarrier = (formVal.carrierLineCustom || formVal.carrierLine || '').trim();
+      formVal.carrierLine = customCarrier;
+      this.checkInForm.patchValue({ carrierLine: customCarrier });
+    }
+
+    const missing: string[] = [];
+
+    if (!formVal.fecha) missing.push('Fecha');
+    if (formVal.operacion === 'CARGA' && (!formVal.noCartaPorte || !formVal.noCartaPorte.trim())) {
+      missing.push('Número de Carta Porte (Obligatorio en Carga)');
+    }
+    if (formVal.operacion === 'DESCARGA' && (!formVal.remision || !formVal.remision.trim())) {
+      missing.push('Número de Remisión / Factura (Obligatorio en Descarga)');
+    }
+    if (!formVal.clientCode || !formVal.client || !formVal.client.trim()) missing.push('Cliente Destinatario');
+    if (!formVal.carrierLineCode || !formVal.carrierLine) missing.push('Línea Transportista');
+    if (!formVal.nombreOperador || !formVal.nombreOperador.trim()) missing.push('Nombre del Operador / Chofer');
+    if (!formVal.placasTracto || !formVal.placasTracto.trim()) missing.push('Placas del Tracto');
+    if (!formVal.noEcoTractor || !formVal.noEcoTractor.trim()) missing.push('No. Económico Tracto');
+    if (!formVal.placasCaja || !formVal.placasCaja.trim()) missing.push('Placas de la Caja');
+    if (formVal.operacion === 'DESCARGA' && this.sealList().length === 0 && (!formVal.noSello || !formVal.noSello.trim())) {
+      missing.push('Al menos 1 Número de Sello de Seguridad / Cincho (Obligatorio en Descarga)');
+    }
+
+    if (missing.length > 0 || this.checkInForm.invalid) {
+      this.checkInForm.markAllAsTouched();
+      this.errorMessage.set(`⚠️ No se puede registrar. Faltan los siguientes campos obligatorios: ${missing.join(', ')}`);
+      this.scrollToTop();
+      return;
+    }
+
+    this.isSaving.set(true);
+    this.errorMessage.set(null);
+
+    const seals: string[] = this.sealList().length > 0 
+      ? [...this.sealList()] 
+      : (formVal.noSello && formVal.noSello.trim() 
+          ? [formVal.noSello.trim().toUpperCase()] 
+          : (formVal.operacion === 'CARGA' ? ['PENDIENTE_ANDEN'] : []));
+
+    const inspectionObservations = [
+      `[FORMATO F01-PO-CP-7.1.3-03] Arribo en Caseta de Seguridad`,
+      `Unidad: Eco=${formVal.noEcoTractor || 'S/N'} | Tipo=${formVal.tipoTransporte || 'Caja Seca'} | Medidas=${formVal.medidasCaja || '53 Pies'}`,
+      `EPP: Calzado=${formVal.eppZapatos} (${formVal.eppZapatosObs || 'OK'}), Cofia=${formVal.eppCofia}, Cubrebocas=${formVal.eppCubrebocas}, Chaleco=${formVal.eppChaleco}`,
+      `Documentación: CartaPorte=${formVal.docCartaPorte} (${formVal.docCartaPorteObs || 'OK'}), Remisión=${formVal.docRemision} (${formVal.docRemisionObs || 'OK'})`,
+      `Revisión Caja: Interior=${formVal.revInteriorCaja}, Daños=${formVal.revDanosCaja}, Puertas=${formVal.revDanosPuertas}, Olores=${formVal.revOloresExtranos}, Plagas=${formVal.revIndiciosPlagas}`,
+      `Chofer: ${formVal.transportistaNombre || formVal.nombreOperador} (Tel: ${formVal.driverPhone || 'No registrado'}) | Vigilancia: ${formVal.responsableVigilanciaNombre || this.getLoggedGuardName()}`
+    ].join(' | ');
+
+    const rCode = formVal.rampCode || null;
+    const rNum = formVal.rampNumber ? Number(formVal.rampNumber) : null;
+    const rDisplay = rCode || (rNum ? `R-${rNum}` : 'Pendiente en Almacén');
+
+    const checkInData: CheckInCasetaData = {
+      carrierLineCode: formVal.carrierLineCode,
+      carrierLine: (formVal.carrierLine || '').trim().toUpperCase(),
+      receptionTime: formVal.horaEntrada,
+      docNumber: ((formVal.operacion === 'DESCARGA' ? formVal.remision : (formVal.noCartaPorte || formVal.remision)) || '').trim().toUpperCase(),
+      docDate: formVal.fecha,
+      clientCode: formVal.clientCode,
+      client: (formVal.client || '').trim().toUpperCase(),
+      rampCode: rCode || undefined,
+      rampNumber: rNum || undefined,
+      driverName: (formVal.nombreOperador || '').trim().toUpperCase(),
+      driverPhone: formVal.driverPhone || '',
+      tractorPlates: (formVal.placasTracto || '').trim().toUpperCase(),
+      boxPlates: (formVal.placasCaja || '').trim().toUpperCase(),
+      noEcoTractor: (formVal.noEcoTractor || '').trim().toUpperCase(),
+      noEcoCaja: (formVal.noEcoCaja || '').trim().toUpperCase(),
+      transportType: (formVal.tipoTransporte || '').trim().toUpperCase(),
+      medidasCaja: (formVal.medidasCaja || '').trim().toUpperCase(),
+      noCartaPorte: (formVal.noCartaPorte || '').trim().toUpperCase(),
+      sealNumbers: seals.map(s => String(s).toUpperCase()),
+      sealNumber: seals.map(s => String(s).toUpperCase()).join(', '),
+      observations: inspectionObservations.toUpperCase(),
+    };
+
+    const op = formVal.operacion || 'DESCARGA';
+    const currentPassToken = this.activeToken();
+
+    if (op === 'CARGA') {
+      this.movementsService.createOutboundCheckInBackend(checkInData).subscribe({
+        next: (outbound) => {
+          this.isSaving.set(false);
+          this.createdFolio.set(outbound.folio);
+          this.assignedRampLabel.set(rDisplay);
+
+          if (currentPassToken) {
+            this.movementsService.movementsApi.deletePass(currentPassToken).subscribe();
+          }
+
+          const printSnapshot = {
+            ...formVal,
+            sealNumbers: [...seals],
+            checklistData: inspectionObservations,
+            generatedFolio: outbound.folio,
+            folio: outbound.folio,
+            rampCode: rDisplay,
+            driverSignature: this.activeDriverSignature() || undefined,
+            driverSignedAt: this.activeDriverSignedAt() || undefined
+          };
+          this.lastCompletedPrintItem.set(printSnapshot);
+          this.resetForm();
+
+          // Notificación flotante del sistema y scroll al menú superior
+          this.toast.success(`¡Carga / Salida corroborada y enviada a Operaciones! Folio #${outbound.folio}`, 4500);
+          this.scrollToTop();
+
+          this.reloadAllData();
+          this.movementsService.reloadOutbounds();
+        },
+        error: (err) => {
+          this.isSaving.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al enviar la información a Operaciones';
+          this.errorMessage.set(msg);
+          this.toast.error(msg, 4500);
+          this.scrollToTop();
+        }
+      });
+    } else {
+      this.movementsService.createCheckInBackend(checkInData).subscribe({
+        next: (header) => {
+          this.isSaving.set(false);
+          this.createdFolio.set(header.folio);
+          this.assignedRampLabel.set(rDisplay);
+
+          if (currentPassToken) {
+            this.movementsService.movementsApi.deletePass(currentPassToken).subscribe();
+          }
+
+          const printSnapshot = {
+            ...formVal,
+            sealNumbers: [...seals],
+            checklistData: inspectionObservations,
+            generatedFolio: header.folio,
+            folio: header.folio,
+            rampCode: rDisplay,
+            driverSignature: this.activeDriverSignature() || undefined,
+            driverSignedAt: this.activeDriverSignedAt() || undefined
+          };
+          this.lastCompletedPrintItem.set(printSnapshot);
+          this.resetForm();
+
+          // Notificación flotante del sistema y scroll al menú superior
+          this.toast.success(`¡Información corroborada y enviada a Operaciones! Folio #${header.folio}`, 4500);
+          this.scrollToTop();
+
+          this.reloadAllData();
+          this.movementsService.reloadReceptions();
+        },
+        error: (err) => {
+          this.isSaving.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al enviar la información a Operaciones';
+          this.errorMessage.set(msg);
+          this.toast.error(msg, 4500);
+          this.scrollToTop();
+        }
+      });
+    }
+  }
+
+  protected resetFormFieldsOnly(): void {
+    this.checkInForm.reset({
+      controlNumber: 'F01-PO-CP-7.1.3-03',
+      revisionNumber: '01',
+      revisionDate: '19/08/2025',
+      processOwner: 'Seguridad Patrimonial',
+      fecha: this.getCurrentDateString(),
+      noCartaPorte: '',
+      remision: '',
+      clientCode: '',
+      client: '',
+      clientNameCustom: '',
+      procedimiento: 'Recepción',
+      operacion: 'DESCARGA',
+      horaEntrada: this.getCurrentTimeString(),
+      horaSalida: '',
+      carrierLineCode: '',
+      carrierLine: '',
+      carrierLineCustom: '',
+      nombreOperador: '',
+      driverPhone: '',
+      rampCode: '',
+      rampNumber: 0,
+      placasTracto: '',
+      noEcoTractor: '',
+      placasCaja: '',
+      noEcoCaja: '',
+      medidasCaja: '',
+      noSello: '',
+      tipoTransporte: '',
+      eppZapatos: 'SI',
+      eppZapatosObs: '',
+      eppCofia: 'SI',
+      eppCofiaObs: '',
+      eppCubrebocas: 'SI',
+      eppCubrebocasObs: '',
+      eppChaleco: 'SI',
+      eppChalecoObs: '',
+      docCartaPorte: 'NO',
+      docCartaPorteObs: 'N/A - Operación de Descarga/Recepción',
+      docRemision: 'SI',
+      docRemisionObs: '',
+      revInteriorCaja: 'SI',
+      revInteriorCajaObs: '',
+      revDanosCaja: 'NO',
+      revDanosCajaObs: '',
+      revDanosPuertas: 'NO',
+      revDanosPuertasObs: '',
+      revOloresExtranos: 'NO',
+      revOloresExtranosObs: '',
+      revIndiciosPlagas: 'NO',
+      revIndiciosPlagasObs: '',
+      responsableVigilanciaNombre: this.getLoggedGuardName(),
+      responsableVigilanciaFirma: true,
+      transportistaNombre: '',
+      transportistaFirma: false
+    });
+    this.sealList.set([]);
+    this.tempSealInput.set('');
+    this.activeToken.set(null);
+    this.activeDriverSignature.set(null);
+    this.activeDriverSignedAt.set(null);
+    this.isCustomTransportType.set(false);
+    this.isCustomBoxDimension.set(false);
+    this.customTransportInput.set('');
+    this.customBoxDimensionInput.set('');
+  }
+
+  protected resetForm(): void {
+    this.resetFormFieldsOnly();
+    this.saveSuccess.set(false);
+    this.createdFolio.set(null);
+    this.assignedRampLabel.set(null);
+    this.errorMessage.set(null);
+    this.lastCompletedPrintItem.set(null);
+  }
+
+  // ── HELPERS FECHA Y HORA ───────────────────────────────────────────────────
+  protected formatTimeString(val: any): string {
+    if (!val) return '--:--';
+    const str = String(val).trim();
+    if (!str || str === '--:--' || str === 'null' || str === 'undefined' || str === '-- : --' || str === '-') return '--:--';
+
+    // Si viene en formato ISO (ej. 2026-09-28T04:20:00Z o 2026-09-28T04:20:00.123456)
+    if (str.includes('T')) {
+      const timePart = str.split('T')[1].split('.')[0].replace(/Z|[+-].*$/g, '');
+      const parts = timePart.split(':');
+      if (parts.length >= 2) {
+        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+      }
+    }
+
+    // Si viene con fecha locale (ej. "27/09/2026, 14:30:00" o "27/09/2026 14:30")
+    if (str.includes(',') || (str.includes('/') && str.includes(':'))) {
+      const segs = str.split(/,|\s+/);
+      for (const seg of segs) {
+        if (seg.includes(':')) {
+          const parts = seg.split(':');
+          if (parts.length >= 2) {
+            return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+          }
+        }
+      }
+    }
+
+    const withoutMillis = str.split('.')[0];
+    const parts = withoutMillis.split(':');
+    if (parts.length >= 2) {
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    }
+
+    return withoutMillis;
+  }
+
+  private getCurrentTimeString(): string {
+    const now = new Date();
+    const hrs = String(now.getHours()).padStart(2, '0');
+    const mins = String(now.getMinutes()).padStart(2, '0');
+    return `${hrs}:${mins}`;
+  }
+
+  private getCurrentDateString(): string {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // ── HELPERS ESTATUS DE MANIOBRA & CANDADO DE SALIDA (SDOP) ──────────────────
+  protected getWarehouseStatusLabel(item: any): string {
+    if (!item) return 'En Maniobra';
+    const ws = (item.warehouseStatus || item.status || '').toUpperCase();
+    if (ws === 'CANCELLED') return 'Cancelado (Listo Salida)';
+    if (item.isReadyForExit) return 'Autorizado / Listo Salida';
+    const isCarga = (item.operacion === 'CARGA' || item.operationType === 'CARGA');
+
+    if (ws === 'COMPLETED' || ws === 'DISPATCHED') return 'Autorizado / Listo Salida';
+    if (ws === 'REGISTERED' || ws === 'PENDING') return 'En Patio / Espera';
+    if (ws === 'ASSIGNED') return isCarga ? 'Asignado a Rampa' : 'Asignado a Rampa';
+    if (ws === 'IN_PROGRESS') return isCarga ? 'Cargando en Andén' : 'Descargando en Andén';
+    if (ws === 'LOADED') return 'Carga Concluida / Auditoría';
+    if (ws === 'DISCHARGED') return 'Descarga Concluida / Auditoría';
+    return isCarga ? 'En Proceso de Carga' : 'En Maniobra';
+  }
+
+  protected getWarehouseStatusIcon(item: any): string {
+    if (!item) return 'sync';
+    const ws = (item.warehouseStatus || item.status || '').toUpperCase();
+    if (ws === 'CANCELLED') return 'cancel';
+    if (item.isReadyForExit) return 'verified';
+    if (ws === 'COMPLETED' || ws === 'DISPATCHED') return 'verified';
+    if (ws === 'REGISTERED' || ws === 'PENDING') return 'hourglass_empty';
+    if (ws === 'ASSIGNED') return 'dock';
+    if (ws === 'IN_PROGRESS') return 'sync';
+    if (ws === 'LOADED' || ws === 'DISCHARGED') return 'fact_check';
+    return 'pending';
+  }
+
+  protected getWarehouseLockTooltip(item: any): string {
+    const ws = (item?.warehouseStatus || item?.status || '').toUpperCase();
+    if (ws === 'DISCHARGED') {
+      return 'Descarga concluida en andén pero pendiente de auditoría. El Líder de Almacén debe autorizar la recepción o cancelarla para habilitar el Check-Out.';
+    }
+    const isCarga = (item?.operacion === 'CARGA' || item?.operationType === 'CARGA');
+    return isCarga
+      ? 'Maniobra de carga en proceso en almacén. Requiere autorización y cierre del Líder de Salidas antes de dar Check-Out.'
+      : 'Maniobra de descarga en proceso en almacén. Requiere autorización y cierre del Líder de Recepción antes de dar Check-Out.';
+  }
+}

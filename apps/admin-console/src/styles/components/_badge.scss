@@ -70,9 +70,29 @@ $statuses: 10, 20, 30, 40, 50, 60, 70, 80;
   font-weight: $fw-bold;
   line-height: 1;
 
-  &--gold    { background: $gold-primary; color: $bg-primary; }
+  &--gold    { background: $gold-primary; color: #0f172a; }
   &--danger  { background: $danger; color: white; }
-  &--warning { background: $warning; color: $bg-primary; }
-  &--info    { background: $info; color: $bg-primary; }
+  &--warning { background: $warning; color: #0f172a; }
+  &--info    { background: $info; color: #ffffff; }
   &--subtle  { background: $border-subtle; color: $text-secondary; }
 }
+
+// ── Badge Institucional Dorado (Pills de formato / cabecera) ──
+.badge-gold,
+.badge--gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-badge, 9999px);
+  background: var(--gold-bg, rgba(197, 168, 107, 0.12));
+  border: 1px solid var(--gold-border, rgba(197, 168, 107, 0.28));
+  color: var(--text-gold, #9b7626);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+}
+

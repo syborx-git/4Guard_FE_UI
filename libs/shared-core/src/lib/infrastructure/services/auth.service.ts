@@ -15,7 +15,7 @@
 import { Injectable, inject, signal, computed, Signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, map, of, delay } from 'rxjs';
+import { Observable, tap, map, of, delay, catchError } from 'rxjs';
 import { AuthResponse, JwtPayload, LoginRequest, User } from '../../domain/models/user.model';
 import { UserRole } from '../../domain/enums/role.enum';
 import { environment } from '../../../environments/environment';
@@ -59,56 +59,68 @@ export class AuthService {
    */
   login(credentials: LoginRequest): Observable<User> {
     this._isLoading.set(true);
-    
-    // Asignar rol según el prefijo/dominio del correo para permitir pruebas de RBAC
-    let role = UserRole.ADMIN;
-    let fullName = 'Carlos Herrera';
-    
-    const email = credentials.email.toLowerCase();
-    if (email.includes('manager')) {
-      role = UserRole.WAREHOUSE_MANAGER;
-      fullName = 'Sofía Ramírez';
-    } else if (email.includes('dock')) {
-      role = UserRole.DOCK_SUPERVISOR;
-      fullName = 'Miguel Torres';
-    } else if (email.includes('qm')) {
-      role = UserRole.QM_INSPECTOR;
-      fullName = 'Ana López';
-    } else if (email.includes('op')) {
-      role = UserRole.WAREHOUSE_OPERATOR;
-      fullName = 'Roberto Sánchez';
-    } else if (email.includes('auditor')) {
-      role = UserRole.AUDITOR;
-      fullName = 'David Salazar';
-    } else if (email.includes('client')) {
-      role = UserRole.CLIENT;
-      fullName = 'Representante Nestlé';
-    }
 
-    const dummyUser: User = {
-      id: `u-${role.toLowerCase()}`,
-      fullName,
-      email: credentials.email,
-      role,
-      branchId: 'BR-MTY-01',
-      branchName: 'Sucursal Monterrey',
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    const body = {
+      identifier: credentials.email,
+      password: credentials.password
     };
 
-    const dummyResponse: AuthResponse = {
-      accessToken: `mock-jwt-token-for-${role}-${Date.now()}`,
-      refreshToken: `mock-refresh-token-for-${role}-${Date.now()}`,
-      expiresIn: 3600,
-      user: dummyUser
-    };
+    return this.http.post<any>('/api/v1/auth/login', body).pipe(
+      map((res: any) => {
+        const data = res?.data || res;
+        const token = data.accessToken || data.token;
+        const refreshToken = data.refreshToken || token;
+        const rawUser = data.user;
 
-    return of(dummyUser).pipe(
-      delay(300), // Simula latencia
-      tap(() => {
-        this.saveSession(dummyResponse);
+        let role: UserRole = UserRole.WAREHOUSE_OPERATOR;
+        if (rawUser?.role) {
+          const r = String(rawUser.role).toUpperCase();
+          if (r.includes('ADMIN') || r.includes('CEO') || r.includes('DIRECTOR')) role = UserRole.ADMIN;
+          else if (r.includes('MANAGER') || r.includes('GERENTE')) role = UserRole.OPERATIONS_MANAGER;
+          else if (r.includes('COORDINATOR') || r.includes('COORD')) role = UserRole.OPERATIONS_COORDINATOR;
+          else if (r.includes('SUPERVISOR') || r.includes('SUPER')) role = UserRole.OPERATIONS_SUPERVISOR;
+          else if (r.includes('CONTROL') || r.includes('MESA')) role = UserRole.CONTROL_DESK;
+          else if (r.includes('SHIFT') || r.includes('LIDER')) role = UserRole.SHIFT_LEADER;
+          else if (r.includes('QM') || r.includes('QUALITY') || r.includes('CALIDAD')) role = UserRole.QM_INSPECTOR;
+          else if (r.includes('SECURITY') || r.includes('GUARD') || r.includes('VIGILANCIA') || r.includes('CASETA')) role = UserRole.SECURITY_GUARD;
+          else role = UserRole.WAREHOUSE_OPERATOR;
+        }
+
+        const user: User = {
+          id: rawUser?.id ? String(rawUser.id) : `u-${Date.now()}`,
+          fullName: rawUser?.fullName || rawUser?.name || `${rawUser?.firstName || ''} ${rawUser?.lastName || ''}`.trim() || rawUser?.username || credentials.email.split('@')[0],
+          email: rawUser?.email || credentials.email,
+          username: rawUser?.username || credentials.email.split('@')[0],
+          role,
+          organizationId: rawUser?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
+          branchId: rawUser?.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
+          branchName: rawUser?.branchName || (rawUser?.branchId === 'b73f0907-9fa5-4bdf-87db-2eb5e7683936' ? 'CENTRO DE DISTRIBUCION CDMX' : null) || 'CENTRO DE DISTRIBUCION CDMX',
+          organizationName: rawUser?.organizationName || '4GUARD LOGISTICS CORP',
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        const response: AuthResponse = {
+          accessToken: token,
+          refreshToken,
+          expiresIn: data.expiresIn || 3600,
+          user
+        };
+
+        this.saveSession(response);
         this._isLoading.set(false);
+        return user;
+      }),
+      catchError((err) => {
+        this._isLoading.set(false);
+        const errMsg = err?.error?.message 
+          || (err.status === 404 
+              ? 'Endpoint no encontrado (404). Asegúrate de haber reiniciado "npm run start:rf" para cargar el proxy.' 
+              : (err.status === 0 
+                  ? 'No hay conexión con el backend (127.0.0.1:8080). Verifica que Spring Boot esté activo.' 
+                  : (err.status === 401 ? 'Credenciales incorrectas. Verifica tu usuario y contraseña.' : 'Error al autenticar en el servidor.')));
+        throw new Error(errMsg);
       })
     );
   }
@@ -185,7 +197,7 @@ export class AuthService {
     if (!token) return false;
 
     // Aceptar automáticamente los tokens simulados de desarrollo
-    if (token.startsWith('mock-jwt-token')) {
+    if (token.startsWith('mock-') || token.startsWith('rf-')) {
       return true;
     }
 
@@ -196,6 +208,44 @@ export class AuthService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Cambia el rol del usuario activo para pruebas rápidas de interfaz (RBAC demo switcher).
+   */
+  switchRoleForTesting(role: UserRole, customName?: string): void {
+    const roleNames: Record<UserRole, string> = {
+      [UserRole.ADMIN]:                  'Ing. Carlos Herrera (Director General)',
+      [UserRole.OPERATIONS_MANAGER]:     'Ing. Roberto Garza (Gerente Operaciones)',
+      [UserRole.OPERATIONS_COORDINATOR]: 'Lic. Fernando Lozano (Coordinador Operaciones)',
+      [UserRole.OPERATIONS_SUPERVISOR]:  'Ing. Héctor Salinas (Supervisor Operaciones)',
+      [UserRole.CONTROL_DESK]:           'Lic. Patricia Gómez (Mesa de Control)',
+      [UserRole.SHIFT_LEADER]:           'Ricardo Peña (Líder de Turno)',
+      [UserRole.WAREHOUSE_OPERATOR]:     'Oficial Montacarguista',
+      [UserRole.QM_INSPECTOR]:           'Dra. Elena Ramos (Inspector de Calidad)',
+      [UserRole.SECURITY_GUARD]:         'Oficial de Turno Caseta',
+    };
+
+    const updatedUser: User = {
+      id: `u-${role.toLowerCase()}`,
+      fullName: customName || roleNames[role] || 'Usuario Operativo',
+      email: `${role.toLowerCase().replace('role_', '')}@4guard.mx`,
+      role,
+      branchId: 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
+      branchName: 'CENTRO DE DISTRIBUCION CDMX',
+      active: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const dummyResponse: AuthResponse = {
+      accessToken: `mock-jwt-token-for-${role}-${Date.now()}`,
+      refreshToken: `mock-refresh-token-for-${role}-${Date.now()}`,
+      expiresIn: 3600,
+      user: updatedUser,
+    };
+
+    this.saveSession(dummyResponse);
   }
 
   /**
@@ -221,10 +271,13 @@ export class AuthService {
   }
 
   private clearSession(): void {
-    // 1. Limpiar JWTs del LocalStorage
+    // 1. Limpiar JWTs y buffers residuales del LocalStorage
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem('4guard_backend_db');
+    localStorage.removeItem('4guard_active_mission');
+    localStorage.removeItem('4guard_missions_buffer');
 
     // 2. Limpiar SessionStorage por completo (previene persistencia en pestaña)
     sessionStorage.clear();

@@ -1,0 +1,1941 @@
+<!-- ════════════════════════════════════════════════════════════════
+     CAMBIO DE ALMACÉN — 4GUARD WMS (HOMOLOGADO)
+     ════════════════════════════════════════════════════════════════ -->
+<div class="transfer-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL CON EL SLIDE DE PESTAÑAS Y BOTÓN DE ACCIÓN
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="transfer-header">
+    <div class="transfer-header__top">
+
+      <div class="transfer-header__left">
+        <div class="transfer-header__icon-wrap">
+          <span class="material-symbols-outlined transfer-header__icon">compare_arrows</span>
+        </div>
+
+        <div class="transfer-header__copy">
+          <div class="transfer-header__eyebrow">
+            <a routerLink="/dashboard" class="transfer-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Dashboard</span>
+            </a>
+            <span class="transfer-header__eyebrow-sep">·</span>
+            <span>Reubicación de Inventario</span>
+          </div>
+          <h1 class="transfer-header__title">Cambio de Almacén</h1>
+          <p class="transfer-header__subtitle">
+            Reubicación de inventario en ceros (Putaway / Traspasos internos en tiempo real).
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center">
+        @if (shiftContext.activeShift(); as shift) {
+          <span
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-[11px] font-bold text-slate-700 dark:text-slate-200"
+            [title]="shift.branchName + ' · ' + shift.timezone"
+          >
+            <span class="material-symbols-outlined text-[16px]">schedule</span>
+            <span>
+              @if (shift.shiftName) {
+                {{ shift.shiftName }} · {{ formatShiftTime(shift.startTime) }}–{{ formatShiftTime(shift.endTime) }}
+              } @else if (shift.configured) {
+                Sin turno vigente
+              } @else {
+                Turno no configurado
+              }
+            </span>
+          </span>
+        }
+      </div>
+
+    </div>
+
+    <!-- ── BARRA CON TABS A LA IZQUIERDA Y BOTÓN A LA DERECHA ── -->
+    <div class="movements-toolbar-row">
+      <nav class="movements-tabs-nav" aria-label="Navegación de movimientos de almacén">
+        <a
+          routerLink="/warehouse-movements/receiving"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">move_to_inbox</span>
+          <span>1. Recepción</span>
+        </a>
+
+        <a
+          routerLink="/warehouse-movements/transfers"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">compare_arrows</span>
+          <span>2. Cambio de Almacén</span>
+        </a>
+
+        <a
+          routerLink="/warehouse-movements/outbound"
+          routerLinkActive="tab-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="movements-tab-btn"
+        >
+          <span class="material-symbols-outlined">local_shipping</span>
+          <span>3. Salidas</span>
+        </a>
+      </nav>
+
+      <button
+        type="button"
+        (click)="startNewTransfer()"
+        class="btn-new-reception"
+        aria-label="Registrar nuevo traspaso"
+      >
+        <span class="material-symbols-outlined">add</span>
+        <span>Nuevo Traspaso</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── 1. KPI CARDS HEADER (CON VISTA COMPACTA COLAPSABLE HOMOLOGADA) ── -->
+  <section aria-label="Métricas Operativas de Cambio de Almacén" class="mb-0">
+    <div class="flex items-center justify-between mb-1.5">
+      <span class="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-sm text-amber-500">analytics</span>
+        <span>Métricas Operativas de Reubicación &amp; Traspasos</span>
+      </span>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors py-0.5 px-2 rounded-md hover:bg-amber-500/10 cursor-pointer"
+        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+      >
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
+    </div>
+
+    @if (isKpiCollapsed()) {
+      <!-- Vista Compacta Resumida Homologada -->
+      <div class="movement-kpi-summary-bar animate-fade-in">
+        <div class="movement-kpi-summary-items">
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-blue-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">Total Traspasos:</span>
+            <strong class="movement-kpi-summary-value">{{ kpiTotalTransfers() }}</strong>
+          </div>
+
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-amber-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">Bahías con Stock:</span>
+            <strong class="movement-kpi-summary-value text-amber-600 dark:text-amber-400">{{ kpiOccupiedLocations() }}</strong>
+          </div>
+
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-emerald-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">Bahías en Ceros:</span>
+            <strong class="movement-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ kpiAvailableLocations() }}</strong>
+          </div>
+
+          <div class="movement-kpi-summary-item">
+            <span class="movement-kpi-summary-dot bg-purple-500 shadow-sm"></span>
+            <span class="movement-kpi-summary-label">UAs Reubicadas:</span>
+            <strong class="movement-kpi-summary-value text-purple-600 dark:text-purple-400">{{ kpiTotalPalletsMoved() }}</strong>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <!-- ── GRID COMPLETO DE KPIS (4 TARJETAS CENTRADAS) ── -->
+      <div class="movement-kpi-grid animate-fade-in">
+        <!-- Total Traspasos -->
+        <div class="movement-kpi-card movement-kpi-card--primary" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">swap_horiz</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">TOTAL TRASPASOS</span>
+            <strong class="movement-kpi-card__value">{{ kpiTotalTransfers() }}</strong>
+            <span class="movement-kpi-card__sub">En sistema / General</span>
+          </div>
+        </div>
+
+        <!-- Bahías Ocupadas -->
+        <div class="movement-kpi-card movement-kpi-card--warning" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">warehouse</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">BAHÍAS CON STOCK</span>
+            <strong class="movement-kpi-card__value">{{ kpiOccupiedLocations() }}</strong>
+            <span class="movement-kpi-card__sub">Ocupadas / Activas</span>
+          </div>
+        </div>
+
+        <!-- Bahías Disponibles (En Ceros) -->
+        <div class="movement-kpi-card movement-kpi-card--success" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">check_circle</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">BAHÍAS EN CEROS</span>
+            <strong class="movement-kpi-card__value">{{ kpiAvailableLocations() }}</strong>
+            <span class="movement-kpi-card__sub">Listas para putaway</span>
+          </div>
+        </div>
+
+        <!-- UAs Reubicadas -->
+        <div class="movement-kpi-card movement-kpi-card--info" fgStarBorder fgSpecularGlow>
+          <div class="movement-kpi-card__icon">
+            <span class="material-symbols-outlined">move_to_inbox</span>
+          </div>
+          <div class="movement-kpi-card__info">
+            <span class="movement-kpi-card__label">UAS REUBICADAS</span>
+            <strong class="movement-kpi-card__value">{{ kpiTotalPalletsMoved() }}</strong>
+            <span class="movement-kpi-card__sub">Tarimas transferidas</span>
+          </div>
+        </div>
+      </div>
+    }
+  </section>
+
+  <!-- ── 2. EXECUTIVE TRANSFERS DIRECTORY OR FULL-WIDTH WORKBENCH ── -->
+  @if (formMode() === 'idle') {
+    <!-- ═══════════════════════════════════════════════════════════════
+         DIRECTORIO EJECUTIVO DE CAMBIO DE ALMACÉN (TARJETAS EJECUTIVAS)
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="executive-directory-card" fgStarBorder fgSpecularGlow>
+      <!-- Header Row: Dot + Title + Count Pill + Hint + Subtitle -->
+      <div class="directory-header-row">
+        <div class="directory-header-left">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="directory-header-dot"></span>
+            <h2 class="directory-header-title">Consultas de Cambio de Almacén & Traspasos</h2>
+            <span class="directory-count-pill">{{ filteredTransfers().length }} movimientos</span>
+            <span class="directory-header-hint">· Haz clic en cualquier tarjeta ejecutiva para abrir su consulta detallada</span>
+          </div>
+          <p class="directory-header-sub">
+            Supervisión y trazabilidad en tiempo real de movimientos entre bahías, putaway y traspasos internos.
+          </p>
+        </div>
+      </div>
+
+      <!-- Controls Row: Search Input with ⌘K + Filter Pills -->
+      <div class="directory-controls-row">
+        <!-- Search Input -->
+        <div class="directory-search-wrapper">
+          <span class="material-symbols-outlined directory-search-icon">search</span>
+          <input
+            type="search"
+            class="directory-search-input"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            placeholder="Buscar por folio, bahía origen, bahía destino, operador o motivo..."
+            autocomplete="off"
+            aria-label="Buscar traspasos"
+          />
+          @if (searchQuery()) {
+            <button
+              type="button"
+              (click)="searchQuery.set('')"
+              class="absolute right-12 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded cursor-pointer"
+              title="Limpiar búsqueda"
+            >
+              <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+          }
+          <span class="directory-search-kbd">⌘K</span>
+        </div>
+
+        <!-- Filter Pills -->
+        <div class="directory-filter-pills" role="group" aria-label="Filtrar por estado">
+          <button
+            type="button"
+            (click)="toggleStatusFilter('ALL')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('ALL')"
+          >
+            <span>Todos ({{ kpiTotalTransfers() }})</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleStatusFilter('COMPLETED')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('COMPLETED')"
+          >
+            <span class="filter-pill-dot dot--emerald"></span>
+            <span>Completados</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleStatusFilter('CANCELLED')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('CANCELLED')"
+          >
+            <span class="filter-pill-dot dot--rose"></span>
+            <span>Cancelados</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Executive Cards Grid -->
+      @if (filteredTransfers().length > 0) {
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          @for (transfer of filteredTransfers(); track transfer.folio) {
+            <div
+              class="executive-card"
+              (click)="selectTransferItem(transfer)"
+              title="Clic para ver consulta detallada"
+            >
+              <!-- Card Top: Avatar + Title/Subtitle + Status Badge -->
+              <div class="executive-card-head">
+                <div class="executive-avatar">
+                  {{ getInitials(transfer.originLocation + ' ' + transfer.destinationLocation) }}
+                </div>
+                <div class="executive-title-group">
+                  <h3 class="executive-title" [title]="transfer.originLocation + ' ➔ ' + transfer.destinationLocation">
+                    {{ transfer.originLocation }} ➔ {{ transfer.destinationLocation }}
+                  </h3>
+                  <p class="executive-subtitle" [title]="transfer.forkliftOperator || 'Operador General'">
+                    {{ transfer.forkliftOperator || 'Operador General' }}
+                  </p>
+                </div>
+                <span
+                  class="executive-status-badge"
+                  [class.badge--verificado]="transfer.status === 'COMPLETED'"
+                  [class.badge--cancelado]="transfer.status === 'CANCELLED'"
+                >
+                  {{ transfer.status === 'COMPLETED' ? 'Completado' : 'Cancelado' }}
+                </span>
+
+                @if (isCarryOver(transfer)) {
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40"
+                    title="Pendiente de un turno anterior."
+                  >
+                    <span class="material-symbols-outlined text-[12px]">history</span>
+                    ARRASTRE
+                  </span>
+                }
+              </div>
+
+              <!-- Folio & Date/Time Row -->
+              <div class="executive-folio-row">
+                <span class="executive-folio-badge">
+                  #{{ transfer.folio }}
+                </span>
+                <span class="executive-time-text">
+                  <span class="material-symbols-outlined text-[13px] opacity-70">schedule</span>
+                  <span>{{ transfer.transferredAt ? (transfer.transferredAt.slice(0, 10)) : 'Registrado' }}</span>
+                </span>
+              </div>
+
+              <!-- 2-Col Details Box -->
+              <div class="executive-details-box">
+                <div class="executive-detail-col">
+                  <span class="executive-detail-label">TARIMAS (UAS)</span>
+                  <div class="executive-detail-val">
+                    <span class="filter-pill-dot dot--amber"></span>
+                    <span>{{ transfer.totalPallets }} tarimas</span>
+                  </div>
+                </div>
+                <div class="executive-detail-col">
+                  <span class="executive-detail-label">TOTAL PIEZAS</span>
+                  <div class="executive-detail-val font-mono">
+                    {{ transfer.totalPieces }} pzas
+                  </div>
+                </div>
+              </div>
+
+              <!-- Motivo de Reubicación -->
+              <div class="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 bg-slate-100/80 dark:bg-slate-800/60 px-2.5 py-1.5 rounded-lg mb-3 truncate">
+                <span class="material-symbols-outlined text-[15px] text-amber-500 shrink-0">sync_alt</span>
+                <span class="truncate font-medium">{{ transfer.reasonLabel || 'Reubicación Interna de Racks' }}</span>
+              </div>
+
+              <!-- Card Footer -->
+              <div class="executive-card-footer">
+                <div class="executive-verif-badge">
+                  <span class="material-symbols-outlined text-sm font-bold">check</span>
+                  <span>Kárdex Actualizado</span>
+                </div>
+                <div class="executive-link">
+                  <span>Ver consulta completa →</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <!-- Empty State en el Directorio -->
+        <div class="synexia-card p-12 text-center space-y-3" fgStarBorder fgSpecularGlow>
+          <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
+            <span class="material-symbols-outlined text-3xl">search_off</span>
+          </div>
+          <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">No se encontraron traspasos</h3>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto">
+            No hay registros que coincidan con el criterio de búsqueda o filtro seleccionado.
+          </p>
+        </div>
+      }
+    </div>
+  } @else if (formMode() === 'create') {
+
+        <!-- ══════════════════════════════════════════════════
+             ESTADO 1: FORMULARIO DE ALTA DE REUBICACIÓN (NUEVO TRASPASO)
+             100% HOMOLOGADO CON RECEPCIÓN DE MERCANCÍA
+             ══════════════════════════════════════════════════ -->
+        <div class="synexia-card p-6 space-y-6 animate-fade-up">
+
+          <!-- Header del Formulario en Body -->
+          <div class="flex items-center justify-between border-b border-subtle pb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
+                <span class="material-symbols-outlined text-2xl">compare_arrows</span>
+              </div>
+              <div>
+                <h2 class="form-card-title">
+                  Nueva Reubicación de Inventario
+                </h2>
+                <p class="form-card-subtitle">
+                  Reubicación de inventario en ceros (Putaway / Traspasos internos en tiempo real)
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              (click)="resetToIdle()"
+              class="btn-secondary-outline text-xs px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1"
+            >
+              <span class="material-symbols-outlined text-sm">arrow_back</span>
+              <span>Volver a Selección</span>
+            </button>
+          </div>
+
+          <!-- ── 1. ASIGNACIÓN DE MONTACARGUISTA CERTIFICADO & ESTATUS ── -->
+          <div class="space-y-3">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">engineering</span>
+              <span>1. NOMBRE DEL MONTACARGUISTA & ESTATUS OPERATIVO</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-start">
+              
+              <!-- Buscador Autocomplete de Montacarguista -->
+              <div class="md:col-span-6 fg-field relative">
+                <label class="fg-label fg-label--required">
+                  Nombre del Montacarguista
+                </label>
+                
+                <div class="relative flex items-center">
+                  <input
+                    type="text"
+                    [value]="operatorSearchQuery()"
+                    (input)="onOperatorInput($any($event.target).value)"
+                    (focus)="isOperatorDropdownOpen.set(true)"
+                    (click)="isOperatorDropdownOpen.set(true)"
+                    placeholder="Selecciona Montacarguista Responsable"
+                    class="fg-input font-bold w-full pr-8"
+                    autocomplete="off"
+                  />
+                  @if (operatorSearchQuery()) {
+                    <button
+                      type="button"
+                      (click)="clearOperatorSelection()"
+                      class="absolute right-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded"
+                      title="Limpiar montacarguista"
+                    >
+                      <span class="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  } @else {
+                    <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">expand_more</span>
+                  }
+                </div>
+
+                <!-- Backdrop transparente -->
+                @if (isOperatorDropdownOpen()) {
+                  <div class="fixed inset-0 z-40" (click)="isOperatorDropdownOpen.set(false)"></div>
+                }
+
+                <!-- Dropdown Flotante Predictivo -->
+                @if (isOperatorDropdownOpen() && filteredForkliftOperators().length > 0) {
+                  <div class="sku-autocomplete-dropdown">
+                    <div class="sku-autocomplete-header">
+                      <div class="sku-autocomplete-header__title">
+                        <span class="material-symbols-outlined text-sm">engineering</span>
+                        <span>-- Selecciona Montacarguista Responsable --</span>
+                      </div>
+                      <span class="sku-autocomplete-header__hint">{{ filteredForkliftOperators().length }} disponibles</span>
+                    </div>
+                    @for (op of filteredForkliftOperators(); track op.id) {
+                      <button
+                        type="button"
+                        (click)="selectOperator(op)"
+                        class="sku-autocomplete-item"
+                        [class.sku-autocomplete-item--selected]="selectedOperatorId() === op.id"
+                      >
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div class="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 font-bold text-xs flex items-center justify-center shrink-0">
+                            {{ getInitials(op.name) }}
+                          </div>
+                          <div class="flex flex-col min-w-0 flex-1">
+                            <span class="sku-autocomplete-name">{{ op.name }}</span>
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">{{ op.jobTitle }} · {{ op.shift }}</span>
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                          <span class="w-2 h-2 rounded-full" [ngClass]="getOperatorAvailability(op).dotClass"></span>
+                          <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border" [ngClass]="getOperatorAvailability(op).badgeClass">
+                            {{ getOperatorAvailability(op).label }}
+                          </span>
+                          @if (selectedOperatorId() === op.id) {
+                            <span class="material-symbols-outlined text-emerald-600 text-base shrink-0 font-bold ml-1">check_circle</span>
+                          }
+                        </div>
+                      </button>
+                    }
+                  </div>
+                } @else if (isOperatorDropdownOpen() && filteredForkliftOperators().length === 0 && operatorSearchQuery()) {
+                  <div class="sku-autocomplete-empty">
+                    No se encontraron montacarguistas para "{{ operatorSearchQuery() }}"
+                  </div>
+                }
+              </div>
+
+              <!-- Tarjeta de Metadatos del Montacarguista -->
+              <div class="md:col-span-6">
+                <div class="caseta-summary-card" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+                  <div class="caseta-summary-item">
+                    <span class="caseta-summary-label">Puesto</span>
+                    <span class="caseta-summary-value" [title]="selectedOperator()?.jobTitle || 'Selecciona Montacarguista Responsable'">
+                      {{ selectedOperator()?.jobTitle || '--' }}
+                    </span>
+                  </div>
+                  <div class="caseta-summary-item">
+                    <span class="caseta-summary-label">Turno</span>
+                    <span class="caseta-summary-value" [title]="selectedOperator() ? formatShift(selectedOperator()?.shift) : 'Selecciona Montacarguista Responsable'">
+                      {{ selectedOperator() ? formatShift(selectedOperator()?.shift) : '--' }}
+                    </span>
+                  </div>
+                  <div class="caseta-summary-item">
+                    <span class="caseta-summary-label">Estatus</span>
+                    @if (selectedOperator()) {
+                      <span class="caseta-summary-value inline-flex items-center gap-1.5" [ngClass]="getOperatorAvailability(selectedOperator()!).status === 'DISPONIBLE' ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'">
+                        <span class="w-2 h-2 rounded-full" [ngClass]="getOperatorAvailability(selectedOperator()!).dotClass"></span>
+                        {{ getOperatorAvailability(selectedOperator()!).label }}
+                      </span>
+                    } @else {
+                      <span class="caseta-summary-value text-slate-400 dark:text-slate-500 font-normal">--</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 2. BAHÍA ORIGEN Y SELECCIÓN DE CANTIDAD ── -->
+          <div class="space-y-3 p-4 rounded-xl border border-subtle bg-surface-subtle shadow-xs">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">output</span>
+              <span>2. BAHÍA DE ORIGEN Y SELECCIONAR CANTIDAD</span>
+            </div>
+
+            <!-- Selector Autocomplete de Bahía Origen y Metadata -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+              <div class="md:col-span-6 fg-field relative">
+                <div class="flex items-center justify-between">
+                  <label class="fg-label fg-label--required">
+                    Bahía de Origen con Stock
+                  </label>
+                  <button
+                    type="button"
+                    (click)="openOriginBaySelector()"
+                    class="text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    title="Abrir mapa de almacén y selector visual de bahías con stock"
+                  >
+                    <span class="material-symbols-outlined text-[13px]">map</span>
+                    <span>Selector Visual / Mapa</span>
+                  </button>
+                </div>
+                <div class="relative flex items-center">
+                  <input
+                    type="text"
+                    [value]="originSearchQuery()"
+                    (input)="onOriginInput($any($event.target).value)"
+                    (focus)="isOriginDropdownOpen.set(true)"
+                    (click)="isOriginDropdownOpen.set(true)"
+                    placeholder="Selecciona Bahía con Stock"
+                    class="fg-input font-bold font-mono w-full pr-8"
+                    autocomplete="off"
+                  />
+                  @if (originSearchQuery()) {
+                    <button
+                      type="button"
+                      (click)="clearOriginSelection()"
+                      class="absolute right-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded"
+                      title="Limpiar bahía origen"
+                    >
+                      <span class="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  } @else {
+                    <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">expand_more</span>
+                  }
+                </div>
+
+                <!-- Backdrop -->
+                @if (isOriginDropdownOpen()) {
+                  <div class="fixed inset-0 z-40" (click)="isOriginDropdownOpen.set(false)"></div>
+                }
+
+                <!-- Dropdown Flotante -->
+                @if (isOriginDropdownOpen() && filteredOccupiedLocations().length > 0) {
+                  <div class="sku-autocomplete-dropdown">
+                    <div class="sku-autocomplete-header">
+                      <div class="sku-autocomplete-header__title">
+                        <span class="material-symbols-outlined text-sm">warehouse</span>
+                        <span>-- Selecciona Bahía con Stock --</span>
+                      </div>
+                      <span class="sku-autocomplete-header__hint">{{ filteredOccupiedLocations().length }} con inventario</span>
+                    </div>
+                    @for (loc of filteredOccupiedLocations(); track loc.locationCode) {
+                      <button
+                        type="button"
+                        (click)="selectOriginLocation(loc.locationCode)"
+                        class="sku-autocomplete-item"
+                        [class.sku-autocomplete-item--selected]="selectedOriginCode() === loc.locationCode"
+                      >
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                          <span class="sku-autocomplete-badge">{{ getLocationDisplayCode(loc) }}</span>
+                          <div class="flex flex-col min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                              <span class="sku-autocomplete-name">{{ loc.zone || 'General' }} · {{ loc.rack || 'Rack' }} {{ loc.level || '' }}</span>
+                              @if (getLocationRemisiones(loc.locationCode).length > 0) {
+                                <span class="text-[9px] font-mono font-bold text-amber-900 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 px-1.5 py-0.2 rounded border border-amber-300 dark:border-amber-700 shrink-0">
+                                  Rem: {{ getLocationRemisiones(loc.locationCode).join(', ') }}
+                                </span>
+                              }
+                            </div>
+                            <span class="text-[10px] text-slate-500 font-medium truncate">
+                              {{ loc.pallets[0]?.description || 'Mercancía en stock' }} ({{ loc.totalPallets }} tarimas · {{ loc.totalPieces }} pzas)
+                            </span>
+                          </div>
+                        </div>
+                        <span class="font-mono font-bold text-amber-700 dark:text-amber-400 text-xs shrink-0">
+                          {{ loc.totalPallets }} UAs
+                        </span>
+                      </button>
+                    }
+                  </div>
+                } @else if (isOriginDropdownOpen() && filteredOccupiedLocations().length === 0 && originSearchQuery()) {
+                  <div class="sku-autocomplete-empty">
+                    No se encontraron bahías con stock para "{{ originSearchQuery() }}"
+                  </div>
+                }
+              </div>
+
+              <!-- Metadata de Bahía Origen (3 Columnas Proporcionales) -->
+              <div class="md:col-span-6">
+                <div class="caseta-summary-card h-full flex items-center" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+                  <div class="caseta-summary-item">
+                    <span class="caseta-summary-label">Zona / Sección</span>
+                    <span class="caseta-summary-value truncate">{{ selectedOriginCode() ? formatZone(originStock().zone) : '--' }}</span>
+                  </div>
+                  <div class="caseta-summary-item">
+                    <span class="caseta-summary-label">Posición</span>
+                    <span class="caseta-summary-value truncate">{{ selectedOriginCode() ? ((originStock().rack || 'Rack 01') + ' - ' + (originStock().level || 'N1')) : '--' }}</span>
+                  </div>
+                  <div class="caseta-summary-item">
+                    <span class="caseta-summary-label">Stock en Bahía</span>
+                    <span class="caseta-summary-value font-mono font-bold">{{ selectedOriginCode() ? (originStock().totalPallets + ' Tarimas (UAs)') : '--' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CONTROLES DE SELECCIÓN DE CANTIDAD Y TABLA DE TARIMAS -->
+            <div class="space-y-3 pt-2">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-2.5 p-2.5 rounded-lg bg-surface border border-subtle">
+                <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+                  <div class="relative w-full max-w-md">
+                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">search</span>
+                    <input
+                      type="text"
+                      [ngModel]="palletSearchQuery()"
+                      (ngModelChange)="palletSearchQuery.set($event)"
+                      [disabled]="!selectedOriginCode() || originStock().pallets.length === 0"
+                      placeholder="Buscar por UA, Lote, SKU, Remisión, Descripción..."
+                      class="fg-input pl-8 pr-7 py-1 text-xs w-full font-medium"
+                    />
+                    @if (palletSearchQuery()) {
+                      <button
+                        type="button"
+                        (click)="palletSearchQuery.set('')"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors p-0.5 rounded"
+                        title="Limpiar búsqueda"
+                      >
+                        <span class="material-symbols-outlined text-xs">close</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                @if (selectedOriginCode() && originStock().pallets.length > 0) {
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <!-- Selector rápido numérico -->
+                    <div class="flex items-center gap-1">
+                      <span class="text-[11px] text-slate-500 font-medium">Cantidad:</span>
+                      <div class="inline-flex items-center rounded-lg border border-subtle bg-surface-subtle overflow-hidden">
+                        <button
+                          type="button"
+                          (click)="setQuantityToMove(selectedPalletIds().length - 1)"
+                          [disabled]="selectedPalletIds().length <= 0"
+                          class="px-2 py-1 text-slate-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold"
+                          title="Reducir una tarima"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          [value]="selectedPalletIds().length"
+                          (input)="onQuantityInputChange($any($event.target).value)"
+                          min="0"
+                          [max]="originStock().pallets.length"
+                          class="w-12 text-center text-xs font-mono font-bold bg-transparent border-0 focus:ring-0 text-amber-700 dark:text-amber-400 p-0"
+                        />
+                        <button
+                          type="button"
+                          (click)="setQuantityToMove(selectedPalletIds().length + 1)"
+                          [disabled]="selectedPalletIds().length >= originStock().pallets.length"
+                          class="px-2 py-1 text-slate-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold"
+                          title="Aumentar una tarima"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span class="text-[11px] text-slate-500 font-mono">de {{ originStock().pallets.length }}</span>
+                    </div>
+
+                    <!-- Botón Seleccionar Todas -->
+                    @if (selectedPalletIds().length < originStock().pallets.length) {
+                      <button
+                        type="button"
+                        (click)="selectAllPallets()"
+                        class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 transition-colors flex items-center gap-1"
+                      >
+                        <span class="material-symbols-outlined text-[13px]">select_all</span>
+                        <span>Seleccionar todas ({{ originStock().pallets.length }})</span>
+                      </button>
+                    }
+
+                    <!-- Botón Deseleccionar Todas -->
+                    @if (selectedPalletIds().length > 0) {
+                      <button
+                        type="button"
+                        (click)="deselectAllPallets()"
+                        class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-500/10 hover:bg-slate-500/20 text-slate-700 dark:text-slate-300 border border-slate-500/30 transition-colors flex items-center gap-1"
+                      >
+                        <span class="material-symbols-outlined text-[13px]">deselect</span>
+                        <span>Deseleccionar todas</span>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+
+              <!-- Tabla de Tarimas con Checkboxes (ID Tarima, Código UA, Lote, Caducidad, Remisión, Producto / SKU, Cantidad) -->
+              <div class="tarimas-table-wrapper max-h-72 overflow-y-auto">
+                <table class="tarimas-table w-full">
+                  <thead>
+                    <tr>
+                      <th class="w-12 text-center">
+                        <input
+                          type="checkbox"
+                          [checked]="isAllVisiblePalletsSelected()"
+                          (change)="toggleSelectAllPallets()"
+                          [disabled]="filteredOriginPallets().length === 0"
+                          class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer disabled:opacity-40"
+                          title="Seleccionar / Deseleccionar todas las tarimas visibles"
+                        />
+                      </th>
+                      <th class="w-28 text-center font-mono">ID Tarima</th>
+                      <th class="w-44 font-mono">Código UA</th>
+                      <th class="w-32 font-mono text-center">Lote</th>
+                      <th class="w-28 font-mono text-center">Caducidad</th>
+                      <th class="w-28 font-mono text-center">Remisión</th>
+                      <th>Producto / SKU</th>
+                      <th class="w-28 text-right font-mono">Cantidad</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (pallet of filteredOriginPallets(); track pallet.id; let idx = $index) {
+                      <tr
+                        (click)="togglePalletSelection(pallet.id)"
+                        [class.selected-row]="selectedPalletIds().includes(pallet.id)"
+                      >
+                        <td class="tarimas-cell-num text-center" (click)="$event.stopPropagation()">
+                          <input
+                            type="checkbox"
+                            [checked]="selectedPalletIds().includes(pallet.id)"
+                            (change)="togglePalletSelection(pallet.id)"
+                            class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                          />
+                        </td>
+                        <td class="tarimas-cell-num text-center">
+                          <span class="px-2 py-0.5 rounded font-mono font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs">
+                            Tarima #{{ pallet.palletNumber != null ? pallet.palletNumber : (idx + 1) }}
+                          </span>
+                        </td>
+                        <td class="tarimas-cell-code font-mono font-bold text-xs text-slate-800 dark:text-slate-100">
+                          {{ pallet.palletCode }}
+                        </td>
+                        <td class="text-center">
+                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono font-bold text-xs bg-amber-100/80 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
+                            <span class="material-symbols-outlined text-[12px] text-amber-700 dark:text-amber-400">label</span>
+                            <span>{{ pallet.lotNumber || 'S/L' }}</span>
+                          </span>
+                        </td>
+                        <td class="text-center">
+                          <span class="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 whitespace-nowrap">
+                            <span class="material-symbols-outlined text-[12px] text-slate-500">event</span>
+                            <span>{{ pallet.expirationDate || 'N/A' }}</span>
+                          </span>
+                        </td>
+                        <td class="text-center">
+                          <span class="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-purple-900 dark:text-purple-200 bg-purple-50 dark:bg-purple-950/50 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800 whitespace-nowrap">
+                            <span>{{ pallet.docNumber || getLocationRemisiones(selectedOriginCode())[0] || '-' }}</span>
+                          </span>
+                        </td>
+                        <td class="tarimas-cell-sku">
+                          <div class="font-bold text-xs text-primary leading-tight">
+                            <span class="font-mono text-amber-700 dark:text-amber-400 mr-2">{{ pallet.productId }}</span>
+                            <span>{{ pallet.description }}</span>
+                          </div>
+                          @if (pallet.supplierName) {
+                            <div class="text-[10px] text-slate-500 truncate mt-0.5">
+                              {{ pallet.supplierName }} · {{ pallet.palletTypeLabel || 'Madera Estándar' }}
+                            </div>
+                          }
+                        </td>
+                        <td class="tarimas-cell-pieces text-right pr-3">
+                          <span class="inline-flex items-center px-2 py-0.5 rounded font-mono font-black text-xs bg-emerald-100/90 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 whitespace-nowrap shadow-2xs">
+                            {{ pallet.pieces || 0 }} PZAS
+                          </span>
+                        </td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="8" class="p-6 text-center text-slate-500 italic text-xs">
+                          @if (!selectedOriginCode()) {
+                            <div class="flex flex-col items-center gap-1">
+                              <span class="material-symbols-outlined text-2xl text-slate-400">warehouse</span>
+                              <span>Selecciona Bahía de Origen con Stock para listar sus tarimas.</span>
+                            </div>
+                          } @else if (originStock().pallets.length === 0) {
+                            <div class="flex flex-col items-center gap-1">
+                              <span class="material-symbols-outlined text-2xl text-amber-500">inventory_2</span>
+                              <span>No hay tarimas disponibles en esta bahía.</span>
+                            </div>
+                          } @else {
+                            <div class="flex flex-col items-center gap-1">
+                              <span class="material-symbols-outlined text-2xl text-slate-400">search_off</span>
+                              <span>No se encontraron tarimas que coincidan con "{{ palletSearchQuery() }}".</span>
+                            </div>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Resumen debajo de la tabla -->
+              <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 px-1">
+                <span>
+                  Seleccionadas: <strong class="text-amber-700 dark:text-amber-400 font-mono">{{ selectedTotalPallets() }} Tarima(s)</strong> de <strong class="font-mono">{{ originStock().pallets.length }}</strong> · <strong class="text-emerald-700 dark:text-emerald-400 font-mono">{{ selectedTotalPieces() }} Pzas</strong>
+                </span>
+                @if (selectedOriginCode() && originStock().pallets.length > 0 && selectedPalletIds().length === 0) {
+                  <span class="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[13px]">info</span>
+                    <span>Selecciona las tarimas a mover usando las casillas o el botón "Seleccionar todas"</span>
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 3. BAHÍA DESTINO (EN CEROS) ── -->
+          <div class="space-y-3 p-4 rounded-xl border border-subtle bg-surface-subtle shadow-xs">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">input</span>
+              <span>3. BAHÍA DE DESTINO (DISPONIBLE O CONSOLIDACIÓN)</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+              <!-- Autocomplete Bahía Destino -->
+              <div class="md:col-span-6 fg-field relative">
+                <div class="flex items-center justify-between">
+                  <label class="fg-label fg-label--required">
+                    Bahía de Destino (En Ceros o con Espacio)
+                  </label>
+                  <button
+                    type="button"
+                    (click)="openDestBaySelector()"
+                    class="text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1"
+                    title="Abrir selector visual con mapa 2D y capacidad real de cada bahía"
+                  >
+                    <span class="material-symbols-outlined text-[13px]">warehouse</span>
+                    <span>Selector Visual (Mapa 2D)</span>
+                  </button>
+                </div>
+                <div class="relative flex items-center">
+                  <input
+                    type="text"
+                    [value]="destSearchQuery()"
+                    (input)="onDestInput($any($event.target).value)"
+                    (focus)="isDestDropdownOpen.set(true)"
+                    (click)="isDestDropdownOpen.set(true)"
+                    placeholder="Selecciona Bahía Destino (En Ceros o Consolidación)"
+                    class="fg-input font-bold font-mono w-full pr-8"
+                    autocomplete="off"
+                  />
+                  @if (destSearchQuery()) {
+                    <button
+                      type="button"
+                      (click)="clearDestSelection()"
+                      class="absolute right-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors flex items-center justify-center p-1 rounded"
+                      title="Limpiar bahía destino"
+                    >
+                      <span class="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  } @else {
+                    <span class="material-symbols-outlined absolute right-2 text-slate-400 text-base pointer-events-none">expand_more</span>
+                  }
+                </div>
+
+                <!-- Backdrop -->
+                @if (isDestDropdownOpen()) {
+                  <div class="fixed inset-0 z-40" (click)="isDestDropdownOpen.set(false)"></div>
+                }
+
+                <!-- Dropdown Flotante -->
+                @if (isDestDropdownOpen() && visibleDestLocations().length > 0) {
+                  <div class="sku-autocomplete-dropdown">
+                    <div class="sku-autocomplete-header">
+                      <div class="sku-autocomplete-header__title">
+                        <span class="material-symbols-outlined text-sm">input</span>
+                        <span>-- Bahías Destino ({{ destOnlyAvailableFilter() ? 'Con Espacio' : 'Todas' }}) --</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button
+                          type="button"
+                          (click)="destOnlyAvailableFilter.set(!destOnlyAvailableFilter())"
+                          class="text-[10px] px-2 py-0.5 rounded font-bold transition-all border cursor-pointer"
+                          [ngClass]="destOnlyAvailableFilter() ? 'bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-950 dark:text-teal-300' : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300'"
+                          title="Alternar entre solo disponibles con espacio o ver todas"
+                        >
+                          {{ destOnlyAvailableFilter() ? '✓ Con Espacio' : 'Ver Todas' }}
+                        </button>
+                        <span class="sku-autocomplete-header__hint">
+                          @if (filteredDestTotalCount() > visibleDestLocations().length) {
+                            40 de {{ filteredDestTotalCount() }}
+                          } @else {
+                            {{ filteredDestTotalCount() }}
+                          } bahías
+                        </span>
+                      </div>
+                    </div>
+                    @for (loc of visibleDestLocations(); track loc.locationCode) {
+                      <button
+                        type="button"
+                        (click)="selectDestinationLocation(loc.locationCode)"
+                        class="sku-autocomplete-item"
+                        [class.sku-autocomplete-item--selected]="selectedDestinationCode() === loc.locationCode"
+                        [class.opacity-60]="!loc.stateInfo.isSelectableForDest"
+                      >
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                          <span class="sku-autocomplete-badge" [ngClass]="loc.totalPallets === 0 ? 'border-emerald-500 text-emerald-800 bg-emerald-50' : 'border-amber-500 text-amber-800 bg-amber-50'">
+                            {{ loc.displayCode }}
+                          </span>
+                          <div class="flex flex-col min-w-0">
+                            <span class="sku-autocomplete-name">{{ loc.zone || 'Zona A' }} (Cap: {{ loc.capacity }} UAs)</span>
+                            <span class="text-[10px] font-medium" [ngClass]="loc.totalPallets === 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'">
+                              {{ loc.stateInfo.description }}
+                            </span>
+                          </div>
+                        </div>
+                        <span class="text-[10px] shrink-0 font-bold px-1.5 py-0.5 rounded border" [ngClass]="loc.stateInfo.badgeClass">
+                          {{ loc.stateInfo.label }}
+                        </span>
+                      </button>
+                    }
+                    @if (filteredDestTotalCount() > visibleDestLocations().length) {
+                      <div class="p-2 text-center text-[10px] text-slate-500 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 font-medium">
+                        Mostrando 40 de {{ filteredDestTotalCount() }} bahías. Escribe en el buscador para afinar.
+                      </div>
+                    }
+                  </div>
+                } @else if (isDestDropdownOpen() && visibleDestLocations().length === 0 && destSearchQuery()) {
+                  <div class="sku-autocomplete-empty">
+                    No se encontraron bahías para "{{ destSearchQuery() }}"
+                  </div>
+                }
+              </div>
+
+              <!-- Metadata Destino y Banner -->
+              <div class="md:col-span-6 space-y-2">
+                <!-- Banner de Validación Destino -->
+                @if (selectedDestinationCode()) {
+                  @if (destStock().isBlocked) {
+                    <div class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-300">
+                      <span class="material-symbols-outlined text-base shrink-0 mt-0.5 text-rose-600">block</span>
+                      <div class="space-y-0.5">
+                        <div class="font-bold flex items-center gap-2">
+                          <span>Bahía Bloqueada</span>
+                          <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-rose-100 text-rose-800">No Disponible</span>
+                        </div>
+                        <p class="text-[11px] opacity-90">
+                          La bahía {{ getLocationDisplayCode(destStock()) }} se encuentra bloqueada por Calidad o Mantenimiento.
+                        </p>
+                      </div>
+                    </div>
+                  } @else if (isDestinationEmpty()) {
+                    <div class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-300">
+                      <span class="material-symbols-outlined text-base shrink-0 mt-0.5 text-emerald-600">check_circle</span>
+                      <div class="space-y-0.5">
+                        <div class="font-bold flex items-center gap-2">
+                          <span>Bahía Destino Disponible (En Ceros)</span>
+                          <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-emerald-100 text-emerald-800">
+                            En Ceros (0 UAs)
+                          </span>
+                        </div>
+                        <p class="text-[11px] opacity-90">
+                          La bahía {{ getLocationDisplayCode(destStock()) }} está vacía. {{ destCapacity() }} espacios disponibles para putaway.
+                        </p>
+                      </div>
+                    </div>
+                  } @else if (isDestinationConsolidation()) {
+                    <div class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all bg-teal-500/10 border-teal-500/30 text-teal-900 dark:text-teal-200">
+                      <span class="material-symbols-outlined text-base shrink-0 mt-0.5 text-teal-600 dark:text-teal-400">merge_type</span>
+                      <div class="space-y-0.5">
+                        <div class="font-bold flex items-center gap-2">
+                          <span>Consolidación de Bahía Autorizada</span>
+                          <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300">
+                            {{ destCurrentPallets() }} + {{ selectedTotalPallets() }} = {{ destResultingPallets() }} / {{ destCapacity() }} UAs
+                          </span>
+                        </div>
+                        <p class="text-[11px] opacity-90">
+                          Espacio suficiente para consolidar (quedará <strong>{{ destCapacity() - destResultingPallets() }}</strong> espacio(s) disponible(s)).
+                          @if (isDestinationSameSku()) {
+                            <span class="text-teal-700 dark:text-teal-300 font-bold block mt-0.5">✓ Mismo producto confirmado. Se desocupará la bahía origen.</span>
+                          } @else {
+                            <span class="text-amber-700 dark:text-amber-300 font-medium block mt-0.5">ℹ Consolidación multi-producto autorizada por capacidad disponible.</span>
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  } @else if (isDestinationOverCapacity()) {
+                    <div class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-300">
+                      <span class="material-symbols-outlined text-base shrink-0 mt-0.5 text-rose-600">warning</span>
+                      <div class="space-y-0.5">
+                        <div class="font-bold flex items-center gap-2">
+                          <span>Capacidad Excedida</span>
+                          <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-rose-100 text-rose-800">
+                            {{ destCurrentPallets() }} + {{ selectedTotalPallets() }} = {{ destResultingPallets() }} UAs (Máx: {{ destCapacity() }})
+                          </span>
+                        </div>
+                        <p class="text-[11px] opacity-90">
+                          No se puede reubicar: la maniobra excede la capacidad física de la bahía por <strong>{{ destResultingPallets() - destCapacity() }}</strong> tarima(s). Selecciona una bahía con más espacios disponibles.
+                        </p>
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="p-2.5 rounded-xl border flex items-start gap-2.5 text-xs transition-all bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-300">
+                      <span class="material-symbols-outlined text-base shrink-0 mt-0.5 text-amber-600">info</span>
+                      <div class="space-y-0.5">
+                        <div class="font-bold flex items-center gap-2">
+                          <span>Bahía con Stock Previo ({{ destCurrentPallets() }} / {{ destCapacity() }} UAs)</span>
+                        </div>
+                        <p class="text-[11px] opacity-90">
+                          Selecciona las tarimas en el Paso 2 para verificar si caben en esta bahía (Espacios libres: {{ destAvailableSlots() }}).
+                        </p>
+                      </div>
+                    </div>
+                  }
+                } @else {
+                  <div class="p-2.5 rounded-xl border border-dashed border-subtle bg-surface-subtle text-slate-500 text-xs flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">info</span>
+                    <span>Selecciona Bahía Destino para verificar espacio o consolidación de inventario.</span>
+                  </div>
+                }
+
+                <!-- Metadata Destino Full Width -->
+                <div class="caseta-summary-card" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+                  <div class="caseta-summary-item">
+                    <span class="caseta-summary-label">Almacén</span>
+                    <span class="caseta-summary-value truncate">{{ selectedDestinationCode() ? formatWarehouse(destStock().warehouseName) : '--' }}</span>
+                  </div>
+                  <div class="caseta-summary-item">
+                    <span class="caseta-summary-label">Zona / Sección</span>
+                    <span class="caseta-summary-value truncate">{{ selectedDestinationCode() ? formatZone(destStock().zone) : '--' }}</span>
+                  </div>
+                  <div class="caseta-summary-item">
+                    <span class="caseta-summary-label">Capacidad</span>
+                    <span class="caseta-summary-value font-mono">{{ selectedDestinationCode() ? (destStock().capacity + ' Tarimas') : '--' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 4. MOTIVO DE TRASPASO Y OBSERVACIONES ── -->
+          <div class="space-y-3 pt-1">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">description</span>
+              <span>4. MOTIVO DE TRASPASO Y OBSERVACIONES</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+              <div class="md:col-span-5 fg-field">
+                <label class="fg-label fg-label--required">
+                  Motivo de Traspaso (Catálogo WMS)
+                </label>
+                <select
+                  [ngModel]="selectedReasonId()"
+                  (ngModelChange)="selectedReasonId.set($event)"
+                  class="fg-input font-bold"
+                >
+                  <option value="">-- Selecciona Motivo de Reubicación --</option>
+                  @for (r of transferReasons; track r.id) {
+                    <option [value]="r.id">{{ r.label }}</option>
+                  }
+                </select>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 block pt-0.5 italic">
+                  {{ selectedReason().description }}
+                </span>
+              </div>
+
+              <div class="md:col-span-7 fg-field">
+                <label class="fg-label">
+                  Observaciones y Justificación
+                </label>
+                <textarea
+                  [ngModel]="observations()"
+                  (ngModelChange)="observations.set($event)"
+                  rows="2"
+                  placeholder="Detalles adicionales sobre la maniobra o reubicación física..."
+                  class="fg-input text-xs w-full"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 5. REVISE QUE LA OPERACIÓN SEA CORRECTA (PRE-VALIDACIÓN EN VIVO) ── -->
+          <div class="space-y-3 pt-1">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">verified</span>
+              <span>5. REVISE QUE LA OPERACIÓN SEA CORRECTA</span>
+            </div>
+
+            <!-- Checklist Interactivo de Pre-Validación -->
+            <div class="p-3.5 rounded-xl border border-subtle bg-surface-subtle space-y-3">
+              <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                <span>Checklist de Validación Operativa:</span>
+                <span class="text-[11px] font-mono px-2 py-0.5 rounded font-bold" [ngClass]="canProceedToConfirm() ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300'">
+                  {{ canProceedToConfirm() ? '5 de 5 Validaciones Completas' : 'Requisitos pendientes' }}
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 text-xs">
+                <!-- Check 1: Montacarguista -->
+                <div class="p-2 rounded-lg border flex items-center gap-2" [ngClass]="isOperatorStepValid() ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-800 bg-surface opacity-75'">
+                  <span class="material-symbols-outlined text-base" [ngClass]="isOperatorStepValid() ? 'text-emerald-600' : 'text-slate-400'">
+                    {{ isOperatorStepValid() ? 'check_circle' : 'radio_button_unchecked' }}
+                  </span>
+                  <div class="flex flex-col min-w-0">
+                    <span class="font-bold text-[11px] truncate">1. Montacarguista</span>
+                    <span class="text-[10px] truncate opacity-80">{{ isOperatorStepValid() ? selectedOperator()?.name : 'Sin asignar' }}</span>
+                  </div>
+                </div>
+
+                <!-- Check 2: Bahía Origen -->
+                <div class="p-2 rounded-lg border flex items-center gap-2" [ngClass]="isOriginStepValid() ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-800 bg-surface opacity-75'">
+                  <span class="material-symbols-outlined text-base" [ngClass]="isOriginStepValid() ? 'text-emerald-600' : 'text-slate-400'">
+                    {{ isOriginStepValid() ? 'check_circle' : 'radio_button_unchecked' }}
+                  </span>
+                  <div class="flex flex-col min-w-0">
+                    <span class="font-bold text-[11px] truncate">2. Bahía Origen</span>
+                    <span class="text-[10px] font-mono truncate opacity-80">{{ isOriginStepValid() ? selectedOriginCode() : 'Sin seleccionar' }}</span>
+                  </div>
+                </div>
+
+                <!-- Check 3: Cantidad Seleccionada -->
+                <div class="p-2 rounded-lg border flex items-center gap-2" [ngClass]="isQuantityStepValid() ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-800 bg-surface opacity-75'">
+                  <span class="material-symbols-outlined text-base" [ngClass]="isQuantityStepValid() ? 'text-emerald-600' : 'text-slate-400'">
+                    {{ isQuantityStepValid() ? 'check_circle' : 'radio_button_unchecked' }}
+                  </span>
+                  <div class="flex flex-col min-w-0">
+                    <span class="font-bold text-[11px] truncate">3. Cantidad UAs</span>
+                    <span class="text-[10px] font-mono truncate opacity-80">{{ isQuantityStepValid() ? (selectedTotalPallets() + ' Tarimas') : '0 Tarimas' }}</span>
+                  </div>
+                </div>
+
+                <!-- Check 4: Bahía Destino (En Ceros o Consolidación) -->
+                <div class="p-2 rounded-lg border flex items-center gap-2" [ngClass]="isDestStepValid() ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-800 bg-surface opacity-75'">
+                  <span class="material-symbols-outlined text-base" [ngClass]="isDestStepValid() ? 'text-emerald-600' : 'text-slate-400'">
+                    {{ isDestStepValid() ? 'check_circle' : 'radio_button_unchecked' }}
+                  </span>
+                  <div class="flex flex-col min-w-0">
+                    <span class="font-bold text-[11px] truncate">4. Bahía Destino</span>
+                    <span class="text-[10px] font-mono truncate opacity-80">
+                      @if (isDestStepValid()) {
+                        @if (isDestinationEmpty()) {
+                          {{ selectedDestinationCode() }} (En Ceros · 0 UAs)
+                        } @else {
+                          {{ selectedDestinationCode() }} (Consolidación · {{ destResultingPallets() }}/{{ destCapacity() }} UAs)
+                        }
+                      } @else if (isDestinationOverCapacity()) {
+                        Capacidad excedida ({{ destResultingPallets() }}/{{ destCapacity() }} UAs)
+                      } @else {
+                        Sin validar
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Check 5: Motivo de Traspaso -->
+                <div class="p-2 rounded-lg border flex items-center gap-2" [ngClass]="isReasonStepValid() ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-800 bg-surface opacity-75'">
+                  <span class="material-symbols-outlined text-base" [ngClass]="isReasonStepValid() ? 'text-emerald-600' : 'text-slate-400'">
+                    {{ isReasonStepValid() ? 'check_circle' : 'radio_button_unchecked' }}
+                  </span>
+                  <div class="flex flex-col min-w-0">
+                    <span class="font-bold text-[11px] truncate">5. Motivo WMS</span>
+                    <span class="text-[10px] truncate opacity-80">{{ isReasonStepValid() ? selectedReason().label : 'Sin especificar' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Totalizadores en Vivo -->
+              <div class="tarimas-summary-grid pt-1">
+                <div>
+                  <span class="tarimas-summary-label">Total Tarimas a Mover</span>
+                  <span class="tarimas-summary-val--tarimas">{{ selectedTotalPallets() }}</span>
+                </div>
+                <div>
+                  <span class="tarimas-summary-label">SKUs Distintos</span>
+                  <span class="tarimas-summary-val--sku">{{ selectedDistinctSkus() }}</span>
+                </div>
+                <div>
+                  <span class="tarimas-summary-label">Piezas Totales</span>
+                  <span class="tarimas-summary-val--pieces">{{ selectedTotalPieces() }} PZAS</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── FOOTER DE ACCIÓN Y CONFIRMACIÓN ── -->
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-subtle">
+            <div class="text-xs text-center sm:text-left">
+              <span class="text-slate-600 dark:text-slate-400">
+                Reubicar <strong class="text-amber-700 dark:text-amber-400 font-mono font-bold">{{ selectedTotalPallets() }} tarimas</strong> de <strong class="text-slate-900 dark:text-slate-100 font-mono font-bold">{{ selectedOriginCode() || '--' }}</strong> ➔ <strong class="text-emerald-700 dark:text-emerald-400 font-mono font-bold">{{ selectedDestinationCode() || '--' }}</strong>
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                (click)="resetToIdle()"
+                class="btn-secondary-outline text-xs px-5 py-2.5 rounded-xl font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                (click)="openConfirmModal()"
+                [disabled]="!canProceedToConfirm()"
+                class="btn-primary-gold px-6 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-slate-950"
+              >
+                <span class="material-symbols-outlined text-base">check_circle</span>
+                <span>Confirmar Cambio de Almacén</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      } @else if (formMode() === 'detail' && selectedTransfer()) {
+
+        <!-- ══════════════════════════════════════════════════
+             ESTADO 2: WORKBENCH DETALLE DEL TRASPASO SELECCIONADO
+             100% HOMOLOGADO CON RECEPCIÓN DE MERCANCÍA
+             ══════════════════════════════════════════════════ -->
+        <div class="synexia-card p-5 space-y-6 animate-fade-up">
+
+          <!-- 1. CABECERA BREADCRUMB & ACCIONES -->
+          <div class="receiving-breadcrumb-bar">
+            <div class="receiving-breadcrumb-bar__path">
+              <button
+                type="button"
+                (click)="resetToIdle()"
+                class="btn-secondary-outline text-xs px-3 py-1 rounded-lg font-bold flex items-center gap-1 mr-2 shadow-sm"
+                title="Volver al Directorio de Consultas"
+              >
+                <span class="material-symbols-outlined text-sm">arrow_back</span>
+                <span>Volver a Consultas</span>
+              </button>
+              <span class="material-symbols-outlined receiving-breadcrumb__icon">compare_arrows</span>
+              <span class="receiving-breadcrumb__module">Movimientos</span>
+              <span class="material-symbols-outlined receiving-breadcrumb__sep">chevron_right</span>
+              <h2 class="receiving-breadcrumb__client">{{ selectedTransfer()!.originLocation }} ➔ {{ selectedTransfer()!.destinationLocation }}</h2>
+              <span class="receiving-breadcrumb__folio">FOLIO #{{ selectedTransfer()!.folio }}</span>
+              <span
+                class="transportistas-status-badge"
+                [class.transportistas-status-badge--active]="selectedTransfer()?.status !== 'CANCELLED'"
+                [class.transportistas-status-badge--cancelled]="selectedTransfer()?.status === 'CANCELLED'"
+              >
+                {{ selectedTransfer()?.status === 'CANCELLED' ? 'Cancelado' : 'Completado' }}
+              </span>
+            </div>
+
+            <!-- BOTONES DE ACCIÓN SUPERIOR -->
+            <div class="flex items-center gap-2">
+              @if (selectedTransfer()?.status !== 'CANCELLED') {
+                <button
+                  type="button"
+                  (click)="openCancelModal()"
+                  class="btn-danger-outline text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm"
+                >
+                  <span class="material-symbols-outlined text-sm">cancel</span>
+                  <span>Cancelar Traspaso</span>
+                </button>
+              }
+              <button
+                type="button"
+                (click)="openPrintPreview(selectedTransfer()!)"
+                class="btn-primary-gold px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm text-slate-900"
+                title="Imprimir Comprobante Oficial"
+              >
+                <span class="material-symbols-outlined text-sm">print</span>
+                <span>Imprimir Comprobante</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. SECCIÓN 1: INFORMACIÓN GENERAL DEL MOVIMIENTO -->
+          <div class="space-y-3">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">info</span>
+              <span>INFORMACIÓN GENERAL DEL MOVIMIENTO</span>
+            </div>
+
+            <div class="caseta-summary-card">
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">No. Folio</span>
+                <span class="caseta-summary-value font-mono text-amber-800 dark:text-amber-300">{{ selectedTransfer()!.folio }}</span>
+              </div>
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">Fecha y Hora</span>
+                <span class="caseta-summary-value font-mono">{{ selectedTransfer()!.transferredAt }}</span>
+              </div>
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">Montacarguista</span>
+                <span class="caseta-summary-value font-semibold" [title]="selectedTransfer()!.forkliftOperator">{{ selectedTransfer()!.forkliftOperator || 'Operador de Montacargas' }}</span>
+              </div>
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">Registrado Por</span>
+                <span class="caseta-summary-value font-semibold" [title]="selectedTransfer()!.transferredBy">{{ selectedTransfer()!.transferredBy || authState.userFullName() || 'Usuario en Sesión' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Matriz Visual Origen -> Destino -->
+          <div class="grid grid-cols-2 gap-4 text-center">
+            <div class="bg-amber-500/10 p-3.5 rounded-xl border border-amber-500/30">
+              <span class="text-amber-800 dark:text-amber-300 block text-[10px] uppercase font-bold">Bahía Origen (Desocupada)</span>
+              <span class="font-mono text-2xl font-bold text-amber-900 dark:text-amber-200">{{ selectedTransfer()!.originLocation }}</span>
+            </div>
+            <div class="bg-emerald-500/10 p-3.5 rounded-xl border border-emerald-500/30">
+              <span class="text-emerald-800 dark:text-emerald-300 block text-[10px] uppercase font-bold">Bahía Destino (Ubicación Actual)</span>
+              <span class="font-mono text-2xl font-bold text-emerald-900 dark:text-emerald-200">{{ selectedTransfer()!.destinationLocation }}</span>
+            </div>
+          </div>
+
+          <!-- Motivo y Observaciones -->
+          <div class="bg-surface-subtle p-3 rounded-xl border border-subtle text-xs space-y-1">
+            <div>
+              <span class="font-bold text-slate-700 dark:text-slate-300">Motivo: </span>
+              <span class="text-secondary">{{ selectedTransfer()!.reasonLabel || 'Reubicación operativa' }}</span>
+            </div>
+            @if (selectedTransfer()!.observations) {
+              <div>
+                <span class="font-bold text-slate-700 dark:text-slate-300">Observaciones: </span>
+                <span class="text-secondary italic">"{{ selectedTransfer()!.observations }}"</span>
+              </div>
+            }
+          </div>
+
+          <!-- Alerta de Cancelación si aplica -->
+          @if (selectedTransfer()!.status === 'CANCELLED') {
+            <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs space-y-1">
+              <div class="flex items-center gap-1.5 font-bold">
+                <span class="material-symbols-outlined text-sm">cancel</span>
+                <span>TRASPASO CANCELADO / REVOCADO</span>
+              </div>
+              @if (selectedTransfer()!.cancellationReason) {
+                <p class="text-[11px] italic">"{{ selectedTransfer()!.cancellationReason }}"</p>
+              }
+              <div class="flex items-center gap-2 text-[10px] font-mono opacity-80 pt-1">
+                @if (selectedTransfer()!.cancelledBy) {
+                  <span>Cancelado por: {{ selectedTransfer()!.cancelledBy }}</span>
+                }
+                @if (selectedTransfer()!.cancelledAt) {
+                  <span>· Fecha: {{ selectedTransfer()!.cancelledAt }}</span>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Tabla de Tarimas Reubicadas en el Detalle -->
+          <div class="space-y-2">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">inventory_2</span>
+              <span>TARIMAS Y PRODUCTOS ASOCIADOS ({{ selectedTransfer()!.pallets?.length || selectedTransfer()!.totalPallets || 0 }})</span>
+            </div>
+
+            <div class="table-shell-wrapper rounded-xl border border-subtle overflow-hidden">
+              <table class="table-dense-custom w-full text-left text-xs">
+                <thead>
+                  <tr class="bg-surface-subtle border-b border-subtle text-[11px] font-bold text-secondary uppercase">
+                    <th class="p-2 text-center w-12">#</th>
+                    <th class="p-2">Código Tarima (UA)</th>
+                    <th class="p-2">Código SKU</th>
+                    <th class="p-2">Descripción del Producto</th>
+                    <th class="p-2 text-right">Piezas</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-subtle">
+                  @for (p of selectedTransfer()!.pallets || []; track p.id; let idx = $index) {
+                    <tr class="hover:bg-surface-hover transition-colors">
+                      <td class="p-2 text-center font-mono font-bold text-slate-400">{{ idx + 1 }}</td>
+                      <td class="p-2 font-mono font-bold text-amber-700 dark:text-amber-400">{{ p.palletCode }}</td>
+                      <td class="p-2 font-mono font-bold">{{ p.productId || '12572733' }}</td>
+                      <td class="p-2 text-secondary">{{ p.description || 'ALIMENTO BALANCEADO PURINA' }}</td>
+                      <td class="p-2 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400">{{ p.pieces }} PZAS</td>
+                    </tr>
+                  } @empty {
+                    @for (i of [1,2,3,4,5].slice(0, selectedTransfer()!.totalPallets || 1); track i; let idx = $index) {
+                      <tr class="hover:bg-surface-hover transition-colors">
+                        <td class="p-2 text-center font-mono font-bold text-slate-400">{{ idx + 1 }}</td>
+                        <td class="p-2 font-mono font-bold text-amber-700 dark:text-amber-400">UA-{{ 104000 + idx + 1 }}</td>
+                        <td class="p-2 font-mono font-bold">12572733</td>
+                        <td class="p-2 text-secondary">ALIMENTO BALANCEADO PURINA</td>
+                        <td class="p-2 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400">45 PZAS</td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Metadatos de Auditoría y Trazabilidad -->
+          <div class="space-y-3 pt-2">
+            <div class="form-section__legend">
+              <span class="material-symbols-outlined">verified_user</span>
+              <span>METADATOS DE AUDITORÍA Y TRAZABILIDAD</span>
+            </div>
+
+            <!-- Metadatos de lectura rápida -->
+            <div class="caseta-summary-card mb-4" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">Folio de Movimiento</span>
+                <span class="caseta-summary-value font-mono text-amber-800 dark:text-amber-300">{{ selectedTransfer()!.folio }}</span>
+              </div>
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">Organización</span>
+                <span class="caseta-summary-value truncate">4GUARD LOGISTICS</span>
+              </div>
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">Registrado Por</span>
+                <span class="caseta-summary-value font-mono font-semibold">{{ selectedTransfer()!.transferredBy || authState.userFullName() || 'Usuario en Sesión' }}</span>
+              </div>
+              <div class="caseta-summary-item">
+                <span class="caseta-summary-label">Fecha de Operación</span>
+                <span class="caseta-summary-value font-mono">{{ selectedTransfer()!.transferredAt }}</span>
+              </div>
+            </div>
+
+            <!-- Línea de Tiempo de Auditoría -->
+            <div class="carriers-timeline-preview">
+              <div class="carriers-timeline-preview__header">
+                <div class="carriers-timeline-preview__title">
+                  <span class="material-symbols-outlined text-base">timeline</span>
+                  <span>Línea de Tiempo de Auditoría</span>
+                </div>
+                <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
+              </div>
+
+              <div class="carriers-timeline-preview__nodes">
+                @for (log of auditEntries(); track log.id || $index; let isLast = $last) {
+                  <div class="carriers-tl-node" [ngClass]="getAuditColorClass(log.action)">
+                    <div class="carriers-tl-node__dot">
+                      <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action) }}</span>
+                    </div>
+                    @if (!isLast) {
+                      <div class="carriers-tl-node__line"></div>
+                    }
+                    <div class="carriers-tl-node__content">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="carriers-tl-node__action font-black text-slate-950 dark:text-white">{{ getAuditSummary(log.action) }}</span>
+                        <span class="carriers-tl-node__tag font-bold">&#64;{{ log.username }}</span>
+                      </div>
+
+                      @if (log.details && log.details.length > 0) {
+                        <div class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2.5 rounded-lg bg-surface border border-subtle">
+                          @for (d of log.details; track d.fieldName) {
+                            <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
+                              <span class="carriers-tl-diff__field font-bold text-slate-700 dark:text-slate-300">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                              @if (d.oldValue && d.oldValue !== 'Sin especificar' && d.oldValue !== d.newValue) {
+                                <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                <span class="carriers-tl-diff__arrow text-slate-400 mx-1.5 font-bold">➔</span>
+                              }
+                              <span class="carriers-tl-diff__new text-emerald-700 dark:text-emerald-400 font-mono font-bold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
+                            </div>
+                          }
+                        </div>
+                      }
+
+                      @if (log.reason) {
+                        <p class="text-xs text-rose-600 font-bold italic mt-1">
+                          Motivo: "{{ log.reason }}"
+                        </p>
+                      }
+
+                      <span class="carriers-tl-node__meta font-bold">
+                        <span class="material-symbols-outlined text-[13px]">schedule</span>
+                        <span>{{ log.timestamp }}</span>
+                        @if (log.authorizedBy) {
+                          <span class="ml-2 font-normal">· Autorizado por: <strong class="carriers-tl-node__author">{{ log.authorizedBy }}</strong></span>
+                        }
+                      </span>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="text-xs text-slate-400 italic text-center py-3">
+                    No hay eventos de auditoría registrados para este folio.
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer de Acciones para Detalle -->
+          <div class="flex items-center justify-between pt-3 border-t border-subtle">
+            <button
+              type="button"
+              (click)="startNewTransfer()"
+              class="btn-secondary-outline px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5"
+            >
+              <span class="material-symbols-outlined text-sm">add</span>
+              <span>Registrar Nuevo Cambio</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="openPrintPreview(selectedTransfer()!)"
+              class="btn-primary-gold px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md text-slate-950"
+            >
+              <span class="material-symbols-outlined text-sm">print</span>
+              <span>Imprimir Comprobante Oficial</span>
+            </button>
+          </div>
+
+        </div>
+
+      }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL 1: CONFIRMACIÓN TRANSACCIONAL (SDD PASO 5)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showConfirmModal()) {
+    <div class="modal-overlay">
+      <div class="modal-card max-w-xl w-full shadow-2xl">
+        
+        <div class="modal-header flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center">
+              <span class="material-symbols-outlined text-2xl">verified_user</span>
+            </div>
+            <div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white uppercase tracking-wide">Confirmar Cambio de Almacén</h3>
+              <p class="text-xs text-slate-900 dark:text-slate-300 font-semibold">Revise que la operación sea correcta antes de confirmar</p>
+            </div>
+          </div>
+          <button (click)="closeConfirmModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Resumen del Movimiento -->
+        <div class="modal-body space-y-4 text-xs">
+          
+          <div class="grid grid-cols-2 gap-3 text-center">
+            <div class="bg-surface-subtle p-3 rounded-xl border border-subtle">
+              <span class="text-slate-900 dark:text-slate-200 block text-[10px] uppercase font-extrabold">Origen (A Vaciar)</span>
+              <span class="font-mono text-xl font-black text-amber-700 dark:text-amber-400">{{ selectedOriginCode() }}</span>
+            </div>
+            <div class="bg-surface-subtle p-3 rounded-xl border border-subtle">
+              <span class="text-slate-900 dark:text-slate-200 block text-[10px] uppercase font-extrabold">Destino (En Ceros)</span>
+              <span class="font-mono text-xl font-black text-emerald-700 dark:text-emerald-400">{{ selectedDestinationCode() }}</span>
+            </div>
+          </div>
+
+          <div class="caseta-summary-card" style="grid-template-columns: 1fr; gap: 0.6rem;">
+            <div class="flex justify-between">
+              <span class="caseta-summary-label">Nombre del Montacarguista:</span>
+              <span class="caseta-summary-value">{{ selectedOperator()?.name || 'No asignado' }} ({{ selectedOperator()?.badge || '--' }})</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="caseta-summary-label">Estatus del Operador:</span>
+              <span class="caseta-summary-value font-bold text-emerald-700 dark:text-emerald-400">Activo · {{ selectedOperator() ? formatShift(selectedOperator()?.shift) : '--' }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="caseta-summary-label">Motivo de Traspaso:</span>
+              <span class="caseta-summary-value text-amber-800 dark:text-amber-300 font-bold">{{ selectedReason().label }}</span>
+            </div>
+            @if (observations()) {
+              <div class="flex justify-between">
+                <span class="caseta-summary-label">Observaciones:</span>
+                <span class="caseta-summary-value italic font-medium">{{ observations() }}</span>
+              </div>
+            }
+            <div class="flex justify-between pt-2 border-t border-amber-500/20">
+              <span class="caseta-summary-label">Cantidad Seleccionada:</span>
+              <span class="font-mono font-black text-emerald-700 dark:text-emerald-400 text-sm">
+                {{ selectedTotalPallets() }} Tarimas ({{ selectedTotalPieces() }} Pzas)
+              </span>
+            </div>
+          </div>
+
+          <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-950 dark:text-amber-200 text-[11px] flex items-center gap-2">
+            <span class="material-symbols-outlined text-base text-amber-700 dark:text-amber-400">lock</span>
+            <span class="font-bold">Esta operación actualizará la ubicación del inventario en tiempo real y generará un folio de auditoría oficial.</span>
+          </div>
+
+        </div>
+
+        <div class="modal-footer flex items-center justify-end gap-3">
+          <button
+            type="button"
+            (click)="closeConfirmModal()"
+            [disabled]="isExecuting()"
+            class="btn-secondary-outline px-4 py-2 rounded-xl text-xs font-bold text-slate-900 dark:text-slate-100"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="executeTransferAction()"
+            [disabled]="isExecuting()"
+            class="btn-primary-gold px-5 py-2 rounded-xl text-xs font-black flex items-center gap-2 shadow-md text-slate-950"
+          >
+            <span class="material-symbols-outlined text-sm">swap_horiz</span>
+            <span>{{ isExecuting() ? 'Ejecutando confirmación...' : 'Ejecutar confirmación' }}</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL 2: ¿DESEA IMPRIMIR DOCUMENTO? (SÍ / NO) — POST-CONFIRMACIÓN
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showPrintPromptModal() && lastCompletedTransfer()) {
+    <div class="modal-overlay p-3 sm:p-4 animate-fade-up">
+      <div class="modal-card max-w-lg w-full shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden">
+        
+        <!-- Header con Icono de Éxito -->
+        <div class="modal-header flex items-center justify-between border-b border-subtle pb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center border border-emerald-500/30">
+              <span class="material-symbols-outlined text-2xl">check_circle</span>
+            </div>
+            <div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white uppercase tracking-wide">
+                ¡Cambio de Almacén Registrado!
+              </h3>
+              <span class="font-mono text-xs font-bold text-amber-800 dark:text-amber-300">
+                Folio Oficial: #{{ lastCompletedTransfer()!.folio }}
+              </span>
+            </div>
+          </div>
+          <button (click)="onConfirmPrintPrompt(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Body de la Pregunta -->
+        <div class="modal-body space-y-4 py-4 text-xs">
+          <div class="p-4 rounded-xl bg-surface-subtle border border-subtle space-y-2 text-center">
+            <span class="material-symbols-outlined text-3xl text-amber-500">print</span>
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white">
+              ¿Desea imprimir documento oficial de la operación?
+            </h4>
+            <p class="text-slate-600 dark:text-slate-400 text-xs">
+              La reubicación de <strong class="text-amber-700 dark:text-amber-400 font-mono">{{ lastCompletedTransfer()!.totalPallets }} tarima(s)</strong> desde <strong class="font-mono">{{ lastCompletedTransfer()!.originLocation }}</strong> hacia <strong class="font-mono">{{ lastCompletedTransfer()!.destinationLocation }}</strong> ha sido confirmada y guardada en la base de datos.
+            </p>
+          </div>
+
+          <div class="caseta-summary-card" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+            <div class="caseta-summary-item">
+              <span class="caseta-summary-label">Montacarguista</span>
+              <span class="caseta-summary-value truncate">{{ lastCompletedTransfer()!.forkliftOperator }}</span>
+            </div>
+            <div class="caseta-summary-item">
+              <span class="caseta-summary-label">Cantidad UAs</span>
+              <span class="caseta-summary-value font-mono">{{ lastCompletedTransfer()!.totalPallets }} Tarimas ({{ lastCompletedTransfer()!.totalPieces }} Pzas)</span>
+            </div>
+            <div class="caseta-summary-item">
+              <span class="caseta-summary-label">Estatus</span>
+              <span class="caseta-summary-value text-emerald-600 dark:text-emerald-400 font-bold">Completado</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer con Opciones Sí / No -->
+        <div class="modal-footer flex items-center justify-between gap-3 pt-3 border-t border-subtle">
+          <button
+            type="button"
+            (click)="onConfirmPrintPrompt(false)"
+            class="btn-secondary-outline px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300"
+          >
+            No, Finalizar
+          </button>
+          
+          <button
+            type="button"
+            (click)="onConfirmPrintPrompt(true)"
+            class="btn-primary-gold px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md text-slate-950"
+          >
+            <span class="material-symbols-outlined text-sm">print</span>
+            <span>Sí, Imprimir Documento</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL 3: COMPROBANTE OFICIAL IMPRIMIBLE
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showPrintModal() && selectedPrintTransfer()) {
+    <div class="modal-overlay p-2 sm:p-4">
+      <div class="modal-card max-w-3xl w-full p-3 sm:p-4 space-y-2.5 max-h-[96vh] flex flex-col overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+        
+        <!-- Header del Modal en UNA SOLA FILA -->
+        <div class="modal-header flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2.5 flex-shrink-0 print:hidden">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="material-symbols-outlined text-base shrink-0" [ngClass]="selectedPrintTransfer()?.status === 'CANCELLED' ? 'text-rose-600' : 'text-amber-500'">
+              {{ selectedPrintTransfer()?.status === 'CANCELLED' ? 'cancel' : 'print' }}
+            </span>
+            <span class="font-black text-slate-950 dark:text-slate-100 text-xs uppercase tracking-wider truncate">
+              {{ selectedPrintTransfer()?.status === 'CANCELLED' ? 'Comprobante de Cancelación de Traspaso' : 'Comprobante Oficial de Traspaso' }}
+            </span>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              (click)="downloadDirectPdf()"
+              [disabled]="isGeneratingPdf()"
+              class="btn-primary-gold px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50 transition-all hover:scale-[1.02] whitespace-nowrap text-slate-900"
+            >
+              <span class="material-symbols-outlined text-sm">download</span>
+              <span>{{ isGeneratingPdf() ? 'Generando...' : 'Descargar PDF (' + (selectedPrintTransfer()?.folio || 'Doc') + '.pdf)' }}</span>
+            </button>
+            <button
+              type="button"
+              (click)="triggerBrowserPrint()"
+              class="btn-secondary-outline px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 whitespace-nowrap border border-slate-300 dark:border-slate-700"
+            >
+              <span class="material-symbols-outlined text-sm">print</span>
+              <span>Imprimir</span>
+            </button>
+            <button
+              type="button"
+              (click)="closePrintModal()"
+              class="btn-secondary-outline px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenido Imprimible -->
+        <div class="modal-body flex-1 overflow-y-auto pr-0.5">
+          <fg-print-transfer-layout [transfer]="selectedPrintTransfer()!"></fg-print-transfer-layout>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       MODAL 3: CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR (WMS)
+       ════════════════════════════════════════════════════════════════ -->
+  @if (showCancelModal()) {
+    <div class="modal-overlay p-2 sm:p-4" (click)="closeCancelModal()">
+      <div class="modal-card max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden animate-fade-up shadow-2xl" (click)="$event.stopPropagation()">
+        
+        <!-- Header de Cancelación -->
+        <div class="modal-header flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="modal-header-icon-box">
+              <span class="material-symbols-outlined">cancel</span>
+            </div>
+            <div>
+              <h3 class="modal-header-title">Cancelar Traspaso #{{ selectedTransfer()?.folio }}</h3>
+              <p class="modal-header-subtitle">Revocación de reubicación con autorización Admin</p>
+            </div>
+          </div>
+          <button (click)="closeCancelModal()" type="button" class="modal-close-icon-btn">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <!-- Body con Motivo y Credenciales -->
+        <div class="modal-body space-y-4 text-xs">
+          <!-- Resumen de Traspaso -->
+          <div class="modal-summary-box grid grid-cols-2 gap-3">
+            <div>
+              <span class="modal-summary-label">Origen:</span>
+              <span class="modal-summary-val font-mono block">{{ selectedTransfer()?.originLocation }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Destino:</span>
+              <span class="modal-summary-val font-mono">{{ selectedTransfer()?.destinationLocation }}</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Total Tarimas:</span>
+              <span class="modal-summary-val modal-summary-val--gold">{{ selectedTransfer()?.totalPallets || 5 }} Tarimas</span>
+            </div>
+            <div>
+              <span class="modal-summary-label">Piezas Totales:</span>
+              <span class="modal-summary-val modal-summary-val--emerald">{{ selectedTransfer()?.totalPieces || 225 }} Piezas</span>
+            </div>
+          </div>
+
+          @if (cancelErrorMessage()) {
+            <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-rose-500 shrink-0">error</span>
+              <span>{{ cancelErrorMessage() }}</span>
+            </div>
+          }
+
+          <!-- Motivo Obligatorio -->
+          <div class="space-y-1">
+            <label class="modal-field-label">
+              Motivo o Justificación Obligatoria de Cancelación <span class="text-rose-500 font-bold">*</span>
+            </label>
+            <textarea
+              [ngModel]="cancelReason()"
+              (ngModelChange)="cancelReason.set($event)"
+              rows="3"
+              class="fg-input w-full text-xs"
+              placeholder="Describe detalladamente el motivo de la cancelación o revocación..."
+            ></textarea>
+          </div>
+
+          <!-- Credenciales ADMIN -->
+          <div class="pt-3 border-t border-subtle space-y-3">
+            <div class="modal-section-legend">
+              <span class="material-symbols-outlined text-base">lock_person</span>
+              <span>Validación de Credenciales de Administrador</span>
+            </div>
+            
+            <div>
+              <label class="modal-field-label">Usuario / Correo Admin <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">person</span>
+                <input
+                  type="text"
+                  [ngModel]="cancelAdminUser()"
+                  (ngModelChange)="cancelAdminUser.set($event)"
+                  class="fg-input fg-input-with-icon-left w-full font-mono text-xs"
+                  placeholder="admin@4guard.com o tu usuario"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="modal-field-label">Contraseña de Administrador <span class="text-rose-500 font-bold">*</span></label>
+              <div class="fg-input-icon-wrap">
+                <span class="material-symbols-outlined fg-input-icon-left">lock</span>
+                <input
+                  [type]="showCancelPassword() ? 'text' : 'password'"
+                  [ngModel]="cancelAdminPassword()"
+                  (ngModelChange)="cancelAdminPassword.set($event)"
+                  (keyup.enter)="confirmCancelTransfer()"
+                  class="fg-input fg-input-with-icons-both w-full font-mono text-xs"
+                  placeholder="Ingresa tu contraseña de acceso"
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowCancelPassword()"
+                  class="fg-input-icon-right"
+                  title="Ver/Ocultar contraseña"
+                >
+                  <span class="material-symbols-outlined text-base">
+                    {{ showCancelPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer flex items-center justify-between">
+          <button type="button" (click)="closeCancelModal()" class="btn-ghost text-xs px-4 py-2 rounded-xl">
+            Regresar
+          </button>
+          <button
+            type="button"
+            (click)="confirmCancelTransfer()"
+            [disabled]="isCancelling()"
+            class="carriers-btn carriers-btn--danger text-xs px-5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
+          >
+            <span class="material-symbols-outlined text-base">security_update_warning</span>
+            <span>{{ isCancelling() ? 'Cancelando...' : 'Confirmar Cancelación' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>
+
+<!-- MODAL: SELECTOR VISUAL DE BAHÍAS ORIGEN (CON STOCK) -->
+@if (showOriginBaySelectorModal()) {
+  <fg-bay-occupancy-selector
+    [selectedLocationCode]="selectedOriginCode()"
+    mode="origin"
+    dialogTitle="Selector Visual / Mapa de Bahía de Origen (Con Stock)"
+    (locationSelected)="onOriginBaySelected($event)"
+    (closed)="showOriginBaySelectorModal.set(false)"
+  ></fg-bay-occupancy-selector>
+}
+
+<!-- MODAL: SELECTOR VISUAL DE BAHÍAS DESTINO (CAPACIDAD DINÁMICA) -->
+@if (showDestBaySelectorModal()) {
+  <fg-bay-occupancy-selector
+    [selectedLocationCode]="selectedDestinationCode()"
+    mode="destination"
+    dialogTitle="Selector Visual / Mapa de Bahía Destino (Ocupación y Capacidad)"
+    (locationSelected)="onDestBaySelected($event)"
+    (closed)="showDestBaySelectorModal.set(false)"
+  ></fg-bay-occupancy-selector>
+}
+

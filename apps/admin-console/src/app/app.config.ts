@@ -12,6 +12,7 @@ import { ApplicationConfig, importProvidersFrom } from '@angular/core';
 import {
   provideRouter,
   withComponentInputBinding,
+  withRouterConfig,
   withViewTransitions,
 } from '@angular/router';
 import {
@@ -20,9 +21,11 @@ import {
 } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
-import { branchInterceptor, mockBackendInterceptor } from '@4guard/shared-core';
+import { branchInterceptor } from '@4guard/shared-core';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { adminRoutes } from './app.routes';
+import { WAREHOUSE_LAYOUT_REPOSITORY } from './features/catalogs/ports/warehouse-layout.repository.port';
+import { WarehouseLayoutHttpAdapter } from './features/catalogs/services/warehouse-layout-http.adapter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -30,6 +33,9 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       adminRoutes,
       withComponentInputBinding(),
+      withRouterConfig({
+        onSameUrlNavigation: 'reload',
+      }),
       withViewTransitions({
         onViewTransitionCreated: (info) => {
           info.transition.finished.catch(() => {
@@ -40,10 +46,16 @@ export const appConfig: ApplicationConfig = {
     ),
 
     // ── HTTP Client con interceptores ────────────────────────────────────────
-    // Orden importante: Auth primero, luego Branch, luego Mock Backend
+    // Orden: Auth primero, luego Branch
     provideHttpClient(
-      withInterceptors([authInterceptor, branchInterceptor, mockBackendInterceptor]),
+      withInterceptors([authInterceptor, branchInterceptor]),
     ),
+
+    // ── Repositorio Warehouse Layout (SDOP Bridge) ───────────────────────────
+    {
+      provide: WAREHOUSE_LAYOUT_REPOSITORY,
+      useClass: WarehouseLayoutHttpAdapter,
+    },
 
     // ── Animaciones ───────────────────────────────────────────────────────────
     provideAnimationsAsync(),

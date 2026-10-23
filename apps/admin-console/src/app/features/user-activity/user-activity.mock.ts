@@ -787,7 +787,7 @@ export const MOCK_ACTIVITY_EVENTS: UserActivityEvent[] = [
 // PERFILES DE REPORTE (4 perfiles de muestra)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MOCK_REPORT_PROFILES: ActivityReportProfile[] = [
+export const DEFAULT_REPORT_PROFILES: ActivityReportProfile[] = [
   {
     id: 'prof-001',
     code: 'RPT-USR-001',

@@ -9,283 +9,105 @@
 <div class="kpi-page">
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       HEADER PRINCIPAL
+       BARRA DE PESTAÑAS (PILLS) Y METRIC CARDS DEL CATÁLOGO (HU-138)
        ════════════════════════════════════════════════════════════════ -->
-<!-- ═══════════════════════════════════════════════════════════════════
-     HERO EJECUTIVO + RESUMEN GENERAL
-     ════════════════════════════════════════════════════════════════ -->
-<header class="kpi-header">
+  <header class="kpi-header">
 
-  <div class="kpi-hero">
-
-    <div class="kpi-hero__glow kpi-hero__glow--gold"></div>
-    <div class="kpi-hero__glow kpi-hero__glow--green"></div>
-
-    <div class="kpi-hero__content">
-
-      <div class="kpi-hero__main">
-
-        <div class="kpi-hero__badges">
-
-          <span class="kpi-hero__hu-badge">
-            HU-138 · ADMINISTRADOR DE INDICADORES
-          </span>
-
-          @if (kpiCritical() > 0) {
-            <span class="kpi-engine-status kpi-engine-status--critical">
-              <span class="kpi-engine-status__dot"></span>
-              {{ kpiCritical() }}
-              {{ kpiCritical() === 1 ? 'alerta crítica activa' : 'alertas críticas activas' }}
-              · Requiere seguimiento
-            </span>
-          } @else {
-            <span class="kpi-engine-status kpi-engine-status--healthy">
-              <span class="kpi-engine-status__dot"></span>
-              Sistema operando con regularidad
-            </span>
-          }
-
-        </div>
-
-        <div class="kpi-hero__title-row">
-
-          <div class="kpi-hero__icon">
-            <span class="material-symbols-outlined">monitoring</span>
-          </div>
-
-          <div>
-            <h1 class="kpi-hero__title">
-              Monitoreo de Rendimiento
-              <span class="kpi-hero__title-separator">•</span>
-              <span class="kpi-hero__title-accent">Dashboard Ejecutivo</span>
-            </h1>
-
-            <p class="kpi-hero__description">
-              Consola unificada de control operativo para administrar los
-              indicadores de rendimiento más relevantes del centro de
-              distribución, configurar umbrales, detectar desviaciones y
-              supervisar el cumplimiento de los objetivos operativos.
-            </p>
-          </div>
-
-        </div>
-
-        <div class="kpi-hero__metadata">
-
-          <div class="kpi-hero__metadata-item">
-            <span class="material-symbols-outlined">sync</span>
-            <span>
-              Sincronización:
-              @if (isLoading) {
-                cargando catálogo…
-              } @else {
-                catálogo actualizado
-              }
-            </span>
-          </div>
-
-          <span class="kpi-hero__metadata-separator">•</span>
-
-          <div class="kpi-hero__metadata-item">
-            <span class="material-symbols-outlined">memory</span>
-            <span>Motor de indicadores activo</span>
-          </div>
-
-          <span class="kpi-hero__metadata-separator">•</span>
-
-          <div class="kpi-hero__metadata-item">
-            <span class="material-symbols-outlined">database</span>
-            <span>{{ totalKpis() }} indicadores habilitados</span>
-          </div>
-
-        </div>
-
-      </div>
+    <!-- ── BARRA DE PESTAÑAS (PILLS) Y BOTÓN DE ACCIÓN ── -->
+    <div class="kpi-toolbar-row">
+      <nav class="kpi-tabs-nav" aria-label="Filtro de módulos operativos">
+        <button
+          type="button"
+          class="kpi-tab-btn"
+          [class.tab-active]="filterModule === ''"
+          (click)="setFilterModule('')">
+          <span class="material-symbols-outlined">apps</span>
+          <span>Todos ({{ kpiService.kpis().length }})</span>
+        </button>
+        @for (mod of modules; track mod.value) {
+          <button
+            type="button"
+            class="kpi-tab-btn"
+            [class.tab-active]="filterModule === mod.value"
+            (click)="setFilterModule(mod.value)">
+            <span>{{ mod.label }}</span>
+          </button>
+        }
+      </nav>
 
       @if (canCreate()) {
-        <div class="kpi-hero__actions">
-
+        <div class="kpi-toolbar-actions">
           <button
             id="btn-new-kpi"
-            class="kpi-btn kpi-btn--hero"
+            class="btn-new-kpi"
             type="button"
             (click)="startNewKpi()"
             [disabled]="isSaving"
-            aria-label="Crear nuevo indicador">
-
+            aria-label="Registrar nuevo indicador">
             <span class="material-symbols-outlined">add</span>
-
-            <span>
-              Nuevo indicador
-              <small>Registrar KPI corporativo</small>
-            </span>
-
+            <span>Nuevo Indicador</span>
           </button>
-
         </div>
       }
-
     </div>
 
-  </div>
-
-  <!-- ── KPI Cards inteligentes ────────────────────────────────────── -->
-  <div class="kpi-kpi-grid" aria-label="Resumen ejecutivo de indicadores">
-
-    <!-- Total -->
-    <article class="kpi-kpi-card kpi-kpi-card--total">
-
-      <div class="kpi-kpi-card__top">
-
-        <div>
-          <span class="kpi-kpi-card__eyebrow">Total indicadores</span>
-
-          @if (isLoading) {
-            <div class="kpi-kpi-card__skeleton"></div>
-          } @else {
-            <div class="kpi-kpi-card__number-row">
-              <strong class="kpi-kpi-card__value">{{ totalKpis() }}</strong>
-              <span class="kpi-kpi-card__unit">KPIs</span>
-            </div>
-          }
+    <!-- ── 4 KPI METRIC CARDS HOMOLOGADAS (SYNEXIA LUXURY) ── -->
+    <div class="movement-kpi-grid" aria-label="Resumen ejecutivo de indicadores">
+      <!-- Total -->
+      <article class="movement-kpi-card movement-kpi-card--primary">
+        <div class="movement-kpi-card__icon">
+          <span class="material-symbols-outlined">monitoring</span>
         </div>
-
-        <div class="kpi-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">activity_zone</span>
+        <div class="movement-kpi-card__info">
+          <span class="movement-kpi-card__label">Total Indicadores</span>
+          <span class="movement-kpi-card__value">{{ totalKpis() }}</span>
+          <span class="movement-kpi-card__sub">Catálogo activo</span>
         </div>
+      </article>
 
-      </div>
-
-      <div class="kpi-kpi-card__footer">
-        <span>Catálogo corporativo activo</span>
-        <strong>Control centralizado</strong>
-      </div>
-
-      <div class="kpi-kpi-card__bar"></div>
-
-    </article>
-
-    <!-- Óptimos -->
-    <article class="kpi-kpi-card kpi-kpi-card--optimal">
-
-      <div class="kpi-kpi-card__top">
-
-        <div>
-          <span class="kpi-kpi-card__eyebrow">Óptimos</span>
-
-          @if (isLoading) {
-            <div class="kpi-kpi-card__skeleton"></div>
-          } @else {
-            <div class="kpi-kpi-card__number-row">
-              <strong class="kpi-kpi-card__value">{{ kpiOptimal() }}</strong>
-
-              @if (totalKpis() > 0) {
-                <span class="kpi-kpi-card__percentage">
-                  {{ (kpiOptimal() * 100 / totalKpis()).toFixed(0) }}%
-                </span>
-              }
-            </div>
-          }
-        </div>
-
-        <div class="kpi-kpi-card__icon-wrap">
+      <!-- Óptimos -->
+      <article class="movement-kpi-card movement-kpi-card--success">
+        <div class="movement-kpi-card__icon">
           <span class="material-symbols-outlined">check_circle</span>
         </div>
-
-      </div>
-
-      <div class="kpi-kpi-card__footer">
-        <span>Operación dentro de meta</span>
-        <strong>Rendimiento estable</strong>
-      </div>
-
-      <div class="kpi-kpi-card__bar"></div>
-
-    </article>
-
-    <!-- Atención -->
-    <article class="kpi-kpi-card kpi-kpi-card--warning">
-
-      <div class="kpi-kpi-card__top">
-
-        <div>
-          <span class="kpi-kpi-card__eyebrow">Atención</span>
-
-          @if (isLoading) {
-            <div class="kpi-kpi-card__skeleton"></div>
-          } @else {
-            <div class="kpi-kpi-card__number-row">
-              <strong class="kpi-kpi-card__value">{{ kpiWarning() }}</strong>
-
-              @if (kpiWarning() > 0) {
-                <span class="kpi-kpi-card__percentage">
-                  Seguimiento
-                </span>
-              }
-            </div>
-          }
+        <div class="movement-kpi-card__info">
+          <span class="movement-kpi-card__label">Óptimos</span>
+          <span class="movement-kpi-card__value">{{ kpiOptimal() }}</span>
+          <span class="movement-kpi-card__sub">
+            {{ totalKpis() > 0 ? ((kpiOptimal() * 100 / totalKpis()).toFixed(0) + '% en meta') : 'Dentro de meta' }}
+          </span>
         </div>
+      </article>
 
-        <div class="kpi-kpi-card__icon-wrap">
+      <!-- En Atención / Warning -->
+      <article class="movement-kpi-card movement-kpi-card--warning">
+        <div class="movement-kpi-card__icon">
           <span class="material-symbols-outlined">warning</span>
         </div>
-
-      </div>
-
-      <div class="kpi-kpi-card__footer">
-        <span>Desviación moderada</span>
-        <strong>
-          {{ kpiWarning() > 0 ? 'Requiere revisión' : 'Sin desviaciones' }}
-        </strong>
-      </div>
-
-      <div class="kpi-kpi-card__bar"></div>
-
-    </article>
-
-    <!-- Críticos -->
-    <article class="kpi-kpi-card kpi-kpi-card--critical">
-
-      <div class="kpi-kpi-card__top">
-
-        <div>
-          <span class="kpi-kpi-card__eyebrow">Críticos</span>
-
-          @if (isLoading) {
-            <div class="kpi-kpi-card__skeleton"></div>
-          } @else {
-            <div class="kpi-kpi-card__number-row">
-              <strong class="kpi-kpi-card__value">{{ kpiCritical() }}</strong>
-
-              @if (kpiCritical() > 0) {
-                <span class="kpi-kpi-card__percentage">
-                  Acción inmediata
-                </span>
-              }
-            </div>
-          }
+        <div class="movement-kpi-card__info">
+          <span class="movement-kpi-card__label">En Atención</span>
+          <span class="movement-kpi-card__value">{{ kpiWarning() }}</span>
+          <span class="movement-kpi-card__sub">
+            {{ kpiWarning() > 0 ? 'Desviación moderada' : 'Sin desviaciones' }}
+          </span>
         </div>
+      </article>
 
-        <div class="kpi-kpi-card__icon-wrap">
+      <!-- Críticos / Danger -->
+      <article class="movement-kpi-card movement-kpi-card--danger">
+        <div class="movement-kpi-card__icon">
           <span class="material-symbols-outlined">error</span>
         </div>
-
-      </div>
-
-      <div class="kpi-kpi-card__footer">
-        <span>Riesgo operativo activo</span>
-        <strong>
-          {{ kpiCritical() > 0 ? 'Mitigación requerida' : 'Operación controlada' }}
-        </strong>
-      </div>
-
-      <div class="kpi-kpi-card__bar"></div>
-
-    </article>
-
-  </div>
-
-</header>
+        <div class="movement-kpi-card__info">
+          <span class="movement-kpi-card__label">Críticos</span>
+          <span class="movement-kpi-card__value">{{ kpiCritical() }}</span>
+          <span class="movement-kpi-card__sub">
+            {{ kpiCritical() > 0 ? 'Mitigación urgente' : 'Operación controlada' }}
+          </span>
+        </div>
+      </article>
+    </div>
+  </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════
        SPLIT VIEW

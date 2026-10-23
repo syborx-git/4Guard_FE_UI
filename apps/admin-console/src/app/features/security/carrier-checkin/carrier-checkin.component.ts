@@ -1,0 +1,784 @@
+import { Component, OnInit, inject, signal, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { WarehouseMovementsApiService } from '../../warehouse-movements/services/warehouse-movements-api.service';
+
+@Component({
+  selector: 'fg-carrier-checkin',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  templateUrl: './carrier-checkin.component.html',
+  styleUrl: './carrier-checkin.component.css'
+})
+export class CarrierCheckinComponent implements OnInit, AfterViewInit {
+  private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
+  private readonly api = inject(WarehouseMovementsApiService);
+
+  @ViewChild('signatureCanvas') signatureCanvasRef?: ElementRef<HTMLCanvasElement>;
+
+  // Theme state: Dark (default) vs Light (high contrast for outdoor sunlight)
+  protected readonly isDarkMode = signal<boolean>(true);
+
+  protected readonly currentStep = signal<number>(1);
+  protected readonly token = signal<string>('');
+  protected readonly isLoadingPass = signal<boolean>(true);
+  protected readonly passError = signal<string | null>(null);
+  protected readonly isSubmitting = signal<boolean>(false);
+  protected readonly submitStatusMessage = signal<string>('Enviando registro a Caseta de Vigilancia...');
+  protected readonly submitSuccess = signal<boolean>(false);
+  protected readonly submitError = signal<string | null>(null);
+
+  protected readonly organizationId = signal<string>('a53f0907-9fa5-4bdf-87db-2eb5e7683935');
+  protected readonly branchId = signal<string>('b73f0907-9fa5-4bdf-87db-2eb5e7683936');
+
+  protected readonly sealList = signal<string[]>([]);
+  protected readonly tempSealInput = signal<string>('');
+
+  // Tipo de Documento para Descarga: REMISION | FACTURA
+  protected readonly dischargeDocType = signal<'REMISION' | 'FACTURA'>('REMISION');
+
+  private readonly defaultClients = [
+    { id: '87c07cb2-61c3-4006-a88c-265bd1eee2df', code: '87c07cb2-61c3-4006-a88c-265bd1eee2df', name: 'MARCAS NESTLE S.A. DE C.V.' },
+    { id: 'c083251b-e210-494e-80f3-38814eaba992', code: 'c083251b-e210-494e-80f3-38814eaba992', name: 'NESTLE MEXICO S.A. DE C.V.' },
+    { id: 'edc885c6-0216-405a-84cc-841f47f30f48', code: 'edc885c6-0216-405a-84cc-841f47f30f48', name: 'QUALAMEX S.A. DE C.V.' }
+  ];
+
+  private readonly defaultCarriers = [
+    { id: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', code: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', name: 'TRANSPORTE GOLA', tradeName: 'TRANSPORTE GOLA' },
+    { id: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', code: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', name: 'TRANSPORTE DIAZ', tradeName: 'TRANSPORTE DIAZ' },
+    { id: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', code: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', name: 'TRANSPORTE TUM', tradeName: 'TRANSPORTE TUM' },
+    { id: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', code: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', name: 'TRANSPORTE EBEN EZER', tradeName: 'TRANSPORTE EBEN EZER' },
+    { id: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', code: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', name: 'TRANSPORTE MONCHO', tradeName: 'TRANSPORTE MONCHO' }
+  ];
+
+  private readonly defaultTransports = [
+    'Tortón',
+    'Tráiler',
+    'Otro (Especificar)'
+  ];
+
+  private readonly defaultBoxDimensions = [
+    '53 Pies',
+    '48 Pies',
+    '40 Pies',
+    '20 Pies',
+    'Tortón',
+    'Rabón',
+    '3.5 Toneladas',
+    'N/A - Plataforma',
+    'Otra Medida'
+  ];
+
+  // Catálogos dinámicos desde Base de Datos (con valores por defecto inmediatos)
+  protected readonly clientsList = signal<Array<{ id: string; code: string; name: string; tradeName?: string }>>(this.defaultClients);
+  protected readonly carrierLinesList = signal<Array<{ id: string; code: string; name: string; tradeName?: string }>>(this.defaultCarriers);
+  protected readonly transportTypesList = signal<string[]>(this.defaultTransports);
+  protected readonly boxDimensionsList = signal<string[]>(this.defaultBoxDimensions);
+
+  // Flags para captura manual / libre
+  protected readonly isCustomClient = signal<boolean>(false);
+  protected readonly isCustomCarrier = signal<boolean>(false);
+  protected readonly isCustomTransport = signal<boolean>(false);
+  protected readonly isCustomDimension = signal<boolean>(false);
+  protected readonly customTransportInput = signal<string>('');
+  protected readonly customDimensionInput = signal<string>('');
+
+  // Signature canvas state
+  private isDrawing = false;
+  private canvasContext: CanvasRenderingContext2D | null = null;
+  protected hasSignature = signal<boolean>(false);
+
+  // Formato F01-PO-CP-7.1.3-03
+  protected readonly checkInForm: FormGroup = this.fb.group({
+    controlNumber: ['F01-PO-CP-7.1.3-03'],
+    operacion: ['DESCARGA', Validators.required], // CARGA | DESCARGA
+    fecha: [new Date().toISOString().slice(0, 10), Validators.required],
+    hora: [new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }), Validators.required],
+
+    // Documentos
+    remision: [''],
+    noCartaPorte: [''],
+
+    // Empresa & Transportista
+    clientName: ['', Validators.required],
+    clientCode: [''],
+    carrierLine: ['', Validators.required],
+    carrierLineCode: [''],
+
+    // Chofer & Unidad
+    nombreOperador: ['', [Validators.required, Validators.minLength(3)]],
+    driverLicense: [''],
+    driverPhone: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]],
+    placasTracto: ['', [Validators.required, Validators.minLength(3)]],
+    noEcoTractor: [''],
+    placasCaja: ['', [Validators.required, Validators.minLength(3)]],
+    noEcoCaja: [''],
+    medidasCaja: ['', Validators.required],
+    tipoTransporte: ['', Validators.required],
+
+    observaciones: [''],
+    declaracionVerdad: [false, Validators.requiredTrue]
+  });
+
+  protected toggleTheme(): void {
+    const nextTheme = !this.isDarkMode();
+    this.isDarkMode.set(nextTheme);
+    try {
+      localStorage.setItem('4g_carrier_portal_theme', nextTheme ? 'dark' : 'light');
+    } catch {
+      // Ignorar fallback de almacenamiento
+    }
+    this.updateCanvasStroke();
+  }
+
+  protected setDischargeDocType(type: 'REMISION' | 'FACTURA'): void {
+    this.dischargeDocType.set(type);
+  }
+
+  ngOnInit(): void {
+    try {
+      const savedTheme = localStorage.getItem('4g_carrier_portal_theme');
+      if (savedTheme === 'light') {
+        this.isDarkMode.set(false);
+      }
+    } catch {
+      // Ignorar fallback
+    }
+
+    this.loadCatalogs();
+    this.setupUppercaseTransform();
+
+    this.route.queryParams.subscribe((params) => {
+      const orgParam = params['org'] || params['organizationId'];
+      if (orgParam) this.organizationId.set(orgParam);
+      const branchParam = params['branch'] || params['branchId'];
+      if (branchParam) this.branchId.set(branchParam);
+
+      const qToken = params['token'] || params['pass'];
+      if (qToken) {
+        this.token.set(qToken.trim().toUpperCase());
+        this.loadPassData(this.token());
+      } else {
+        // Generar folio oficial para el nuevo registro de auto-ingreso
+        const randomFolio = Math.floor(100000 + Math.random() * 900000);
+        const autoToken = 'PASS-4G-' + randomFolio;
+        this.token.set(autoToken);
+        this.isLoadingPass.set(false);
+
+        // Notificar de inmediato a Caseta que un chofer abrió el formulario ("QR esperando captura")
+        this.api.submitPublicDriverCheckin(autoToken, {
+          status: 'PENDING_DRIVER',
+          organizationId: this.organizationId(),
+          branchId: this.branchId(),
+          operationType: 'DESCARGA',
+          driverName: '',
+          nombreOperador: ''
+        }).subscribe({ error: () => {} });
+      }
+    });
+  }
+
+  protected switchToFormView(): void {
+    this.submitSuccess.set(false);
+  }
+
+  protected switchToPassView(): void {
+    this.submitSuccess.set(true);
+  }
+
+  protected populateDemoPassIfEmpty(): void {
+    // No-op: los datos deben ser capturados limpiamente por el operador
+  }
+
+  protected loadCatalogs(): void {
+    this.api.getPublicCatalogs().subscribe({
+      next: (data) => {
+        if (data) {
+          if (data.clients && Array.isArray(data.clients) && data.clients.length > 0) {
+            this.clientsList.set(data.clients);
+          }
+          const carriers = (data.carrierLines && data.carrierLines.length > 0) 
+            ? data.carrierLines 
+            : ((data as any).carriers || []);
+          if (carriers && Array.isArray(carriers) && carriers.length > 0) {
+            this.carrierLinesList.set(carriers);
+          }
+          if (data.transportTypes && Array.isArray(data.transportTypes) && data.transportTypes.length > 0) {
+            const allowed = ['Tortón', 'Tráiler', 'Otro (Especificar)'];
+            const filtered = data.transportTypes.filter((t: string) => allowed.includes(t));
+            this.transportTypesList.set(filtered.length > 0 ? filtered : allowed);
+          } else {
+            this.transportTypesList.set(this.defaultTransports);
+          }
+          if (data.boxDimensions && Array.isArray(data.boxDimensions) && data.boxDimensions.length > 0) {
+            this.boxDimensionsList.set(data.boxDimensions);
+          }
+        }
+      },
+      error: () => {
+        // Mantiene catalogos cargados por defecto en signals
+        this.transportTypesList.set(this.defaultTransports);
+      }
+    });
+  }
+
+  private setupUppercaseTransform(): void {
+    const textFields = [
+      'remision',
+      'noCartaPorte',
+      'clientName',
+      'carrierLine',
+      'nombreOperador',
+      'driverLicense',
+      'placasTracto',
+      'noEcoTractor',
+      'placasCaja',
+      'noEcoCaja',
+      'medidasCaja',
+      'tipoTransporte',
+      'observaciones'
+    ];
+
+    for (const field of textFields) {
+      const ctrl = this.checkInForm.get(field);
+      if (ctrl) {
+        ctrl.valueChanges.subscribe((val) => {
+          if (typeof val === 'string' && val !== val.toUpperCase()) {
+            ctrl.setValue(val.toUpperCase(), { emitEvent: false });
+          }
+        });
+      }
+    }
+  }
+
+  protected onClientSelectChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    if (val === '__OTHER__') {
+      this.isCustomClient.set(true);
+      this.checkInForm.patchValue({ clientCode: 'OTRO', clientName: '' });
+    } else {
+      this.isCustomClient.set(false);
+      const found = this.clientsList().find((c) => c.code === val || c.id === val || c.name === val);
+      if (found) {
+        this.checkInForm.patchValue({
+          clientCode: found.code || found.id,
+          clientName: found.name
+        });
+      } else if (val) {
+        this.checkInForm.patchValue({
+          clientCode: val,
+          clientName: val
+        });
+      }
+    }
+  }
+
+  protected toggleCustomClient(custom: boolean): void {
+    this.isCustomClient.set(custom);
+    if (!custom) {
+      this.checkInForm.patchValue({ clientCode: '', clientName: '' });
+    }
+  }
+
+  protected onCarrierSelectChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    if (val === '__OTHER__') {
+      this.isCustomCarrier.set(true);
+      this.checkInForm.patchValue({ carrierLineCode: 'OTRO', carrierLine: '' });
+    } else {
+      this.isCustomCarrier.set(false);
+      const found = this.carrierLinesList().find((c) => 
+        c.code === val || c.id === val || c.name === val || c.tradeName === val
+      );
+      if (found) {
+        this.checkInForm.patchValue({
+          carrierLineCode: found.code || found.id,
+          carrierLine: found.tradeName || found.name
+        });
+      } else if (val) {
+        this.checkInForm.patchValue({
+          carrierLineCode: val,
+          carrierLine: val
+        });
+      }
+    }
+  }
+
+  protected toggleCustomCarrier(custom: boolean): void {
+    this.isCustomCarrier.set(custom);
+    if (!custom) {
+      this.checkInForm.patchValue({ carrierLineCode: '', carrierLine: '' });
+    }
+  }
+
+  protected selectTransportType(val: string): void {
+    if (val === 'Otro (Especificar)' || val === 'Otro' || val === '__OTHER__') {
+      this.isCustomTransport.set(true);
+      this.checkInForm.patchValue({ tipoTransporte: this.customTransportInput() || 'Otro' });
+    } else {
+      this.isCustomTransport.set(false);
+      this.checkInForm.patchValue({ tipoTransporte: val });
+    }
+  }
+
+  protected selectBoxDimension(val: string): void {
+    if (val === 'Otra Medida' || val === '__OTHER__') {
+      this.isCustomDimension.set(true);
+      this.checkInForm.patchValue({ medidasCaja: this.customDimensionInput() || 'Personalizada' });
+    } else {
+      this.isCustomDimension.set(false);
+      this.checkInForm.patchValue({ medidasCaja: val });
+    }
+  }
+
+  protected getTransportIcon(t: string): string {
+    if (t.includes('Camioneta')) return '🛻';
+    if (t.includes('Tortón') || t.includes('Torton')) return '🚚';
+    if (t.includes('Tráiler') || t.includes('Trailer')) return '🚛';
+    return '🚚';
+  }
+
+  protected onTransportTypeSelectChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    this.selectTransportType(val);
+  }
+
+  protected onCustomTransportChange(val: string): void {
+    this.customTransportInput.set(val);
+    this.checkInForm.patchValue({ tipoTransporte: val });
+  }
+
+  protected onBoxDimensionSelectChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    this.selectBoxDimension(val);
+  }
+
+  protected onCustomDimensionChange(val: string): void {
+    this.customDimensionInput.set(val);
+    this.checkInForm.patchValue({ medidasCaja: val });
+  }
+
+  ngAfterViewInit(): void {
+    this.initCanvas();
+  }
+
+  protected loadPassData(tokenStr: string): void {
+    this.isLoadingPass.set(true);
+    this.passError.set(null);
+
+    // Decodificar Token Inteligente incrustado en el QR si está disponible en URL
+    this.tryDecodeSmartToken(tokenStr);
+
+    this.api.getPublicPass(tokenStr).subscribe({
+      next: (pass: any) => {
+        this.isLoadingPass.set(false);
+        if (pass) {
+          this.applyPassDataToForm(pass);
+          const st = String(pass.status || '').toUpperCase();
+          if (st === 'SUBMITTED' || st === 'ACTIVE' || st === 'IN_YARD' || st === 'IN_DOCK' || st === 'CALL_TO_DOCK' || st === 'COMPLETED' || pass.submittedAt) {
+            this.submitSuccess.set(true);
+          }
+        }
+      },
+      error: () => {
+        this.isLoadingPass.set(false);
+      }
+    });
+  }
+
+  private tryDecodeSmartToken(tokenStr: string): void {
+    if (!tokenStr || !tokenStr.startsWith('PASS-4G-')) return;
+    try {
+      const b64Part = tokenStr.replace('PASS-4G-', '').replace(/-/g, '+').replace(/_/g, '/');
+      const jsonStr = decodeURIComponent(atob(b64Part));
+      const passData = JSON.parse(jsonStr);
+
+      if (passData) {
+        if (passData.op) {
+          this.onOperationChange(passData.op as 'CARGA' | 'DESCARGA');
+        }
+        if (passData.cn) this.checkInForm.patchValue({ clientName: passData.cn, clientCode: passData.cc || '' });
+        if (passData.cln) this.checkInForm.patchValue({ carrierLine: passData.cln, carrierLineCode: passData.clc || '' });
+        if (passData.dn) this.checkInForm.patchValue({ nombreOperador: passData.dn });
+        if (passData.dp || passData.phone) this.checkInForm.patchValue({ driverPhone: passData.dp || passData.phone });
+        if (passData.tp) this.checkInForm.patchValue({ placasTracto: passData.tp });
+        if (passData.doc) {
+          if (passData.op === 'CARGA') {
+            this.checkInForm.patchValue({ noCartaPorte: passData.doc });
+          } else {
+            this.checkInForm.patchValue({ remision: passData.doc });
+          }
+        }
+      }
+    } catch {
+      // Ignorar errores si no es token b64
+    }
+  }
+
+  private applyPassDataToForm(pass: any): void {
+    const op = pass.operationType || pass.operacion;
+    if (op) {
+      this.onOperationChange(op as 'CARGA' | 'DESCARGA');
+    }
+    if (pass.clientName) this.checkInForm.patchValue({ clientName: pass.clientName, clientCode: pass.clientCode || '' });
+    if (pass.carrierLine) this.checkInForm.patchValue({ carrierLine: pass.carrierLine, carrierLineCode: pass.carrierLineCode || '' });
+    if (pass.driverName || pass.nombreOperador) this.checkInForm.patchValue({ nombreOperador: pass.driverName || pass.nombreOperador });
+    if (pass.driverPhone || pass.telefonoChofer) this.checkInForm.patchValue({ driverPhone: pass.driverPhone || pass.telefonoChofer });
+    if (pass.tractorPlates || pass.placasTracto) this.checkInForm.patchValue({ placasTracto: pass.tractorPlates || pass.placasTracto });
+    if (pass.boxPlates || pass.placasCaja) this.checkInForm.patchValue({ placasCaja: pass.boxPlates || pass.placasCaja });
+    if (pass.noEcoTractor) this.checkInForm.patchValue({ noEcoTractor: pass.noEcoTractor });
+    if (pass.noEcoCaja) this.checkInForm.patchValue({ noEcoCaja: pass.noEcoCaja });
+    
+    const doc = pass.docNumber || pass.noCartaPorte || pass.remision;
+    if (doc) {
+      if (op === 'CARGA') {
+        this.checkInForm.patchValue({ noCartaPorte: doc });
+      } else {
+        this.checkInForm.patchValue({ remision: doc });
+        const upperDoc = String(doc).toUpperCase();
+        if (upperDoc.startsWith('FACT') || upperDoc.includes('FACTURA')) {
+          this.dischargeDocType.set('FACTURA');
+        } else {
+          this.dischargeDocType.set('REMISION');
+        }
+      }
+    }
+    if (pass.sealNumbers && Array.isArray(pass.sealNumbers) && pass.sealNumbers.length > 0) {
+      this.sealList.set(pass.sealNumbers);
+    }
+  }
+
+  protected onOperationChange(val: 'CARGA' | 'DESCARGA'): void {
+    this.checkInForm.patchValue({ operacion: val });
+    const cartaCtrl = this.checkInForm.get('noCartaPorte');
+    const remCtrl = this.checkInForm.get('remision');
+
+    if (val === 'CARGA') {
+      cartaCtrl?.setValidators([Validators.required]);
+      remCtrl?.clearValidators();
+      remCtrl?.setValue('');
+      // En maniobras de CARGA, los sellos se asignan en andén tras la carga
+      this.sealList.set(['N/A - Sellos asignados en andén al concluir carga']);
+      this.tempSealInput.set('');
+    } else {
+      remCtrl?.setValidators([Validators.required]);
+      cartaCtrl?.clearValidators();
+      cartaCtrl?.setValue('');
+      if (this.sealList().some(s => s.includes('N/A'))) {
+        this.sealList.set([]);
+      }
+    }
+    cartaCtrl?.updateValueAndValidity();
+    remCtrl?.updateValueAndValidity();
+  }
+
+  protected readonly validationErrorsList = signal<string[]>([]);
+
+  protected setStep(step: number): void {
+    if (step > this.currentStep()) {
+      for (let s = this.currentStep(); s < step; s++) {
+        if (!this.validateStep(s)) return;
+      }
+    }
+    this.validationErrorsList.set([]);
+    this.currentStep.set(step);
+    if (step === 3) {
+      setTimeout(() => this.initCanvas(), 100);
+    }
+  }
+
+  protected selectCarrierLine(carrierName: string): void {
+    if (carrierName === '__OTHER__' || carrierName === '➕ Otra Línea') {
+      this.isCustomCarrier.set(true);
+      this.checkInForm.patchValue({ carrierLineCode: 'OTRO', carrierLine: '' });
+    } else {
+      this.isCustomCarrier.set(false);
+      const found = this.carrierLinesList().find((c) => 
+        c.name === carrierName || c.tradeName === carrierName || c.code === carrierName
+      );
+      this.checkInForm.patchValue({
+        carrierLineCode: found ? (found.code || found.id) : carrierName,
+        carrierLine: carrierName
+      });
+    }
+  }
+
+  protected validateStep(step: number): boolean {
+    const missing: string[] = [];
+    const f = this.checkInForm.value;
+
+    if (step === 1) {
+      if (!f.operacion) missing.push('Tipo de Operación (Carga o Descarga)');
+      if (!f.clientName || !f.clientName.trim()) missing.push('Empresa / Cliente Destinatario');
+      if (f.operacion === 'CARGA' && (!f.noCartaPorte || !f.noCartaPorte.trim())) {
+        missing.push('Número de Carta Porte (Obligatorio en Carga)');
+      }
+      if (f.operacion === 'DESCARGA' && (!f.remision || !f.remision.trim())) {
+        const docName = this.dischargeDocType() === 'FACTURA' ? 'Número de Factura' : 'Número de Remisión';
+        missing.push(`${docName} (Obligatorio en Descarga)`);
+      }
+    } else if (step === 2) {
+      if (f.operacion === 'CARGA') {
+        this.sealList.set(['N/A - Sellos asignados en andén al concluir carga']);
+      } else {
+        if (this.tempSealInput().trim()) {
+          this.addSeal();
+        }
+        if (this.sealList().length === 0) {
+          this.sealList.set(['S/N']);
+        }
+      }
+      if (!f.carrierLine || !f.carrierLine.trim()) missing.push('Línea Transportista / Fletera');
+      if (!f.nombreOperador || f.nombreOperador.trim().length < 3) missing.push('Nombre Completo del Operador / Chofer (mínimo 3 letras)');
+      if (!f.driverPhone || !/^[0-9]{10}$/.test(f.driverPhone.trim())) {
+        missing.push('Teléfono Celular de Contacto (10 dígitos para WhatsApp / SMS)');
+      }
+      if (!f.tipoTransporte || !f.tipoTransporte.trim()) missing.push('Tipo de Transporte');
+      if (!f.medidasCaja || !f.medidasCaja.trim()) missing.push('Medidas de Caja');
+      if (!f.placasTracto || f.placasTracto.trim().length < 3) missing.push('Placas de Tracto');
+      if (!f.placasCaja || f.placasCaja.trim().length < 3) missing.push('Placas de Caja');
+    } else if (step === 3) {
+      if (!this.hasSignature()) {
+        missing.push('Firma Digital del Chofer en el recuadro');
+      }
+      if (!f.declaracionVerdad) {
+        missing.push('Aceptación de la Declaración bajo protesta de decir verdad');
+      }
+    }
+
+    this.validationErrorsList.set(missing);
+    if (missing.length > 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    return missing.length === 0;
+  }
+
+  protected nextStep(): void {
+    if (!this.validateStep(this.currentStep())) {
+      return;
+    }
+    this.validationErrorsList.set([]);
+    if (this.currentStep() < 3) {
+      this.currentStep.update((s) => s + 1);
+      if (this.currentStep() === 3) {
+        setTimeout(() => this.initCanvas(), 100);
+      }
+    }
+  }
+
+  protected prevStep(): void {
+    this.validationErrorsList.set([]);
+    if (this.currentStep() > 1) {
+      this.currentStep.update((s) => s - 1);
+    }
+  }
+
+  // ── MANEJO DE SELLOS ──
+  protected addSeal(): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return; // Bloqueado en Carga
+    }
+    const val = this.tempSealInput().trim().toUpperCase();
+    if (val && !this.sealList().includes(val)) {
+      this.sealList.update((list) => [...list, val]);
+      this.tempSealInput.set('');
+    }
+  }
+
+  protected removeSeal(index: number): void {
+    if (this.checkInForm.get('operacion')?.value === 'CARGA') {
+      return;
+    }
+    this.sealList.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  // ── CANVAS DE FIRMA DIGITAL ──
+  private initCanvas(): void {
+    if (!this.signatureCanvasRef) return;
+    const canvas = this.signatureCanvasRef.nativeElement;
+    this.canvasContext = canvas.getContext('2d');
+    if (!this.canvasContext) return;
+
+    // Set canvas internal resolution based on CSS display dimensions
+    const displayWidth = canvas.clientWidth || canvas.offsetWidth || 340;
+    canvas.width = displayWidth;
+    canvas.height = 150;
+
+    this.updateCanvasStroke();
+    this.canvasContext.lineWidth = 2.8;
+    this.canvasContext.lineCap = 'round';
+    this.canvasContext.lineJoin = 'round';
+  }
+
+  private updateCanvasStroke(): void {
+    if (!this.canvasContext) return;
+    this.canvasContext.strokeStyle = this.isDarkMode() ? '#38bdf8' : '#0f172a';
+  }
+
+  protected startDrawing(event: MouseEvent | TouchEvent): void {
+    event.preventDefault();
+    this.isDrawing = true;
+    const pos = this.getEventPos(event);
+    if (this.canvasContext) {
+      this.updateCanvasStroke();
+      this.canvasContext.beginPath();
+      this.canvasContext.moveTo(pos.x, pos.y);
+    }
+  }
+
+  protected draw(event: MouseEvent | TouchEvent): void {
+    if (!this.isDrawing || !this.canvasContext) return;
+    event.preventDefault();
+    const pos = this.getEventPos(event);
+    this.canvasContext.lineTo(pos.x, pos.y);
+    this.canvasContext.stroke();
+    this.hasSignature.set(true);
+  }
+
+  protected stopDrawing(): void {
+    this.isDrawing = false;
+  }
+
+  protected clearSignature(): void {
+    if (!this.signatureCanvasRef || !this.canvasContext) return;
+    const canvas = this.signatureCanvasRef.nativeElement;
+    this.canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+    this.hasSignature.set(false);
+  }
+
+  private getEventPos(event: MouseEvent | TouchEvent): { x: number; y: number } {
+    if (!this.signatureCanvasRef) return { x: 0, y: 0 };
+    const canvas = this.signatureCanvasRef.nativeElement;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
+
+    if (event instanceof MouseEvent) {
+      return {
+        x: (event.clientX - rect.left) * scaleX,
+        y: (event.clientY - rect.top) * scaleY
+      };
+    }
+    const touch = event.touches[0] || (event as TouchEvent).changedTouches[0];
+    return {
+      x: (touch.clientX - rect.left) * scaleX,
+      y: (touch.clientY - rect.top) * scaleY
+    };
+  }
+
+  // ── SUBMIT CHOFER ──
+  protected submitDriverForm(): void {
+    const isCarga = this.checkInForm.get('operacion')?.value === 'CARGA';
+    if (!isCarga && this.tempSealInput().trim()) {
+      this.addSeal();
+    }
+
+    for (let s = 1; s <= 3; s++) {
+      if (!this.validateStep(s)) {
+        this.currentStep.set(s);
+        if (s === 3) setTimeout(() => this.initCanvas(), 100);
+        return;
+      }
+    }
+
+    if (this.checkInForm.invalid || !this.hasSignature() || (!isCarga && this.sealList().length === 0)) {
+      this.checkInForm.markAllAsTouched();
+      return;
+    }
+
+    this.isSubmitting.set(true);
+    this.submitError.set(null);
+
+    const f = this.checkInForm.value;
+    const seals = isCarga ? ['N/A - Sellos asignados en andén al concluir carga'] : [...this.sealList()];
+
+    let sigData = '';
+    if (this.signatureCanvasRef && this.hasSignature()) {
+      try {
+        const origCanvas = this.signatureCanvasRef.nativeElement;
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 300;
+        tempCanvas.height = 100;
+        const ctx = tempCanvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(origCanvas, 0, 0, 300, 100);
+          sigData = tempCanvas.toDataURL('image/png', 0.7);
+        } else {
+          sigData = origCanvas.toDataURL('image/png');
+        }
+      } catch {
+        sigData = this.signatureCanvasRef.nativeElement.toDataURL('image/png');
+      }
+    }
+
+    const payload = {
+      organizationId: this.organizationId(),
+      branchId: this.branchId(),
+      operationType: f.operacion,
+      docNumber: ((f.operacion === 'CARGA' ? f.noCartaPorte : f.remision) || '').trim().toUpperCase(),
+      noCartaPorte: (f.noCartaPorte || '').trim().toUpperCase(),
+      remision: (f.remision || '').trim().toUpperCase(),
+      clientCode: f.clientCode,
+      clientName: (f.clientName || '').trim().toUpperCase(),
+      carrierLineCode: f.carrierLineCode,
+      carrierLine: (f.carrierLine || '').trim().toUpperCase(),
+      driverName: (f.nombreOperador || '').trim().toUpperCase(),
+      driverLicense: (f.driverLicense || '').trim().toUpperCase(),
+      driverPhone: f.driverPhone,
+      tractorPlates: (f.placasTracto || '').trim().toUpperCase(),
+      noEcoTractor: (f.noEcoTractor || '').trim().toUpperCase(),
+      boxPlates: (f.placasCaja || '').trim().toUpperCase(),
+      noEcoCaja: (f.noEcoCaja || '').trim().toUpperCase(),
+      boxDimensions: (f.medidasCaja || '').trim().toUpperCase(),
+      transportType: (f.tipoTransporte || '').trim().toUpperCase(),
+      sealNumbers: seals.map(s => String(s).toUpperCase()),
+      observations: (f.observaciones || 'REGISTRO COMPLETADO POR CHOFER VÍA SMARTPHONE').trim().toUpperCase(),
+      driverSignature: sigData || 'FIRMA_DIGITAL_AUTORIZADA_CHOFER',
+      checklistData: null,
+      status: 'SUBMITTED'
+    };
+
+    const tokenToSend = this.token() || 'PASS-DEMO';
+    this.submitStatusMessage.set('Transmitiendo datos a Caseta de Vigilancia...');
+
+    this.api.submitPublicDriverCheckin(tokenToSend, payload).subscribe({
+      next: () => {
+        this.isSubmitting.set(false);
+        this.submitSuccess.set(true);
+      },
+      error: (err) => {
+        this.isSubmitting.set(false);
+        const msg = err?.error?.message || err?.message || 'Error al transmitir su registro a Caseta de Vigilancia. Por favor intente nuevamente.';
+        this.submitError.set(msg);
+      }
+    });
+  }
+
+  protected getQrCodeUrl(): string {
+    const val = this.token() || 'PASS-4G-OFICIAL';
+    return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=2&ecc=H&data=${encodeURIComponent(val)}`;
+  }
+
+  protected sharePassViaWhatsApp(): void {
+    const f = this.checkInForm.value;
+    const token = this.token();
+    const op = f.operacion || 'DESCARGA';
+    const text = `*4GUARD WMS — Pase Digital de Acceso*\n` +
+      `*Pase Folio:* ${token}\n` +
+      `*Operación:* ${op}\n` +
+      `*Chofer:* ${f.nombreOperador}\n` +
+      `*Transportista:* ${f.carrierLine}\n` +
+      `*Placas Tracto:* ${f.placasTracto || '-'}\n` +
+      `*Placas Caja:* ${f.placasCaja || '-'}\n` +
+      `*Documento:* ${op === 'CARGA' ? (f.noCartaPorte || '-') : (f.remision || '-')}\n\n` +
+      `Presenta este pase QR en la caseta de vigilancia para acceso inmediato.`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  }
+}

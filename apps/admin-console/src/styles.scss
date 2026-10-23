@@ -29,6 +29,11 @@
 @use 'layouts/toolbar';
 @use 'layouts/dashboard';
 
+// ── 5. Tailwind CSS Directives ───────────────────────────────
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 // ── 5. Reset / Base ───────────────────────────────────────────
 *,
 *::before,
@@ -51,21 +56,29 @@ body {
   font-size: $text-base;
   font-weight: $fw-regular;
   line-height: $lh-normal;
-  color: $text-primary;
-  background-color: $bg-primary;
+  color: var(--text-primary, #17243d);
+  background-color: var(--bg-primary, #f3f0e9);
   min-height: 100vh;
   overflow-x: hidden;
 }
 
-// ── 6. Tipografía base ───────────────────────────────────────
+// ── 6. Tipografía base (Dinámica Light & Dark) ───────────────
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: $font-display;
+  color: var(--text-primary, #172033);
+}
 
 h1,
 h2,
 h3 {
-  font-family: $font-display;
   font-weight: $fw-bold;
   line-height: $lh-tight;
-  color: $text-primary;
 }
 
 h4,
@@ -74,7 +87,6 @@ h6 {
   font-family: $font-ui;
   font-weight: $fw-semibold;
   line-height: $lh-snug;
-  color: $text-primary;
 }
 
 h1 {
@@ -104,25 +116,25 @@ h6 {
 }
 
 p {
-  color: $text-secondary;
+  color: var(--text-secondary, #748094);
   line-height: $lh-relaxed;
   max-width: 72ch;
 }
 
 a {
-  color: $gold-primary;
+  color: var(--gold, #ad8129);
   text-decoration: none;
   transition: color $transition-fast;
 
   &:hover {
-    color: $gold-light;
+    color: var(--gold-light, #c6a255);
   }
 }
 
 strong,
 b {
   font-weight: $fw-semibold;
-  color: $text-primary;
+  color: var(--text-primary, #17243d);
 }
 
 code,
@@ -158,15 +170,15 @@ html {
 }
 
 .text-primary {
-  color: $text-primary !important;
+  color: var(--text-primary, #17243d) !important;
 }
 
 .text-secondary {
-  color: $text-secondary !important;
+  color: var(--text-secondary, #748094) !important;
 }
 
 .text-muted {
-  color: $text-tertiary !important;
+  color: var(--text-muted, #a0a8b4) !important;
 }
 
 .text-danger {
@@ -611,3 +623,486 @@ Glass Components
   background: transparent;
 
 }
+
+// ============================================================
+// 13. ENTERPRISE PRINT ENGINE & PDF ISOLATION (4GUARD WMS)
+// ============================================================
+
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 0 !important;
+  }
+
+  // 1. Reset base de impresión
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 12mm 15mm 12mm 15mm !important;
+    font-size: 11pt !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  // 2. Ocultar estrictamente toda la UI de navegación, shell y complementos
+  aside,
+  header,
+  nav,
+  footer:not(.print-footer),
+  .sidebar,
+  .shell__header,
+  .shell__topbar,
+  .shell__sidebar,
+  .shell__toggle,
+  .no-print,
+  .print\:hidden,
+  .print-hidden,
+  button,
+  fg-forbot-trigger-button,
+  fg-forbot-chat-drawer,
+  .forbot-avatar-container,
+  .modal-header,
+  .print-modal-header,
+  .modal-actions,
+  .print-modal-actions,
+  .driver-popover,
+  .toast-container,
+  #sidebar-toggle-btn {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  // 3. Desacoplar layouts de pantalla completa (Shell & Router Outlet)
+  .shell,
+  .shell__main,
+  .shell__content,
+  .shell--collapsed,
+  main,
+  router-outlet + * {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    min-height: auto !important;
+    transform: none !important;
+  }
+
+  // 4. Transformar los contenedores Modal en hojas de papel limpias
+  .modal-overlay,
+  .print-modal-overlay {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+  }
+
+  .modal-card,
+  .print-modal-card {
+    position: static !important;
+    display: block !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    border-radius: 0 !important;
+  }
+
+  .modal-body,
+  .print-modal-body {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  // 5. Estilos de Documento Oficial Imprimible
+  .print-container,
+  .official-print-document,
+  .fg-print-outbound,
+  fg-print-reception-layout,
+  fg-print-cancellation-layout,
+  fg-print-transfer-layout,
+  fg-print-dispatch-layout,
+  fg-print-verification-layout {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  // 6. Tablas, bordes y saltos de página inteligentes
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  .avoid-break,
+  .print-signatures,
+  .print-header,
+  .print-summary {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  // Respetar colores exactos en fondos de advertencias/comprobantes
+  .bg-rose-600 { background-color: #e11d48 !important; color: #ffffff !important; }
+  .bg-rose-50 { background-color: #fff1f2 !important; }
+  .border-rose-600 { border-color: #e11d48 !important; }
+  .text-rose-700 { color: #be123c !important; }
+
+  .bg-amber-500\/10 { background-color: #fef3c7 !important; }
+  .bg-emerald-500\/10 { background-color: #d1fae5 !important; }
+  .bg-slate-900 { background-color: #0f172a !important; color: #ffffff !important; }
+  .bg-slate-800 { background-color: #1e293b !important; color: #ffffff !important; }
+  .bg-slate-200 { background-color: #e2e8f0 !important; }
+  .bg-slate-100 { background-color: #f1f5f9 !important; }
+  .bg-slate-50 { background-color: #f8fafc !important; }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 4GUARD WMS — GLOBAL SELECT & DROPDOWN ACCESSIBILITY & DARK MODE
+// ─────────────────────────────────────────────────────────────
+
+select,
+.fg-select,
+.form-select,
+.carriers-filter-select,
+.orgs-filter-select,
+.users-filter-select,
+.skus-filter-select,
+.roles-filter-select,
+.sections-filter-select,
+.supplier-filter-select,
+.clients-filter-select,
+.branches-filter-select,
+.field-group__input.select,
+.page-size-select,
+.quality-mini-select {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  color-scheme: light;
+  border-radius: 8px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23748094'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.6rem center !important;
+  background-size: 0.85rem 0.85rem !important;
+  padding-right: 1.8rem !important;
+
+  &::-ms-expand {
+    display: none !important;
+  }
+
+  option,
+  optgroup {
+    background-color: #ffffff !important;
+    color: #17243d !important;
+    padding: 8px 12px;
+  }
+}
+
+html.theme-dark,
+html.dark,
+body.theme-dark,
+body.dark,
+:root.theme-dark,
+:root.dark,
+.theme-dark,
+.dark {
+  select,
+  .fg-select,
+  .form-select,
+  .carriers-filter-select,
+  .orgs-filter-select,
+  .users-filter-select,
+  .skus-filter-select,
+  .roles-filter-select,
+  .sections-filter-select,
+  .supplier-filter-select,
+  .clients-filter-select,
+  .branches-filter-select,
+  .field-group__input.select,
+  .page-size-select,
+  .quality-mini-select {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    color-scheme: dark !important;
+    background-color: #111a26 !important;
+    color: #edf1f5 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d0af67'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.6rem center !important;
+    background-size: 0.85rem 0.85rem !important;
+    padding-right: 1.8rem !important;
+
+    &::-ms-expand {
+      display: none !important;
+    }
+
+    option,
+    optgroup {
+      background-color: #111a26 !important;
+      color: #edf1f5 !important;
+      padding: 10px 14px;
+
+      &:hover,
+      &:focus,
+      &:checked {
+        background-color: #1a2738 !important;
+        color: #d0af67 !important;
+      }
+
+      &:disabled {
+        color: #64748b !important;
+      }
+    }
+
+    &:focus {
+      border-color: #d0af67 !important;
+      box-shadow: 0 0 0 3px rgba(208, 175, 103, 0.18) !important;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ── WMS Collapsible KPI Pattern (Homologado para Submódulos Admin)
+// ─────────────────────────────────────────────────────────────
+.wms-kpi-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.wms-kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.25rem;
+}
+
+.wms-kpi-header__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-gold, #c5a86b);
+}
+
+.wms-kpi-header__icon {
+  font-size: 1rem;
+  color: var(--accent-gold, #c5a86b);
+}
+
+.wms-kpi-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.24);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease-out;
+
+  &:hover {
+    background: rgba(245, 158, 11, 0.16);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #92400e;
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+html.theme-dark,
+html.dark,
+body.theme-dark,
+body.dark,
+.dark {
+  .wms-kpi-toggle-btn {
+    color: #d0af67;
+    background: rgba(208, 175, 103, 0.1);
+    border-color: rgba(208, 175, 103, 0.26);
+
+    &:hover {
+      background: rgba(208, 175, 103, 0.2);
+      border-color: rgba(208, 175, 103, 0.45);
+      color: #f1cb7d;
+    }
+  }
+}
+
+.wms-kpi-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1.25rem;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-card, #e2e8f0);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(17, 26, 38, 0.04);
+  backdrop-filter: blur(12px);
+}
+
+.wms-kpi-summary-items {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.25rem;
+  flex-wrap: wrap;
+}
+
+.wms-kpi-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+}
+
+.wms-kpi-summary-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+
+  &--total {
+    background: #64748b;
+    box-shadow: 0 0 6px rgba(100, 116, 139, 0.4);
+  }
+
+  &--active {
+    background: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+  }
+
+  &--inactive,
+  &--suspended {
+    background: #94a3b8;
+  }
+
+  &--warning,
+  &--alert {
+    background: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+  }
+
+  &--rose {
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+  }
+
+  &--blue,
+  &--destinations,
+  &--branches,
+  &--system,
+  &--supervisors {
+    background: #3b82f6;
+    box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
+  }
+
+  &--purple,
+  &--preferred {
+    background: #8b5cf6;
+    box-shadow: 0 0 6px rgba(139, 92, 246, 0.5);
+  }
+
+  &--gold {
+    background: #c5a86b;
+    box-shadow: 0 0 6px rgba(197, 168, 107, 0.5);
+  }
+}
+
+.wms-kpi-summary-label {
+  color: var(--text-secondary, #64748b);
+  font-weight: 500;
+  font-size: 0.74rem;
+}
+
+.wms-kpi-summary-value {
+  font-weight: 800;
+  font-size: 0.88rem;
+  color: var(--text-primary, #1e293b);
+}
+
+.animate-fade-in {
+  animation: wmsFadeIn 0.25s ease-out forwards;
+}
+
+@keyframes wmsFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

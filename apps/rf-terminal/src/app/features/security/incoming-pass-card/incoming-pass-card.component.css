@@ -1,0 +1,426 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.rf-pass-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.85rem 1.15rem;
+  border-radius: 14px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%);
+  border: 1.5px solid rgba(197, 168, 107, 0.35);
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Modo oscuro RF Terminal */
+:host-context(.theme-dark) .rf-pass-card,
+:host-context(.dark) .rf-pass-card,
+:host-context([data-theme='dark']) .rf-pass-card {
+  background: linear-gradient(155deg, rgba(26, 34, 51, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+  border: 1.5px solid rgba(208, 175, 103, 0.25);
+  box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Acento lateral rail indicador */
+.rf-pass-card::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 5px;
+  width: 4px;
+  border-radius: 999px;
+  background: #c5a86b;
+  transition: all 180ms ease;
+}
+
+.rf-pass-card--inbound::before {
+  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+.rf-pass-card--outbound::before {
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+.rf-pass-card:hover {
+  transform: translateY(-2px);
+  border-color: #c5a86b;
+  box-shadow: 0 10px 24px -4px rgba(197, 168, 107, 0.22);
+}
+
+/* Estado activo cuando la tarjeta está seleccionada/cargada en F01 */
+.rf-pass-card--active {
+  border-color: #10b981 !important;
+  background: linear-gradient(155deg, rgba(236, 253, 245, 0.95) 0%, rgba(240, 253, 250, 0.92) 100%) !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4), 0 8px 20px -2px rgba(16, 185, 129, 0.2) !important;
+}
+
+:host-context(.theme-dark) .rf-pass-card--active,
+:host-context(.dark) .rf-pass-card--active,
+:host-context([data-theme='dark']) .rf-pass-card--active {
+  background: linear-gradient(155deg, rgba(6, 44, 30, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border-color: #10b981 !important;
+}
+
+.rf-pass-card--active::before {
+  background: #10b981 !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6) !important;
+}
+
+/* ── 1. HEADER ──────────────────────────────────────────────── */
+.rf-pass-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.rf-pass-card__badge-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.rf-pass-card__op-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.rf-pass-card__op-pill.is-inbound {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+:host-context(.theme-dark) .rf-pass-card__op-pill,
+:host-context(.dark) .rf-pass-card__op-pill {
+  color: #fbbf24;
+}
+
+:host-context(.theme-dark) .rf-pass-card__op-pill.is-inbound,
+:host-context(.dark) .rf-pass-card__op-pill.is-inbound {
+  color: #60a5fa;
+}
+
+.rf-pass-card__op-icon {
+  font-size: 13px !important;
+  font-weight: 900;
+}
+
+.rf-pass-card__time-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+}
+
+:host-context(.theme-dark) .rf-pass-card__time-pill,
+:host-context(.dark) .rf-pass-card__time-pill {
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+}
+
+.rf-pass-card__btn-reject {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.rf-pass-card__btn-reject:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  transform: scale(1.08);
+}
+
+/* ── 2. IDENTIDAD TRANSPORTE & OPERADOR ────────────────────── */
+.rf-pass-card__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.rf-pass-card__carrier-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rf-pass-card__carrier-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 850;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:host-context(.theme-dark) .rf-pass-card__carrier-title,
+:host-context(.dark) .rf-pass-card__carrier-title {
+  color: #f1f5f9;
+}
+
+.rf-pass-card__driver-box {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rf-pass-card__driver-avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, rgba(197, 168, 107, 0.25) 0%, rgba(197, 168, 107, 0.1) 100%);
+  border: 1px solid rgba(197, 168, 107, 0.4);
+  color: #b45309;
+  font-size: 0.75rem;
+  font-weight: 850;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.04em;
+}
+
+:host-context(.theme-dark) .rf-pass-card__driver-avatar,
+:host-context(.dark) .rf-pass-card__driver-avatar {
+  color: #fcd34d;
+  background: rgba(208, 175, 103, 0.18);
+  border-color: rgba(208, 175, 103, 0.35);
+}
+
+.rf-pass-card__driver-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.rf-pass-card__driver-name {
+  font-size: 0.84rem;
+  font-weight: 750;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:host-context(.theme-dark) .rf-pass-card__driver-name,
+:host-context(.dark) .rf-pass-card__driver-name {
+  color: #e2e8f0;
+}
+
+.rf-pass-card__driver-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  color: #64748b;
+  font-family: var(--font-mono, monospace);
+}
+
+:host-context(.theme-dark) .rf-pass-card__driver-contact,
+:host-context(.dark) .rf-pass-card__driver-contact {
+  color: #94a3b8;
+}
+
+/* ── 3. MÉTRICAS PLACAS & DOCUMENTO / REMISIÓN ─────────────── */
+.rf-pass-card__metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr;
+  gap: 0.4rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.035);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:host-context(.theme-dark) .rf-pass-card__metrics-grid,
+:host-context(.dark) .rf-pass-card__metrics-grid {
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.rf-pass-card__metric-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.rf-pass-card__metric-col + .rf-pass-card__metric-col {
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  padding-left: 0.45rem;
+}
+
+:host-context(.theme-dark) .rf-pass-card__metric-col + .rf-pass-card__metric-col,
+:host-context(.dark) .rf-pass-card__metric-col + .rf-pass-card__metric-col {
+  border-left-color: rgba(255, 255, 255, 0.08);
+}
+
+.rf-pass-card__metric-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.rf-pass-card__metric-val {
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:host-context(.theme-dark) .rf-pass-card__metric-val,
+:host-context(.dark) .rf-pass-card__metric-val {
+  color: #e2e8f0;
+}
+
+/* Resalte especial para Remisión / Doc */
+.rf-pass-card__metric-val--doc {
+  color: #b45309;
+  font-weight: 850;
+}
+
+:host-context(.theme-dark) .rf-pass-card__metric-val--doc,
+:host-context(.dark) .rf-pass-card__metric-val--doc {
+  color: #fbbf24;
+}
+
+/* ── 4. FOOTER & CTA ────────────────────────────────────────── */
+.rf-pass-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed rgba(197, 168, 107, 0.25);
+}
+
+.rf-pass-card__btn-load-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #f8fafc;
+  border: 1px solid rgba(197, 168, 107, 0.4);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 150ms ease;
+  min-height: 38px;
+}
+
+.rf-pass-card__btn-load-action:hover {
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+  border-color: #c5a86b;
+  color: #fbbf24;
+  transform: translateY(-1px);
+}
+
+:host-context(.theme-dark) .rf-pass-card__btn-load-action,
+:host-context(.dark) .rf-pass-card__btn-load-action {
+  background: linear-gradient(135deg, rgba(208, 175, 103, 0.22) 0%, rgba(208, 175, 103, 0.1) 100%);
+  color: #fcd34d;
+  border-color: rgba(208, 175, 103, 0.35);
+}
+
+:host-context(.theme-dark) .rf-pass-card__btn-load-action:hover,
+:host-context(.dark) .rf-pass-card__btn-load-action:hover {
+  background: linear-gradient(135deg, rgba(208, 175, 103, 0.35) 0%, rgba(208, 175, 103, 0.18) 100%);
+  border-color: #fcd34d;
+}
+
+.rf-pass-card__loaded-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #059669;
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+:host-context(.theme-dark) .rf-pass-card__loaded-banner,
+:host-context(.dark) .rf-pass-card__loaded-banner {
+  color: #34d399;
+}
+
+.rf-pass-card__action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.rf-pass-card__action-group .rf-pass-card__btn-load-action {
+  flex: 1;
+}
+
+.rf-pass-card__btn-cancel-load {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 130ms ease;
+  white-space: nowrap;
+}
+
+.rf-pass-card__btn-cancel-load:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}

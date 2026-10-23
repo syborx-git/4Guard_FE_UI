@@ -1,0 +1,3875 @@
+import { Component, ElementRef, ViewChild, inject, signal, computed, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthState } from '../../../../core/auth/auth.state';
+import { ToastService } from '../../../../core/services/toast.service';
+import { PrintService } from '../../../../core/services/print.service';
+import { SmartNotificationService } from '../../../../core/services/smart-notification.service';
+import { ShiftContextService } from '../../../../core/services/shift-context.service';
+import { WarehouseMovementsService, isUuid } from '../../services/warehouse-movements.service';
+import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
+import {
+  CheckInCasetaData,
+  ReceptionHeader,
+  ReceptionPalletItem,
+  ReceptionLot,
+  PalletType,
+  PALLET_TYPE_LABELS,
+  MovementAuditEntry,
+  parseAuditTimestamp,
+  PatioUnitMonitor,
+  RampOccupancyStatus,
+  RampItem,
+  ReturnDetectionResponse,
+  ExpectedReturnPalletDto,
+  VerifyPalletResponse,
+  LocationStockInfo,
+  ProductSkuItem,
+  STANDARD_PRODUCTS,
+} from '../../models/warehouse-movements.models';
+import { PrintReceptionLayoutComponent } from '../../components/print-layouts/print-reception-layout.component';
+import { PrintCancellationLayoutComponent } from '../../components/print-layouts/print-cancellation-layout.component';
+import { BayOccupancySelectorComponent, BaySelectionResult } from '../../../../shared/components/bay-occupancy-selector/bay-occupancy-selector.component';
+
+import { StarBorderDirective } from '../../../../shared/directives/star-border.directive';
+import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
+import { QualityStateService } from '../../../quality/services/quality-state.service';
+import { WarehouseLayoutService } from '../../../catalogs/services/warehouse-layout.service';
+import { UnitOfMeasure } from '@4guard/shared-core';
+
+export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
+
+export interface ShelfLifeEvaluation {
+  remainingDays: number;
+  totalDays: number | null;
+  totalMonths: number | null;
+  remainingPct: number | null;
+  thresholdRequired: number; // 75 o 50
+  isCompliant: boolean;
+  isExpired: boolean;
+  category: '< 24m' | '≥ 24m' | 'ESTIMADO';
+  badgeText: string;
+  badgeDetail: string;
+}
+
+@Component({
+  selector: 'fg-receiving-submodule',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    RouterLink,
+    RouterLinkActive,
+    PrintReceptionLayoutComponent,
+    PrintCancellationLayoutComponent,
+    BayOccupancySelectorComponent,
+    StarBorderDirective,
+    SpecularGlowDirective,
+  ],
+  templateUrl: './receiving-submodule.component.html',
+  styleUrl: './receiving-submodule.component.css',
+})
+export class ReceivingSubmoduleComponent implements OnInit {
+  protected readonly authState = inject(AuthState);
+  protected readonly Math      = Math;
+  private readonly movementsService = inject(WarehouseMovementsService);
+  private readonly movementsApi = inject(WarehouseMovementsApiService);
+  private readonly qualityState = inject(QualityStateService);
+  private readonly layoutService = inject(WarehouseLayoutService);
+  private readonly smartNotification = inject(SmartNotificationService);
+  readonly shiftContext = inject(ShiftContextService);
+  private readonly fb = inject(FormBuilder);
+  private readonly toast = inject(ToastService);
+  private readonly printService = inject(PrintService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  goToManageCarriers(): void {
+    this.router.navigate(['/admin/carriers']);
+  }
+
+  protected formatShiftTime(value: string | null): string {
+    return value ? value.slice(0, 5) : '';
+  }
+
+  // Auto-foco en escáner de UAs
+  @ViewChild('uaInput') uaInput!: ElementRef<HTMLInputElement>;
+  // ── ESTADO DEL WORKBENCH ──
+  formMode = signal<'idle' | 'create' | 'detail'>('idle');
+  searchQuery = signal('');
+  statusFilter = signal<string>('REGISTERED');
+  selectedReception = signal<ReceptionHeader | null>(null);
+  auditEntries = signal<MovementAuditEntry[]>([]);
+  showAuditTimeline = signal(false);
+  isKpiCollapsed = signal<boolean>(localStorage.getItem('4g_receiving_kpis_collapsed') === 'true');
+
+  toggleShowAuditTimeline(): void {
+    this.showAuditTimeline.update((v) => !v);
+  }
+
+  toggleKpiCollapse(): void {
+    const next = !this.isKpiCollapsed();
+    this.isKpiCollapsed.set(next);
+    localStorage.setItem('4g_receiving_kpis_collapsed', String(next));
+  }
+
+  // Cola Reactiva de Pre-Recepciones Pendientes (Caseta)
+  pendingReceptions = this.movementsService.pendingReceptions;
+  pendingReceptionsCount = this.movementsService.pendingReceptionsCount;
+
+  // Matriz de Ocupación de Rampas 1-12
+  rampOccupancyStatus = this.movementsService.rampOccupancyStatus;
+  totalBusyRampsCount = this.movementsService.totalBusyRampsCount;
+  totalFreeRampsCount = this.movementsService.totalFreeRampsCount;
+
+  // Modal Plano de Andenes Interactivo
+  showDockMapModal = signal(false);
+
+  // Modal Selector Visual de Bahías (22 Pallets)
+  showBaySelectorModal = signal(false);
+
+  // Modal Re-etiquetado Selectivo de UAs (SSCC GS1-128)
+  showRelabelModal = signal(false);
+  selectedPalletIdsForRelabel = signal<Set<string>>(new Set());
+  relabelReason = signal<string>('Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128');
+  isRelabelling = signal<boolean>(false);
+
+  // Modal Edición de Ficha de Caseta
+  showEditCasetaModal = signal(false);
+  editCasetaSeals = signal<string[]>([]);
+  tempEditSealInput = signal('');
+
+  editCasetaForm = this.fb.group({
+    docNumber: ['', [Validators.required]],
+    clientCode: [''],
+    client: ['', [Validators.required]],
+    carrierLineCode: [''],
+    carrierLine: ['', [Validators.required]],
+    receptionTime: ['', [Validators.required]],
+    driverName: ['', [Validators.required]],
+    tractorPlates: ['', [Validators.required]],
+    boxPlates: ['', [Validators.required]],
+    noEcoTractor: [''],
+    noEcoCaja: [''],
+  });
+
+  openEditCasetaModal(): void {
+    const rec = this.selectedReception();
+    if (!rec) return;
+
+    if (rec.status !== 'REGISTERED' && !this.allowCasetaEditAuthorized()) {
+      this.openReopenModal('CASETA_DATA');
+      this.toast.info('Para modificar datos de la ficha en este estado se requiere validación de supervisor.');
+      return;
+    }
+
+    const carrierName = rec.checkIn.carrierLine || '';
+    const clientName = rec.checkIn.client || '';
+    const matchedCarrier = this.carrierLines().find(
+      (c) =>
+        c.code === rec.checkIn.carrierLineCode ||
+        c.name === carrierName ||
+        (carrierName && c.name.toLowerCase().includes(carrierName.toLowerCase())) ||
+        (carrierName && carrierName.toLowerCase().includes(c.name.toLowerCase()))
+    );
+    const matchedClient = this.clients().find(
+      (cl) =>
+        cl.code === rec.checkIn.clientCode ||
+        cl.name === clientName ||
+        (clientName && cl.name.toLowerCase().includes(clientName.toLowerCase())) ||
+        (clientName && clientName.toLowerCase().includes(cl.name.toLowerCase()))
+    );
+
+    this.editCasetaForm.patchValue({
+      docNumber: rec.checkIn.docNumber || rec.folio || '',
+      clientCode: matchedClient ? matchedClient.code : (rec.checkIn.clientCode || ''),
+      client: matchedClient ? matchedClient.name : clientName,
+      carrierLineCode: matchedCarrier ? matchedCarrier.code : (rec.checkIn.carrierLineCode || ''),
+      carrierLine: matchedCarrier ? matchedCarrier.name : carrierName,
+      receptionTime: rec.checkIn.receptionTime || '',
+      driverName: rec.checkIn.driverName || '',
+      tractorPlates: rec.checkIn.tractorPlates || '',
+      boxPlates: rec.checkIn.boxPlates || '',
+      noEcoTractor: rec.checkIn.noEcoTractor || (rec as any).noEcoTractor || '',
+      noEcoCaja: rec.checkIn.noEcoCaja || (rec as any).noEcoCaja || '',
+    });
+    const seals = rec.checkIn.sealNumbers && rec.checkIn.sealNumbers.length > 0
+      ? [...rec.checkIn.sealNumbers]
+      : (rec.checkIn.sealNumber ? [rec.checkIn.sealNumber] : []);
+    this.editCasetaSeals.set(seals);
+    this.tempEditSealInput.set('');
+    this.showEditCasetaModal.set(true);
+  }
+
+  onEditCasetaCarrierChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    const found = this.carrierLines().find((c) => c.name === val || c.code === val);
+    if (found) {
+      this.editCasetaForm.patchValue({ carrierLineCode: found.code, carrierLine: found.name });
+    }
+  }
+
+  onEditCasetaClientChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const val = target.value;
+    const found = this.clients().find((c) => c.name === val || c.code === val);
+    if (found) {
+      this.editCasetaForm.patchValue({ clientCode: found.code, client: found.name });
+    }
+  }
+
+  addEditSeal(): void {
+    const val = this.tempEditSealInput().trim().toUpperCase();
+    if (!val) return;
+    if (this.editCasetaSeals().includes(val)) {
+      this.toast.warning(`El sello ${val} ya está registrado.`);
+      return;
+    }
+    this.editCasetaSeals.update((l) => [...l, val]);
+    this.tempEditSealInput.set('');
+  }
+
+  removeEditSeal(idx: number): void {
+    this.editCasetaSeals.update((l) => l.filter((_, i) => i !== idx));
+  }
+
+  saveCasetaModifications(): void {
+    if (this.tempEditSealInput().trim()) {
+      this.addEditSeal();
+    }
+
+    if (this.editCasetaForm.invalid) {
+      this.editCasetaForm.markAllAsTouched();
+      this.toast.warning('Por favor completa los campos requeridos de la ficha.');
+      return;
+    }
+
+    if (this.editCasetaSeals().length === 0) {
+      this.toast.warning('Debes mantener al menos 1 sello o cincho de seguridad.');
+      return;
+    }
+
+    const currentRec = this.selectedReception();
+    if (!currentRec) return;
+
+    const val = this.editCasetaForm.value;
+    const currentRampNumber = currentRec.checkIn?.rampNumber ?? (currentRec as any).rampNumber ?? null;
+    const currentRampCode = currentRec.checkIn?.rampCode ?? (currentRampNumber ? `LOC-RAMP-${String(currentRampNumber).padStart(2, '0')}` : null);
+    const updatedDoc = (val.docNumber || currentRec.checkIn.docNumber || '').trim().toUpperCase();
+
+    const updatedCheckIn: CheckInCasetaData = {
+      ...currentRec.checkIn,
+      docNumber: updatedDoc,
+      carrierLineCode: val.carrierLineCode || currentRec.checkIn.carrierLineCode,
+      carrierLine: val.carrierLine || currentRec.checkIn.carrierLine,
+      receptionTime: val.receptionTime || currentRec.checkIn.receptionTime,
+      driverName: val.driverName || currentRec.checkIn.driverName,
+      tractorPlates: (val.tractorPlates || currentRec.checkIn.tractorPlates).toUpperCase(),
+      boxPlates: (val.boxPlates || currentRec.checkIn.boxPlates).toUpperCase(),
+      noEcoTractor: (val.noEcoTractor || currentRec.checkIn.noEcoTractor || '').trim(),
+      noEcoCaja: (val.noEcoCaja || currentRec.checkIn.noEcoCaja || '').trim(),
+      clientCode: val.clientCode || currentRec.checkIn.clientCode,
+      client: val.client || currentRec.checkIn.client,
+      rampNumber: currentRampNumber,
+      rampCode: currentRampCode || undefined,
+      sealNumbers: this.editCasetaSeals(),
+      sealNumber: this.editCasetaSeals().join(', '),
+    };
+
+    const auditDetails = [
+      { fieldName: 'No. Remisión / Factura', oldValue: currentRec.checkIn?.docNumber, newValue: updatedCheckIn.docNumber },
+      { fieldName: 'Línea Transportista', oldValue: currentRec.checkIn?.carrierLine, newValue: updatedCheckIn.carrierLine },
+      { fieldName: 'Operador / Chofer', oldValue: currentRec.checkIn?.driverName, newValue: updatedCheckIn.driverName },
+      { fieldName: 'Placas del Tracto', oldValue: currentRec.checkIn?.tractorPlates, newValue: updatedCheckIn.tractorPlates },
+      { fieldName: 'Placas de la Caja', oldValue: currentRec.checkIn?.boxPlates, newValue: updatedCheckIn.boxPlates },
+      { fieldName: 'No. Eco Tracto', oldValue: currentRec.checkIn?.noEcoTractor, newValue: updatedCheckIn.noEcoTractor },
+      { fieldName: 'No. Eco Caja', oldValue: currentRec.checkIn?.noEcoCaja, newValue: updatedCheckIn.noEcoCaja },
+      { fieldName: 'Sellos de Seguridad', oldValue: currentRec.checkIn?.sealNumber, newValue: updatedCheckIn.sealNumber },
+    ].filter(d => d.oldValue !== d.newValue);
+
+    if (auditDetails.length > 0) {
+      this.movementsService.addReceptionAudit(currentRec.folio, {
+        id: `aud-caseta-${Date.now()}`,
+        action: 'FICHA_CASETA_MODIFICADA',
+        actionLabel: 'Modificación de Ficha Operativa de Arribo',
+        username: 'Operador Caseta / Administrador',
+        timestamp: new Date().toLocaleString('es-MX'),
+        details: auditDetails,
+      });
+    }
+
+    const updatedReception: ReceptionHeader = {
+      ...currentRec,
+      checkIn: updatedCheckIn,
+    };
+
+    this.movementsService.updateCasetaCheckInBackend(currentRec.id || currentRec.folio, updatedCheckIn).subscribe({
+      next: (persisted) => {
+        this.selectedReception.set(persisted);
+        this.showEditCasetaModal.set(false);
+        this.toast.success('Ficha operativa de arribo actualizada y guardada correctamente.');
+        this.loadAuditLogs(persisted.id || persisted.folio);
+
+        this.smartNotification.dispatch({
+          category: 'SECURITY',
+          title: '🎯 Ficha de Arribo Actualizada',
+          message: `Ficha de transporte actualizada para Folio #${persisted.folio} (${updatedCheckIn.client || 'Cliente'}) — Chofer: ${updatedCheckIn.driverName || 'Transportista'}`,
+          referenceFolio: persisted.folio,
+          route: '/security',
+          targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+          targetRoutes: ['/security'],
+          severity: 'INFO',
+          data: persisted
+        });
+      },
+      error: () => {
+        this.selectedReception.set(updatedReception);
+        this.showEditCasetaModal.set(false);
+        this.toast.success('Ficha operativa actualizada.');
+
+        this.smartNotification.dispatch({
+          category: 'SECURITY',
+          title: '🎯 Ficha de Arribo Actualizada',
+          message: `Ficha de transporte actualizada para Folio #${currentRec.folio} (${updatedCheckIn.client || 'Cliente'}) — Chofer: ${updatedCheckIn.driverName || 'Transportista'}`,
+          referenceFolio: currentRec.folio,
+          route: '/security',
+          targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+          targetRoutes: ['/security'],
+          severity: 'INFO',
+          data: updatedReception
+        });
+      }
+    });
+
+    this.auditEntries.update((entries) => [
+      {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        timestamp: new Date().toLocaleTimeString(),
+        action: 'EDICIÓN_CASETA',
+        actionLabel: 'Modificación de Ficha de Caseta',
+        username: this.authState.userFullName() || this.authState.currentUser()?.email || 'Supervisor',
+        reason: `Remisión: ${updatedDoc}, Cliente: ${updatedCheckIn.client}, Chofer: ${updatedCheckIn.driverName}, Placas: ${updatedCheckIn.tractorPlates}/${updatedCheckIn.boxPlates}`,
+        observations: `Sellos actualizados: ${updatedCheckIn.sealNumber}`,
+        details: [
+          { fieldName: 'No. Remisión', newValue: updatedDoc },
+          { fieldName: 'Cliente', newValue: updatedCheckIn.client },
+          { fieldName: 'Línea Transportista', newValue: updatedCheckIn.carrierLine },
+          { fieldName: 'Chofer', newValue: updatedCheckIn.driverName },
+          { fieldName: 'Placas Tracto', newValue: updatedCheckIn.tractorPlates },
+          { fieldName: 'Placas Caja', newValue: updatedCheckIn.boxPlates },
+          { fieldName: 'Sellos', newValue: updatedCheckIn.sealNumber },
+        ],
+      },
+      ...entries,
+    ]);
+  }
+
+  onRampMatrixClick(ramp: RampOccupancyStatus): void {
+    if (ramp.status === 'OCCUPIED_INBOUND' && ramp.operationFolio) {
+      this.loadFromNotification(ramp.operationFolio);
+      this.showDockMapModal.set(false);
+    } else if (ramp.status === 'AVAILABLE') {
+      if (this.formMode() === 'create') {
+        this.checkInForm.patchValue({ rampNumber: ramp.rampNumber, rampCode: ramp.code });
+        this.toast.info(`Rampa ${ramp.rampNumber} seleccionada.`);
+      } else if (this.formMode() === 'detail' && this.selectedReception()?.status === 'REGISTERED') {
+        this.altaForm.patchValue({ rampNumber: ramp.rampNumber });
+        this.rampSearchQuery.set(ramp.name || `Rampa ${ramp.rampNumber}`);
+        this.toast.info(`Rampa ${ramp.rampNumber} asignada al Folio #${this.selectedReception()?.folio}`);
+      }
+      this.showDockMapModal.set(false);
+    }
+  }
+
+  getRampOccupancy(rampNumber: number): RampOccupancyStatus | undefined {
+    return this.rampOccupancyStatus().find((r) => r.rampNumber === rampNumber);
+  }
+
+  isRampBusy(rampNumber: number, allowedFolio?: string | number): boolean {
+    const occ = this.getRampOccupancy(rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') return false;
+    if (allowedFolio != null && String(occ.operationFolio) === String(allowedFolio)) return false;
+    return true;
+  }
+
+  getRampDisplayLabel(rm: RampItem, currentFolio?: string | number): string {
+    const occ = this.getRampOccupancy(rm.rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') {
+      return `${rm.name} (Libre)`;
+    }
+    if (currentFolio != null && String(occ.operationFolio) === String(currentFolio)) {
+      return `${rm.name} (Asignada a este Folio)`;
+    }
+    if (occ.status === 'OCCUPIED_INBOUND') {
+      return `${rm.name} (Ocupada - Folio #${occ.operationFolio})`;
+    }
+    return `${rm.name} (Ocupada - Salida #${occ.operationFolio})`;
+  }
+
+  // Banner colapsable / expandible de la cola de notificaciones
+  isQueueBannerExpanded = signal(true);
+
+  // Modal Cancelación con Autorización de Administrador
+  showCancelModal = signal(false);
+  cancelReason = signal('');
+  cancelAdminUser = signal('');
+  cancelAdminPassword = signal('');
+  cancelErrorMessage = signal<string | null>(null);
+  showCancelPassword = signal(false);
+  isCancelling = signal(false);
+
+  toggleShowCancelPassword(): void {
+    this.showCancelPassword.update((v) => !v);
+  }
+
+  // Modal Reapertura con Autorización de Supervisor / Administrador
+  showReopenModal = signal(false);
+  reopenActionType = signal<'PALLET_SWAP' | 'MISSING_PALLETS' | 'CASETA_DATA' | 'UA_SWAP'>('PALLET_SWAP');
+  reopenTargetPalletType = signal<PalletType>('TARIMA_CHEP_NACIONAL');
+  reopenSwapScope = signal<'ALL' | 'SELECTED'>('ALL');
+  reopenSelectedPalletIds = signal<string[]>([]);
+  reopenSwapReasonQuick = signal<string>('ESTANDAR_PLANTA');
+  reopenReason = signal('');
+  reopenAdminUser = signal('');
+  reopenAdminPassword = signal('');
+  reopenErrorMessage = signal<string | null>(null);
+  showReopenPassword = signal(false);
+  isReopening = signal(false);
+  allowCasetaEditAuthorized = signal(false);
+
+  // Estados específicos para Cambio / Homologación Rápida de UAs del Cliente (Pistola RF)
+  reopenUaSwapList = signal<Array<{
+    id: string;
+    palletNumber: number;
+    currentUa: string;
+    newUa: string;
+    productId: string;
+    pieces: number;
+    isModified: boolean;
+  }>>([]);
+  reopenUaBulkOpen = signal(false);
+  reopenUaBulkText = signal('');
+
+  reopenModifiedUaCount = computed(() => {
+    return this.reopenUaSwapList().filter((item) => item.newUa.trim().length > 0).length;
+  });
+
+  reopenBayCapacity = computed(() => {
+    const rec = this.selectedReception();
+    if (!rec) return { bayCode: 'N/A', totalCapacity: 22, currentThisRec: 0, otherPallets: 0, availableCupo: 22 };
+    const bayCode = rec.storageLocation || (rec as any).storageLocationCode || 'POS-A-001';
+    const clean = bayCode.trim().toUpperCase();
+    const live = this.movementsService.getBayLiveOccupancy(bayCode);
+    const thisRecPallets = rec.pallets?.length || 0;
+    const totalStoredInBay = live ? live.totalPallets : thisRecPallets;
+    const otherPallets = Math.max(0, totalStoredInBay - thisRecPallets);
+
+    const locMap = this.movementsService.locations();
+    const loc = locMap[clean] || 
+                (clean.startsWith('LOC-') ? locMap[clean.replace(/^LOC-/, 'POS-')] : undefined) ||
+                (clean.startsWith('POS-') ? locMap[clean.replace(/^POS-/, 'LOC-')] : undefined);
+    const totalCapacity = this.movementsService.resolveBayCapacity(loc);
+    const availableCupo = Math.max(0, totalCapacity - totalStoredInBay);
+    return {
+      bayCode,
+      totalCapacity,
+      currentThisRec: thisRecPallets,
+      otherPallets,
+      availableCupo,
+    };
+  });
+
+  readonly palletSwapReasons = [
+    { id: 'ESTANDAR_PLANTA', label: 'Estándar Obligatorio de Planta / Racks', desc: 'Retarimado físico obligatorio para ingresar a racks de almacenaje.' },
+    { id: 'POOL_CHEP', label: 'Circuito de Tarimas CHEP / PECO', desc: 'Sustitución de tarima transportista por tarima pool CHEP.' },
+    { id: 'INOCUIDAD_PLASTICA', label: 'Inocuidad / Tarima Plástica Sanitaria', desc: 'Exigencia de grado alimenticio / área limpia sin madera.' },
+    { id: 'TARIMA_DANADA', label: 'Tarima Original Dañada / Rota', desc: 'Sustitución por daño o astillado durante la maniobra de descarga.' },
+    { id: 'SOLICITUD_CLIENTE', label: 'Instrucción Especial del Cliente', desc: 'Requisito específico del propietario de la mercancía.' },
+    { id: 'OTRO', label: 'Otro Motivo Operativo', desc: 'Justificación documentada por supervisión.' },
+  ];
+
+  toggleShowReopenPassword(): void {
+    this.showReopenPassword.update((v) => !v);
+  }
+
+  toggleReopenPalletSelection(palletId: string): void {
+    this.reopenSelectedPalletIds.update((ids) =>
+      ids.includes(palletId) ? ids.filter((id) => id !== palletId) : [...ids, palletId]
+    );
+  }
+
+  isPalletSelectedForSwap(palletId: string): boolean {
+    return this.reopenSelectedPalletIds().includes(palletId);
+  }
+
+  // Modal Cambio de Remisión con Autorización de Rango Superior
+  showChangeRemisionModal = signal(false);
+  newRemisionInput = signal('');
+  changeRemisionReason = signal('');
+  changeRemisionAdminUser = signal('');
+  changeRemisionAdminPassword = signal('');
+  changeRemisionError = signal<string | null>(null);
+  showChangeRemisionPassword = signal(false);
+  isChangingRemision = signal(false);
+
+  toggleShowChangeRemisionPassword(): void {
+    this.showChangeRemisionPassword.update((v) => !v);
+  }
+
+  getInitials(name?: string): string {
+    if (!name) return 'RC';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  // Modales del Workbench
+  showCheckInModal = signal(false);
+  showEditPalletModal = signal(false);
+  showQuickAddModal = signal(false);
+  showPrintModal = signal(false);
+  showLeaderModal = signal(false);
+
+  quickAddType = signal<'CARRIER' | 'RAMP'>('CARRIER');
+  quickAddCodeInput = signal('');
+  quickAddNameInput = signal('');
+  quickAddRampNumInput = signal<number>(13);
+
+  // ── ESTADO DE EDICIÓN DE TARIMA INDIVIDUAL (ADMIN) ──
+  editingPallet = signal<ReceptionPalletItem | null>(null);
+  palletTypes = Object.entries(PALLET_TYPE_LABELS) as [PalletType, string][];
+
+  // ── STREAM REACTIVO DE TARIMAS (UA) ──
+  palletStream = signal<ReceptionPalletItem[]>([]);
+  uaCodeInput = signal('');
+  uaObsInput = signal('');
+  generatedFolio = signal('');
+
+  // ── CATÁLOGOS BASE REACTIVOS ──
+  carrierLines = this.movementsService.carrierLines;
+  clients = this.movementsService.clients;
+  ramps = this.movementsService.ramps;
+  forkliftOperators = this.movementsService.forkliftOperators;
+
+  suppliers = this.movementsService.suppliers;
+
+  products = signal<ProductSkuItem[]>(STANDARD_PRODUCTS);
+
+  // ── AUTOCOMPLETE PREDICTIVO DE PRODUCTO (SKU) ──
+  skuSearchQuery = signal<string>('');
+  isSkuDropdownOpen = signal<boolean>(false);
+  filteredProducts = computed(() => {
+    const q = this.skuSearchQuery().toLowerCase().trim();
+    const list = this.products();
+    if (!q) return list;
+    return list.filter(
+      (p) => p.code.toLowerCase().includes(q) || p.name.toLowerCase().includes(q)
+    );
+  });
+
+  // ── AUTOCOMPLETE PREDICTIVO DE MONTACARGUISTA ──
+  operatorSearchQuery = signal<string>('');
+  isOperatorDropdownOpen = signal<boolean>(false);
+  filteredForkliftOperators = computed(() => {
+    const q = this.operatorSearchQuery().toLowerCase().trim();
+    const list = this.forkliftOperators();
+    if (!q) return list;
+    return list.filter(
+      (op) =>
+        (op.name && op.name.toLowerCase().includes(q)) ||
+        (op.code && op.code.toLowerCase().includes(q)) ||
+        (op.jobTitle && op.jobTitle.toLowerCase().includes(q)) ||
+        (op.shift && op.shift.toLowerCase().includes(q))
+    );
+  });
+
+  // ── AUTOCOMPLETE PREDICTIVO DE RAMPA DE RECEPCIÓN ──
+  rampSearchQuery = signal<string>('');
+  isRampDropdownOpen = signal<boolean>(false);
+  filteredRamps = computed(() => {
+    const q = this.rampSearchQuery().toLowerCase().trim();
+    const list = this.ramps();
+    if (!q) return list;
+    const currentVal = this.altaForm.get('rampNumber')?.value;
+    const currentRamp = list.find(r => r.rampNumber === currentVal);
+    if (currentRamp && (currentRamp.name.toLowerCase() === q || `rampa ${currentRamp.rampNumber}` === q)) {
+      return list;
+    }
+    return list.filter(
+      (rm) =>
+        (rm.name && rm.name.toLowerCase().includes(q)) ||
+        (rm.code && rm.code.toLowerCase().includes(q)) ||
+        String(rm.rampNumber).includes(q)
+    );
+  });
+
+  // ── AUTOCOMPLETE PREDICTIVO DE PROVEEDOR ──
+  supplierSearchQuery = signal<string>('');
+  isSupplierDropdownOpen = signal<boolean>(false);
+  filteredSuppliers = computed(() => {
+    const q = this.supplierSearchQuery().toLowerCase().trim();
+    const list = this.suppliers();
+    if (!q) return list;
+    return list.filter(
+      (s) =>
+        (s.name && s.name.toLowerCase().includes(q)) ||
+        (s.code && s.code.toLowerCase().includes(q))
+    );
+  });
+
+  // ── AUTOCOMPLETE PREDICTIVO DE TIPO DE TARIMA ──
+  palletTypeSearchQuery = signal<string>('');
+  isPalletTypeDropdownOpen = signal<boolean>(false);
+  filteredPalletTypes = computed(() => {
+    const q = this.palletTypeSearchQuery().toLowerCase().trim();
+    const list = this.palletTypes;
+    if (!q) return list;
+    const currentVal = this.altaForm.get('selectedPalletType')?.value;
+    const currentEntry = list.find(pt => pt[0] === currentVal);
+    if (currentEntry && (currentEntry[1].toLowerCase() === q || currentEntry[0].toLowerCase() === q)) {
+      return list;
+    }
+    return list.filter(
+      (pt) =>
+        pt[0].toLowerCase().includes(q) ||
+        pt[1].toLowerCase().includes(q)
+    );
+  });
+
+  // ── FORMULARIO: ALTA DE CASETA (Check-in inicial) ──
+  checkInForm = this.fb.group({
+    carrierLineCode: [''],
+    carrierLine: ['', [Validators.required]],
+    receptionTime: [new Date().toTimeString().slice(0, 5), [Validators.required]],
+    docNumber: ['', [Validators.required]],
+    docDate: [new Date().toISOString().slice(0, 10), [Validators.required]],
+    elaborationDate: [''],
+    expirationDate: [''],
+    lotNumber: [''],
+    clientCode: [''],
+    client: ['', [Validators.required]],
+    rampCode: [''],
+    rampNumber: [null as number | null],
+    forkliftOperatorCode: [''],
+    forkliftOperator: ['', [Validators.required]],
+    driverName: ['', [Validators.required]],
+    tractorPlates: ['', [Validators.required]],
+    boxPlates: ['', [Validators.required]],
+    sealNumber: [''],
+    noEcoTractor: [''],
+    noEcoCaja: [''],
+    securityApproved: [true],
+  });
+
+  // ── REINGENIERÍA: MONITOR DE UNIDADES EN PATIO Y CANDADO ANTI-DUPLICADOS ──
+  activePatioTab = signal<'workbench' | 'patio'>('workbench');
+  duplicateUaError = signal<string | null>(null);
+  expirationWarningAlert = signal<string | null>(null);
+
+  patioUnits = signal<PatioUnitMonitor[]>([]);
+
+  patioWaitAlertsCount = computed(() => this.patioUnits().filter(u => u.hasWaitAlert).length);
+  patioDischargeAlertsCount = computed(() => this.patioUnits().filter(u => u.hasDischargeAlert).length);
+
+  isSubmitting = signal(false);
+
+  // Lista Reactiva de Cinchos/Sellos
+  sealList = signal<string[]>([]);
+  tempSealInput = signal('');
+
+  // Catálogos para Autorización Excepcional de Vida Útil Remanente (Protocolo MRP & Planeación de Demanda)
+  readonly STANDARD_OPS_MANAGERS = [
+    'Equipo MRP / Planeación de la Demanda',
+    'Fábrica Receptora (Control de Calidad)',
+    'Ing. Carlos Mendoza (Gerente de Operaciones)',
+    'Lic. Sofia Morales (Subgerente de Operaciones)',
+    'Mtro. Roberto Garza (Director de Operaciones WMS)',
+    'Ing. David Alarcón (Superintendente de Almacén)',
+  ];
+
+  readonly STANDARD_OPS_REASONS = [
+    'Autorizado por MRP previo a embarque (Evaluación de riesgo aprobada)',
+    'Acuerdo con Planeación de la Demanda y Fábrica Receptora (Absorción de costo convenida)',
+    'Uso y consumo inmediato en producción / Maquila rápida',
+    'Rotación rápida acordada con cliente / Salida programada',
+    'Desabasto crítico de insumos / Urgencia operativa',
+    'Convenio comercial especial con proveedor por caducidad corta',
+    'Otro motivo operativo (especificar en justificación)',
+  ];
+
+  // ── GESTIÓN MULTI-LOTE POR RECEPCIÓN Y ASIGNACIÓN A UA ──
+  lotsList = signal<ReceptionLot[]>([]);
+  selectedScanningLot = signal<string>('');
+  showAddLotModal = signal(false);
+  showOpsAuthPassword = signal(false);
+
+  // ── LOGÍSTICA INVERSA Y AUTO-DETECCIÓN INTELIGENTE DE RETORNOS (ADR-021) ──
+  detectedReturn = signal<ReturnDetectionResponse | null>(null);
+  isDetectingReturn = signal<boolean>(false);
+  isVerifyingDockPallet = signal<boolean>(false);
+  dockScanUaCode = signal<string>('');
+  dockScanResult = signal<VerifyPalletResponse | null>(null);
+  showRemissionTreeModal = signal<boolean>(false);
+  remissionTreeLogs = signal<any[]>([]);
+  selectedTreeFolio = signal<string>('');
+  kpiReturns = computed(() => this.movementsService.receptions().filter((r: any) => r.operationType === 'REENTRY' || !!r.sourceOutboundFolio).length);
+
+  toggleShowOpsAuthPassword(): void {
+    this.showOpsAuthPassword.update((v) => !v);
+  }
+
+  newLotForm = this.fb.group({
+    lotNumber: ['', [Validators.required]],
+    elaborationDate: [''],
+    expirationDate: ['', [Validators.required]],
+    authorizedByOpsManager: [''],
+    opsManagerPassword: [''],
+    opsManagerReason: [''],
+    quickOpsReason: [''],
+  });
+
+  // ── FORMULARIO: ALTA / EDICIÓN DE RECEPCIÓN (Detalle Producto) ──
+  altaForm = this.fb.group({
+    lotNumber: ['', [Validators.required]],
+    elaborationDate: [''],
+    expirationDate: ['', [Validators.required]],
+    authorizedByOpsManager: [''],
+    opsManagerReason: [''],
+    storageLocation: [''],
+    storageLocationId: [''],
+    forkliftOperator: ['', [Validators.required]],
+    rampNumber: [null as number | null, [Validators.required]],
+    productId: ['', [Validators.required]],
+    productName: [''],
+    supplierName: ['', [Validators.required]],
+    piecesPerPallet: [0, [Validators.required, Validators.min(1)]],
+    selectedPalletType: ['' as any, [Validators.required]],
+    observations: [''],
+  });
+
+  // ── FORMULARIO: EDICIÓN DE TARIMA INDIVIDUAL (ADMIN) ──
+  editPalletForm = this.fb.group({
+    id: [''],
+    palletNumber: [1],
+    palletCode: ['', [Validators.required]],
+    productId: ['', [Validators.required]],
+    description: ['', [Validators.required]],
+    supplierName: [''],
+    palletTypeId: ['' as any, [Validators.required]],
+    pieces: [0, [Validators.required, Validators.min(1)]],
+    observations: [''],
+    lotNumber: [''],
+    expirationDate: [''],
+    docNumber: [''],
+  });
+
+  // ── ESTADO DE MODAL LÍDER, VERIFICACIÓN DE UAS E IMPRESIÓN ──
+  leaderModalTitle = signal('');
+  leaderAction = signal<'COMPLETE' | 'CANCEL' | null>(null);
+  cancellationJustification = signal('');
+  printType = signal<'RECEPTION' | 'CANCELLATION' | null>(null);
+  selectedPrintReception = signal<ReceptionHeader | null>(null);
+
+  // Selector y asignación reactiva de Bahía
+  selectedBayName = signal<string>('');
+
+  // Verificación de UAs escaneadas
+  showUaVerificationModal = signal(false);
+  verifiedPalletIds = signal<Set<string>>(new Set());
+  verifiedPalletCount = computed(() => this.verifiedPalletIds().size);
+
+  // ── COMPUTADOS DEL WORKBENCH ──
+  // El tablero operativo se acota al turno vigente: los pendientes de turnos
+  // anteriores permanecen visibles (arrastre); verificados/cancelados de turnos
+  // anteriores salen del tablero y quedan en el historial.
+  private isActiveStatus(status: string): boolean {
+    return status !== 'COMPLETED' && status !== 'CANCELLED';
+  }
+
+  protected readonly boardReceptions = computed(() => {
+    const sessionId = this.shiftContext.activeShift()?.sessionId;
+    const list = this.movementsService.receptions();
+    if (!sessionId) return list;
+    return list.filter(
+      (r) => r.shiftSessionId === sessionId || this.isActiveStatus(r.status)
+    );
+  });
+
+  protected isCarryOver(rec: ReceptionHeader): boolean {
+    const sessionId = this.shiftContext.activeShift()?.sessionId;
+    return !!sessionId && !!rec.shiftSessionId && rec.shiftSessionId !== sessionId
+      && this.isActiveStatus(rec.status);
+  }
+
+  kpiTotal = computed(() => this.boardReceptions().length);
+  kpiRegistered = computed(() => this.boardReceptions().filter((r) => r.status === 'REGISTERED').length);
+  kpiInProcess = computed(() => this.boardReceptions().filter((r) => r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED').length);
+  kpiCompleted = computed(() => this.boardReceptions().filter((r) => r.status === 'COMPLETED').length);
+  kpiCancelled = computed(() => this.boardReceptions().filter((r) => r.status === 'CANCELLED').length);
+
+  // Filtros Multi-Estado Píldoras
+  // Por defecto el tablero operativo arranca en "En Caseta" (REGISTERED).
+  activeStatusFilters = signal<string[]>(['REGISTERED']);
+
+  toggleStatusFilter(status: string): void {
+    if (status === 'ALL') {
+      this.activeStatusFilters.set([]);
+      this.statusFilter.set('ALL');
+      return;
+    }
+    const current = this.activeStatusFilters();
+    if (current.includes(status)) {
+      const updated = current.filter(s => s !== status);
+      this.activeStatusFilters.set(updated);
+      this.statusFilter.set(updated.length === 1 ? updated[0] : (updated.length === 0 ? 'ALL' : 'MULTI'));
+    } else {
+      const updated = [...current, status];
+      this.activeStatusFilters.set(updated);
+      this.statusFilter.set(updated.length === 1 ? updated[0] : 'MULTI');
+    }
+  }
+
+  isStatusFilterActive(status: string): boolean {
+    if (status === 'ALL') return this.activeStatusFilters().length === 0;
+    return this.activeStatusFilters().includes(status);
+  }
+
+  getReceptionPhaseInfo(status: string): {
+    phaseNumber: number;
+    phaseLabel: string;
+    percentage: number;
+    colorClass: string;
+    progressWidth: string;
+  } {
+    switch (status) {
+      case 'REGISTERED':
+        return { phaseNumber: 1, phaseLabel: '1. Caseta · Arribo', percentage: 20, colorClass: 'fill--amber', progressWidth: '20%' };
+      case 'ASSIGNED':
+        return { phaseNumber: 2, phaseLabel: '2. En Andén · Asignada', percentage: 40, colorClass: 'fill--blue', progressWidth: '40%' };
+      case 'IN_PROGRESS':
+        return { phaseNumber: 3, phaseLabel: '3. En Descarga Activa', percentage: 60, colorClass: 'fill--cyan', progressWidth: '60%' };
+      case 'DISCHARGED':
+        return { phaseNumber: 4, phaseLabel: '4. Por Auditar · Concluida', percentage: 80, colorClass: 'fill--purple', progressWidth: '80%' };
+      case 'COMPLETED':
+        return { phaseNumber: 5, phaseLabel: '5. Verificado · En Stock', percentage: 100, colorClass: 'fill--emerald', progressWidth: '100%' };
+      case 'CANCELLED':
+        return { phaseNumber: 0, phaseLabel: 'Cancelada / Revocada', percentage: 100, colorClass: 'fill--rose', progressWidth: '100%' };
+      default:
+        return { phaseNumber: 1, phaseLabel: '1. Caseta · Arribo', percentage: 20, colorClass: 'fill--amber', progressWidth: '20%' };
+    }
+  }
+
+  formatDateDisplay(dateStr?: string, timeStr?: string): string {
+    let d = (dateStr || '').replace(/,+$/, '').trim();
+    if (d.includes('T')) d = d.slice(0, 10);
+    if (!d) d = '25/9/2026';
+    const t = (timeStr || '').replace(/^,+/, '').trim();
+    return t ? `${d} · ${t}` : d;
+  }
+
+  closeReceptionDetail(): void {
+    this.selectedReception.set(null);
+    this.formMode.set('idle');
+  }
+
+  filteredReceptions = computed(() => {
+    const list = this.boardReceptions();
+    const q = this.searchQuery().toLowerCase().trim();
+    const multi = this.activeStatusFilters();
+    const st = this.statusFilter();
+
+    return list.filter((r) => {
+      let matchStatus = true;
+      if (multi.length > 0) {
+        matchStatus = multi.some((m) => {
+          if (m === 'REENTRY') return r.operationType === 'REENTRY' || !!r.sourceOutboundFolio;
+          if (m === 'IN_PROGRESS') return r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED';
+          return r.status === m;
+        });
+      } else if (st !== 'ALL') {
+        if (st === 'REENTRY') {
+          matchStatus = r.operationType === 'REENTRY' || !!r.sourceOutboundFolio;
+        } else if (st === 'IN_PROGRESS') {
+          matchStatus = r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED';
+        } else {
+          matchStatus = r.status === st;
+        }
+      }
+
+      const matchQuery =
+        !q ||
+        r.folio.toLowerCase().includes(q) ||
+        (r.sourceOutboundFolio && r.sourceOutboundFolio.toLowerCase().includes(q)) ||
+        (r.checkIn?.docNumber && r.checkIn.docNumber.toLowerCase().includes(q)) ||
+        (r.checkIn?.client && r.checkIn.client.toLowerCase().includes(q)) ||
+        (r.checkIn?.driverName && r.checkIn.driverName.toLowerCase().includes(q)) ||
+        (r.checkIn?.sealNumber && r.checkIn.sealNumber.toLowerCase().includes(q)) ||
+        (r.productName && r.productName.toLowerCase().includes(q)) ||
+        (r.productId && r.productId.toLowerCase().includes(q));
+
+      return matchStatus && matchQuery;
+    });
+  });
+
+  totalTarimas = computed(() => this.palletStream().length);
+  totalProductos = computed(() => {
+    const set = new Set(this.palletStream().map((p) => p.productId));
+    return set.size;
+  });
+  totalPiezas = computed(() => this.palletStream().reduce((acc, p) => acc + p.pieces, 0));
+
+  constructor() {
+    // Estado inicial: Siempre iniciar en Sin selección (Empty State WMS)
+    this.formMode.set('idle');
+    this.selectedReception.set(null);
+  }
+
+  ngOnInit(): void {
+    this.movementsService.loadInitialBackendData();
+    this.movementsService.reloadSuppliers();
+    this.shiftContext.loadActiveShift();
+
+    this.movementsService.movementsApi.getProductSkus().subscribe({
+      next: (prods: any) => {
+        if (prods && prods.length > 0) {
+          const sorted = prods
+            .map((p: any) => ({
+              id: p.id,
+              code: String(p.code || p.id).trim(),
+              name: p.name || p.description || p.code,
+              defaultPieces: p.piecesPerPallet || 0,
+            }))
+            .sort((a: any, b: any) => {
+              const numA = parseInt(a.code, 10);
+              const numB = parseInt(b.code, 10);
+              if (!isNaN(numA) && !isNaN(numB)) {
+                return numA - numB;
+              }
+              return a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+          this.products.set(sorted);
+          const currentRec = this.selectedReception();
+          if (currentRec) {
+            this.patchAltaFormWithReception(currentRec);
+          }
+        }
+      },
+      error: () => {},
+    });
+
+    this.route.queryParams.subscribe((params) => {
+      const folio = params['folio'];
+      if (folio) {
+        this.searchQuery.set(folio);
+        const rec = this.movementsService.findReceptionByFolio(folio);
+        if (rec) {
+          this.selectReception(rec);
+        } else {
+          this.movementsService.movementsApi.getReceptions({ search: folio }).subscribe({
+            next: (list: any[]) => {
+              if (list && list.length > 0) {
+                const found = this.movementsService.mapReceptionResponseToHeader(list[0]);
+                this.selectReception(found);
+              }
+            },
+            error: () => {},
+          });
+        }
+      } else {
+        this.formMode.set('idle');
+        this.selectedReception.set(null);
+        this.palletStream.set([]);
+      }
+    });
+
+    // Subscripción reactiva con debounce a cambios de número de remisión/documento para detección automática
+    this.checkInForm.get('docNumber')?.valueChanges.pipe(
+      debounceTime(350),
+      distinctUntilChanged()
+    ).subscribe((val) => {
+      if (!val || val.trim().length < 3) {
+        this.detectedReturn.set(null);
+        return;
+      }
+      this.isDetectingReturn.set(true);
+      this.movementsApi.detectReturn(val.trim()).subscribe({
+        next: (res) => {
+          this.isDetectingReturn.set(false);
+          if (res && res.isReturn) {
+            this.detectedReturn.set(res);
+            this.toast.info(`⚡ Retorno detectado: Corresponde a salida previa #${res.sourceOutboundFolio}`);
+            this.smartNotification.dispatch({
+              category: 'RECEIVING',
+              title: '⚡ Retorno Detectado Automáticamente',
+              message: `La remisión '${res.remisionNo || val}' corresponde a la salida previa #${res.sourceOutboundFolio}.`,
+              severity: 'INFO',
+            });
+          } else {
+            this.detectedReturn.set(null);
+          }
+        },
+        error: () => {
+          this.isDetectingReturn.set(false);
+          this.detectedReturn.set(null);
+        }
+      });
+    });
+  }
+
+  applyDetectedReturn(ret: ReturnDetectionResponse): void {
+    if (!ret) return;
+    this.checkInForm.patchValue({
+      client: ret.clientName || this.checkInForm.value.client,
+      clientCode: ret.clientId || this.checkInForm.value.clientCode,
+      carrierLine: ret.carrierName || this.checkInForm.value.carrierLine,
+      carrierLineCode: ret.carrierId || this.checkInForm.value.carrierLineCode,
+      driverName: ret.driverName || this.checkInForm.value.driverName,
+      tractorPlates: ret.tractorPlates || this.checkInForm.value.tractorPlates,
+      boxPlates: ret.boxPlates || this.checkInForm.value.boxPlates,
+      docNumber: ret.remisionNo || this.checkInForm.value.docNumber,
+    });
+    this.toast.success(`Datos del retorno #${ret.sourceOutboundFolio} precargados exitosamente.`);
+  }
+
+  onVerifyDockPallet(code: string): void {
+    if (!code || !code.trim()) {
+      this.toast.warning('Ingresa o escanea el código de tarima.');
+      return;
+    }
+    const rec = this.selectedReception();
+    const recId = rec?.id;
+    if (!recId) {
+      this.toast.error('No hay una recepción activa seleccionada.');
+      return;
+    }
+    this.isVerifyingDockPallet.set(true);
+    this.movementsApi.verifyPallet(recId, { palletCode: code.trim() }).subscribe({
+      next: (res) => {
+        this.isVerifyingDockPallet.set(false);
+        this.dockScanResult.set(res);
+        this.dockScanUaCode.set('');
+        if (res.valid) {
+          this.toast.success(res.message);
+          this.refreshReceptionDetail(recId);
+        } else {
+          this.toast.error(res.message);
+        }
+      },
+      error: (err) => {
+        this.isVerifyingDockPallet.set(false);
+        const msg = err?.error?.message || 'Error al validar la tarima en andén.';
+        this.dockScanResult.set({
+          valid: false,
+          status: 'DISCREPANCY',
+          palletCode: code,
+          verifiedCount: 0,
+          totalExpected: 0,
+          remainingCount: 0,
+          message: msg
+        });
+        this.toast.error(msg);
+      }
+    });
+  }
+
+  openRemissionTreeModal(folio: string): void {
+    if (!folio) return;
+    this.selectedTreeFolio.set(folio);
+    this.showRemissionTreeModal.set(true);
+    this.movementsApi.getRemissionTree(folio).subscribe({
+      next: (logs) => this.remissionTreeLogs.set(logs || []),
+      error: () => this.remissionTreeLogs.set([])
+    });
+  }
+
+  closeRemissionTreeModal(): void {
+    this.showRemissionTreeModal.set(false);
+    this.remissionTreeLogs.set([]);
+    this.selectedTreeFolio.set('');
+  }
+
+  private refreshReceptionDetail(recId: string): void {
+    this.movementsApi.getReceptionById(recId).subscribe({
+      next: (res: any) => {
+        if (res) {
+          const mapped = this.movementsService.mapReceptionResponseToHeader(res);
+          this.selectedReception.set(mapped);
+          if (mapped.pallets) {
+            this.palletStream.set(mapped.pallets);
+          }
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  resetCheckInForm(): void {
+    const firstCarrier = this.carrierLines()[0];
+    const firstClient = this.clients()[0];
+    const firstRamp = this.ramps()[0];
+    const firstOp = this.forkliftOperators()[0];
+    const now24 = new Date().toTimeString().slice(0, 5);
+
+    this.checkInForm.reset({
+      carrierLineCode: firstCarrier ? firstCarrier.code : '',
+      carrierLine: firstCarrier ? firstCarrier.name : '',
+      receptionTime: now24,
+      docNumber: '',
+      docDate: new Date().toISOString().slice(0, 10),
+      elaborationDate: '',
+      expirationDate: '',
+      lotNumber: '',
+      clientCode: firstClient ? firstClient.code : '',
+      client: firstClient ? firstClient.name : '',
+      rampCode: '',
+      rampNumber: null,
+      forkliftOperatorCode: firstOp ? firstOp.code : '',
+      forkliftOperator: firstOp ? firstOp.name : '',
+      driverName: '',
+      tractorPlates: '',
+      boxPlates: '',
+      sealNumber: '',
+    });
+    this.sealList.set([]);
+  }
+
+  resetAltaForm(): void {
+    this.altaForm.reset({
+      lotNumber: '',
+      elaborationDate: '',
+      expirationDate: '',
+      storageLocation: '',
+      storageLocationId: '',
+      forkliftOperator: '',
+      rampNumber: null,
+      productId: '',
+      productName: '',
+      supplierName: '',
+      piecesPerPallet: 0,
+      selectedPalletType: '' as any,
+      observations: '',
+    });
+    this.skuSearchQuery.set('');
+    this.isSkuDropdownOpen.set(false);
+    this.operatorSearchQuery.set('');
+    this.isOperatorDropdownOpen.set(false);
+    this.supplierSearchQuery.set('');
+    this.isSupplierDropdownOpen.set(false);
+    this.palletTypeSearchQuery.set('');
+    this.isPalletTypeDropdownOpen.set(false);
+    this.rampSearchQuery.set('');
+    this.isRampDropdownOpen.set(false);
+  }
+
+  // Iniciar registro de nuevo arribo en Caseta de Seguridad
+  startNewReception(): void {
+    this.router.navigate(['/security']);
+  }
+
+  // Restablecer a estado inicial (Sin selección)
+  resetToIdle(): void {
+    this.formMode.set('idle');
+    this.selectedReception.set(null);
+    localStorage.removeItem('4g_active_reception_folio');
+    this.resetAltaForm();
+  }
+
+  // ── OPERACIONES DEL WORKBENCH ──
+
+  selectReception(rec: ReceptionHeader): void {
+    this.formMode.set('detail');
+    this.selectedReception.set(rec);
+    localStorage.setItem('4g_active_reception_folio', rec.folio);
+    this.palletStream.set(rec.pallets ? [...rec.pallets] : []);
+    this.loadAuditLogs(rec.folio);
+    this.patchAltaFormWithReception(rec);
+    this.movementsService.syncGlobalMaxPalletNumber();
+
+    if (rec.pallets && Array.isArray(rec.pallets)) {
+      for (const p of rec.pallets) {
+        if (p.palletNumber && Number(p.palletNumber) > 0) {
+          this.movementsService.updateGlobalMaxPalletNumber(Number(p.palletNumber));
+        }
+      }
+    }
+
+    if (rec.id) {
+      this.movementsApi.getReceptionById(rec.id).subscribe({
+        next: (fullData) => {
+          const mapped = this.movementsService.mapReceptionResponseToHeader(fullData);
+          if (!mapped.checkIn?.docNumber && rec.checkIn?.docNumber) {
+            mapped.checkIn.docNumber = rec.checkIn.docNumber;
+          }
+          if (!mapped.checkIn?.rampNumber && rec.checkIn?.rampNumber) {
+            mapped.checkIn.rampNumber = rec.checkIn.rampNumber;
+          }
+          if (rec.checkIn?.noEcoTractor) {
+            mapped.checkIn.noEcoTractor = rec.checkIn.noEcoTractor;
+          }
+          if (rec.checkIn?.noEcoCaja) {
+            mapped.checkIn.noEcoCaja = rec.checkIn.noEcoCaja;
+          }
+          if (mapped.pallets && Array.isArray(mapped.pallets)) {
+            for (const p of mapped.pallets) {
+              if (p.palletNumber && Number(p.palletNumber) > 0) {
+                this.movementsService.updateGlobalMaxPalletNumber(Number(p.palletNumber));
+              }
+            }
+          }
+          this.selectedReception.set(mapped);
+          this.palletStream.set(mapped.pallets ? [...mapped.pallets] : []);
+          this.patchAltaFormWithReception(mapped);
+          this.movementsService.updateReception(mapped.id || mapped.folio, mapped);
+          this.loadAuditLogs(mapped.id || mapped.folio);
+        },
+        error: () => {},
+      });
+    }
+  }
+
+  patchAltaFormWithReception(rec: ReceptionHeader): void {
+    const defaultOperator = rec.checkIn?.forkliftOperator || '';
+    const currentProdId = rec.productId || rec.skuCode || '';
+
+    const matchedProduct = (currentProdId || rec.productName)
+      ? this.products().find(
+          (p) =>
+            p.code === currentProdId ||
+            p.id === currentProdId ||
+            (p.name && rec.productName && p.name.trim().toLowerCase() === rec.productName.trim().toLowerCase()) ||
+            (p.code && rec.productName && rec.productName.includes(p.code))
+        )
+      : null;
+
+    if (matchedProduct) {
+      this.skuSearchQuery.set(`${matchedProduct.code} - ${matchedProduct.name}`);
+    } else if (currentProdId) {
+      this.skuSearchQuery.set(rec.productName ? `${currentProdId} - ${rec.productName}` : currentProdId);
+    } else {
+      this.skuSearchQuery.set('');
+    }
+    this.isSkuDropdownOpen.set(false);
+
+    // Sincronizar montacarguista
+    this.operatorSearchQuery.set(defaultOperator || '');
+    this.isOperatorDropdownOpen.set(false);
+
+    // Sincronizar proveedor
+    this.supplierSearchQuery.set(rec.supplierName || '');
+    this.isSupplierDropdownOpen.set(false);
+
+    // Sincronizar rampa asignada desde caseta
+    const assignedRampNum = rec.checkIn?.rampNumber ?? (rec as any).rampNumber;
+    if (assignedRampNum != null && Number(assignedRampNum) > 0) {
+      const num = Number(assignedRampNum);
+      const matchedRamp = this.ramps().find((rm) => rm.rampNumber === num);
+      const rampName = matchedRamp ? matchedRamp.name : `Rampa ${num < 10 ? '0' + num : num}`;
+      this.rampSearchQuery.set(rampName);
+    } else {
+      this.rampSearchQuery.set('');
+    }
+    this.isRampDropdownOpen.set(false);
+
+    const hasConfiguredProduct = !!(rec.productId || rec.skuCode || (rec.pallets && rec.pallets.length > 0));
+    const palletTypeValue = hasConfiguredProduct ? (rec.selectedPalletType || ('' as any)) : ('' as any);
+
+    // Sincronizar tipo de tarima
+    const ptLabel = palletTypeValue ? (PALLET_TYPE_LABELS[palletTypeValue as PalletType] || palletTypeValue) : '';
+    this.palletTypeSearchQuery.set(ptLabel);
+    this.isPalletTypeDropdownOpen.set(false);
+
+    const rawObs = rec.observations || '';
+    const isCasetaChecklist = rawObs.includes('[FORMATO F01') || rawObs.includes('Arribo en Caseta');
+    const cleanDischargeObs = isCasetaChecklist
+      ? ''
+      : rawObs.replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim();
+
+    const rNum = (assignedRampNum != null && Number(assignedRampNum) > 0) ? Number(assignedRampNum) : null;
+    let bayLoc = rec.storageLocation || rec.storageLocationCode;
+    if (!bayLoc || bayLoc === 'POS-A-001') {
+      bayLoc = rNum ? `STAGING-R${String(rNum).padStart(2, '0')}` : 'STAGING-R01';
+    }
+    this.selectedBayName.set(bayLoc);
+    if (rec.storageLocation !== bayLoc) {
+      rec.storageLocation = bayLoc;
+      rec.storageLocationCode = bayLoc;
+    }
+
+    this.altaForm.patchValue({
+      lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
+      elaborationDate: rec.elaborationDate || rec.checkIn?.elaborationDate || '',
+      expirationDate: rec.expirationDate || rec.checkIn?.expirationDate || '',
+      storageLocation: bayLoc,
+      storageLocationId: rec.storageLocationId || '',
+      forkliftOperator: defaultOperator,
+      rampNumber: rNum,
+      productId: matchedProduct ? matchedProduct.code : (rec.skuCode || rec.productId || ''),
+      productName: rec.productName || (matchedProduct ? matchedProduct.name : ''),
+      supplierName: rec.supplierName || '',
+      piecesPerPallet: rec.piecesPerPallet != null ? Number(rec.piecesPerPallet) : 0,
+      selectedPalletType: palletTypeValue,
+      observations: cleanDischargeObs,
+    });
+
+    // Sincronizar catálogo de lotes disponibles en la sesión de recepción
+    const primaryLot = (rec.lotNumber || rec.checkIn?.lotNumber || '').trim().toUpperCase();
+    const primaryExp = rec.expirationDate || rec.checkIn?.expirationDate || '';
+    const primaryElab = rec.elaborationDate || rec.checkIn?.elaborationDate || '';
+    const primaryRequiresOps = rec.requiresOpsAuthorization || false;
+    const primaryOpsManager = rec.authorizedByOpsManager || '';
+    const primaryOpsReason = rec.opsManagerReason || '';
+    const primaryOpsDate = rec.opsAuthorizationDate || '';
+
+    const initialLots: ReceptionLot[] = [];
+    if (primaryLot) {
+      initialLots.push({
+        lotNumber: primaryLot,
+        elaborationDate: primaryElab,
+        expirationDate: primaryExp,
+        requiresOpsAuthorization: primaryRequiresOps,
+        authorizedByOpsManager: primaryOpsManager,
+        opsManagerReason: primaryOpsReason,
+        opsAuthorizationDate: primaryOpsDate,
+      });
+    }
+
+    if ((rec as any).lots && Array.isArray((rec as any).lots)) {
+      (rec as any).lots.forEach((lt: any) => {
+        if (lt.lotNumber && !initialLots.some((l) => l.lotNumber === lt.lotNumber)) {
+          initialLots.push({
+            id: lt.id,
+            lotNumber: lt.lotNumber,
+            expirationDate: lt.expirationDate || '',
+            elaborationDate: lt.elaborationDate || '',
+            shelfLifeDaysRemaining: lt.shelfLifeDaysRemaining,
+            requiresOpsAuthorization: lt.requiresOpsAuthorization || false,
+            authorizedByOpsManager: lt.authorizedByOpsManager || '',
+            opsManagerReason: lt.opsManagerReason || '',
+            opsAuthorizationDate: lt.opsAuthorizationDate || '',
+          });
+        }
+      });
+    }
+
+    if (rec.pallets && rec.pallets.length > 0) {
+      rec.pallets.forEach((p) => {
+        if (p.lotNumber && !initialLots.some((l) => l.lotNumber === p.lotNumber)) {
+          initialLots.push({
+            lotNumber: p.lotNumber,
+            expirationDate: p.expirationDate || primaryExp,
+            elaborationDate: (p as any).elaborationDate || primaryElab,
+            requiresOpsAuthorization: p.requiresOpsAuthorization || false,
+            authorizedByOpsManager: p.authorizedByOpsManager || '',
+            opsManagerReason: p.opsManagerReason || '',
+          });
+        }
+      });
+    }
+
+    const finalList = initialLots;
+    this.lotsList.set(finalList);
+
+    if (finalList.length > 0) {
+      const activeLotNum = primaryLot || finalList[0].lotNumber;
+      this.selectedScanningLot.set(activeLotNum);
+      const activeLotObj = finalList.find((l) => l.lotNumber === activeLotNum) || finalList[0];
+      this.altaForm.patchValue({
+        lotNumber: activeLotObj.lotNumber,
+        expirationDate: activeLotObj.expirationDate || '',
+        elaborationDate: activeLotObj.elaborationDate || '',
+      });
+    } else {
+      this.selectedScanningLot.set('');
+      this.altaForm.patchValue({
+        lotNumber: '',
+        expirationDate: '',
+        elaborationDate: '',
+      });
+    }
+  }
+
+  // ── MÉTODOS DE CONTROL DE LOTES POR UA (CRITERIO 1 & 2 - REGLA 9 MESES Y OPS AUTH) ──
+  getActiveLot(): ReceptionLot | undefined {
+    const selected = this.selectedScanningLot();
+    if (selected) {
+      const found = this.lotsList().find((l) => l.lotNumber === selected);
+      if (found) return found;
+    }
+    const lotNum = (this.altaForm.value.lotNumber || '').trim().toUpperCase();
+    if (lotNum) {
+      const found = this.lotsList().find((l) => l.lotNumber === lotNum);
+      if (found) return found;
+    }
+    return this.lotsList().length > 0 ? this.lotsList()[0] : undefined;
+  }
+
+  getActiveLotShelfLifeDays(): number | null {
+    const lot = this.getActiveLot();
+    return this.getLotShelfLifeDays(lot);
+  }
+
+  getLotShelfLifeDays(lot?: ReceptionLot): number | null {
+    const targetLot = lot || this.getActiveLot();
+    if (!targetLot || !targetLot.expirationDate) return null;
+    return this.calculateShelfLifeDays(targetLot.expirationDate);
+  }
+
+  calculateShelfLifeDays(expDateStr?: string | null): number | null {
+    if (!expDateStr) return null;
+    const expDate = new Date(expDateStr + 'T00:00:00Z');
+    if (isNaN(expDate.getTime())) return null;
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    return Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  getPalletsCountForLot(lotNum: string): number {
+    if (!lotNum) return 0;
+    return this.palletStream().filter((p) => p.lotNumber === lotNum).length;
+  }
+
+  // ── GESTIÓN DE VIDA ÚTIL REMANENTE (REGLA CORPORATIVA MRP / PLANEACIÓN) ──
+  // < 24 meses vida total -> al menos 75% vida restante
+  // >= 24 meses vida total -> al menos 50% vida restante
+  // Excepciones: requieren autorización previa con evaluación de riesgo MRP / Fábrica
+  evaluateShelfLife(expDateStr?: string | null, elabDateStr?: string | null): ShelfLifeEvaluation | null {
+    if (!expDateStr) return null;
+    const expDate = new Date(expDateStr + 'T00:00:00Z');
+    if (isNaN(expDate.getTime())) return null;
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const remainingDays = Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const isExpired = remainingDays < 0;
+
+    if (isExpired) {
+      return {
+        remainingDays,
+        totalDays: null,
+        totalMonths: null,
+        remainingPct: 0,
+        thresholdRequired: 75,
+        isCompliant: false,
+        isExpired: true,
+        category: '< 24m',
+        badgeText: `Vencido (${Math.abs(remainingDays)}d)`,
+        badgeDetail: `El lote venció hace ${Math.abs(remainingDays)} días. No apto para recibo.`,
+      };
+    }
+
+    if (elabDateStr) {
+      const elabDate = new Date(elabDateStr + 'T00:00:00Z');
+      if (!isNaN(elabDate.getTime()) && expDate.getTime() > elabDate.getTime()) {
+        const totalDays = Math.max(1, Math.floor((expDate.getTime() - elabDate.getTime()) / (1000 * 60 * 60 * 24)));
+        const totalMonths = Math.round((totalDays / 30.4375) * 10) / 10;
+        const remainingPct = Math.min(100, Math.max(0, Math.round(((remainingDays / totalDays) * 1000) / 10)));
+        const isLongLife = totalMonths >= 24;
+        const thresholdRequired = isLongLife ? 50 : 75;
+        const category: '< 24m' | '≥ 24m' = isLongLife ? '≥ 24m' : '< 24m';
+        const isCompliant = remainingPct >= thresholdRequired;
+
+        return {
+          remainingDays,
+          totalDays,
+          totalMonths,
+          remainingPct,
+          thresholdRequired,
+          isCompliant,
+          isExpired: false,
+          category,
+          badgeText: `${remainingPct}% vida (${category})`,
+          badgeDetail: `${remainingPct}% restante de ${totalMonths}m totales (Mín: ${thresholdRequired}%)`,
+        };
+      }
+    }
+
+    // Si no hay fecha de elaboración, se calcula sobre base estándar prudencial de 24 meses (730 días)
+    const estimatedTotalDays = 730;
+    const remainingPct = Math.min(100, Math.max(0, Math.round(((remainingDays / estimatedTotalDays) * 1000) / 10)));
+    const thresholdRequired = 75;
+    const isCompliant = remainingPct >= thresholdRequired;
+
+    return {
+      remainingDays,
+      totalDays: estimatedTotalDays,
+      totalMonths: 24,
+      remainingPct,
+      thresholdRequired,
+      isCompliant,
+      isExpired: false,
+      category: 'ESTIMADO',
+      badgeText: `${remainingDays}d (${remainingPct}% est.)`,
+      badgeDetail: `${remainingDays} días restantes (~${remainingPct}% vida estimada)`,
+    };
+  }
+
+  getShelfLifeEval(lot?: ReceptionLot | null): ShelfLifeEvaluation | null {
+    const target = lot || this.getActiveLot();
+    if (!target || !target.expirationDate) return null;
+    return this.evaluateShelfLife(target.expirationDate, target.elaborationDate);
+  }
+
+  getActiveLotShelfLifeEval(): ShelfLifeEvaluation | null {
+    const lot = this.getActiveLot();
+    return this.getShelfLifeEval(lot);
+  }
+
+  getNewLotShelfLifeEval(): ShelfLifeEvaluation | null {
+    const exp = this.newLotForm.get('expirationDate')?.value;
+    const elab = this.newLotForm.get('elaborationDate')?.value;
+    return this.evaluateShelfLife(exp, elab);
+  }
+
+  isShelfLifeCompliant(days: number | null, lot?: ReceptionLot): boolean {
+    const target = lot || this.getActiveLot();
+    if (target && target.expirationDate) {
+      const evalRes = this.evaluateShelfLife(target.expirationDate, target.elaborationDate);
+      if (evalRes) return evalRes.isCompliant;
+    }
+    return days != null && days >= 270;
+  }
+
+  isLotOpsAuthorized(lot?: ReceptionLot): boolean {
+    if (!lot) return false;
+    return Boolean(lot.requiresOpsAuthorization && lot.authorizedByOpsManager && lot.opsManagerReason);
+  }
+
+  // Verifica si en el modal newLotForm la fecha ingresada requiere autorización MRP (< 75% o < 50%)
+  isNewLotShelfLifeShort(): boolean {
+    const evalRes = this.getNewLotShelfLifeEval();
+    if (!evalRes) return false;
+    return !evalRes.isCompliant;
+  }
+
+  getNewLotShelfLifeDays(): number | null {
+    const evalRes = this.getNewLotShelfLifeEval();
+    return evalRes ? evalRes.remainingDays : null;
+  }
+
+  onQuickOpsReasonChange(event: Event): void {
+    const val = (event.target as HTMLSelectElement).value;
+    if (val && val !== 'Otro motivo operativo (especificar en justificación)') {
+      this.newLotForm.patchValue({ opsManagerReason: val });
+    }
+  }
+
+  openAddLotModal(): void {
+    this.newLotForm.reset({
+      lotNumber: '',
+      elaborationDate: '',
+      expirationDate: '',
+      authorizedByOpsManager: '',
+      opsManagerPassword: '',
+      opsManagerReason: '',
+      quickOpsReason: '',
+    });
+    this.showOpsAuthPassword.set(false);
+    this.showAddLotModal.set(true);
+  }
+
+  openEditActiveLotModal(): void {
+    const lot = this.getActiveLot();
+    this.newLotForm.reset({
+      lotNumber: lot?.lotNumber || this.selectedScanningLot() || '',
+      elaborationDate: lot?.elaborationDate || '',
+      expirationDate: lot?.expirationDate || '',
+      authorizedByOpsManager: lot?.authorizedByOpsManager || '',
+      opsManagerPassword: '',
+      opsManagerReason: lot?.opsManagerReason || '',
+      quickOpsReason: lot?.opsManagerReason || '',
+    });
+    this.showOpsAuthPassword.set(false);
+    this.showAddLotModal.set(true);
+  }
+
+  closeAddLotModal(): void {
+    this.showAddLotModal.set(false);
+  }
+
+  saveNewLot(): void {
+    if (this.newLotForm.invalid) {
+      this.newLotForm.markAllAsTouched();
+      this.toast.warning('Ingresa el número de lote y fecha de caducidad obligatoria.');
+      return;
+    }
+
+    const vals = this.newLotForm.value;
+    const lotNum = (vals.lotNumber || '').trim().toUpperCase();
+    const elab = vals.elaborationDate || '';
+    const exp = vals.expirationDate || '';
+    const opsAuth = (vals.authorizedByOpsManager || '').trim();
+    const opsPassword = (vals.opsManagerPassword || '').trim();
+    const opsReason = (vals.opsManagerReason || '').trim();
+
+    if (elab && exp) {
+      if (exp < elab) {
+        this.toast.error('🛑 La fecha de caducidad no puede ser anterior a la de elaboración.');
+        return;
+      }
+      if (exp === elab) {
+        const ok = window.confirm('⚠️ La fecha de caducidad es idéntica a la de elaboración. ¿Desea continuar?');
+        if (!ok) return;
+      }
+    }
+
+    // 🔒 REGLA DE VIDA ÚTIL: MATRIZ DINÁMICA MRP (<24m: 75% | ≥24m: 50%)
+    let requiresOpsAuth = false;
+    if (exp) {
+      const evalRes = this.evaluateShelfLife(exp, elab);
+      if (evalRes) {
+        if (evalRes.isExpired) {
+          this.toast.error(`🛑 Fecha de caducidad inválida: El lote ya está vencido (hace ${Math.abs(evalRes.remainingDays)} días). No se permite el ingreso de mercancía caducada.`);
+          return;
+        }
+        if (!evalRes.isCompliant) {
+          requiresOpsAuth = true;
+          if (!opsAuth) {
+            this.toast.error(`🛑 Candado de Calidad: El lote cuenta con ${evalRes.remainingPct}% de vida restante (requiere ≥ ${evalRes.thresholdRequired}% para material ${evalRes.category}). Debes ingresar el Usuario o Autorizador MRP / Planeación.`);
+            return;
+          }
+          if (!opsPassword) {
+            this.toast.error(`🛑 Candado de Calidad: Ingresa la contraseña o PIN de autorización de la excepción.`);
+            return;
+          }
+          if (!opsReason) {
+            this.toast.error(`🛑 Candado de Calidad: Debes ingresar el motivo formal de excepción acordado con MRP / Fábrica.`);
+            return;
+          }
+        }
+      }
+    }
+
+    const newLotData: ReceptionLot = {
+      lotNumber: lotNum,
+      elaborationDate: elab || undefined,
+      expirationDate: exp,
+      requiresOpsAuthorization: requiresOpsAuth,
+      authorizedByOpsManager: requiresOpsAuth ? opsAuth : undefined,
+      opsManagerReason: requiresOpsAuth ? opsReason : undefined,
+      opsAuthorizationDate: requiresOpsAuth ? new Date().toISOString() : undefined,
+    };
+
+    const existingIndex = this.lotsList().findIndex((l) => l.lotNumber === lotNum);
+    if (existingIndex >= 0) {
+      this.lotsList.update((list) => {
+        const copy = [...list];
+        copy[existingIndex] = { ...copy[existingIndex], ...newLotData };
+        return copy;
+      });
+      this.toast.success(`Lote ${lotNum} actualizado con éxito${requiresOpsAuth ? ' (con Autorización de Gerencia de Operaciones)' : ''}.`);
+    } else {
+      this.lotsList.update((list) => [...list, newLotData]);
+      this.toast.success(`Lote ${lotNum} registrado y agregado a la sesión${requiresOpsAuth ? ' (con Autorización de Gerencia de Operaciones)' : ''}.`);
+    }
+
+    // Persistir en Backend si la recepción ya existe
+    const recId = this.selectedReception()?.id;
+    if (recId && isUuid(recId)) {
+      this.movementsApi.addReceptionLot(recId, {
+        lotNumber: lotNum,
+        elaborationDate: elab || undefined,
+        expirationDate: exp || undefined,
+        authorizedByOpsManager: requiresOpsAuth ? opsAuth : undefined,
+        opsManagerReason: requiresOpsAuth ? opsReason : undefined,
+      }).subscribe({
+        next: (savedLot: any) => {
+          if (savedLot && savedLot.id) {
+            this.lotsList.update((list) =>
+              list.map((l) => (l.lotNumber === lotNum ? { ...l, id: savedLot.id } : l))
+            );
+          }
+        },
+        error: (err: any) => {
+          console.warn('Sync addReceptionLot:', err);
+        },
+      });
+    }
+
+    this.selectedScanningLot.set(lotNum);
+    this.altaForm.patchValue({
+      lotNumber: lotNum,
+      expirationDate: exp,
+      elaborationDate: elab,
+      authorizedByOpsManager: requiresOpsAuth ? opsAuth : '',
+      opsManagerReason: requiresOpsAuth ? opsReason : '',
+    });
+
+    this.closeAddLotModal();
+  }
+
+  removeLotFromSession(lotNum: string, event?: Event): void {
+    if (event) event.stopPropagation();
+    const inUse = this.palletStream().some((p) => p.lotNumber === lotNum);
+    if (inUse) {
+      this.toast.warning(`El lote ${lotNum} está asignado a una o más tarimas en la descarga.`);
+      return;
+    }
+    const ok = window.confirm(`¿Desea eliminar el lote ${lotNum} de la sesión de recepción?`);
+    if (!ok) return;
+
+    const targetLot = this.lotsList().find((l) => l.lotNumber === lotNum);
+    const recId = this.selectedReception()?.id;
+    if (recId && isUuid(recId) && (targetLot as any)?.id) {
+      this.movementsApi.deleteReceptionLot(recId, (targetLot as any).id).subscribe({
+        error: (err: any) => console.warn('Sync deleteReceptionLot:', err),
+      });
+    }
+
+    this.lotsList.update((list) => list.filter((l) => l.lotNumber !== lotNum));
+    const remaining = this.lotsList();
+    if (this.selectedScanningLot() === lotNum) {
+      if (remaining.length > 0) {
+        this.selectLotForScanning(remaining[0].lotNumber);
+      } else {
+        this.selectedScanningLot.set('');
+        this.altaForm.patchValue({
+          lotNumber: '',
+          expirationDate: '',
+          elaborationDate: '',
+        });
+      }
+    }
+    this.toast.info(`Lote ${lotNum} eliminado de la sesión.`);
+  }
+
+  selectLotForScanning(lotNum: string): void {
+    this.selectedScanningLot.set(lotNum);
+    const matched = this.lotsList().find((l) => l.lotNumber === lotNum);
+    if (matched) {
+      this.altaForm.patchValue({
+        lotNumber: matched.lotNumber,
+        expirationDate: matched.expirationDate || '',
+        elaborationDate: matched.elaborationDate || '',
+      });
+    }
+  }
+
+  assignLotToPallet(palletId: string, lotNum: string): void {
+    const matchedLot = this.lotsList().find((l) => l.lotNumber === lotNum);
+    const updatedStream = this.palletStream().map((p) => {
+      if (p.id === palletId) {
+        return {
+          ...p,
+          lotNumber: lotNum,
+          expirationDate: matchedLot?.expirationDate || p.expirationDate || (this.altaForm.value.expirationDate ?? undefined),
+        };
+      }
+      return p;
+    });
+    this.palletStream.set(updatedStream);
+    this.selectedReception.update((rec) => (rec ? { ...rec, pallets: updatedStream } : null));
+
+    const recId = this.selectedReception()?.id;
+    if (recId && isUuid(recId) && palletId && isUuid(palletId)) {
+      this.movementsApi.updatePallet(recId, palletId, {
+        lotNumber: lotNum,
+        expirationDate: matchedLot?.expirationDate || undefined,
+      }).subscribe({
+        next: () => {},
+        error: (err: any) => console.warn('Sync assignLotToPallet error:', err)
+      });
+    }
+
+    this.toast.success(`Lote ${lotNum} asignado a la UA.`);
+  }
+
+  reportPalletToQuality(pallet?: ReceptionPalletItem): void {
+    const current = this.selectedReception();
+    const sku = pallet?.productId || current?.productId || 'SKU-REC-DEF';
+    const desc = pallet?.description || current?.productName || 'Producto en Recepción';
+    const client = current?.checkIn?.client || 'Cliente General';
+    const batch = pallet?.lotNumber || current?.lotNumber || current?.checkIn?.docNumber || 'LOT-REC-2026';
+    const qty = pallet?.pieces || Number(this.altaForm.value.piecesPerPallet) || 45;
+
+    const newBlock = this.qualityState.createBlock({
+      sku,
+      description: desc,
+      clientId: current?.checkIn?.clientCode || 'cli-01',
+      clientName: client,
+      batchNumber: batch,
+      sscc: pallet?.palletCode || `SSCC-${Date.now()}`,
+      quantity: qty,
+      unitOfMeasure: UnitOfMeasure.BOX,
+      locationId: current?.checkIn?.rampNumber ? `RAMPA-0${current.checkIn.rampNumber}` : 'LOC-REC-DOCK-01',
+      stage: 'INBOUND_UNLOAD',
+      defectCategory: 'MATERIAL',
+      defectCriteria: ['Material con daño físico / anomalía en recepción'],
+      severity: 'WARNING',
+      status: 'BLOCKED',
+      reportedBy: `${this.authState.currentUser()?.fullName || this.authState.currentUser()?.username || 'Operador Recepción'} (Andén)`,
+      notes: `Reporte PNC generado desde Recepción de Mercancías para Folio #${current?.folio || 'N/A'}${pallet ? ' (Tarima UA ' + pallet.palletCode + ')' : ''}`,
+      evidenceFiles: []
+    });
+
+    this.toast.success(`⚠️ Reporte a Calidad (PNC) creado exitosamente con Folio #${newBlock.folio}`);
+  }
+
+  loadAuditLogs(folioOrId: string): void {
+    const rec = this.selectedReception() || this.movementsService.findReceptionByFolio(folioOrId);
+    const id = (rec?.id && isUuid(rec.id)) ? rec.id : (isUuid(folioOrId) ? folioOrId : null);
+    const folio = rec?.folio || folioOrId;
+
+    if (id) {
+      this.movementsApi.getReceptionAudit(id).subscribe({
+        next: (logs) => {
+          if (logs && logs.length > 0) {
+            const mapped: MovementAuditEntry[] = logs.map((l: any) => {
+              const rawTs = l.timestamp || l.createdAt || l.date;
+              return {
+                id: l.id || `aud-${Date.now()}-${Math.random()}`,
+                action: l.action,
+                actionLabel: l.actionLabel || this.getAuditSummary(l.action),
+                username: l.username || 'Usuario',
+                timestamp: rawTs ? (isNaN(new Date(rawTs).getTime()) ? String(rawTs) : new Date(rawTs).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })) : (l.timestamp || new Date().toLocaleString('es-MX')),
+                rawTimestamp: rawTs ? new Date(rawTs).getTime() : Date.now(),
+                details: (l.details || [])
+                  .filter((d: any) => {
+                    const f = (d.fieldName || '').toLowerCase();
+                    if (f.includes('lote') || f === 'lotnumber' || f === 'lot_number') {
+                      if (
+                        l.action === 'DESCARGA_FINALIZADA' ||
+                        l.action === 'DESCARGA_INICIADA' ||
+                        l.action === 'RECEPCION_ASIGNADA' ||
+                        (rec?.lots && rec.lots.length > 1) ||
+                        this.lotsList().length > 1
+                      ) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  })
+                  .map((d: any) => ({
+                    fieldName: this.formatFieldLabel(d.fieldName),
+                    oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
+                    newValue: this.formatFieldValue(d.fieldName, d.newValue),
+                  })),
+                reason: l.reason || '',
+                authorizedBy: l.authorizedBy || '',
+              };
+            });
+            const sorted = this.sortAuditEntries(mapped);
+            this.auditEntries.set(sorted);
+            this.movementsService.setReceptionAuditLogs(folio, sorted);
+            return;
+          }
+          const localLogs = this.movementsService.getReceptionAuditLogs(folio);
+          this.auditEntries.set(this.sortAuditEntries(localLogs));
+        },
+        error: () => {
+          const localLogs = this.movementsService.getReceptionAuditLogs(folio);
+          this.auditEntries.set(this.sortAuditEntries(localLogs));
+        },
+      });
+    } else {
+      const logs = this.movementsService.getReceptionAuditLogs(folio);
+      this.auditEntries.set(this.sortAuditEntries(logs || []));
+    }
+  }
+
+  // Ordenamiento cronológico inverso: el evento más reciente arriba (top), el más antiguo abajo
+  sortAuditEntries(entries: MovementAuditEntry[]): MovementAuditEntry[] {
+    if (!entries || entries.length === 0) return [];
+    return [...entries].sort((a, b) => {
+      const timeA = parseAuditTimestamp(a.rawTimestamp || a.timestamp);
+      const timeB = parseAuditTimestamp(b.rawTimestamp || b.timestamp);
+      return timeB - timeA;
+    });
+  }
+
+  formatFieldLabel(field: string): string {
+    return this.movementsService.formatFieldLabel(field);
+  }
+
+  formatFieldValue(field: string, value: any): string {
+    return this.movementsService.formatFieldValue(field, value);
+  }
+
+  getAuditIcon(action: string): string {
+    switch (action) {
+      case 'RECEPCION_CREADA':     return 'add_circle';
+      case 'RECEPCION_COMPLETADA': return 'check_circle';
+      case 'RECEPCION_REABIERTA':  return 'lock_open_right';
+      case 'BAHIA_REUBICADA':      return 'swap_horiz';
+      case 'BAHIA_MODIFICADA':     return 'grid_view';
+      case 'FICHA_CASETA_MODIFICADA': return 'badge';
+      case 'REENTRY_COMPLETED':
+      case 'REINGRESO_REGISTRADO': return 'replay';
+      case 'REENTRY_SCANNED':      return 'qr_code_scanner';
+      case 'TARIMA_EDITADA':       return 'edit_note';
+      case 'REMISION_MODIFICADA':  return 'edit_document';
+      case 'RECEPCION_ACTUALIZADA':return 'edit';
+      case 'RECEPCION_CANCELADA':  return 'cancel';
+      default:                     return 'history';
+    }
+  }
+
+  getAuditColorClass(action: string): string {
+    switch (action) {
+      case 'RECEPCION_CREADA':     return 'carriers-tl-node--emerald';
+      case 'RECEPCION_COMPLETADA': return 'carriers-tl-node--blue';
+      case 'RECEPCION_REABIERTA':  return 'carriers-tl-node--purple';
+      case 'BAHIA_REUBICADA':      return 'carriers-tl-node--amber';
+      case 'BAHIA_MODIFICADA':     return 'carriers-tl-node--blue';
+      case 'FICHA_CASETA_MODIFICADA': return 'carriers-tl-node--indigo';
+      case 'REENTRY_COMPLETED':
+      case 'REINGRESO_REGISTRADO':
+      case 'REENTRY_SCANNED':      return 'carriers-tl-node--indigo';
+      case 'REMISION_MODIFICADA':  return 'carriers-tl-node--purple';
+      case 'TARIMA_EDITADA':
+      case 'RECEPCION_ACTUALIZADA':return 'carriers-tl-node--amber';
+      case 'RECEPCION_CANCELADA':  return 'carriers-tl-node--red';
+      default:                     return 'carriers-tl-node--indigo';
+    }
+  }
+
+  getAuditSummary(action: string): string {
+    switch (action) {
+      case 'RECEPCION_CREADA':     return 'Pre-Recepción Registrada en Caseta';
+      case 'RECEPCION_COMPLETADA': return 'Descarga Finalizada y Cierre F01';
+      case 'RECEPCION_REABIERTA':  return 'Reapertura Extraordinaria con Autorización';
+      case 'BAHIA_REUBICADA':      return 'Reubicación a Posición Fija Definitiva';
+      case 'BAHIA_MODIFICADA':     return 'Cambio de Bahía de Almacenamiento';
+      case 'FICHA_CASETA_MODIFICADA': return 'Modificación de Ficha Operativa de Arribo';
+      case 'REENTRY_COMPLETED':    return 'Reingreso Formal / Devolución Concluida F01-R';
+      case 'REINGRESO_REGISTRADO': return 'Arribo de Reingreso en Caseta';
+      case 'REENTRY_SCANNED':      return 'UA Reingresada Escaneada en Andén';
+      case 'REMISION_MODIFICADA':  return 'Modificación de No. de Remisión';
+      case 'TARIMA_EDITADA':       return 'Ajuste de Tarima Individual';
+      case 'RECEPCION_ACTUALIZADA':return 'Actualización de Parámetros de Recepción';
+      case 'RECEPCION_CANCELADA':  return 'Cancelación Extraordinaria con Autorización';
+      default:                     return action;
+    }
+  }
+
+  // Notificación Simulada & Navegación Directa por Folio
+  loadFromNotification(folio: string): void {
+    this.searchQuery.set(folio);
+    const rec = this.movementsService.findReceptionByFolio(folio);
+    if (rec) {
+      this.selectReception(rec);
+      this.toast.info(`Cargando información completa del Folio #${folio}`);
+    }
+  }
+
+  toggleQueueBanner(): void {
+    this.isQueueBannerExpanded.update((v) => !v);
+  }
+
+  openNewReceptionModal(): void {
+    this.resetCheckInForm();
+    this.showCheckInModal.set(true);
+  }
+
+  closeNewReceptionModal(): void {
+    this.showCheckInModal.set(false);
+  }
+
+  submitCheckIn(): void {
+    // Asegurar que si los selects no fueron cambiados manualmente, tomen la opción visualmente visible
+    if (!this.checkInForm.value.carrierLine && this.carrierLines().length > 0) {
+      const c = this.carrierLines()[0];
+      this.checkInForm.patchValue({ carrierLineCode: c.code, carrierLine: c.name });
+    }
+    if (!this.checkInForm.value.client && this.clients().length > 0) {
+      const cl = this.clients()[0];
+      this.checkInForm.patchValue({ clientCode: cl.code, client: cl.name });
+    }
+    if (!this.checkInForm.value.forkliftOperator && this.forkliftOperators().length > 0) {
+      const op = this.forkliftOperators()[0];
+      this.checkInForm.patchValue({ forkliftOperatorCode: op.code, forkliftOperator: op.name });
+    }
+    if (!this.checkInForm.value.rampNumber && this.ramps().length > 0) {
+      const rm = this.ramps()[0];
+      this.checkInForm.patchValue({ rampCode: rm.code, rampNumber: rm.rampNumber });
+    }
+
+    if (this.tempSealInput().trim()) {
+      this.addSeal();
+    }
+
+    if (this.checkInForm.invalid) {
+      this.checkInForm.markAllAsTouched();
+      const missing: string[] = [];
+      if (this.checkInForm.get('carrierLine')?.invalid) missing.push('Línea Transportadora');
+      if (this.checkInForm.get('client')?.invalid) missing.push('Cliente');
+      if (this.checkInForm.get('forkliftOperator')?.invalid) missing.push('Montacarguista');
+      if (this.checkInForm.get('docNumber')?.invalid) missing.push('No. Documento');
+      if (this.checkInForm.get('docDate')?.invalid) missing.push('Fecha del Documento');
+      if (this.checkInForm.get('receptionTime')?.invalid) missing.push('Hora de Recepción');
+      if (this.checkInForm.get('driverName')?.invalid) missing.push('Operador / Chofer');
+      if (this.checkInForm.get('tractorPlates')?.invalid) missing.push('Placas Tracto');
+      if (this.checkInForm.get('boxPlates')?.invalid) missing.push('Placas Caja');
+
+      this.toast.warning(`Por favor completa los campos obligatorios: ${missing.join(', ')}.`);
+      return;
+    }
+
+    const currentSeals = [...this.sealList()];
+    const singleSeal = (this.checkInForm.get('sealNumber')?.value || '').trim();
+    if (singleSeal && !currentSeals.includes(singleSeal.toUpperCase())) {
+      currentSeals.push(singleSeal.toUpperCase());
+      this.sealList.set(currentSeals);
+    }
+
+    if (currentSeals.length === 0) {
+      this.toast.warning('El sello de seguridad es obligatorio. Debe agregar al menos un número de sello o cincho.');
+      return;
+    }
+
+    this.isSubmitting.set(true);
+    const formData = this.checkInForm.value as any;
+    formData.sealNumbers = currentSeals;
+
+    this.movementsService.createCheckInBackend(formData).subscribe({
+      next: (newRec) => {
+        this.isSubmitting.set(false);
+        this.showCheckInModal.set(false);
+        this.formMode.set('detail');
+        this.selectReception(newRec);
+        this.toast.success(`Pre-Recepción #${newRec.folio} registrada exitosamente en el servidor.`);
+      },
+      error: (err) => {
+        this.isSubmitting.set(false);
+        const errData = err?.error?.data;
+        let details = '';
+        if (Array.isArray(errData)) {
+          details = errData.join(', ');
+        } else if (typeof errData === 'string') {
+          details = errData;
+        }
+        const errMsg = details
+          ? `${err?.error?.message || 'Error'}: ${details}`
+          : (err?.error?.message || err?.message || 'Error al registrar pre-recepción en el servidor');
+        console.error('[RECEPCION_CHECKIN_ERROR]', err);
+        this.toast.error(errMsg);
+      },
+    });
+  }
+
+  isSavingDraft = signal(false);
+  isCompleting = signal(false);
+  isConcludingDischarge = signal(false);
+  isStartingDischarge = signal(false);
+
+  validateAltaForm(): boolean {
+    const pId = this.altaForm.get('productId')?.value;
+    if (pId && !this.altaForm.get('productName')?.value) {
+      const prod = this.products().find((p) => p.id === pId);
+      if (prod) {
+        this.altaForm.patchValue({ productName: prod.name });
+      }
+    }
+
+    if (this.altaForm.invalid) {
+      this.altaForm.markAllAsTouched();
+      const missing: string[] = [];
+      if (this.altaForm.get('lotNumber')?.invalid) missing.push('Lote de Recepción');
+      if (this.altaForm.get('expirationDate')?.invalid) missing.push('Fecha de Caducidad');
+      if (this.altaForm.get('forkliftOperator')?.invalid) missing.push('Montacarguista');
+      if (this.altaForm.get('rampNumber')?.invalid) missing.push('Rampa de Recepción');
+      if (this.altaForm.get('productId')?.invalid) missing.push('Producto (SKU)');
+      if (this.altaForm.get('piecesPerPallet')?.invalid) missing.push('Piezas por Tarima');
+      if (this.altaForm.get('selectedPalletType')?.invalid) missing.push('Tipo de Tarima');
+      if (this.altaForm.get('supplierName')?.invalid) missing.push('Proveedor');
+
+      this.toast.warning(`Por favor completa los parámetros obligatorios de la descarga: ${missing.join(', ')}.`);
+      return false;
+    }
+
+    // ⚠️ VALIDACIÓN RIGUROSA DE FECHAS (CRITERIO 2: ELABORACIÓN VS CADUCIDAD)
+    const elab = this.altaForm.get('elaborationDate')?.value;
+    const exp = this.altaForm.get('expirationDate')?.value;
+    if (elab && exp) {
+      if (exp < elab) {
+        this.toast.error('🛑 Error de validación: La fecha de caducidad no puede ser anterior a la fecha de elaboración.');
+        return false;
+      }
+      if (exp === elab) {
+        const confirmed = window.confirm('⚠️ Advertencia: La fecha de caducidad es la misma que la de elaboración. ¿Está seguro que desea continuar?');
+        if (!confirmed) {
+          return false;
+        }
+      }
+    }
+
+    // 🔒 CANDADO DE CALIDAD DE VIDA ÚTIL: MATRIZ DINÁMICA MRP (<24m -> 75% | ≥24m -> 50%)
+    if (exp) {
+      const evalRes = this.evaluateShelfLife(exp, elab);
+      if (evalRes) {
+        if (evalRes.isExpired) {
+          this.toast.error(`🛑 Fecha de caducidad inválida: El lote está vencido (hace ${Math.abs(evalRes.remainingDays)} días). No se permite la descarga física.`);
+          return false;
+        }
+        if (!evalRes.isCompliant) {
+          const activeLot = this.getActiveLot();
+          const isAuthorized = activeLot && activeLot.requiresOpsAuthorization && activeLot.authorizedByOpsManager && activeLot.opsManagerReason;
+          if (!isAuthorized) {
+            this.toast.error(`🛑 Candado de Calidad: El lote cuenta con ${evalRes.remainingPct}% de vida restante (< ${evalRes.thresholdRequired}% requerido para material ${evalRes.category}). Para continuar se requiere la Autorización Excepcional de MRP / Planeación.`);
+            this.openEditActiveLotModal();
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  // ── TRANSICIONES DEL CICLO DE VIDA DE RECEPCIÓN (5 FASES) ──
+
+  isAssigning = signal(false);
+
+  // Fase 1 -> 2: Asignar a Montacarguista y Bloquear Andén
+  assignToForklift(): void {
+    const current = this.selectedReception();
+    if (!current) return;
+
+    if (!this.validateAltaForm()) return;
+
+    const formVals = this.altaForm.value;
+    const receptionId = current.id || current.folio;
+    const adminUser = this.authState.userFullName() || this.authState.currentUser()?.email || 'Administrador WMS';
+
+    this.isAssigning.set(true);
+    this.movementsService
+      .assignReception(receptionId, formVals, this.products(), this.suppliers(), adminUser)
+      .subscribe({
+        next: (updated) => {
+          this.isAssigning.set(false);
+          this.selectedReception.set(updated);
+          this.patchAltaFormWithReception(updated);
+          this.toast.success(`¡Folio #${updated.folio} asignado a Rampa ${updated.checkIn.rampNumber}! Asignación enviada a Caseta de Seguridad.`);
+
+          // Despachar alerta en vivo a Caseta de Seguridad
+          const rNum = updated.checkIn.rampNumber;
+          const rLabel = rNum ? `R-${String(rNum).padStart(2, '0')}` : 'Andén';
+          this.smartNotification.dispatch({
+            category: 'SECURITY',
+            title: '🎯 Rampa Asignada por Operaciones',
+            message: `Rampa ${rLabel} asignada para Folio #${updated.folio} (${updated.checkIn.client || 'Cliente'}) — Chofer: ${updated.checkIn.driverName || 'Transportista'} (Placas: ${updated.checkIn.tractorPlates})`,
+            referenceFolio: updated.folio,
+            route: '/security',
+            targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+            targetRoutes: ['/security'],
+            severity: 'SUCCESS',
+            data: updated
+          });
+        },
+        error: (err) => {
+          this.isAssigning.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al asignar la recepción';
+          this.toast.error(msg);
+        },
+      });
+  }
+
+  // Fase 2 -> 3: Inicio de Descarga Física en Andén (ASSIGNED -> IN_PROGRESS)
+  // Plan B / Contingencia: si la terminal móvil del montacarguista presenta fallas, la mesa inicia y escanea directamente
+  startDischarge(currentRec?: ReceptionHeader): void {
+    const current = currentRec || this.selectedReception();
+    if (!current) return;
+
+    const op = current.checkIn?.forkliftOperator || 'Montacarguista';
+    const recId = current.id || current.folio;
+
+    this.isStartingDischarge.set(true);
+    this.movementsService.startDischarge(recId, op).subscribe({
+      next: (updated) => {
+        this.isStartingDischarge.set(false);
+        this.selectedReception.set(updated);
+        this.patchAltaFormWithReception(updated);
+        this.loadAuditLogs(updated.folio);
+        this.toast.success(
+          `Descarga física iniciada en Rampa ${updated.checkIn?.rampNumber || ''}. Escáner de tarimas habilitado.`
+        );
+        setTimeout(() => {
+          if (this.uaInput?.nativeElement) {
+            this.uaInput.nativeElement.focus();
+          }
+        }, 150);
+      },
+      error: (err) => {
+        this.isStartingDischarge.set(false);
+        const msg = err?.error?.message || err?.message || 'Error al iniciar la descarga física';
+        this.toast.error(msg);
+      },
+    });
+  }
+
+  // Compatibilidad legacy
+  simulateStartDischarge(): void {
+    this.startDischarge();
+  }
+
+  // Montacarguista o Mesa Administrativa Concluye Descarga Física (Envía a Formato F01)
+  finishDischarge(currentRec?: ReceptionHeader): void {
+    const current = currentRec || this.selectedReception();
+    if (!current) return;
+
+    const stream = [...this.palletStream()];
+    if (stream.length === 0) {
+      this.toast.error('Debe registrar o escanear al menos una tarima antes de concluir la descarga física.');
+      return;
+    }
+
+    const op = current.checkIn?.forkliftOperator || 'Montacarguista';
+    const recId = current.id || current.folio;
+    const formVals = this.altaForm.value;
+
+    this.isConcludingDischarge.set(true);
+    this.movementsService
+      .finishDischarge(recId, stream, op, formVals, this.products(), this.suppliers())
+      .subscribe({
+        next: (updated) => {
+          this.isConcludingDischarge.set(false);
+          this.selectedReception.set(updated);
+          this.palletStream.set(updated.pallets ? [...updated.pallets] : stream);
+          this.loadAuditLogs(updated.folio);
+          this.toast.success(`Descarga física concluida en Rampa ${updated.checkIn?.rampNumber || ''}. Formato F01 listo para emisión.`);
+        },
+        error: (err) => {
+          this.isConcludingDischarge.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al concluir la descarga física';
+          this.toast.error(msg);
+        },
+      });
+  }
+
+  // Compatibilidad legacy
+  simulateFinishDischarge(): void {
+    this.finishDischarge();
+  }
+
+  // Guardar Cambios Parciales / Avance de Descarga en el Backend (wms.warehouse_reception_pallets)
+  saveDraftReception(): void {
+    const current = this.selectedReception();
+    if (!current) return;
+
+    if (!this.validateAltaForm()) return;
+
+    const formVals = this.altaForm.value;
+    const currentStream = [...this.palletStream()];
+    const receptionId = current.id || current.folio;
+
+    this.isSavingDraft.set(true);
+    this.movementsService
+      .saveDraftReceptionBackend(
+        receptionId,
+        formVals,
+        currentStream,
+        this.products(),
+        this.suppliers()
+      )
+      .subscribe({
+        next: (updated) => {
+          this.isSavingDraft.set(false);
+          this.selectedReception.set(updated);
+          this.palletStream.set(updated.pallets ? [...updated.pallets] : []);
+          this.patchAltaFormWithReception(updated);
+          this.toast.success(`Avance de Folio #${current.folio} y ${(updated.pallets || []).length} tarima(s) guardados correctamente en la base de datos.`);
+        },
+        error: (err) => {
+          this.isSavingDraft.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al guardar avances en el servidor';
+          this.toast.error(msg);
+        },
+      });
+  }
+
+  // ── EDICIÓN Y ELIMINACIÓN DE TARIMAS (ROL ADMINISTRADOR) ──
+  openEditPalletModal(pallet: ReceptionPalletItem): void {
+    const currentRec = this.selectedReception();
+    this.editPalletForm.setValue({
+      id: pallet.id,
+      palletNumber: pallet.palletNumber || 1,
+      palletCode: pallet.palletCode,
+      productId: pallet.productId,
+      description: pallet.description,
+      supplierName: pallet.supplierName || this.altaForm.value.supplierName || 'LE MEXICO S.A DE C.V',
+      palletTypeId: pallet.palletTypeId,
+      pieces: pallet.pieces,
+      observations: pallet.observations || '',
+      lotNumber: pallet.lotNumber || this.selectedScanningLot() || this.altaForm.value.lotNumber || '',
+      expirationDate: pallet.expirationDate || this.altaForm.value.expirationDate || '',
+      docNumber: (pallet as any).docNumber || currentRec?.checkIn?.docNumber || this.checkInForm.value.docNumber || '',
+    });
+    this.showEditPalletModal.set(true);
+  }
+
+  closeEditPalletModal(): void {
+    this.showEditPalletModal.set(false);
+  }
+
+  saveEditedPallet(): void {
+    if (this.editPalletForm.invalid) {
+      this.editPalletForm.markAllAsTouched();
+      this.toast.warning('Completa los campos obligatorios de la tarima.');
+      return;
+    }
+
+    const formVals = this.editPalletForm.value;
+    const newCode = (formVals.palletCode || '').trim().toUpperCase();
+    if (!newCode) {
+      this.toast.warning('El código de tarima (UA) es obligatorio.');
+      return;
+    }
+
+    const isDup = this.palletStream().some((p) => p.id !== formVals.id && p.palletCode.toUpperCase() === newCode);
+    if (isDup) {
+      this.toast.error(`🛑 La UA/SSCC (${newCode}) ya está asignada a otra tarima en esta recepción.`);
+      return;
+    }
+
+    const pType = (formVals.palletTypeId as PalletType) || 'MADERA_ESTANDAR';
+
+    this.palletStream.update((list) =>
+      list.map((item) => {
+        if (item.id === formVals.id) {
+          return {
+            ...item,
+            palletCode: newCode,
+            productId: formVals.productId || item.productId,
+            description: formVals.description || item.description,
+            supplierName: formVals.supplierName || item.supplierName,
+            palletTypeId: pType,
+            palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Madera Estándar',
+            pieces: Number(formVals.pieces) || item.pieces,
+            observations: formVals.observations || undefined,
+            lotNumber: formVals.lotNumber ? formVals.lotNumber.toUpperCase() : item.lotNumber,
+            expirationDate: (formVals.expirationDate || item.expirationDate) ?? undefined,
+            docNumber: (formVals.docNumber || item.docNumber) ?? undefined,
+          };
+        }
+        return item;
+      })
+    );
+
+    this.closeEditPalletModal();
+    this.toast.success(`Tarima #${formVals.palletNumber} actualizada.`);
+  }
+
+  removePalletFromStream(palletId: string): void {
+    const list = this.palletStream().filter((p) => p.id !== palletId);
+    this.palletStream.set(list);
+    this.toast.info('Tarima removida de la descarga');
+  }
+
+  // ── SELECTOR VISUAL DE BAHÍAS (22 PALLETS) & CATÁLOGO WMS ──
+  baySearchQuery = signal<string>('');
+  isBayDropdownOpen = signal<boolean>(false);
+
+  allWarehouseLocations = computed(() => {
+    const locMap = this.movementsService.locations();
+    return Object.values(locMap).filter((loc) => !loc.isBlocked);
+  });
+
+  filteredWarehouseLocations = computed(() => {
+    const q = this.baySearchQuery().toLowerCase().trim();
+    const list = this.allWarehouseLocations();
+    if (!q) return list;
+    return list.filter(
+      (l) =>
+        l.locationCode.toLowerCase().includes(q) ||
+        (l.warehouseName && l.warehouseName.toLowerCase().includes(q)) ||
+        (l.zone && l.zone.toLowerCase().includes(q)) ||
+        (l.aisle && l.aisle.toLowerCase().includes(q)) ||
+        (l.rack && l.rack.toLowerCase().includes(q))
+    );
+  });
+
+  // ── ESTADOS DE REUBICACIÓN DESDE BUFFER TEMPORAL ──
+  isReallocatingMode = signal<boolean>(false);
+  reallocatingSourceBay = signal<string>('');
+
+  isTemporaryBay(code?: string | null): boolean {
+    if (!code) return false;
+    const c = code.toUpperCase().trim();
+    return c.includes('-T') || c.includes('TMP') || c.startsWith('T') || c.includes('TEMPORAL') || c.includes('STAGING') || c.includes('BUFFER');
+  }
+
+  openBaySelector(): void {
+    this.isReallocatingMode.set(false);
+    this.showBaySelectorModal.set(true);
+  }
+
+  openReallocationModal(rec: ReceptionHeader): void {
+    const bay = rec.storageLocation || rec.storageLocationCode || this.selectedBayName() || 'STAGING-R01';
+    this.isReallocatingMode.set(true);
+    this.reallocatingSourceBay.set(bay);
+    this.showBaySelectorModal.set(true);
+  }
+
+  closeBaySelectorModal(): void {
+    this.isReallocatingMode.set(false);
+    this.showBaySelectorModal.set(false);
+  }
+
+  onBayInput(query: string): void {
+    this.baySearchQuery.set(query);
+    this.isBayDropdownOpen.set(true);
+  }
+
+  selectBayFromList(loc: LocationStockInfo): void {
+    this.onBaySelected({
+      locationId: loc.locationId || loc.locationCode,
+      locationCode: loc.locationCode,
+      isOverride: false,
+    });
+    this.baySearchQuery.set(loc.locationCode);
+    this.isBayDropdownOpen.set(false);
+  }
+
+  clearBaySelection(): void {
+    this.baySearchQuery.set('');
+    this.isBayDropdownOpen.set(false);
+  }
+
+  onBaySelected(res: BaySelectionResult): void {
+    const isReallocation = this.isReallocatingMode();
+    const sourceBay = this.reallocatingSourceBay() || this.selectedBayName() || 'STAGING-R01';
+    const targetBay = res.locationCode;
+
+    this.selectedBayName.set(targetBay);
+    this.altaForm.patchValue({
+      storageLocation: targetBay,
+      storageLocationId: res.locationId || targetBay,
+    });
+
+    const currentRec = this.selectedReception();
+    if (currentRec) {
+      // Si la recepción ya tenía pallets cargados, actualizar la ubicación de todos los pallets
+      const updatedPallets = (currentRec.pallets || []).map((p) => ({
+        ...p,
+        locationId: res.locationId || targetBay,
+        currentLocation: targetBay,
+        observations: isReallocation 
+          ? `Reubicado desde buffer temporal ${sourceBay} a posición fija ${targetBay}` 
+          : p.observations,
+      }));
+
+      const updatedRec: ReceptionHeader = {
+        ...currentRec,
+        storageLocation: targetBay,
+        storageLocationId: res.locationId || targetBay,
+        storageLocationCode: targetBay,
+        pallets: updatedPallets,
+      };
+      this.selectedReception.set(updatedRec);
+
+      // Sincronizar de inmediato con el catálogo/croquis 2D
+      if (targetBay && targetBay !== 'Buffer Temporal') {
+        const pCount = (currentRec.pallets || []).length || 14;
+        const pSku = currentRec.productName || this.altaForm.value.productName || 'Mercancía Asignada';
+        const pLot = currentRec.lotNumber || this.altaForm.value.lotNumber || 'LOT-2026';
+        if (isReallocation && sourceBay) {
+          this.layoutService.transferSimulatedInventory(sourceBay, targetBay, pCount, pSku, pLot, currentRec.folio);
+        } else {
+          this.layoutService.recordSimulatedInbound(targetBay, pCount, pSku, pLot, currentRec.folio);
+        }
+      }
+
+      // Registrar explícitamente en la línea de tiempo de auditoría
+      const auditAction = isReallocation ? 'BAHIA_REUBICADA' : 'BAHIA_MODIFICADA';
+      const actionLabel = isReallocation 
+        ? 'Reubicación a Posición Fija Definitiva' 
+        : 'Cambio de Bahía de Almacenamiento';
+
+      this.movementsService.addReceptionAudit(updatedRec.folio, {
+        id: `aud-bay-${Date.now()}`,
+        action: auditAction,
+        actionLabel: actionLabel,
+        username: 'Administrador WMS',
+        timestamp: new Date().toLocaleString('es-MX'),
+        reason: isReallocation 
+          ? `Reubicación desde buffer temporal ${sourceBay} a posición fija ${targetBay}` 
+          : `Asignación de bahía ${targetBay}`,
+        details: [
+          { fieldName: 'Bahía Origen', oldValue: sourceBay },
+          { fieldName: 'Bahía Destino', newValue: targetBay },
+          { fieldName: 'Tarimas Involucradas', newValue: `${updatedPallets.length} Tarimas` },
+        ],
+      });
+      this.loadAuditLogs(updatedRec.folio);
+
+      const live = this.movementsService.getBayLiveOccupancy(targetBay);
+      if (live && live.remisiones.length > 0) {
+        const otherRemisiones = live.remisiones.filter((r) => r.receptionFolio !== currentRec?.folio);
+        if (otherRemisiones.length > 0) {
+          const otherCount = otherRemisiones.reduce((acc, r) => acc + r.palletsCount, 0);
+          this.toast.info(`📦 Bahía Compartida: ${targetBay} almacena ${otherCount} tarimas de ${otherRemisiones.length} remisión(es) previa(s). Capacidad restante actualizada.`);
+        }
+      }
+
+      // Sincronizar inmediatamente al Backend en tiempo real si el registro ya existe
+      if (currentRec.id && isUuid(currentRec.id)) {
+        this.movementsApi
+          .updateReceptionParameters(currentRec.id, {
+            storageLocationId: isUuid(res.locationId) ? res.locationId : undefined,
+            storageLocationCode: targetBay,
+          } as any)
+          .subscribe({
+            next: () => {
+              this.movementsService.updateReception(currentRec.id!, updatedRec, true);
+              this.loadAuditLogs(currentRec.id!);
+            },
+            error: (err) => console.warn('Error sincronizando bahía:', err),
+          });
+      }
+
+      if (isReallocation) {
+        const operatorName = currentRec.checkIn?.forkliftOperator || 'Hector Villalva Ayala';
+        const folioStr = currentRec.folio || currentRec.checkIn?.docNumber || 'REM';
+        this.toast.success(
+          `⚡ Reubicación Exitosa: Remisión ${folioStr} trasladada de ${sourceBay} a ${targetBay}. Notificación enviada al montacarguista (${operatorName}).`
+        );
+      } else {
+        if (res.isOverride) {
+          this.toast.info(`Bahía ${targetBay} asignada con Anulación de Administrador.`);
+        } else {
+          this.toast.success(`Bahía ${targetBay} asignada correctamente.`);
+        }
+      }
+    }
+
+    this.isReallocatingMode.set(false);
+    this.showBaySelectorModal.set(false);
+  }
+
+  // ── RE-ETIQUETADO SELECTIVO DE UAS (SSCC GS1-128) ──
+  openRelabelModal(): void {
+    const rec = this.selectedReception();
+    if (!rec || !rec.pallets || rec.pallets.length === 0) {
+      this.toast.warning('No hay tarimas disponibles en la recepción para re-etiquetar.');
+      return;
+    }
+    const allIds = new Set(rec.pallets.map((p) => p.id));
+    this.selectedPalletIdsForRelabel.set(allIds);
+    this.relabelReason.set('Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128');
+    this.showRelabelModal.set(true);
+  }
+
+  closeRelabelModal(): void {
+    this.showRelabelModal.set(false);
+  }
+
+  togglePalletRelabelSelection(id: string): void {
+    this.selectedPalletIdsForRelabel.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  toggleSelectAllPalletsForRelabel(): void {
+    const rec = this.selectedReception();
+    if (!rec || !rec.pallets) return;
+    const current = this.selectedPalletIdsForRelabel();
+    if (current.size === rec.pallets.length) {
+      this.selectedPalletIdsForRelabel.set(new Set());
+    } else {
+      this.selectedPalletIdsForRelabel.set(new Set(rec.pallets.map((p) => p.id)));
+    }
+  }
+
+  executeRelabelUas(): void {
+    const rec = this.selectedReception();
+    if (!rec || !rec.id) return;
+    const palletIds = Array.from(this.selectedPalletIdsForRelabel());
+    if (palletIds.length === 0) {
+      this.toast.warning('Selecciona al menos una tarima para re-etiquetar.');
+      return;
+    }
+
+    const payload = {
+      palletIds,
+      reason: this.relabelReason().trim() || 'Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128',
+    };
+
+    this.isRelabelling.set(true);
+    this.movementsApi.relabelUas(rec.id, payload).subscribe({
+      next: (mappings) => {
+        this.isRelabelling.set(false);
+        this.showRelabelModal.set(false);
+        this.toast.success(`Se re-etiquetaron ${mappings?.length || palletIds.length} tarimas exitosamente con SSCC 4Guard.`);
+        if (rec.id) {
+          this.movementsApi.getReceptionById(rec.id).subscribe({
+            next: (fullData) => {
+              const mapped = this.movementsService.mapReceptionResponseToHeader(fullData);
+              this.selectedReception.set(mapped);
+              this.palletStream.set(mapped.pallets ? [...mapped.pallets] : []);
+              this.patchAltaFormWithReception(mapped);
+              this.movementsService.loadInitialBackendData();
+            },
+          });
+        }
+      },
+      error: (err) => {
+        this.isRelabelling.set(false);
+        this.toast.error(err?.error?.message || 'Error al re-etiquetar las tarimas.');
+      },
+    });
+  }
+
+  // ── CANCELACIÓN EXTRAORDINARIA DE RECEPCIÓN ──
+  openCancelModal(): void {
+    this.cancelReason.set('');
+    this.cancelAdminUser.set('');
+    this.cancelAdminPassword.set('');
+    this.cancelErrorMessage.set(null);
+    this.showCancelPassword.set(false);
+    this.showCancelModal.set(true);
+  }
+
+  closeCancelModal(): void {
+    this.showCancelModal.set(false);
+  }
+
+  confirmCancelReception(): void {
+    this.cancelErrorMessage.set(null);
+    const reason = this.cancelReason().trim();
+    const user = this.cancelAdminUser().trim();
+    const pass = this.cancelAdminPassword().trim();
+    const current = this.selectedReception();
+
+    if (!current) return;
+
+    if (!reason) {
+      this.cancelErrorMessage.set('El motivo de cancelación es obligatorio.');
+      return;
+    }
+    if (!user || !pass) {
+      this.cancelErrorMessage.set('Ingresa usuario y contraseña de Administrador.');
+      return;
+    }
+
+    this.isCancelling.set(true);
+
+    const adminLabel = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Admin Autorizado)`;
+
+    if (current.id && pass) {
+      this.movementsApi
+        .cancelReception(current.id, {
+          adminUsername: user,
+          adminPassword: pass,
+          reason,
+        })
+        .subscribe({
+          next: () => {
+            this.isCancelling.set(false);
+            this.showCancelModal.set(false);
+
+            const cancelled = this.movementsService.cancelReception(
+              current.folio,
+              reason,
+              adminLabel
+            );
+
+            if (cancelled) {
+              this.selectReception(cancelled);
+              this.selectedPrintReception.set(cancelled);
+              this.printType.set('CANCELLATION');
+              this.toast.success(`Recepción #${cancelled.folio} cancelada exitosamente.`);
+              this.showPrintModal.set(true);
+            }
+          },
+          error: (err: any) => {
+            this.isCancelling.set(false);
+            const msg =
+              err.error?.message ||
+              err.message ||
+              'Error al validar credenciales de Administrador o cancelar en el servidor.';
+            this.cancelErrorMessage.set(msg);
+          },
+        });
+    } else {
+      const cancelled = this.movementsService.cancelReception(
+        current.folio,
+        reason,
+        adminLabel
+      );
+
+      this.isCancelling.set(false);
+      this.showCancelModal.set(false);
+
+      if (cancelled) {
+        this.selectReception(cancelled);
+        this.selectedPrintReception.set(cancelled);
+        this.printType.set('CANCELLATION');
+        this.toast.success(`Recepción #${cancelled.folio} cancelada exitosamente.`);
+        this.showPrintModal.set(true);
+      } else {
+        this.toast.error('No se pudo procesar la cancelación de la recepción.');
+      }
+    }
+  }
+
+  // ── REAPERTURA Y RETARIMADO EXTRAORDINARIO DE RECEPCIÓN ──
+  openReopenModal(initialAction: 'PALLET_SWAP' | 'MISSING_PALLETS' | 'CASETA_DATA' | 'UA_SWAP' = 'PALLET_SWAP'): void {
+    const rec = this.selectedReception();
+    this.reopenActionType.set(initialAction);
+    const currentPType = rec?.selectedPalletType || 'MADERA_ESTANDAR';
+    const defaultTarget = currentPType === 'TARIMA_CHEP_NACIONAL' ? 'MADERA_ESTANDAR' : 'TARIMA_CHEP_NACIONAL';
+    this.reopenTargetPalletType.set(defaultTarget as PalletType);
+    this.reopenSwapScope.set('ALL');
+    this.reopenSelectedPalletIds.set([]);
+    this.reopenSwapReasonQuick.set('ESTANDAR_PLANTA');
+    this.reopenReason.set('');
+    this.reopenAdminUser.set('');
+    this.reopenAdminPassword.set('');
+    this.reopenErrorMessage.set(null);
+    this.showReopenPassword.set(false);
+    this.initReopenUaSwapList();
+    this.showReopenModal.set(true);
+  }
+
+  setReopenAction(action: 'PALLET_SWAP' | 'MISSING_PALLETS' | 'CASETA_DATA' | 'UA_SWAP'): void {
+    this.reopenActionType.set(action);
+    if (action === 'UA_SWAP') {
+      if (this.reopenUaSwapList().length === 0) {
+        this.initReopenUaSwapList();
+      }
+      setTimeout(() => {
+        const first = document.getElementById('ua-scan-input-0') as HTMLInputElement;
+        if (first) {
+          first.focus();
+        }
+      }, 100);
+    }
+  }
+
+  initReopenUaSwapList(): void {
+    const pallets = this.selectedReception()?.pallets || this.palletStream() || [];
+    const items = pallets.map((p, idx) => ({
+      id: p.id,
+      palletNumber: p.palletNumber || (idx + 1),
+      currentUa: p.palletCode,
+      newUa: '',
+      productId: p.productId || 'SKU',
+      pieces: p.pieces || 0,
+      isModified: false,
+    }));
+    this.reopenUaSwapList.set(items);
+    this.reopenUaBulkOpen.set(false);
+    this.reopenUaBulkText.set('');
+  }
+
+  // Feedback acústico para terminales y pistolas RF
+  playBeepSuccess(): void {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.09);
+    } catch (_) {}
+  }
+
+  playBeepError(): void {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.16);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.18);
+    } catch (_) {}
+  }
+
+  // Manejo de disparo láser de pistola con auto-avance al siguiente campo
+  onUaScanEnter(index: number, event: Event): void {
+    event.preventDefault();
+    const list = [...this.reopenUaSwapList()];
+    const item = list[index];
+    if (!item) return;
+
+    const rawVal = (item.newUa || '').trim().toUpperCase();
+    if (!rawVal) {
+      this.playBeepError();
+      this.toast.warning(`La Tarima #${item.palletNumber} requiere un código UA válido.`);
+      return;
+    }
+
+    // Validación de duplicados en el lote
+    const isDup = list.some((other, oIdx) => oIdx !== index && other.newUa.trim().toUpperCase() === rawVal);
+    if (isDup) {
+      this.playBeepError();
+      this.toast.error(`🛑 La UA (${rawVal}) ya fue capturada en otra tarima de este embarque.`);
+      return;
+    }
+
+    item.newUa = rawVal;
+    item.isModified = rawVal !== item.currentUa;
+    list[index] = item;
+    this.reopenUaSwapList.set(list);
+    this.playBeepSuccess();
+
+    // Auto-avance del cursor a la siguiente tarima
+    setTimeout(() => {
+      const nextInput = document.getElementById(`ua-scan-input-${index + 1}`) as HTMLInputElement;
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.select();
+      } else {
+        this.toast.success('🎯 ¡Todas las UAs capturadas! Ingresa las credenciales de autorización.');
+      }
+    }, 50);
+  }
+
+  onUaInputChange(index: number, val: string): void {
+    this.reopenUaSwapList.update((list) => {
+      const copy = [...list];
+      if (copy[index]) {
+        const upper = (val || '').trim().toUpperCase();
+        copy[index] = {
+          ...copy[index],
+          newUa: upper,
+          isModified: upper.length > 0 && upper !== copy[index].currentUa,
+        };
+      }
+      return copy;
+    });
+  }
+
+  resetUaRow(index: number): void {
+    this.reopenUaSwapList.update((list) => {
+      const copy = [...list];
+      if (copy[index]) {
+        copy[index] = {
+          ...copy[index],
+          newUa: '',
+          isModified: false,
+        };
+      }
+      return copy;
+    });
+  }
+
+  applyBulkUaPaste(): void {
+    const raw = this.reopenUaBulkText().trim();
+    if (!raw) {
+      this.toast.warning('Pega al menos una UA para distribuir.');
+      return;
+    }
+
+    const lines = raw.split(/[\r\n,;\t]+/).map((s) => s.trim().toUpperCase()).filter(Boolean);
+    if (lines.length === 0) return;
+
+    const list = [...this.reopenUaSwapList()];
+    let appliedCount = 0;
+    lines.forEach((ua, idx) => {
+      if (idx < list.length) {
+        list[idx] = {
+          ...list[idx],
+          newUa: ua,
+          isModified: ua !== list[idx].currentUa,
+        };
+        appliedCount++;
+      }
+    });
+
+    this.reopenUaSwapList.set(list);
+    this.reopenUaBulkText.set('');
+    this.reopenUaBulkOpen.set(false);
+    this.playBeepSuccess();
+    this.toast.success(`⚡ Se distribuyeron ${appliedCount} UAs desde la lista del cliente.`);
+  }
+
+  closeReopenModal(): void {
+    this.showReopenModal.set(false);
+  }
+
+  confirmReopenReception(): void {
+    this.reopenErrorMessage.set(null);
+    const action = this.reopenActionType();
+    const reasonText = this.reopenReason().trim();
+    const user = this.reopenAdminUser().trim();
+    const pass = this.reopenAdminPassword().trim();
+    const current = this.selectedReception();
+
+    if (!current) return;
+
+    if (!user || !pass) {
+      this.reopenErrorMessage.set('Ingresa usuario y contraseña de Administrador / Supervisor.');
+      return;
+    }
+
+    const adminLabel = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Supervisor Autorizado)`;
+
+    let fullReason = reasonText;
+    if (action === 'PALLET_SWAP') {
+      const quickMatch = this.palletSwapReasons.find((r) => r.id === this.reopenSwapReasonQuick());
+      const prefix = quickMatch ? `[${quickMatch.label}]` : '[Retarimado Físico en Andén]';
+      fullReason = reasonText ? `${prefix} ${reasonText}` : prefix;
+    } else if (action === 'UA_SWAP') {
+      const prefix = '[Homologación de UAs del Cliente]';
+      fullReason = reasonText ? `${prefix} ${reasonText}` : prefix;
+    } else if (!fullReason) {
+      this.reopenErrorMessage.set('El motivo o justificación de la acción es obligatorio.');
+      return;
+    }
+
+    this.isReopening.set(true);
+
+    if (action === 'PALLET_SWAP') {
+      const targetType = this.reopenTargetPalletType();
+      const scope = this.reopenSwapScope();
+      const selectedIds = this.reopenSelectedPalletIds();
+
+      if (scope === 'SELECTED' && selectedIds.length === 0) {
+        this.isReopening.set(false);
+        this.reopenErrorMessage.set('Debes seleccionar al menos una tarima física para el retarimado.');
+        return;
+      }
+
+      const updated = this.movementsService.swapReceptionPalletType(
+        current.folio,
+        targetType,
+        scope,
+        selectedIds,
+        fullReason,
+        adminLabel
+      );
+
+      this.isReopening.set(false);
+      this.showReopenModal.set(false);
+
+      if (updated) {
+        this.selectReception(updated);
+        this.palletStream.set(updated.pallets ? [...updated.pallets] : []);
+        this.loadAuditLogs(updated.id || updated.folio);
+        const targetLabel = this.getPalletTypeLabel(targetType);
+        this.toast.success(`🪵 Retarimado registrado: ahora se encuentra en ${targetLabel}. UAs actualizadas.`);
+
+        this.smartNotification.dispatch({
+          category: 'RECEIVING',
+          title: '🪵 Cambio Físico de Tarima (Retarimado)',
+          message: `Recepción #${updated.folio}: Retarimado a ${targetLabel} por ${adminLabel}. Motivo: ${fullReason}.`,
+          referenceFolio: updated.folio,
+          route: '/movements/receiving',
+          targetRoles: ['ADMIN', 'OPERATIONS_SUPERVISOR', 'WAREHOUSE_OPERATOR', 'FORKLIFT_OPERATOR'],
+          targetRoutes: ['/movements/receiving'],
+          severity: 'INFO',
+          data: updated,
+        });
+      } else {
+        this.toast.error('No se pudo procesar el cambio de tarima.');
+      }
+    } else if (action === 'UA_SWAP') {
+      const items = this.reopenUaSwapList();
+      const modifiedItems = items.filter((it) => it.newUa.trim().length > 0);
+
+      if (modifiedItems.length === 0) {
+        this.isReopening.set(false);
+        this.reopenErrorMessage.set('Debes pistolear o ingresar al menos una nueva UA del cliente.');
+        return;
+      }
+
+      // Validar duplicados entre las UAs resultantes (usando la nueva si fue capturada, o la actual si quedó sin cambio)
+      const usedUas = new Set<string>();
+      for (const it of items) {
+        const u = (it.newUa.trim() || it.currentUa).toUpperCase();
+        if (usedUas.has(u)) {
+          this.isReopening.set(false);
+          this.reopenErrorMessage.set(`🛑 La UA (${u}) está repetida. Cada tarima debe tener un código único.`);
+          return;
+        }
+        usedUas.add(u);
+      }
+
+      const mappings = items.map((it) => ({
+        palletId: it.id,
+        oldUa: it.currentUa,
+        newUa: it.newUa.trim() ? it.newUa.trim().toUpperCase() : it.currentUa,
+      }));
+
+      const updated = this.movementsService.updateReceptionPalletUas(
+        current.folio,
+        mappings,
+        fullReason,
+        adminLabel
+      );
+
+      this.isReopening.set(false);
+      this.showReopenModal.set(false);
+
+      if (updated) {
+        this.selectReception(updated);
+        this.palletStream.set(updated.pallets ? [...updated.pallets] : []);
+        this.loadAuditLogs(updated.id || updated.folio);
+        this.toast.success(`🎯 Se homologaron ${modifiedItems.length} UAs del cliente exitosamente.`);
+
+        this.smartNotification.dispatch({
+          category: 'RECEIVING',
+          title: '🎯 UAs de Cliente Homologadas',
+          message: `Recepción #${updated.folio}: ${modifiedItems.length} UAs actualizadas por ${adminLabel}. Motivo: ${fullReason}.`,
+          referenceFolio: updated.folio,
+          route: '/movements/receiving',
+          targetRoles: ['ADMIN', 'OPERATIONS_SUPERVISOR', 'WAREHOUSE_OPERATOR', 'FORKLIFT_OPERATOR'],
+          targetRoutes: ['/movements/receiving'],
+          severity: 'INFO',
+          data: updated,
+        });
+      } else {
+        this.toast.error('No se pudo procesar la homologación de UAs.');
+      }
+    } else if (action === 'MISSING_PALLETS') {
+      const reopened = this.movementsService.reopenReception(
+        current.folio,
+        fullReason,
+        adminLabel,
+        'MISSING_PALLETS'
+      );
+
+      this.isReopening.set(false);
+      this.showReopenModal.set(false);
+
+      if (reopened) {
+        this.selectReception(reopened);
+        this.palletStream.set(reopened.pallets ? [...reopened.pallets] : []);
+        this.loadAuditLogs(reopened.id || reopened.folio);
+        this.toast.success(`🔓 Recepción #${reopened.folio} reabierta exitosamente. Andén y escaneo habilitados para tarimas adicionales.`);
+
+        this.smartNotification.dispatch({
+          category: 'RECEIVING',
+          title: '🔓 Recepción Reabierta para Captura Complementaria',
+          message: `La recepción #${reopened.folio} ha sido reabierta por ${adminLabel}. Motivo: ${fullReason}. Habilitada para captura de pallets omitidos.`,
+          referenceFolio: reopened.folio,
+          route: '/movements/receiving',
+          targetRoles: ['ADMIN', 'OPERATIONS_SUPERVISOR', 'WAREHOUSE_OPERATOR', 'FORKLIFT_OPERATOR', 'MONTACARGUISTA'],
+          targetRoutes: ['/movements/receiving'],
+          severity: 'WARNING',
+          data: reopened,
+        });
+      } else {
+        this.toast.error('No se pudo procesar la reapertura de la recepción.');
+      }
+    } else if (action === 'CASETA_DATA') {
+      this.isReopening.set(false);
+      this.showReopenModal.set(false);
+      this.allowCasetaEditAuthorized.set(true);
+      this.toast.info(`🔑 Autorización concedida para modificar la Ficha de Caseta de la recepción #${current.folio}.`);
+      this.openEditCasetaModal();
+    }
+  }
+
+  // ── CAMBIO DE NO. DE REMISIÓN / DOCUMENTO ──
+  openChangeRemisionModal(): void {
+    this.newRemisionInput.set('');
+    this.changeRemisionReason.set('');
+    this.changeRemisionAdminUser.set('');
+    this.changeRemisionAdminPassword.set('');
+    this.changeRemisionError.set(null);
+    this.showChangeRemisionPassword.set(false);
+    this.showChangeRemisionModal.set(true);
+  }
+
+  closeChangeRemisionModal(): void {
+    this.showChangeRemisionModal.set(false);
+  }
+
+  confirmChangeRemision(): void {
+    this.changeRemisionError.set(null);
+    const newDoc = this.newRemisionInput().trim();
+    const reason = this.changeRemisionReason().trim();
+    const user = this.changeRemisionAdminUser().trim();
+    const pass = this.changeRemisionAdminPassword().trim();
+    const current = this.selectedReception();
+
+    if (!current) return;
+
+    if (!newDoc) {
+      this.changeRemisionError.set('El nuevo número de remisión es obligatorio.');
+      return;
+    }
+
+    if (newDoc.toUpperCase() === (current.checkIn?.docNumber || '').toUpperCase()) {
+      this.changeRemisionError.set('El nuevo número de remisión debe ser diferente al actual.');
+      return;
+    }
+
+    if (!reason) {
+      this.changeRemisionError.set('La justificación o motivo del cambio es obligatoria.');
+      return;
+    }
+
+    if (!user || !pass) {
+      this.changeRemisionError.set('Ingresa usuario y contraseña de Supervisor o Administrador.');
+      return;
+    }
+
+    this.isChangingRemision.set(true);
+
+    const adminLabel = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Supervisor Autorizado)`;
+
+    if (current.id && pass) {
+      this.movementsApi
+        .changeRemision(current.id, {
+          newDocNumber: newDoc,
+          reason,
+          adminUsername: user,
+          adminPassword: pass,
+        })
+        .subscribe({
+          next: () => {
+            this.isChangingRemision.set(false);
+            this.showChangeRemisionModal.set(false);
+
+            const updated = this.movementsService.changeRemision(
+              current.folio,
+              newDoc,
+              reason,
+              adminLabel
+            );
+
+            if (updated) {
+              this.selectedReception.set(updated);
+              this.loadAuditLogs(updated.folio);
+            }
+            this.toast.success(`No. de Remisión modificado exitosamente a: ${newDoc}`);
+          },
+          error: (err: any) => {
+            this.isChangingRemision.set(false);
+            const msg =
+              err.error?.message ||
+              err.message ||
+              'Error al validar credenciales o procesar el cambio de remisión en el servidor.';
+            this.changeRemisionError.set(msg);
+          },
+        });
+    } else {
+      const updated = this.movementsService.changeRemision(
+        current.folio,
+        newDoc,
+        reason,
+        adminLabel
+      );
+      this.isChangingRemision.set(false);
+      this.showChangeRemisionModal.set(false);
+
+      if (updated) {
+        this.selectedReception.set(updated);
+        this.loadAuditLogs(updated.folio);
+        this.toast.success(`No. de Remisión modificado exitosamente a: ${newDoc}`);
+      } else {
+        this.toast.error('No se pudo procesar el cambio de remisión.');
+      }
+    }
+  }
+
+  initiateCompleteReception(): void {
+    const rec = this.selectedReception();
+    if (!rec) {
+      this.toast.warning('No hay ninguna recepción seleccionada.');
+      return;
+    }
+    if (!this.validateAltaForm()) return;
+
+    if (this.palletStream().length === 0) {
+      this.toast.warning('Debes ingresar al menos 1 Tarima en la lista de descarga antes de completar la recepción.');
+      return;
+    }
+
+    const receptionId = rec.id || rec.folio;
+    const currentStream = [...this.palletStream()];
+    const formVals = this.altaForm.value;
+    const leaderName = this.authState.userFullName() || this.authState.currentUser()?.fullName || 'Líder de Almacén';
+    const leaderUser = this.authState.currentUser()?.email || this.authState.currentUser()?.username || 'enrique@4guard.com';
+
+    this.isCompleting.set(true);
+    this.movementsService
+      .completeReceptionBackend(
+        receptionId,
+        formVals,
+        currentStream,
+        this.products(),
+        this.suppliers(),
+        leaderName,
+        leaderUser,
+        'admin123'
+      )
+      .subscribe({
+        next: (updated) => {
+          this.isCompleting.set(false);
+          const currentLots = this.lotsList();
+          const enrichedPallets = currentStream.map((p, idx) => {
+            let rawLot = p.lotNumber || (p as any).lot_number || (p as any).receptionLot?.lotNumber || (p as any).batchNumber || (p as any).batch_number;
+            let pLot = (rawLot && String(rawLot).trim() && rawLot !== 'N/A' && rawLot !== '-')
+              ? String(rawLot).trim().toUpperCase()
+              : '';
+            let rawExp = p.expirationDate || (p as any).expiration_date || (p as any).receptionLot?.expirationDate;
+            let pExp = (rawExp && String(rawExp).trim() && rawExp !== 'N/A' && rawExp !== '-')
+              ? String(rawExp).trim()
+              : '';
+
+            if (!pLot && currentLots.length > 0) pLot = currentLots[0].lotNumber;
+            if (!pExp && pLot) {
+              const matched = currentLots.find(l => l.lotNumber.toUpperCase() === pLot.toUpperCase());
+              if (matched && matched.expirationDate) pExp = matched.expirationDate;
+            }
+            const pDoc = (p.docNumber && String(p.docNumber).trim() && p.docNumber !== 'N/A' && p.docNumber !== '-')
+              ? String(p.docNumber).trim().toUpperCase()
+              : ((p as any).doc_number || (p as any).remisionNo || (p as any).documentNumber || rec.checkIn?.docNumber || this.checkInForm.value.docNumber || '');
+            return {
+              ...p,
+              palletNumber: p.palletNumber || (idx + 1),
+              lotNumber: pLot || rec.lotNumber || 'N/A',
+              expirationDate: pExp || rec.expirationDate || 'N/A',
+              docNumber: pDoc || '-'
+            };
+          });
+
+          const finalRec: ReceptionHeader = updated.folio
+            ? { ...updated, pallets: enrichedPallets, lots: (currentLots.length > 0 ? [...currentLots] : (updated as any).lots) }
+            : { ...rec, status: 'COMPLETED' as const, pallets: enrichedPallets, lots: (currentLots.length > 0 ? [...currentLots] : rec.lots) };
+          this.selectedReception.set(finalRec);
+          this.selectedPrintReception.set(finalRec);
+          this.printType.set('RECEPTION');
+          this.showPrintModal.set(true);
+          this.movementsService.reloadReceptions();
+
+          // Sincronización con el Catálogo y Croquis 2D
+          let assignedBay = formVals.storageLocation || (formVals as any)?.storageLocationCode || this.selectedBayName();
+          if (assignedBay && (assignedBay.startsWith('LOC-RAMP') || assignedBay.startsWith('R-') || assignedBay.startsWith('RAMP'))) {
+            const m = assignedBay.match(/\d+/);
+            assignedBay = m ? `STAGING-R${String(m[0]).padStart(2, '0')}` : 'STAGING-R01';
+          }
+          if (assignedBay && assignedBay !== 'Buffer Temporal') {
+            const skuName = formVals.productName || rec.productName || 'Mercancía Recepcionada';
+            const lotNum = formVals.lotNumber || rec.lotNumber || 'LOT-2026';
+            this.layoutService.recordSimulatedInbound(
+              assignedBay,
+              enrichedPallets.length || 14,
+              skuName,
+              lotNum,
+              rec.folio
+            );
+          }
+
+          this.toast.success(`Recepción #${rec.folio} autorizada y cerrada exitosamente. Guardada en la base de datos.`);
+        },
+        error: (err) => {
+          this.isCompleting.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al completar la recepción en el servidor';
+          this.toast.error(msg);
+        },
+      });
+  }
+
+  toggleSkuDropdown(): void {
+    this.isSkuDropdownOpen.update((v) => !v);
+  }
+
+  onSkuInput(value: string): void {
+    this.skuSearchQuery.set(value);
+    this.isSkuDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({
+        productId: '',
+        productName: '',
+      });
+      return;
+    }
+
+    const exact = this.products().find((p) => p.code.toLowerCase() === val.toLowerCase() || p.id.toLowerCase() === val.toLowerCase());
+    if (exact) {
+      this.altaForm.patchValue({
+        productId: exact.code || exact.id,
+        productName: exact.name,
+      });
+      if (exact.defaultPieces && (!this.altaForm.get('piecesPerPallet')?.value || this.altaForm.get('piecesPerPallet')?.value === 0)) {
+        this.altaForm.patchValue({ piecesPerPallet: exact.defaultPieces });
+      }
+    } else {
+      // Permite entrada directa manual de cualquier SKU
+      this.altaForm.patchValue({
+        productId: val,
+        productName: `Producto SKU ${val}`,
+      });
+    }
+  }
+
+  selectProductSku(prod: { id: string; code: string; name: string; defaultPieces: number }): void {
+    this.altaForm.patchValue({
+      productId: prod.code || prod.id,
+      productName: prod.name,
+    });
+    if (prod.defaultPieces && (!this.altaForm.get('piecesPerPallet')?.value || this.altaForm.get('piecesPerPallet')?.value === 0)) {
+      this.altaForm.patchValue({ piecesPerPallet: prod.defaultPieces });
+    }
+    this.skuSearchQuery.set(`${prod.code} - ${prod.name}`);
+    this.isSkuDropdownOpen.set(false);
+  }
+
+  clearSkuSelection(): void {
+    this.altaForm.patchValue({
+      productId: '',
+      productName: '',
+    });
+    this.skuSearchQuery.set('');
+    this.isSkuDropdownOpen.set(false);
+  }
+
+  onProductSelect(productId: string): void {
+    if (!productId) {
+      this.clearSkuSelection();
+      return;
+    }
+    const prod = this.products().find((p) => p.code === productId || p.id === productId);
+    if (prod) {
+      this.selectProductSku(prod);
+    }
+  }
+
+  toggleOperatorDropdown(): void {
+    this.isOperatorDropdownOpen.update((v) => !v);
+  }
+
+  toggleSupplierDropdown(): void {
+    this.isSupplierDropdownOpen.update((v) => !v);
+  }
+
+  toggleRampDropdown(): void {
+    this.isRampDropdownOpen.update((v) => !v);
+  }
+
+  // ── MANEJADORES DE AUTOCOMPLETE MONTACARGUISTA ──
+  onOperatorInput(value: string): void {
+    this.operatorSearchQuery.set(value);
+    this.isOperatorDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({ forkliftOperator: '' });
+      return;
+    }
+
+    const exact = this.forkliftOperators().find(
+      (op) => op.name.toLowerCase() === val.toLowerCase() || op.code.toLowerCase() === val.toLowerCase()
+    );
+    this.altaForm.patchValue({ forkliftOperator: exact ? exact.name : val });
+  }
+
+  selectForkliftOperator(op: { code: string; name: string }): void {
+    this.altaForm.patchValue({ forkliftOperator: op.name });
+    this.operatorSearchQuery.set(op.name);
+    this.isOperatorDropdownOpen.set(false);
+  }
+
+  clearOperatorSelection(): void {
+    this.altaForm.patchValue({ forkliftOperator: '' });
+    this.operatorSearchQuery.set('');
+    this.isOperatorDropdownOpen.set(false);
+  }
+
+  // ── MANEJADORES DE AUTOCOMPLETE PROVEEDOR ──
+  onSupplierInput(value: string): void {
+    this.supplierSearchQuery.set(value);
+    this.isSupplierDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({ supplierName: '' });
+      return;
+    }
+
+    const exact = this.suppliers().find(
+      (s) => s.name.toLowerCase() === val.toLowerCase() || s.code.toLowerCase() === val.toLowerCase()
+    );
+    this.altaForm.patchValue({ supplierName: exact ? exact.name : val });
+  }
+
+  selectSupplier(sup: { code: string; name: string }): void {
+    this.altaForm.patchValue({ supplierName: sup.name });
+    this.supplierSearchQuery.set(sup.name);
+    this.isSupplierDropdownOpen.set(false);
+  }
+
+  clearSupplierSelection(): void {
+    this.altaForm.patchValue({ supplierName: '' });
+    this.supplierSearchQuery.set('');
+    this.isSupplierDropdownOpen.set(false);
+  }
+
+  // ── MANEJADORES DE AUTOCOMPLETE RAMPA ──
+  onRampInput(value: string): void {
+    this.rampSearchQuery.set(value);
+    this.isRampDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({ rampNumber: '' as any });
+      return;
+    }
+
+    const exact = this.ramps().find(
+      (rm) => rm.name.toLowerCase() === val.toLowerCase() || String(rm.rampNumber) === val || rm.code.toLowerCase() === val.toLowerCase()
+    );
+    if (exact && !this.isRampBusy(exact.rampNumber, this.selectedReception()?.folio)) {
+      this.altaForm.patchValue({ rampNumber: exact.rampNumber });
+    }
+  }
+
+  selectRamp(rm: RampItem): void {
+    if (this.isRampBusy(rm.rampNumber, this.selectedReception()?.folio)) {
+      const occ = this.getRampOccupancy(rm.rampNumber);
+      const opLabel = occ?.operationType === 'OUTBOUND' ? 'la Salida / Carga' : 'la Recepción / Descarga';
+      this.toast.warning(`⚠️ La ${rm.name} se encuentra ocupada por ${opLabel} (Folio #${occ?.operationFolio || 'Activo'}). Debe liberarse antes de asignarla.`);
+      return;
+    }
+    this.altaForm.patchValue({ rampNumber: rm.rampNumber });
+    this.rampSearchQuery.set(rm.name);
+    this.isRampDropdownOpen.set(false);
+  }
+
+  clearRampSelection(): void {
+    this.altaForm.patchValue({ rampNumber: '' as any });
+    this.rampSearchQuery.set('');
+    this.isRampDropdownOpen.set(false);
+  }
+
+  getRampBadgeInfo(rm: RampItem, currentFolio?: string | number): { label: string; bgClass: string; textClass: string; borderClass: string } {
+    const occ = this.getRampOccupancy(rm.rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') {
+      return {
+        label: 'LIBRE',
+        bgClass: 'bg-emerald-100',
+        textClass: 'text-emerald-900',
+        borderClass: 'border-emerald-300'
+      };
+    }
+    if (currentFolio != null && String(occ.operationFolio) === String(currentFolio)) {
+      return {
+        label: 'ASIGNADA',
+        bgClass: 'bg-blue-100',
+        textClass: 'text-blue-950',
+        borderClass: 'border-blue-300'
+      };
+    }
+    if (occ.status === 'OCCUPIED_INBOUND') {
+      return {
+        label: `OCUPADA (#${occ.operationFolio})`,
+        bgClass: 'bg-rose-100',
+        textClass: 'text-rose-900',
+        borderClass: 'border-rose-300'
+      };
+    }
+    return {
+      label: `SALIDA (#${occ.operationFolio})`,
+      bgClass: 'bg-amber-100',
+      textClass: 'text-amber-900',
+      borderClass: 'border-amber-300'
+    };
+  }
+
+  // ── MANEJADORES DE AUTOCOMPLETE TIPO DE TARIMA ──
+  onPalletTypeInput(value: string): void {
+    this.palletTypeSearchQuery.set(value);
+    this.isPalletTypeDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.altaForm.patchValue({ selectedPalletType: '' as any });
+      return;
+    }
+
+    const exact = this.palletTypes.find(
+      (pt) => pt[0].toLowerCase() === val.toLowerCase() || pt[1].toLowerCase() === val.toLowerCase()
+    );
+    if (exact) {
+      this.altaForm.patchValue({ selectedPalletType: exact[0] });
+    }
+  }
+
+  selectPalletType(pt: [PalletType, string]): void {
+    this.altaForm.patchValue({ selectedPalletType: pt[0] });
+    this.palletTypeSearchQuery.set(pt[1]);
+    this.isPalletTypeDropdownOpen.set(false);
+  }
+
+  clearPalletTypeSelection(): void {
+    this.altaForm.patchValue({ selectedPalletType: '' as any });
+    this.palletTypeSearchQuery.set('');
+    this.isPalletTypeDropdownOpen.set(false);
+  }
+
+  // ── GENERADOR DE UAS (SSCC GS1-128 DE 18 DÍGITOS CON CHECKSUM MÓDULO 10 Y COLISIÓN CERO) ──
+  generateUniqueSscc(): string {
+    const epochSec = Math.floor(Date.now() / 1000);
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const base17 = `000750${String(epochSec % 10000000).padStart(7, '0')}${rand}`;
+    let sum = 0;
+    for (let i = 0; i < 17; i++) {
+      const digit = Number(base17.charAt(i));
+      const multiplier = i % 2 === 0 ? 3 : 1;
+      sum += digit * multiplier;
+    }
+    const mod = sum % 10;
+    const checkDigit = mod === 0 ? 0 : 10 - mod;
+    return `${base17}${checkDigit}`;
+  }
+
+  generateAndSetUaCode(): void {
+    const generated = this.generateUniqueSscc();
+    this.uaCodeInput.set(generated);
+    this.toast.info(`UA SSCC-18 generada: ${generated}`);
+  }
+
+  // ── ESCÁNER Y CARGA RÁPIDA DE UAs CON CANDADO ANTI-DUPLICADOS & ORDEN DESCENDENTE ──
+  onUaEnter(event?: Event): void {
+    if (event) event.preventDefault();
+    this.duplicateUaError.set(null);
+    this.expirationWarningAlert.set(null);
+
+    if (!this.altaForm.value.productId) {
+      this.toast.warning('Por favor selecciona un Producto (SKU) antes de escanear tarimas.');
+      return;
+    }
+    if (!this.altaForm.value.selectedPalletType) {
+      this.toast.warning('Por favor selecciona un Tipo de Tarima antes de escanear tarimas.');
+      return;
+    }
+    if (!this.altaForm.value.supplierName) {
+      this.toast.warning('Por favor selecciona un Proveedor antes de escanear tarimas.');
+      return;
+    }
+    if (!this.altaForm.value.piecesPerPallet || Number(this.altaForm.value.piecesPerPallet) <= 0) {
+      this.toast.warning('Por favor especifica las Piezas por Tarima (> 0) antes de escanear tarimas.');
+      return;
+    }
+
+    let code = this.uaCodeInput().trim();
+    if (!code) {
+      code = this.generateUniqueSscc();
+    }
+
+    const formattedCode = code.toUpperCase();
+
+    // 🛑 CANDADO ESTRICTO DE ESCANEO DUPLICADO
+    const isDuplicateInStream = this.palletStream().some((p) => p.palletCode === formattedCode);
+    if (isDuplicateInStream) {
+      const errorMsg = `🛑 BLOQUEO DE SEGURIDAD: La UA (${formattedCode}) ya fue escaneada previamente en esta recepción. Registro duplicado cancelado.`;
+      this.duplicateUaError.set(errorMsg);
+      this.toast.error(errorMsg);
+      return;
+    }
+
+    // ⚠️ VALIDACIÓN PARAMÉTRICA DE CADUCIDAD & VIDA ÚTIL
+    const expDateStr = this.altaForm.value.expirationDate || this.checkInForm.value.expirationDate;
+    if (expDateStr) {
+      const expDate = new Date(expDateStr).getTime();
+      const now = new Date().getTime();
+      const diffDays = Math.ceil((expDate - now) / (1000 * 3600 * 24));
+
+      if (diffDays < 30) {
+        const warnMsg = `⚠️ ALERTA DE VIDA ÚTIL CORTE: Este lote cuenta con solo ${diffDays} día(s) de vida útil remanente (<30 días). Requiere visto bueno del Líder.`;
+        this.expirationWarningAlert.set(warnMsg);
+        this.toast.warning(warnMsg);
+      }
+    }
+
+    const pzas = Number(this.altaForm.value.piecesPerPallet) || 480;
+    const pType = (this.altaForm.value.selectedPalletType as PalletType) || 'MADERA_ESTANDAR';
+    const prodId = this.altaForm.value.productId || '';
+    const prodName = this.altaForm.value.productName || this.altaForm.value.productId || '';
+    const suppName = this.altaForm.value.supplierName || '';
+    const nextNum = this.getNextConsecutivePalletNumber();
+
+    const activeLotNum = this.selectedScanningLot() || this.altaForm.value.lotNumber || '';
+    const matchedLot = this.lotsList().find((l) => l.lotNumber === activeLotNum);
+    const activeExpDate = matchedLot?.expirationDate || this.altaForm.value.expirationDate || this.checkInForm.value.expirationDate || '';
+    const currentDoc = this.checkInForm.value.docNumber || this.selectedReception()?.checkIn?.docNumber || '';
+
+    const newItem: ReceptionPalletItem = {
+      id: `ua-${Date.now()}-${nextNum}`,
+      palletNumber: nextNum,
+      palletCode: formattedCode,
+      description: prodName,
+      productId: prodId,
+      supplierName: suppName,
+      pieces: pzas,
+      observations: this.uaObsInput().trim() || undefined,
+      palletTypeId: pType,
+      palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Madera Estándar',
+      lotNumber: activeLotNum || undefined,
+      expirationDate: activeExpDate || undefined,
+      docNumber: currentDoc || undefined,
+    };
+
+    // ⬇️ VISUALIZACIÓN DESCENDENTE: Los más recientes se agregan AL PRINCIPIO del arreglo (unshift)
+    this.movementsService.updateGlobalMaxPalletNumber(nextNum);
+    this.palletStream.update((list) => [newItem, ...list]);
+    this.uaCodeInput.set('');
+    this.uaObsInput.set('');
+
+    setTimeout(() => {
+      if (this.uaInput?.nativeElement) {
+        this.uaInput.nativeElement.focus();
+      }
+    }, 10);
+  }
+
+  // Obtiene el siguiente consecutivo de tarima global a nivel de almacén/sistema (Garantiza continuidad estricta entre remisiones)
+  getNextConsecutivePalletNumber(): number {
+    let maxInStream = 0;
+    for (const p of this.palletStream()) {
+      if (p.palletNumber && Number(p.palletNumber) > maxInStream) {
+        maxInStream = Number(p.palletNumber);
+      }
+    }
+    const maxInAll = this.movementsService.getGlobalMaxPalletNumber();
+    return Math.max(maxInStream, maxInAll) + 1;
+  }
+
+  // ── AUXILIARES Y CATÁLOGOS ──
+  onCarrierLineSelect(code: string): void {
+    const item = this.carrierLines().find((c) => c.code === code);
+    if (item) {
+      this.checkInForm.patchValue({ carrierLineCode: item.code, carrierLine: item.name });
+    }
+  }
+
+  onClientSelect(code: string): void {
+    const item = this.clients().find((c) => c.code === code);
+    if (item) {
+      this.checkInForm.patchValue({ clientCode: item.code, client: item.name });
+    }
+  }
+
+  onRampSelect(code: string): void {
+    const item = this.ramps().find((r) => r.code === code);
+    if (item) {
+      this.checkInForm.patchValue({ rampCode: item.code, rampNumber: item.rampNumber });
+    }
+  }
+
+  onForkliftOperatorSelect(code: string): void {
+    const item = this.forkliftOperators().find((m) => m.code === code);
+    if (item) {
+      this.checkInForm.patchValue({ forkliftOperatorCode: item.code, forkliftOperator: item.name });
+    }
+  }
+
+  openQuickAddModal(type: 'CARRIER' | 'RAMP'): void {
+    this.quickAddType.set(type);
+    if (type === 'CARRIER') {
+      const nextNum = this.carrierLines().length + 1;
+      this.quickAddCodeInput.set(`TR-0${nextNum}`);
+      this.quickAddNameInput.set('');
+    } else {
+      const nextNum = this.ramps().length + 1;
+      this.quickAddCodeInput.set(`R-${nextNum < 10 ? '0' + nextNum : nextNum}`);
+      this.quickAddRampNumInput.set(nextNum);
+      this.quickAddNameInput.set(`Rampa ${nextNum}`);
+    }
+    this.showQuickAddModal.set(true);
+  }
+
+  saveQuickAddEntity(): void {
+    const type = this.quickAddType();
+    const code = this.quickAddCodeInput().trim();
+    const name = this.quickAddNameInput().trim();
+
+    if (!code || !name) return;
+
+    if (type === 'CARRIER') {
+      this.movementsService.addCarrierLine({ code, name });
+      this.checkInForm.patchValue({ carrierLine: code });
+    } else if (type === 'RAMP') {
+      const rNum = this.quickAddRampNumInput();
+      this.movementsService.addRamp({ code, rampNumber: rNum, name });
+      this.checkInForm.patchValue({ rampNumber: rNum });
+    }
+
+    this.showQuickAddModal.set(false);
+  }
+
+  addSeal(): void {
+    const s = this.tempSealInput().trim().toUpperCase();
+    if (s && !this.sealList().includes(s)) {
+      this.sealList.update((list) => [...list, s]);
+      this.tempSealInput.set('');
+    }
+  }
+
+  removeSeal(index: number): void {
+    this.sealList.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  openPrintPreview(rec: ReceptionHeader): void {
+    const currentStream = this.palletStream();
+    const isCurrentlySelected = this.selectedReception()?.id === rec.id || this.selectedReception()?.folio === rec.folio;
+    const palletsToPrint = (isCurrentlySelected && currentStream && currentStream.length > 0)
+      ? [...currentStream]
+      : (rec.pallets && rec.pallets.length > 0 ? rec.pallets : [...currentStream]);
+    const formVals = this.altaForm.value;
+    const currentLots = this.lotsList();
+
+    const enrichedPallets = palletsToPrint.map((p, idx) => {
+      let rawLot = p.lotNumber || (p as any).lot_number || (p as any).receptionLot?.lotNumber || (p as any).batchNumber || (p as any).batch_number;
+      let pLot = (rawLot && String(rawLot).trim() && rawLot !== 'N/A' && rawLot !== '-')
+        ? String(rawLot).trim().toUpperCase()
+        : '';
+      let rawExp = p.expirationDate || (p as any).expiration_date || (p as any).receptionLot?.expirationDate;
+      let pExp = (rawExp && String(rawExp).trim() && rawExp !== 'N/A' && rawExp !== '-')
+        ? String(rawExp).trim()
+        : '';
+
+      if (!pLot && currentLots.length > 0) {
+        pLot = currentLots[0].lotNumber;
+      }
+      if (!pExp && pLot) {
+        const matched = currentLots.find(l => l.lotNumber.toUpperCase() === pLot.toUpperCase());
+        if (matched && matched.expirationDate) pExp = matched.expirationDate;
+      }
+      const pDoc = (p.docNumber && String(p.docNumber).trim() && p.docNumber !== 'N/A' && p.docNumber !== '-')
+        ? String(p.docNumber).trim().toUpperCase()
+        : ((p as any).doc_number || (p as any).remisionNo || (p as any).documentNumber || rec.checkIn?.docNumber || this.checkInForm.value.docNumber || '');
+      return {
+        ...p,
+        palletNumber: p.palletNumber || (idx + 1),
+        lotNumber: pLot || rec.lotNumber || formVals.lotNumber || 'N/A',
+        expirationDate: pExp || rec.expirationDate || formVals.expirationDate || 'N/A',
+        docNumber: pDoc || '-'
+      };
+    });
+
+    const assignedRampNum = rec.checkIn?.rampNumber ?? (rec as any).rampNumber ?? formVals.rampNumber ?? this.checkInForm.value.rampNumber ?? null;
+    const assignedRampCode = rec.checkIn?.rampCode ?? (rec as any).rampCode ?? this.checkInForm.value.rampCode ?? (assignedRampNum ? `LOC-RAMP-${String(assignedRampNum).padStart(2, '0')}` : null);
+
+    const recToPrint: ReceptionHeader = {
+      ...rec,
+      checkIn: {
+        ...(rec.checkIn || {}),
+        rampNumber: assignedRampNum,
+        rampCode: assignedRampCode || rec.checkIn?.rampCode,
+      },
+      leaderAuthorizedBy: rec.leaderAuthorizedBy || rec.cancelledBy || this.authState.userFullName() || '',
+      cancelledBy: rec.cancelledBy || rec.leaderAuthorizedBy || this.authState.userFullName() || '',
+      lotNumber: rec.lotNumber || formVals.lotNumber || (enrichedPallets.length > 0 ? enrichedPallets[0].lotNumber : 'N/A'),
+      expirationDate: rec.expirationDate || formVals.expirationDate || (enrichedPallets.length > 0 ? enrichedPallets[0].expirationDate : 'N/A'),
+      productId: rec.productId || formVals.productId || (enrichedPallets.length > 0 ? enrichedPallets[0].productId : ''),
+      productName: rec.productName || formVals.productName || (enrichedPallets.length > 0 ? enrichedPallets[0].description : ''),
+      supplierName: rec.supplierName || formVals.supplierName || '',
+      piecesPerPallet: rec.piecesPerPallet || formVals.piecesPerPallet || 40,
+      selectedPalletType: rec.selectedPalletType || (formVals.selectedPalletType as PalletType) || 'MADERA_ESTANDAR',
+      pallets: enrichedPallets,
+      lots: (rec.lots && rec.lots.length > 0) ? rec.lots : (currentLots.length > 0 ? [...currentLots] : undefined),
+      observations: rec.observations || formVals.observations || undefined,
+    };
+
+    this.selectedPrintReception.set(recToPrint);
+    this.printType.set(rec.status === 'CANCELLED' ? 'CANCELLATION' : 'RECEPTION');
+    this.showPrintModal.set(true);
+  }
+
+  isGeneratingPdf = signal(false);
+
+  async downloadDirectPdf(): Promise<void> {
+    const isReception = this.printType() === 'RECEPTION';
+    const selector = isReception ? 'fg-print-reception-layout' : 'fg-print-cancellation-layout';
+    const recNumber = this.selectedPrintReception()?.folio || this.selectedPrintReception()?.checkIn?.docNumber || '26510';
+    const pdfFilename = isReception ? `Recepcion_${recNumber}` : `Cancelacion_${recNumber}`;
+    this.isGeneratingPdf.set(true);
+    try {
+      await this.printService.downloadPdf(selector, pdfFilename);
+    } finally {
+      this.isGeneratingPdf.set(false);
+    }
+  }
+
+  triggerBrowserPrint(): void {
+    const isReception = this.printType() === 'RECEPTION';
+    const selector = isReception ? 'fg-print-reception-layout' : 'fg-print-cancellation-layout';
+    const recNumber = this.selectedPrintReception()?.folio || this.selectedPrintReception()?.checkIn?.docNumber || '26510';
+    const printDocTitle = isReception ? `Recepción #${recNumber}` : `Cancelación #${recNumber}`;
+    this.printService.printElement(selector, printDocTitle);
+  }
+
+  closePrintModal(): void {
+    this.showPrintModal.set(false);
+    this.selectedPrintReception.set(null);
+  }
+
+  // ── AUDITORÍA Y VERIFICACIÓN DE UAS (HALLAZGO 1) ──
+  onVerifyUa(): void {
+    this.openUaVerificationModal();
+  }
+
+  openUaVerificationModal(): void {
+    const rec = this.selectedReception();
+    if (this.palletStream().length === 0 && rec?.pallets && rec.pallets.length > 0) {
+      this.palletStream.set([...rec.pallets]);
+    }
+    this.showUaVerificationModal.set(true);
+  }
+
+  closeUaVerificationModal(): void {
+    this.showUaVerificationModal.set(false);
+  }
+
+  togglePalletVerification(palletId: string): void {
+    this.toggleVerifyPallet(palletId);
+  }
+
+  toggleVerifyPallet(palletId: string): void {
+    this.verifiedPalletIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(palletId)) {
+        next.delete(palletId);
+      } else {
+        next.add(palletId);
+      }
+      return next;
+    });
+  }
+
+  markAllPalletsVerified(mark: boolean = true): void {
+    if (mark) {
+      const allIds = new Set(this.palletStream().map((p) => p.id));
+      this.verifiedPalletIds.set(allIds);
+      this.toast.success('Todas las UAs marcadas como conformes y verificadas.');
+    } else {
+      this.verifiedPalletIds.set(new Set());
+      this.toast.info('Verificación de UAs restablecida.');
+    }
+  }
+
+  confirmUaVerification(): void {
+    const total = this.palletStream().length;
+    const verified = this.verifiedPalletCount();
+    this.toast.success(`Auditoría de UAs confirmada: ${verified}/${total} tarimas conformes.`);
+    this.closeUaVerificationModal();
+  }
+
+  getPalletTypeLabel(type?: string): string {
+    if (!type) return 'Madera Estándar';
+    return (PALLET_TYPE_LABELS as Record<string, string>)[type] || type;
+  }
+}

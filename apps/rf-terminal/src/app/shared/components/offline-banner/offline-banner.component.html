@@ -1,0 +1,131 @@
+@if (isVisible()) {
+  <aside
+    class="rf-sync-banner"
+    [class.banner--danger]="syncState.isQueueFull() || zoneLease.isScanLocked() || syncState.hasError()"
+    [class.banner--warning]="syncState.isOffline() || zoneLease.leaseStatus() === 'WARNING'"
+    [class.banner--syncing]="syncState.isSyncing()"
+    role="status"
+    aria-live="polite">
+    
+    <div class="banner-main-row">
+      <!-- Indicador y Mensaje de Conectividad -->
+      <div class="banner-left-content">
+        <span class="banner-pulse-dot"></span>
+        
+        <span class="material-symbols-outlined banner-icon">
+          @if (syncState.isQueueFull()) {
+            report
+          } @else if (zoneLease.isScanLocked()) {
+            lock_clock
+          } @else if (syncState.isOffline()) {
+            wifi_off
+          } @else if (syncState.isSyncing()) {
+            sync
+          } @else {
+            cloud_done
+          }
+        </span>
+
+        <div class="banner-text-block">
+          <span class="banner-primary-msg font-display font-black">
+            @if (syncState.isQueueFull()) {
+              ⛔ COLA OFFLINE LLENA (500/500) • CAPTURA BLOQUEADA
+            } @else if (zoneLease.isScanLocked()) {
+              ⛔ ARRENDAMIENTO EXPIRADO (30 MIN) • PASILLO BLOQUEADO
+            } @else if (syncState.isOffline()) {
+              MODO OFFLINE ACTIVO • ZONA CIEGA
+            } @else if (syncState.isSyncing()) {
+              SINCRONIZANDO CON WMS CENTRAL...
+            } @else {
+              CONEXIÓN RESTABLECIDA
+            }
+          </span>
+
+          <span class="banner-sub-msg font-body">
+            @if (zoneLease.activeLease(); as lease) {
+              <span>⏳ Lease Pasillo: <strong>{{ zoneLease.formattedTime() }}</strong> ({{ lease.zoneName }})</span>
+              <span class="dot-sep">•</span>
+            }
+            <span>📦 <strong>{{ syncState.pendingCount() }}/{{ syncState.maxCapacity }}</strong> en cola IndexedDB</span>
+            @if (syncState.conflictCount() > 0) {
+              <span class="dot-sep">•</span>
+              <span class="text-rose-400 font-bold">⚠️ {{ syncState.conflictCount() }} conflicto(s) en arbitraje</span>
+            }
+          </span>
+        </div>
+      </div>
+
+      <!-- Barra de Progreso de Ocupación de Cola (0 a 500) -->
+      <div class="banner-queue-gauge">
+        <div class="gauge-bar-track">
+          <div
+            class="gauge-bar-fill"
+            [style.width.%]="syncState.queueOccupancy()"
+            [class.gauge--danger]="syncState.queueOccupancy() >= 90"
+            [class.gauge--warning]="syncState.queueOccupancy() >= 50 && syncState.queueOccupancy() < 90"></div>
+        </div>
+        <span class="gauge-label font-mono font-bold">{{ syncState.queueOccupancy() }}%</span>
+      </div>
+
+      <!-- Acciones Rápidas -->
+      <div class="banner-actions">
+        @if (zoneLease.isScanLocked()) {
+          <button
+            type="button"
+            (click)="renewActiveLease()"
+            class="btn-banner-action btn-banner--urgent font-display font-black"
+            title="Renovar arrendamiento de pasillo">
+            <span class="material-symbols-outlined text-xs">restart_alt</span>
+            <span>RENOVAR LEASE</span>
+          </button>
+        }
+
+        <button
+          type="button"
+          (click)="triggerManualSync()"
+          [disabled]="isTestingSync() || syncState.isSyncing()"
+          class="btn-banner-action font-display font-bold"
+          title="Forzar verificación de red y vaciado FIFO">
+          <span class="material-symbols-outlined text-xs" [class.spin-anim]="isTestingSync() || syncState.isSyncing()">sync</span>
+          <span>{{ syncState.isSyncing() ? 'Sincronizando...' : 'Sincronizar' }}</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="toggleDetails()"
+          class="btn-banner-toggle"
+          title="Ver cola detallada">
+          <span class="material-symbols-outlined text-sm">
+            {{ showDetails() ? 'expand_less' : 'expand_more' }}
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Desplegable con Detalle de Operaciones en Cola FIFO -->
+    @if (showDetails()) {
+      <div class="banner-details-drawer">
+        <div class="details-header font-display font-bold">
+          <span>Operaciones Encoladas Secuencialmente (FIFO):</span>
+          <span class="font-mono text-xs">{{ syncState.pendingCount() }} registradas localmente</span>
+        </div>
+
+        <div class="details-list">
+          @for (op of syncState.syncQueue(); track op.id; let idx = $index) {
+            <div class="queue-item-row">
+              <span class="queue-item-num font-mono">#{{ idx + 1 }}</span>
+              <span class="queue-item-method font-mono font-bold">{{ op.method }}</span>
+              <span class="queue-item-desc font-body">{{ op.description || op.url }}</span>
+              <span class="queue-item-time font-mono text-xs">{{ op.createdAt | date:'HH:mm:ss' }}</span>
+              @if (op.failed) {
+                <span class="queue-badge-fail font-mono">Reintento Fallido</span>
+              }
+            </div>
+          } @empty {
+            <div class="queue-empty-text font-body">No hay transacciones pendientes en cola local.</div>
+          }
+        </div>
+      </div>
+    }
+  </aside>
+}

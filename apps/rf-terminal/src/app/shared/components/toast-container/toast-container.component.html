@@ -1,0 +1,72 @@
+<!-- Contenedor Global de Notificaciones Toast (RF Terminal) -->
+<div
+  class="rf-toast-container"
+  aria-live="polite"
+  aria-relevant="additions removals"
+  aria-label="Notificaciones de operaciones y transacciones">
+
+  @for (toast of toastService.toasts(); track toast.id) {
+    <article
+      class="rf-toast"
+      [class]="'rf-toast rf-toast--' + toast.type"
+      role="status"
+      [attr.aria-label]="toast.message"
+      [style.--toast-duration]="toast.duration + 'ms'">
+
+      <!-- Barra de Acento Lumínico Lateral -->
+      <div class="toast__accent" aria-hidden="true"></div>
+
+      <!-- Icono de Estado -->
+      <div class="toast__icon-box" aria-hidden="true">
+        @switch (toast.type) {
+          @case ('success') {
+            <span class="material-symbols-outlined toast__icon text-emerald-500">check_circle</span>
+          }
+          @case ('error') {
+            <span class="material-symbols-outlined toast__icon text-rose-500">error</span>
+          }
+          @case ('warning') {
+            <span class="material-symbols-outlined toast__icon text-amber-500">warning</span>
+          }
+          @case ('info') {
+            <span class="material-symbols-outlined toast__icon text-sky-500">info</span>
+          }
+        }
+      </div>
+
+      <!-- Contenido del Mensaje -->
+      <div class="toast__content-col">
+        <span class="toast__eyebrow font-mono">
+          @if (toast.title) {
+            {{ toast.title }}
+          } @else {
+            @switch (toast.type) {
+              @case ('success') { Operación Exitosa }
+              @case ('error')   { Error en Transacción }
+              @case ('warning') { Alerta Operativa }
+              @case ('info')    { Notificación de Tarea }
+            }
+          }
+        </span>
+
+        <p class="toast__message font-body">
+          {{ toast.message }}
+        </p>
+      </div>
+
+      <!-- Botón de Cierre -->
+      <button
+        type="button"
+        class="toast__close-btn"
+        (click)="toastService.dismiss(toast.id)"
+        aria-label="Cerrar notificación">
+        <span class="material-symbols-outlined text-base">close</span>
+      </button>
+
+      <!-- Barra de Progreso Countdown -->
+      <div class="toast__progress-track" aria-hidden="true">
+        <span class="toast__progress-fill"></span>
+      </div>
+    </article>
+  }
+</div>

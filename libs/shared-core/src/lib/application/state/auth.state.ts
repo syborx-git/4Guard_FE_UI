@@ -53,20 +53,40 @@ export class AuthState {
       .toUpperCase();
   });
 
-  /** Etiqueta legible del rol actual */
+  /** Etiqueta legible del rol actual en español limpio */
   readonly roleLabel = computed(() => {
-    const role = this.authService.currentRole();
-    if (!role) return '';
-    const labels: Record<UserRole, string> = {
-      [UserRole.ADMIN]: 'Administrador',
-      [UserRole.WAREHOUSE_MANAGER]: 'Gerente de Almacén',
-      [UserRole.DOCK_SUPERVISOR]: 'Supervisor de Andén',
-      [UserRole.WAREHOUSE_OPERATOR]: 'Operario de Almacén',
-      [UserRole.QM_INSPECTOR]: 'Inspector de Calidad',
-      [UserRole.AUDITOR]: 'Auditor',
-      [UserRole.CLIENT]: 'Cliente 3PL',
+    const rawRole = this.authService.currentRole() || this.authService.currentUser()?.role || '';
+    if (!rawRole) return 'Operario de Almacén';
+
+    const normalized = String(rawRole).trim().toUpperCase();
+    const labels: Record<string, string> = {
+      'ROLE_ADMIN': 'Director General (Admin)',
+      'ADMIN': 'Director General (Admin)',
+      'ROLE_OPERATIONS_MANAGER': 'Gerente de Operaciones',
+      'OPERATIONS_MANAGER': 'Gerente de Operaciones',
+      'ROLE_OPERATIONS_COORDINATOR': 'Coordinador de Operaciones',
+      'OPERATIONS_COORDINATOR': 'Coordinador de Operaciones',
+      'ROLE_OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
+      'OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
+      'ROLE_CONTROL_DESK': 'Mesa de Control',
+      'CONTROL_DESK': 'Mesa de Control',
+      'ROLE_SHIFT_LEADER': 'Líder de Turno',
+      'SHIFT_LEADER': 'Líder de Turno',
+      'ROLE_WAREHOUSE_OPERATOR': 'Montacarguista',
+      'WAREHOUSE_OPERATOR': 'Montacarguista',
+      'ROLE_QM_INSPECTOR': 'Inspector de Calidad',
+      'QM_INSPECTOR': 'Inspector de Calidad',
+      'ROLE_SECURITY_GUARD': 'Guardia de Seguridad',
+      'SECURITY_GUARD': 'Guardia de Seguridad',
+      'ROLE_FORKLIFT_OPERATOR': 'Montacarguista',
+      'FORKLIFT_OPERATOR': 'Montacarguista',
+      'ROLE_AUDITOR': 'Auditor de Inventarios',
+      'AUDITOR': 'Auditor de Inventarios',
+      'ROLE_CLIENT': 'Cliente 3PL',
+      'CLIENT': 'Cliente 3PL',
     };
-    return labels[role] ?? role;
+
+    return labels[normalized] ?? 'Operario de Almacén';
   });
 
   // ─── Acciones ─────────────────────────────────────────────────────────────
@@ -118,20 +138,17 @@ export class AuthState {
     return this.authService.hasRole(...roles);
   }
 
+  /**
+   * Cambia el rol del usuario activo para pruebas rápidas de interfaz (RBAC demo switcher).
+   */
+  switchRoleForTesting(role: UserRole, customName?: string): void {
+    this.authService.switchRoleForTesting(role, customName);
+  }
+
   // ─── Helpers privados ─────────────────────────────────────────────────────
 
-  private redirectAfterLogin(user: User): void {
-    const roleRoutes: Partial<Record<UserRole, string>> = {
-      [UserRole.ADMIN]: '/dashboard',
-      [UserRole.WAREHOUSE_MANAGER]: '/dashboard',
-      [UserRole.DOCK_SUPERVISOR]: '/receiving',
-      [UserRole.WAREHOUSE_OPERATOR]: '/picking',
-      [UserRole.QM_INSPECTOR]: '/quality',
-      [UserRole.AUDITOR]: '/dashboard',
-      [UserRole.CLIENT]: '/dashboard',
-    };
-
-    const route = roleRoutes[user.role] ?? '/dashboard';
-    this.router.navigate([route]);
+  private redirectAfterLogin(_user: User): void {
+    // Redirección estándar inicial siempre al Menú de Operaciones
+    this.router.navigate(['/menu']);
   }
 }

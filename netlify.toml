@@ -12,6 +12,13 @@
   # Fijar versión de Node.js compatible con Angular 17
   NODE_VERSION = "20"
 
+# Proxy inverso para peticiones de API al Backend en Render
+[[redirects]]
+  from   = "/api/v1/*"
+  to     = "https://fourguard-be-huzh.onrender.com/api/v1/:splat"
+  status = 200
+  force  = true
+
 # Redirigir todas las rutas al index.html para que funcione el routing de Angular (SPA)
 [[redirects]]
   from   = "/*"

@@ -18,16 +18,22 @@ export const rbacGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const module        = route.data?.['module'] as string | undefined;
   const requiredRoles = route.data?.['roles']  as UserRole[] | undefined;
 
+  const fallbackUrl = authState.canAccessModule('security') && !authState.canAccessModule('dashboard')
+    ? '/security'
+    : '/dashboard';
+
   // Si hay roles explícitos en la ruta, verificarlos primero
   if (requiredRoles && requiredRoles.length > 0) {
     if (!authState.hasRole(...requiredRoles)) {
-      return router.createUrlTree(['/dashboard']);
+      console.warn(`[rbacGuard] Acceso denegado a '${route.routeConfig?.path}'. Roles requeridos:`, requiredRoles, 'Rol actual:', authState.role());
+      return router.createUrlTree([fallbackUrl]);
     }
   }
 
-  // Verificar acceso por módulo (usando la tabla MODULE_PERMISSIONS)
+  // Verificar acceso por módulo (usando la tabla MODULE_PERMISSIONS / canAccessModule)
   if (module && !authState.canAccessModule(module)) {
-    return router.createUrlTree(['/dashboard']);
+    console.warn(`[rbacGuard] Acceso denegado al módulo '${module}'. Rol actual:`, authState.role());
+    return router.createUrlTree([fallbackUrl]);
   }
 
   return true;

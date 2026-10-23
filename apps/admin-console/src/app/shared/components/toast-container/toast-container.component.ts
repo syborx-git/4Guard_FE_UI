@@ -107,7 +107,7 @@ import { ToastService } from '../../../core/services/toast.service';
       align-items: flex-end;
       gap: 0.75rem;
 
-      width: min(390px, calc(100vw - 2rem));
+      width: min(480px, calc(100vw - 2rem));
 
       pointer-events: none;
     }
@@ -339,8 +339,10 @@ import { ToastService } from '../../../core/services/toast.service';
       color: var(--text-primary, #20242d);
 
       font-size: 0.78rem;
-      font-weight: 520;
+      font-weight: 550;
       line-height: 1.45;
+      white-space: normal;
+      word-break: break-word;
       overflow-wrap: anywhere;
     }
 

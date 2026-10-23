@@ -13,9 +13,11 @@ import {
   HostListener,
   OnInit,
   OnDestroy,
-  PLATFORM_ID
+  PLATFORM_ID,
+  effect,
+  ViewChild
 } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
@@ -24,6 +26,21 @@ import { SyncState, UserRole } from '@4guard/shared-core';
 import { AuthState } from '../../../core/auth/auth.state';
 import { UsersService } from '../../../core/services/users.service';
 import { UserProfileDto } from '../../../core/models/user.models';
+import { ToastService } from '../../../core/services/toast.service';
+import { SmartNotificationService, SmartNotification } from '../../../core/services/smart-notification.service';
+import { ReceptionHeader } from '../../../features/warehouse-movements/models/warehouse-movements.models';
+
+export interface WaffleItem {
+  id: string;
+  name: string;
+  category: 'google' | 'wms';
+  icon: string;
+  iconBg: string;
+  route?: string;
+  url?: string;
+  badge?: string;
+  badgeBg?: string;
+}
 
 /** Valida que confirmPassword coincida con newPassword. */
 function passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
@@ -35,28 +52,154 @@ function passwordsMatchValidator(control: AbstractControl): ValidationErrors | n
   return null;
 }
 
-interface NavItem {
+export interface SubNavItem {
+  label: string;
+  route: string;
+  icon: string;
+}
+
+export interface NavItem {
   label: string;
   route: string;
   icon: string;   // Material Symbols name
   module: string;
   badge?: () => number;
+  children?: SubNavItem[];
 }
 
 import { PasswordCollapseComponent } from '../password-collapse/password-collapse.component';
+import { QuickOperatorSwitchModalComponent } from './quick-operator-switch-modal/quick-operator-switch-modal.component';
+import { ForbotTriggerButtonComponent } from '../forbot/forbot-trigger-button/forbot-trigger-button.component';
+import { ForbotChatDrawerComponent } from '../forbot/forbot-chat-drawer/forbot-chat-drawer.component';
+import { ForbotEngineService } from '../../../core/forbot/services/forbot-engine.service';
+import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
+import { OperationalNotificationsComponent } from '../operational-notifications/operational-notifications.component';
 
 @Component({
   selector: 'fg-admin-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ReactiveFormsModule, CommonModule],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    ReactiveFormsModule,
+    CommonModule,
+    QuickOperatorSwitchModalComponent,
+    ForbotTriggerButtonComponent,
+    ForbotChatDrawerComponent,
+    OperationalNotificationsComponent
+  ],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.css',
 })
 export class ShellComponent implements OnInit, OnDestroy {
+  @ViewChild(OperationalNotificationsComponent) protected readonly opNotif?: OperationalNotificationsComponent;
+
   protected readonly authState = inject(AuthState);
   protected readonly syncState = inject(SyncState);
+  protected readonly forbotEngine = inject(ForbotEngineService);
+  protected readonly smartNotification = inject(SmartNotificationService);
+  private readonly movementsService = inject(WarehouseMovementsService);
   private readonly usersService = inject(UsersService);
   private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
+
+  // ── Segmentación Inteligente por Rol y Contexto ──
+  protected readonly isGuardOnly = computed(() => {
+    const role = (this.authState.role() || '').toUpperCase();
+    const isAdmin = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('DIRECTOR') || role.includes('CEO');
+    if (isAdmin) return false;
+    return (
+      role.includes('GUARD') ||
+      role.includes('VIGILAN') ||
+      role.includes('CASETA') ||
+      role === 'SECURITY_GUARD' ||
+      role === 'ROLE_SECURITY_GUARD'
+    );
+  });
+
+  protected readonly isSecurityUser = computed(() => {
+    const role = (this.authState.role() || '').toUpperCase();
+    const route = this.router.url;
+    return (
+      role.includes('ADMIN') ||
+      role.includes('MANAGER') ||
+      role.includes('DIRECTOR') ||
+      role.includes('SECURITY') ||
+      role.includes('VIGILAN') ||
+      role.includes('GUARD') ||
+      role.includes('CASETA') ||
+      route.startsWith('/security')
+    );
+  });
+
+  protected readonly isReceivingUser = computed(() => {
+    if (this.isGuardOnly()) return false;
+    const role = (this.authState.role() || '').toUpperCase();
+    const route = this.router.url;
+    return (
+      role.includes('ADMIN') ||
+      role.includes('MANAGER') ||
+      role.includes('DIRECTOR') ||
+      role.includes('WAREHOUSE') ||
+      role.includes('DOCK') ||
+      role.includes('OPERAT') ||
+      role.includes('ALMACEN') ||
+      route.startsWith('/warehouse-movements') ||
+      route.startsWith('/receiving')
+    );
+  });
+
+  protected readonly isQualityUser = computed(() => {
+    if (this.isGuardOnly()) return false;
+    const role = (this.authState.role() || '').toUpperCase();
+    const route = this.router.url;
+    return (
+      role.includes('ADMIN') ||
+      role.includes('MANAGER') ||
+      role.includes('DIRECTOR') ||
+      role.includes('QM') ||
+      role.includes('QUALIT') ||
+      role.includes('CALIDAD') ||
+      role.includes('INSPECT') ||
+      role.includes('AUDIT') ||
+      route.startsWith('/quality')
+    );
+  });
+
+  constructor() {
+    effect(() => {
+      const arrived = this.movementsService.latestArrivedReception();
+      if (arrived && this.isReceivingUser()) {
+        this.opNotif?.triggerArrival('RECEIVING');
+      }
+    }, { allowSignalWrites: true });
+
+    effect(() => {
+      const notif = this.smartNotification.latestNotification();
+      if (notif) {
+        if (notif.category === 'SECURITY' && this.isSecurityUser()) {
+          this.opNotif?.triggerArrival('SECURITY');
+        } else if (notif.category === 'RECEIVING' && this.isReceivingUser()) {
+          this.opNotif?.triggerArrival('RECEIVING');
+        } else if (notif.category === 'QUALITY' && this.isQualityUser()) {
+          this.opNotif?.triggerArrival('QUALITY');
+        }
+      }
+    }, { allowSignalWrites: true });
+  }
+
+  private preReceptionPollIntervalId: any = null;
+
+  /** Listener global para abrir/cerrar ForBot con Ctrl + K */
+  @HostListener('window:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'k' || event.key === 'K')) {
+      event.preventDefault();
+      this.forbotEngine.toggleDrawer();
+    }
+  }
 
   private readonly document = inject(DOCUMENT);
   private readonly platformId = inject(PLATFORM_ID);
@@ -84,6 +227,21 @@ export class ShellComponent implements OnInit, OnDestroy {
   // ── Profile dropdown & Change Password modal ──────────────
   protected readonly showProfileMenu = signal(false);
   protected readonly showChangePasswordModal = signal(false);
+  protected readonly isQuickOperatorModalOpen = signal(false);
+
+  protected openQuickOperatorModal(): void {
+    this.showProfileMenu.set(false);
+    this.isQuickOperatorModalOpen.set(true);
+  }
+
+  protected closeQuickOperatorModal(): void {
+    this.isQuickOperatorModalOpen.set(false);
+  }
+
+  protected lockWorkstation(): void {
+    this.showProfileMenu.set(false);
+    this.authState.lockWorkstation();
+  }
   protected readonly isChangingPassword = signal(false);
   protected readonly changePasswordError = signal<string | null>(null);
   protected readonly changePasswordSuccess = signal(false);
@@ -148,18 +306,179 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly reqNumberOrSymbol = computed(() => /[0-9!@#$%^&*]/.test(this.newPwdValue() ?? ''));
 
 
-  /** Cierra el menú de perfil al hacer click fuera del sidebar */
+  // ── Waffle Menu (Ecosistema de Aplicaciones) ─────────────────────
+  protected readonly showWaffleMenu = signal(false);
+  protected readonly waffleSearchQuery = signal('');
+  protected readonly waffleActiveTab = signal<'all' | 'google' | 'wms'>('all');
+
+  protected readonly waffleItems: WaffleItem[] = [
+    {
+      id: 'gmail',
+      name: 'GMAIL',
+      category: 'google',
+      icon: 'mail',
+      iconBg: 'linear-gradient(135deg, #ea4335 0%, #c5221f 100%)',
+      url: 'https://mail.google.com',
+    },
+    {
+      id: 'drive',
+      name: 'DRIVE',
+      category: 'google',
+      icon: 'folder_shared',
+      iconBg: 'linear-gradient(135deg, #34a853 0%, #1e8e3e 100%)',
+      url: 'https://drive.google.com',
+    },
+    {
+      id: 'calendar',
+      name: 'CALENDAR',
+      category: 'google',
+      icon: 'calendar_month',
+      iconBg: 'linear-gradient(135deg, #4285f4 0%, #1a73e8 100%)',
+      badge: 'HOY',
+      badgeBg: '#f59e0b',
+      url: 'https://calendar.google.com',
+    },
+    {
+      id: 'maps',
+      name: 'MAPS WMS',
+      category: 'wms',
+      icon: 'pin_drop',
+      iconBg: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+      route: '/layout',
+    },
+    {
+      id: 'gemini',
+      name: 'GEMINI IA',
+      category: 'google',
+      icon: 'auto_awesome',
+      iconBg: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)',
+      badge: 'IA',
+      badgeBg: '#d4af37',
+      url: 'https://gemini.google.com',
+    },
+    {
+      id: 'meet',
+      name: 'MEET',
+      category: 'google',
+      icon: 'videocam',
+      iconBg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      url: 'https://meet.google.com',
+    },
+    {
+      id: 'evidencia',
+      name: 'EVIDENCIA',
+      category: 'wms',
+      icon: 'photo_camera',
+      iconBg: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+      route: '/receiving',
+    },
+    {
+      id: 'whatsapp',
+      name: 'WHATSAPP',
+      category: 'google',
+      icon: 'chat',
+      iconBg: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+      url: 'https://web.whatsapp.com',
+    },
+    {
+      id: 'tutoriales',
+      name: 'TUTORIALES',
+      category: 'wms',
+      icon: 'play_circle',
+      iconBg: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+      route: '/dashboard',
+    },
+    {
+      id: 'reglas',
+      name: 'REGLAS',
+      category: 'wms',
+      icon: 'tune',
+      iconBg: 'linear-gradient(135deg, #d4af37 0%, #85581a 100%)',
+      badge: 'MOTOR',
+      badgeBg: '#b8860b',
+      route: '/business-rules',
+    },
+    {
+      id: 'seguridad',
+      name: 'CASETA & SEGURIDAD',
+      category: 'wms',
+      icon: 'security',
+      iconBg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      badge: 'CASETA',
+      badgeBg: '#059669',
+      route: '/security',
+    },
+  ];
+
+  protected readonly filteredWaffleItems = computed(() => {
+    const query = this.waffleSearchQuery().toLowerCase().trim();
+    const tab = this.waffleActiveTab();
+
+    return this.waffleItems.filter((item) => {
+      const matchesTab = tab === 'all' || item.category === tab;
+      const matchesQuery = !query || item.name.toLowerCase().includes(query);
+      if (!matchesTab || !matchesQuery) return false;
+
+      // Restricción RBAC en accesos directos
+      if (item.route) {
+        if (item.route.startsWith('/security') && !this.authState.canAccessModule('security')) return false;
+        if (item.route.startsWith('/receiving') && !this.authState.canAccessModule('warehouse-movements') && !this.authState.canAccessModule('receiving')) return false;
+        if (item.route.startsWith('/dashboard') && !this.authState.canAccessModule('dashboard')) return false;
+        if (item.route.startsWith('/layout') && !this.authState.canAccessModule('layout') && !this.authState.canAccessModule('catalogs')) return false;
+        if (item.route.startsWith('/business-rules') && !this.authState.canAccessModule('business-rules')) return false;
+      }
+      return true;
+    });
+  });
+
+  /** Cierra el menú de perfil y Waffle menu al hacer click fuera */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (!target.closest('.sidebar__user-trigger') && !target.closest('.profile-menu')) {
       this.showProfileMenu.set(false);
     }
+    if (!target.closest('.shell__waffle-container')) {
+      this.showWaffleMenu.set(false);
+    }
+  }
+
+  protected toggleWaffleMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.showProfileMenu.set(false);
+    this.showWaffleMenu.update((v) => !v);
+  }
+
+  protected setWaffleTab(tab: 'all' | 'google' | 'wms'): void {
+    this.waffleActiveTab.set(tab);
+  }
+
+  protected onWaffleSearchInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.waffleSearchQuery.set(target.value);
+  }
+
+  protected clearWaffleSearch(): void {
+    this.waffleSearchQuery.set('');
+  }
+
+  protected onEditFavorites(): void {
+    alert('Modo edición de accesos directos activado.');
+  }
+
+  protected onWaffleItemClick(item: WaffleItem): void {
+    this.showWaffleMenu.set(false);
+    if (item.route) {
+      this.router.navigate([item.route]);
+    } else if (item.url) {
+      window.open(item.url, '_blank');
+    }
   }
 
   protected toggleProfileMenu(event: MouseEvent): void {
     event.stopPropagation();
-    this.showProfileMenu.update(v => !v);
+    this.showWaffleMenu.set(false);
+    this.showProfileMenu.update((v) => !v);
   }
 
   protected openChangePassword(): void {
@@ -216,34 +535,105 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   /** Conteo de alertas criticas (demo: 2) */
   protected readonly criticalCount = signal(2);
+  protected readonly showCriticalAlertsModal = signal(false);
+
+  protected toggleCriticalAlertsModal(event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.showCriticalAlertsModal.update((v) => !v);
+  }
+
+  protected closeCriticalAlertsModal(): void {
+    this.showCriticalAlertsModal.set(false);
+  }
+
+  protected navigateFromAlert(route: string): void {
+    this.showCriticalAlertsModal.set(false);
+    this.router.navigateByUrl(route);
+  }
 
   /** Texto de ultima actualizacion */
   protected readonly lastUpdated = signal('ahora');
 
   protected readonly navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', module: 'dashboard' },
-    { label: 'Inventario', route: '/inventory', icon: 'inventory_2', module: 'inventory' },
-    { label: 'Recepcion', route: '/receiving', icon: 'move_to_inbox', module: 'receiving' },
+    { label: 'Seguridad', route: '/security', icon: 'security', module: 'security' },
+    {
+      label: 'Recepción',
+      route: '/warehouse-movements/receiving',
+      icon: 'move_to_inbox',
+      module: 'warehouse-movements',
+      children: [
+        { label: 'Recepción de Mercancía', route: '/warehouse-movements/receiving', icon: 'move_to_inbox' },
+        { label: 'Cambio de Almacén', route: '/warehouse-movements/transfers', icon: 'swap_horiz' },
+        { label: 'Salidas de Almacén', route: '/warehouse-movements/outbound', icon: 'local_shipping' },
+      ],
+    },
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
-    { label: 'Despacho', route: '/shipping', icon: 'local_shipping', module: 'shipping' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
-    { label: 'Turnos y Horarios', route: '/shifts', icon: 'schedule', module: 'shifts' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
-    // HU-131: Motor de Reglas de Negocio Enterprise
-    { label: 'Reglas de negocio', route: '/business-rules', icon: 'gavel', module: 'business-rules' },
-    // HU-146: Temporal debajo de Administrar para evaluación de UX.
-    // Mover a Monitoreo o Auditoría cuando se defina el módulo definitivo.
-    { label: 'Actividad por usuario', route: '/user-activity', icon: 'manage_search', module: 'user-activity' },
+    { label: 'Almacén / Topología', route: '/catalogs/warehouse', icon: 'warehouse', module: 'catalogs' },
+    { label: 'Consulta Inventario', route: '/inventory-query', icon: 'inventory', module: 'inventory-query' },
   ];
-
 
   /** Filtra los nav items segun el rol del usuario */
   protected readonly visibleNavItems = computed(() =>
     this.navItems.filter((item) => this.authState.canAccessModule(item.module)),
   );
 
+  protected readonly expandedSubmenus = signal<Set<string>>(new Set<string>());
+
+  protected isSubmenuExpanded(module: string): boolean {
+    return this.expandedSubmenus().has(module);
+  }
+
+  protected toggleSubmenu(module: string, event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.expandedSubmenus.update((set) => {
+      const next = new Set(set);
+      if (next.has(module)) {
+        next.delete(module);
+      } else {
+        next.add(module);
+      }
+      return next;
+    });
+  }
+
+  protected isItemActive(item: NavItem): boolean {
+    const currentUrl = this.router.url;
+    if (currentUrl.startsWith(item.route)) return true;
+    if (item.children && item.children.some((c) => currentUrl.startsWith(c.route))) return true;
+    return false;
+  }
+
+  protected onParentNavClick(item: NavItem): void {
+    if (this.isSidebarCollapsed()) {
+      this.isSidebarCollapsed.set(false);
+    }
+    this.expandedSubmenus.update((set) => {
+      const next = new Set(set);
+      next.add(item.module);
+      return next;
+    });
+    if (!this.isItemActive(item)) {
+      this.router.navigateByUrl(item.route);
+    }
+  }
+
+  protected readonly resumedProcessNotice = signal<string | null>(null);
+
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
+
+    // Verificar si se reanudó un proceso guardado por inactividad
+    const resumedProcess = localStorage.getItem('4g_resumed_process_name');
+    if (resumedProcess) {
+      this.resumedProcessNotice.set(resumedProcess);
+      localStorage.removeItem('4g_resumed_process_name');
+      setTimeout(() => this.resumedProcessNotice.set(null), 7000);
+    }
 
     this.restoreTheme();
     this.updateClock();
@@ -255,6 +645,13 @@ export class ShellComponent implements OnInit, OnDestroy {
     this.refreshIntervalId = setInterval(() => {
       this.runHeaderRefreshAnimation();
     }, 30000);
+
+    // Polling reactivo cada 6 segundos para recepciones de caseta en tiempo real
+    this.preReceptionPollIntervalId = setInterval(() => {
+      if (this.authState.isAuthenticated() && this.authState.accessToken()) {
+        this.movementsService.reloadReceptions();
+      }
+    }, 6000);
   }
 
   ngOnDestroy(): void {
@@ -268,6 +665,10 @@ export class ShellComponent implements OnInit, OnDestroy {
 
     if (this.refreshTimeoutId) {
       clearTimeout(this.refreshTimeoutId);
+    }
+
+    if (this.preReceptionPollIntervalId) {
+      clearInterval(this.preReceptionPollIntervalId);
     }
   }
 
@@ -332,7 +733,10 @@ export class ShellComponent implements OnInit, OnDestroy {
     const root = this.document.documentElement;
 
     root.classList.toggle('theme-dark', isDark);
+    root.classList.toggle('dark', isDark);
     root.classList.toggle('theme-light', !isDark);
+
+    this.forbotEngine.checkTheme();
   }
 
   protected toggleSidebar(): void {

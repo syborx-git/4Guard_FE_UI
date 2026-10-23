@@ -1,0 +1,342 @@
+<div class="catalog-sub-page font-sans">
+
+  <!-- Toast Alert -->
+  @if (toastMessage()) {
+    <div
+      class="toast-banner transition-all border"
+      [ngClass]="{
+        'toast-success': toastMessage()?.type === 'success',
+        'toast-error': toastMessage()?.type === 'error'
+      }"
+    >
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined">
+          {{ toastMessage()?.type === 'success' ? 'check_circle' : 'error' }}
+        </span>
+        <span>{{ toastMessage()?.text }}</span>
+      </div>
+      <button (click)="toastMessage.set(null)" class="hover:opacity-75">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>
+  }
+
+  <!-- Header y Sub-Pestañas de Montacarguistas -->
+  <div class="catalog-card-container shadow-xl">
+    <div class="catalog-header-row">
+      <div class="flex items-center gap-3">
+        <div class="catalog-icon-wrap">
+          <span class="material-symbols-outlined text-2xl">engineering</span>
+        </div>
+        <div>
+          <h2 class="catalog-title">Catálogo de Montacarguistas y Scorecard Operativo</h2>
+          <p class="catalog-subtitle">
+            Métricas de desempeño en andén, efectividad en ubicaciones, vigencia de licencias y gestión de rotación
+          </p>
+        </div>
+      </div>
+
+      <!-- Sub-tabs Buttons -->
+      <div class="subtabs-bar">
+        <button
+          type="button"
+          (click)="activeTab.set('create')"
+          [ngClass]="activeTab() === 'create' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">person_add</span>
+          1. Alta de Montacarguistas
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('delete')"
+          [ngClass]="activeTab() === 'delete' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">delete_forever</span>
+          2. Baja Definitiva (Hard Delete)
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('scorecard')"
+          [ngClass]="activeTab() === 'scorecard' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">leaderboard</span>
+          3. Consulta / Scorecard
+        </button>
+      </div>
+    </div>
+
+    <!-- 1. ALTA DE MONTACARGUISTAS -->
+    @if (activeTab() === 'create') {
+      <form [formGroup]="operatorForm" (ngSubmit)="onSubmitCreateOperator()" class="mt-6 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="form-field-label">Nombre(s) *</label>
+            <input
+              type="text"
+              formControlName="firstName"
+              placeholder="Ej. Juan Manuel"
+              class="form-field-input"
+            />
+          </div>
+
+          <div>
+            <label class="form-field-label">Apellido Paterno *</label>
+            <input
+              type="text"
+              formControlName="lastNamePaterno"
+              placeholder="Ej. Pérez"
+              class="form-field-input"
+            />
+          </div>
+
+          <div>
+            <label class="form-field-label">Apellido Materno *</label>
+            <input
+              type="text"
+              formControlName="lastNameMaterno"
+              placeholder="Ej. Hernández"
+              class="form-field-input"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="form-field-label">Número de Licencia DC-3 *</label>
+            <input
+              type="text"
+              formControlName="licenseNumber"
+              placeholder="Ej. LIC-MC-9921"
+              class="form-field-input font-mono text-amber-500 uppercase"
+            />
+          </div>
+
+          <div>
+            <label class="form-field-label">Vencimiento de Licencia *</label>
+            <input
+              type="date"
+              formControlName="licenseExpirationDate"
+              class="form-field-input"
+            />
+          </div>
+
+          <div>
+            <label class="form-field-label">Turno Asignado *</label>
+            <select
+              formControlName="shift"
+              class="form-field-select font-medium"
+            >
+              <option value="Turno 1 - Matutino">Turno 1 - Matutino (06:00 - 14:00)</option>
+              <option value="Turno 2 - Vespertino">Turno 2 - Vespertino (14:00 - 22:00)</option>
+              <option value="Turno 3 - Nocturno">Turno 3 - Nocturno (22:00 - 06:00)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <button
+            type="button"
+            (click)="activeTab.set('scorecard')"
+            class="btn-secondary"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="operatorForm.invalid"
+            class="btn-primary"
+          >
+            <span class="material-symbols-outlined text-base">person_add</span>
+            Guardar Montacarguista
+          </button>
+        </div>
+      </form>
+    }
+
+    <!-- 2. BAJA DEFINITIVA O 3. SCORECARD -->
+    @if (activeTab() === 'scorecard' || activeTab() === 'delete') {
+      <div class="mt-6 space-y-4">
+
+        @if (activeTab() === 'delete') {
+          <div class="p-3.5 rounded-xl border border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-950/40 flex items-start gap-3">
+            <span class="material-symbols-outlined text-rose-600 dark:text-rose-400 mt-0.5">warning</span>
+            <div class="text-xs space-y-0.5">
+              <span class="font-bold text-rose-800 dark:text-rose-300 block">Política de Remoción Física por Rotación de Personal</span>
+              <p class="text-rose-700 dark:text-rose-200/80">
+                A diferencia de los SKUs (NOM-251), la Baja Definitiva elimina FÍSICAMENTE el registro de la base de datos para liberar las listas de selección en andén.
+              </p>
+            </div>
+          </div>
+        }
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="form-field-label">Buscar por Nombre o Código Operador</label>
+            <div class="relative">
+              <input
+                type="text"
+                [value]="searchTerm()"
+                (input)="searchTerm.set($any($event.target).value)"
+                placeholder="Ej. Juan Pérez, OP-501..."
+                class="form-field-input pl-9"
+              />
+              <span class="material-symbols-outlined absolute left-2.5 top-2.5 text-slate-400 text-sm">search</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-field-label">Estado de Licencia DC-3</label>
+            <select
+              [value]="licenseStatusFilter()"
+              (change)="licenseStatusFilter.set($any($event.target).value)"
+              class="form-field-select"
+            >
+              <option value="ALL">Todas las Licencias</option>
+              <option value="VIGENTE">VIGENTE (Verde)</option>
+              <option value="POR_VENCER">POR VENCER (Amarillo)</option>
+              <option value="VENCIDA">VENCIDA (Rojo / Bloqueado)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Código / Nombre Operador</th>
+                <th>Fecha Ingreso</th>
+                <th class="text-center">Movimientos / Mes</th>
+                <th class="text-center">% Precisión Ubicación</th>
+                <th>Número de Licencia</th>
+                <th class="text-center">Estado Licencia DC-3</th>
+                <th class="text-right">Acciones / Remoción</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (op of filteredOperators(); track op.id) {
+                <tr>
+                  <td>
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 font-bold">
+                        {{ op.firstName[0] }}{{ op.lastNamePaterno[0] }}
+                      </div>
+                      <div>
+                        <span class="font-bold text-slate-900 dark:text-white block">{{ op.fullName }}</span>
+                        <span class="text-[10px] font-mono text-amber-600 dark:text-amber-400">{{ op.employeeCode }} • {{ op.scorecard.shift }}</span>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td class="font-mono text-slate-500 dark:text-slate-400">
+                    {{ op.hireDate }}
+                  </td>
+
+                  <td class="text-center">
+                    <span class="role-badge font-mono font-bold">
+                      ⚡ {{ op.scorecard.movementsThisMonth }} movs
+                    </span>
+                  </td>
+
+                  <td class="text-center">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <div class="w-16 bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                        <div
+                          class="h-full bg-emerald-500 rounded-full"
+                          [style.width.%]="op.scorecard.locationAccuracyPercentage"
+                        ></div>
+                      </div>
+                      <span class="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                        {{ op.scorecard.locationAccuracyPercentage }}%
+                      </span>
+                    </div>
+                  </td>
+
+                  <td class="font-mono text-slate-700 dark:text-slate-300">
+                    {{ op.licenseNumber }}
+                    <span class="block text-[10px] text-slate-500">Vence: {{ op.licenseExpirationDate }}</span>
+                  </td>
+
+                  <td class="text-center">
+                    <span
+                      class="status-pill"
+                      [ngClass]="{
+                        'status-pill-active': op.licenseStatus === 'VIGENTE',
+                        'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30': op.licenseStatus === 'POR_VENCER',
+                        'status-pill-inactive animate-pulse': op.licenseStatus === 'VENCIDA'
+                      }"
+                    >
+                      {{ op.licenseStatus === 'VIGENTE' ? 'Vigente' : op.licenseStatus === 'POR_VENCER' ? 'Por Vencer' : 'Vencida (Bloqueado)' }}
+                    </span>
+                  </td>
+
+                  <td class="text-right">
+                    <button
+                      (click)="openDeleteModal(op)"
+                      class="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-xs font-semibold flex items-center gap-1 ml-auto"
+                      title="Eliminar Físicamente de la BD"
+                    >
+                      <span class="material-symbols-outlined text-sm">delete_forever</span>
+                      Baja Definitiva
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="empty-table-row">
+                    No se encontraron montacarguistas registrados.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+  </div>
+
+  <!-- Modal de Confirmación de Baja Definitiva -->
+  @if (selectedOperatorForDelete()) {
+    <div class="modal-overlay">
+      <div class="modal-card max-w-md border-rose-500/40">
+        <div class="modal-header text-rose-600 dark:text-rose-400">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-2xl">warning</span>
+            <h3 class="modal-title text-rose-800 dark:text-rose-300">Confirmar Baja Definitiva (Hard Delete)</h3>
+          </div>
+          <button (click)="closeDeleteModal()" class="modal-close-btn">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body space-y-2 text-xs text-slate-700 dark:text-slate-300">
+          <p>
+            ¿Está seguro de eliminar físicamente al operador <strong class="text-slate-900 dark:text-white">{{ selectedOperatorForDelete()?.fullName }}</strong> ({{ selectedOperatorForDelete()?.employeeCode }})?
+          </p>
+          <p class="text-rose-700 dark:text-rose-300 font-medium bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-lg border border-rose-200 dark:border-rose-900/50">
+            ⚠️ Esta acción es irreversible y removerá permanentemente al operador para liberar las listas de selección en andén.
+          </p>
+        </div>
+
+        <div class="modal-footer">
+          <button (click)="closeDeleteModal()" class="btn-secondary">
+            Cancelar
+          </button>
+          <button
+            (click)="confirmHardDelete()"
+            class="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-semibold hover:bg-rose-500 flex items-center gap-1 shadow-lg shadow-rose-600/30"
+          >
+            <span class="material-symbols-outlined text-sm">delete_forever</span>
+            Sí, Eliminar Definitivamente
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

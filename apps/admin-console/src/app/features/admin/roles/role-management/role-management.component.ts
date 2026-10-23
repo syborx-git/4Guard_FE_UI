@@ -63,7 +63,7 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
 
   protected readonly selectedRole = signal<Role | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
@@ -114,6 +114,13 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
     return result.sort((a, b) => a.groupName.localeCompare(b.groupName));
   });
 
+  /** Retorna los primeros 8 dígitos (#00000001) para visualización compacta y limpia en todo el sistema. */
+  protected getShortId(id?: string | null): string {
+    if (!id) return '--------';
+    const clean = id.replace(/[^a-zA-Z0-9]/g, '');
+    return clean.length >= 8 ? clean.slice(0, 8).toUpperCase() : clean.padEnd(8, '0').toUpperCase();
+  }
+
   // ─── Computed Lista Filtrada de Roles ────────────────────────────────────────
 
   protected readonly filteredRoles = computed(() => {
@@ -158,6 +165,13 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
     return Math.min(this.currentPage() * this.pageSize(), this.filteredRoles().length);
   });
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── Computed KPIs ──────────────────────────────────────────────────────────
 
   protected readonly kpiTotalRoles  = computed(() => this.roleService.totalCount());
@@ -174,6 +188,7 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
   // ─── Ciclo de Vida ───────────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    this.startNewRole();
     this.loadRolesAndPermissions();
   }
 
@@ -259,16 +274,7 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
   }
 
   protected cancelForm(): void {
-    const role = this.selectedRole();
-    if (role) {
-      this.formMode.set('edit');
-      this.populateForm(role);
-    } else {
-      this.formMode.set('idle');
-    }
-    this.submitAttempted.set(false);
-    this.backendError.set(null);
-    this.saveSuccess.set(false);
+    this.startNewRole();
   }
 
   private populateForm(role: Role): void {

@@ -1,0 +1,43 @@
+<!-- inventory-query-shell.component.html — Homologado con el Design System 4GUARD WMS -->
+<div class="inventory-page">
+  
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL HOMOLOGADO
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="inventory-header">
+
+    <div class="inventory-header__top">
+
+      <div class="inventory-header__left">
+        <div class="inventory-header__icon-wrap">
+          <span class="material-symbols-outlined inventory-header__icon">inventory</span>
+        </div>
+
+        <div class="inventory-header__copy">
+          <div class="inventory-header__eyebrow">
+            <a routerLink="/dashboard" class="inventory-header__eyebrow-tag">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Dashboard</span>
+            </a>
+            <span class="inventory-header__eyebrow-sep">·</span>
+            <span>Control de Stock & Existencias</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <h1 class="inventory-header__title">Consulta de Inventarios y Exportación Excel</h1>
+            <span class="inventory-header__badge">WMS 4GUARD</span>
+          </div>
+          <p class="inventory-header__subtitle">
+            Control de stock en tiempo real, filtros multicriterio, regla de caducidad a 30 días y motor de exportación a Excel.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+  </header>
+
+  <!-- Contenido Principal: Grid interactivo y KPIs -->
+  <main class="inventory-main-content">
+    <fg-inventory-query-grid></fg-inventory-query-grid>
+  </main>
+</div>

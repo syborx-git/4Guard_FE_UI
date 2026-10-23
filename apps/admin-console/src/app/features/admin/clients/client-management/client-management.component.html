@@ -1,6 +1,6 @@
 <!--
   client-management.component.html
-  Gestión de Clientes (Depositantes / Owners 3PL) — 4GUARD WMS
+  Gestión de Clientes (Depositantes / Owners 3PL & Destinos Físicos) — 4GUARD WMS
 
   Layout: Split View 35/65 (Master-Detail)
   Estilos: Prestige Gold & Midnight Navy (Modo Claro por defecto + Modo Oscuro)
@@ -31,7 +31,7 @@
           </div>
           <h1 class="clients-header__title">Gestión de Clientes</h1>
           <p class="clients-header__subtitle">
-            Administra el catálogo maestro de depositantes, códigos ERP y titulares de mercancía 3PL
+            Catálogo maestro de empresas depositantes 3PL, matriz de contactos y direcciones físicas de entrega (bodegas y plantas)
           </p>
         </div>
       </div>
@@ -51,58 +51,124 @@
 
     </div>
 
-    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
-    <div class="clients-kpi-grid" aria-label="Indicadores de clientes">
-
-      <!-- Total -->
-      <div class="clients-kpi-card clients-kpi-card--total">
-        <div class="clients-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">partner_exchange</span>
-        </div>
-        <div class="clients-kpi-card__body">
-          @if (isLoading) {
-            <div class="clients-kpi-card__skeleton"></div>
-          } @else {
-            <span class="clients-kpi-card__value">{{ totalClients() }}</span>
-          }
-          <span class="clients-kpi-card__label">Total Registrados</span>
-        </div>
-        <div class="clients-kpi-card__bar clients-kpi-card__bar--total"></div>
+    <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
+    <section aria-label="Métricas de Clientes" class="wms-kpi-section">
+      <div class="wms-kpi-header">
+        <span class="wms-kpi-header__title">
+          <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+          <span>Métricas de Cartera de Clientes</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="wms-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
       </div>
 
-      <!-- Activos -->
-      <div class="clients-kpi-card clients-kpi-card--active">
-        <div class="clients-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">check_circle</span>
-        </div>
-        <div class="clients-kpi-card__body">
-          @if (isLoading) {
-            <div class="clients-kpi-card__skeleton"></div>
-          } @else {
-            <span class="clients-kpi-card__value">{{ kpiActive() }}</span>
-          }
-          <span class="clients-kpi-card__label">Clientes Activos</span>
-        </div>
-        <div class="clients-kpi-card__bar clients-kpi-card__bar--active"></div>
-      </div>
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+        <div class="wms-kpi-summary-bar animate-fade-in">
+          <div class="wms-kpi-summary-items">
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+              <span class="wms-kpi-summary-label">Empresas:</span>
+              <strong class="wms-kpi-summary-value">{{ totalClients() }}</strong>
+            </div>
 
-      <!-- Inactivos -->
-      <div class="clients-kpi-card clients-kpi-card--inactive">
-        <div class="clients-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">block</span>
-        </div>
-        <div class="clients-kpi-card__body">
-          @if (isLoading) {
-            <div class="clients-kpi-card__skeleton"></div>
-          } @else {
-            <span class="clients-kpi-card__value">{{ kpiInactive() }}</span>
-          }
-          <span class="clients-kpi-card__label">Clientes Inactivos</span>
-        </div>
-        <div class="clients-kpi-card__bar clients-kpi-card__bar--inactive"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">Activos:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ kpiActive() }}</strong>
+            </div>
 
-    </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--inactive"></span>
+              <span class="wms-kpi-summary-label">Inactivos:</span>
+              <strong class="wms-kpi-summary-value text-slate-500">{{ kpiInactive() }}</strong>
+            </div>
+
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--destinations"></span>
+              <span class="wms-kpi-summary-label">Destinos / Bodegas:</span>
+              <strong class="wms-kpi-summary-value text-blue-600 dark:text-blue-400">{{ totalDestinations() }}</strong>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="clients-kpi-grid animate-fade-in" aria-label="Indicadores de clientes">
+
+          <!-- Total Clientes -->
+          <div class="clients-kpi-card clients-kpi-card--total">
+            <div class="clients-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">corporate_fare</span>
+            </div>
+            <div class="clients-kpi-card__body">
+              @if (isLoading) {
+                <div class="clients-kpi-card__skeleton"></div>
+              } @else {
+                <span class="clients-kpi-card__value">{{ totalClients() }}</span>
+              }
+              <span class="clients-kpi-card__label">Empresas Registradas</span>
+            </div>
+            <div class="clients-kpi-card__bar clients-kpi-card__bar--total"></div>
+          </div>
+
+          <!-- Activos -->
+          <div class="clients-kpi-card clients-kpi-card--active">
+            <div class="clients-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="clients-kpi-card__body">
+              @if (isLoading) {
+                <div class="clients-kpi-card__skeleton"></div>
+              } @else {
+                <span class="clients-kpi-card__value">{{ kpiActive() }}</span>
+              }
+              <span class="clients-kpi-card__label">Clientes Activos</span>
+            </div>
+            <div class="clients-kpi-card__bar clients-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- Inactivos -->
+          <div class="clients-kpi-card clients-kpi-card--inactive">
+            <div class="clients-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">block</span>
+            </div>
+            <div class="clients-kpi-card__body">
+              @if (isLoading) {
+                <div class="clients-kpi-card__skeleton"></div>
+              } @else {
+                <span class="clients-kpi-card__value">{{ kpiInactive() }}</span>
+              }
+              <span class="clients-kpi-card__label">Clientes Inactivos</span>
+            </div>
+            <div class="clients-kpi-card__bar clients-kpi-card__bar--inactive"></div>
+          </div>
+
+          <!-- Total Destinos Físicos -->
+          <div class="clients-kpi-card clients-kpi-card--destinations">
+            <div class="clients-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">factory</span>
+            </div>
+            <div class="clients-kpi-card__body">
+              @if (isLoading) {
+                <div class="clients-kpi-card__skeleton"></div>
+              } @else {
+                <span class="clients-kpi-card__value">{{ totalDestinations() }}</span>
+              }
+              <span class="clients-kpi-card__label">Destinos / Bodegas</span>
+            </div>
+            <div class="clients-kpi-card__bar clients-kpi-card__bar--destinations"></div>
+          </div>
+
+        </div>
+      }
+    </section>
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════
@@ -111,7 +177,7 @@
   <div class="clients-split" [class.clients-split--form-open]="formMode() !== 'idle'">
 
     <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA — Directorio (35%)
+         COLUMNA IZQUIERDA — Directorio Master (35%)
          ───────────────────────────────────────────────────────────── -->
     <aside class="clients-directory" aria-label="Directorio de clientes">
 
@@ -124,7 +190,7 @@
             id="client-search"
             class="clients-search__input"
             type="search"
-            placeholder="Buscar por nombre, código ERP, organización..."
+            placeholder="Buscar por razón social, RFC, destino o dirección..."
             [ngModel]="filterText()"
             (ngModelChange)="filterText.set($event)"
             aria-label="Buscar cliente"
@@ -186,7 +252,7 @@
         <div class="clients-state" role="status">
           <span class="material-symbols-outlined clients-state__icon">partner_exchange</span>
           <p class="clients-state__title">Sin clientes</p>
-          <p class="clients-state__desc">No hay clientes depositantes registrados aún.</p>
+          <p class="clients-state__desc">No hay empresas depositantes registradas aún.</p>
           @if (canCreate()) {
             <button class="clients-btn clients-btn--primary" type="button" (click)="startNewClient()">
               <span class="material-symbols-outlined">add</span>
@@ -218,18 +284,38 @@
               (keydown.enter)="selectClient(client)"
               tabindex="0">
 
-              <!-- Avatar -->
+              <!-- Avatar con Iniciales -->
               <div class="client-avatar" aria-hidden="true">
                 {{ getInitials(client) }}
               </div>
 
-              <!-- Info -->
+              <!-- Info Principal -->
               <div class="client-item__body">
-                <div class="client-item__name">{{ client.name }}</div>
-                <div class="client-item__meta">
-                  <span class="client-item__code">{{ client.externalId }}</span>
+                <div class="client-item__name-row">
+                  <span class="client-item__name">{{ client.name }}</span>
                 </div>
-                <div class="client-item__org">{{ client.orgName }}</div>
+
+                <div class="client-item__meta">
+                  <span class="client-item__code font-mono">{{ client.externalId }}</span>
+                  <span class="client-item__dest-badge">
+                    <span class="material-symbols-outlined text-[11px]">factory</span>
+                    {{ client.destinations?.length || 0 }} dest.
+                  </span>
+                </div>
+
+                @if (client.address) {
+                  <div class="client-item__address truncate" title="{{ client.address }}">
+                    <span class="material-symbols-outlined text-[12px]">location_on</span>
+                    <span>{{ client.address }}</span>
+                  </div>
+                }
+
+                @if (client.phone) {
+                  <div class="client-item__phone">
+                    <span class="material-symbols-outlined text-[12px]">call</span>
+                    <span>{{ client.phone }}</span>
+                  </div>
+                }
               </div>
 
               <!-- Estado -->
@@ -246,7 +332,7 @@
 
         <div class="clients-directory__footer">
           <span class="clients-count">
-            {{ filteredClients().length }} cliente{{ filteredClients().length !== 1 ? 's' : '' }}
+            {{ filteredClients().length }} cliente{{ filteredClients().length !== 1 ? 's' : '' }} registrado{{ filteredClients().length !== 1 ? 's' : '' }}
           </span>
         </div>
       }
@@ -258,36 +344,14 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="clients-detail" aria-label="Detalle del cliente">
 
-      @if (formMode() === 'idle') {
-        <div class="clients-empty-state">
-          <div class="clients-empty-state__graphic" aria-hidden="true">
-            <span class="material-symbols-outlined clients-empty-state__icon">partner_exchange</span>
-          </div>
-          <h2 class="clients-empty-state__title">Sin selección</h2>
-          <p class="clients-empty-state__desc">
-            Selecciona un cliente depositante de la lista para consultar su información,
-            o registra uno nuevo.
-          </p>
-          @if (canCreate()) {
-            <button
-              class="clients-btn clients-btn--primary"
-              type="button"
-              (click)="startNewClient()"
-              aria-label="Registrar nuevo cliente">
-              <span class="material-symbols-outlined">add</span>
-              Nuevo cliente
-            </button>
-          }
-        </div>
-      } @else {
-        <div class="clients-form-container">
+      <div class="clients-form-container">
 
           <!-- ── Barra de título del formulario ── -->
           <div class="clients-form-header">
             <div class="clients-form-header__left">
               <div class="clients-form-header__breadcrumb">
                 <span class="material-symbols-outlined">partner_exchange</span>
-                Clientes
+                <span>Clientes</span>
                 <span class="material-symbols-outlined clients-form-header__chevron">chevron_right</span>
                 <strong>
                   @if (formMode() === 'new') { Nuevo cliente }
@@ -307,7 +371,7 @@
           @if (saveSuccess()) {
             <div class="clients-alert clients-alert--success" role="status" aria-live="polite">
               <span class="material-symbols-outlined">check_circle</span>
-              <span>Cliente guardado correctamente.</span>
+              <span>Información del cliente y destinos físicos guardada correctamente.</span>
             </div>
           }
 
@@ -319,7 +383,7 @@
           }
 
           <!-- ════════════════════════════════════════════════════════
-               FORMULARIO REACTIVO
+               FORMULARIO REACTIVO MULTI-SECCIÓN
                ════════════════════════════════════════════════════ -->
           <form
             [formGroup]="form"
@@ -328,24 +392,24 @@
             autocomplete="off"
             class="clients-form">
 
-            <!-- SECCIÓN 1 — Información General ──────────────────── -->
+            <!-- SECCIÓN 1 — Información General & Domicilio Fiscal ── -->
             <fieldset class="clients-form-section">
               <legend class="clients-form-section__legend">
-                <span class="material-symbols-outlined">badge</span>
-                Información General del Cliente
+                <span class="material-symbols-outlined text-amber-500">corporate_fare</span>
+                <span>1. Información General y Domicilio Fiscal</span>
               </legend>
 
               <div class="clients-form-grid clients-form-grid--2">
 
                 <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="name">Nombre / Razón Social</label>
+                  <label class="fg-label fg-label--required" for="name">Razón Social / Nombre Comercial</label>
                   <input
                     id="name"
                     class="fg-input"
                     [class.fg-input--error]="fieldHasError('name')"
                     type="text"
                     formControlName="name"
-                    placeholder="Ej. Cliente Logística SA de CV"
+                    placeholder="Ej. NESTLE MEXICO S.A. DE C.V."
                     maxlength="150"
                     aria-required="true"
                   />
@@ -355,19 +419,65 @@
                 </div>
 
                 <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="externalId">Código Cliente / RFC (External ID)</label>
+                  <label class="fg-label fg-label--required" for="externalId">Código Cliente / RFC Fiscal (External ID)</label>
                   <input
                     id="externalId"
                     class="fg-input fg-input--mono"
                     [class.fg-input--error]="fieldHasError('externalId')"
                     type="text"
                     formControlName="externalId"
-                    placeholder="Ej. CLI-001 o CLO990101XXX"
+                    placeholder="Ej. NME850101K99 o CLI-1002"
                     maxlength="50"
                     aria-required="true"
                   />
                   @if (fieldHasError('externalId')) {
                     <span class="fg-error" role="alert">{{ getFieldError('externalId') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="address">Dirección Fiscal / Corporativa</label>
+                  <input
+                    id="address"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('address')"
+                    type="text"
+                    formControlName="address"
+                    placeholder="Ej. Av. Ejército Nacional 453, Granada, CDMX"
+                    aria-required="true"
+                  />
+                  @if (fieldHasError('address')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('address') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="phone">Teléfono Corporativo Principal (Opcional)</label>
+                  <input
+                    id="phone"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('phone')"
+                    type="text"
+                    formControlName="phone"
+                    placeholder="Ej. 55 5268 2000 (Opcional)"
+                  />
+                  @if (fieldHasError('phone')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('phone') }}</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="email">Correo Electrónico General</label>
+                  <input
+                    id="email"
+                    class="fg-input"
+                    [class.fg-input--error]="fieldHasError('email')"
+                    type="email"
+                    formControlName="email"
+                    placeholder="Ej. contacto@empresa.com"
+                  />
+                  @if (fieldHasError('email')) {
+                    <span class="fg-error" role="alert">{{ getFieldError('email') }}</span>
                   }
                 </div>
 
@@ -386,32 +496,195 @@
                 </div>
 
                 <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="status">Estado Operativo</label>
-                  <select
-                    id="status"
-                    class="fg-select"
-                    formControlName="status"
-                    aria-required="true">
-                    <option value="ACTIVE">Activa</option>
-                    <option value="INACTIVE">Inactiva</option>
-                  </select>
+                  <label class="fg-label" for="webPortalPassword">Contraseña Web Autoservicio</label>
+                  <input
+                    id="webPortalPassword"
+                    class="fg-input font-mono"
+                    type="text"
+                    formControlName="webPortalPassword"
+                    placeholder="Acceso Portal Clientes"
+                  />
                 </div>
 
               </div>
             </fieldset>
 
-            <!-- SECCIÓN 2 — Información de Control e Historial de Auditoría BE ──────── -->
+            <!-- SECCIÓN 2 — Matriz Dinámica de Contactos Corporativos ── -->
+            <fieldset class="clients-form-section">
+              <div class="clients-section-header">
+                <legend class="clients-form-section__legend">
+                  <span class="material-symbols-outlined text-amber-500">contacts</span>
+                  <span>2. Panel Dinámico de Contactos Corporativos</span>
+                </legend>
+                <button
+                  type="button"
+                  (click)="addContactField()"
+                  class="clients-btn clients-btn--ghost clients-btn--sm"
+                  aria-label="Agregar Contacto">
+                  <span class="material-symbols-outlined text-sm">add</span>
+                  Agregar Contacto
+                </button>
+              </div>
+
+              <div formArrayName="contacts" class="clients-sub-list">
+                @for (ctrl of contactsFormArray.controls; track $index) {
+                  <div [formGroupName]="$index" class="client-sub-card">
+                    <div class="client-sub-card__grid client-sub-card__grid--contact">
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Nombre Contacto</label>
+                        <input
+                          type="text"
+                          formControlName="name"
+                          placeholder="Ej. Ing. Carlos Fuentes"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Departamento</label>
+                        <input
+                          type="text"
+                          formControlName="department"
+                          placeholder="Ej. Logística y Abasto"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="fg-field">
+                        <label class="fg-label">Teléfono Directo (Opcional)</label>
+                        <input
+                          type="text"
+                          formControlName="phone"
+                          placeholder="Ej. 55 1234 5678 (Opcional)"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Correo Electrónico</label>
+                        <input
+                          type="email"
+                          formControlName="email"
+                          placeholder="cfuentes@empresa.com"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="client-sub-card__actions">
+                        @if (contactsFormArray.length > 1) {
+                          <button
+                            type="button"
+                            (click)="removeContactField($index)"
+                            class="clients-btn-icon clients-btn-icon--danger"
+                            title="Eliminar contacto">
+                            <span class="material-symbols-outlined text-base">delete</span>
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Matriz de Direcciones de Destino Físico (Bodegas / Plantas) ── -->
+            <fieldset class="clients-form-section">
+              <div class="clients-section-header">
+                <legend class="clients-form-section__legend">
+                  <span class="material-symbols-outlined text-amber-500">factory</span>
+                  <span>3. Direcciones Físicas de Destino (Bodegas, Plantas, Cedis)</span>
+                </legend>
+                <button
+                  type="button"
+                  (click)="addDestinationField()"
+                  class="clients-btn clients-btn--ghost clients-btn--sm"
+                  aria-label="Agregar Destino Físico">
+                  <span class="material-symbols-outlined text-sm">add_location_alt</span>
+                  Agregar Destino Físico
+                </button>
+              </div>
+
+              <div formArrayName="destinations" class="clients-sub-list">
+                @for (ctrl of destinationsFormArray.controls; track $index) {
+                  <div [formGroupName]="$index" class="client-sub-card client-sub-card--dest">
+                    <div class="client-sub-card__top-bar">
+                      <span class="client-dest-tag font-mono">
+                        {{ ctrl.get('destinationCode')?.value || 'DEST-NEW' }}
+                      </span>
+                      <button
+                        type="button"
+                        (click)="removeDestinationField($index)"
+                        class="clients-btn-icon clients-btn-icon--danger"
+                        title="Eliminar destino">
+                        <span class="material-symbols-outlined text-base">delete</span>
+                      </button>
+                    </div>
+
+                    <div class="client-sub-card__grid client-sub-card__grid--dest">
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Nombre de Planta / Bodega</label>
+                        <input
+                          type="text"
+                          formControlName="plantName"
+                          placeholder="Ej. Planta Toluca (Café y Cacao)"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Persona de Contacto en Sitio</label>
+                        <input
+                          type="text"
+                          formControlName="contactPerson"
+                          placeholder="Ej. Ing. Fernando Ruiz"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                      <div class="fg-field">
+                        <label class="fg-label fg-label--required">Teléfono de Planta / Bodega</label>
+                        <input
+                          type="text"
+                          formControlName="phone"
+                          placeholder="Ej. 722 279 1000"
+                          class="fg-input fg-input--sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="fg-field mt-2">
+                      <label class="fg-label fg-label--required">Dirección Física Completa de Entrega</label>
+                      <input
+                        type="text"
+                        formControlName="fullAddress"
+                        placeholder="Ej. Km 62.5 Carretera México-Toluca, Zona Industrial Toluca, EdoMex"
+                        class="fg-input fg-input--sm"
+                      />
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="client-empty-sub-card">
+                    <span class="material-symbols-outlined text-xl text-slate-400">pin_drop</span>
+                    <p class="text-xs text-slate-500">Sin destinos físicos registrados. Se utilizará la dirección fiscal por defecto.</p>
+                  </div>
+                }
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 4 — Control e Historial de Auditoría BE ──────── -->
             @if (formMode() === 'edit' && selectedClient()) {
               <fieldset class="clients-form-section clients-form-section--readonly">
                 <legend class="clients-form-section__legend">
-                  <span class="material-symbols-outlined">manage_history</span>
-                  Información de Control y Auditoría BE
+                  <span class="material-symbols-outlined text-amber-500">manage_history</span>
+                  <span>4. Información de Control y Auditoría BE</span>
                 </legend>
 
                 <div class="clients-readonly-grid">
                   <div class="clients-readonly-field">
-                    <span class="clients-readonly-field__label">ID de Cliente (UUID)</span>
-                    <span class="clients-readonly-field__value font-mono">{{ selectedClient()!.id }}</span>
+                    <span class="clients-readonly-field__label">ID de Sistema (8 dígitos)</span>
+                    <span class="clients-readonly-field__value font-mono font-bold text-slate-800" [title]="'UUID Completo en BD: ' + selectedClient()!.id">
+                      #{{ getShortId(selectedClient()!.id) }}
+                    </span>
+                  </div>
+                  <div class="clients-readonly-field">
+                    <span class="clients-readonly-field__label">Código Externo / ERP</span>
+                    <span class="clients-readonly-field__value font-mono font-bold text-amber-700">
+                      {{ selectedClient()!.externalId }}
+                    </span>
                   </div>
                   <div class="clients-readonly-field">
                     <span class="clients-readonly-field__label">Fecha de creación</span>
@@ -431,61 +704,61 @@
                   </div>
                 </div>
 
-                <!-- ── Línea de Tiempo de Auditoría BE ── -->
+                <!-- ── LÍNEA DE TIEMPO DE AUDITORÍA HOMOLOGADA ── -->
                 @if (canViewAudit()) {
-                  <div class="clients-timeline-box">
-                    <div class="clients-timeline-header">
-                      <div class="clients-timeline-title">
-                        <span class="material-symbols-outlined">history</span>
-                        <span>Historial de Cambios de Auditoría (GET /api/v1/clients/&#123;id&#125;/audit)</span>
+                  <div class="carriers-timeline-preview">
+                    <div class="carriers-timeline-preview__header">
+                      <div class="carriers-timeline-preview__title">
+                        <span class="material-symbols-outlined text-base">timeline</span>
+                        <span>Línea de Tiempo de Auditoría</span>
                       </div>
-                      <button
-                        type="button"
-                        class="clients-btn clients-btn--ghost clients-btn--sm"
-                        (click)="loadAuditLogs(selectedClient()!.id)">
-                        <span class="material-symbols-outlined">refresh</span>
-                        Actualizar
-                      </button>
+                      <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
                     </div>
 
                     @if (isLoadingAudit()) {
-                      <div class="clients-audit-loading">
-                        <span class="material-symbols-outlined spinner">sync</span>
+                      <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined animate-spin text-sm">sync</span>
                         <span>Cargando bitácora de auditoría...</span>
                       </div>
                     } @else if (auditEntries().length === 0) {
-                      <div class="clients-audit-empty">
-                        <span class="material-symbols-outlined">info</span>
-                        <span>No hay eventos de auditoría registrados aún para este cliente.</span>
+                      <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4">
+                        No hay eventos de auditoría registrados para este cliente.
                       </div>
                     } @else {
-                      <div class="clients-timeline-nodes">
-                        @for (entry of auditEntries(); track entry.id; let last = $last) {
-                          <div class="clients-tl-node" [ngClass]="'clients-tl-node--' + (entry.timelineColor || 'update')">
-                            <div class="clients-tl-node__dot">
-                              <span class="material-symbols-outlined">{{ entry.timelineIcon || 'info' }}</span>
+                      <div class="carriers-timeline-preview__nodes">
+                        @for (log of auditEntries(); track log.id || $index; let isLast = $last) {
+                          <div class="carriers-tl-node" [ngClass]="getAuditColorClass(log.action, log.timelineColor)">
+                            <div class="carriers-tl-node__dot">
+                              <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action, log.timelineIcon) }}</span>
                             </div>
-                            <div class="clients-tl-node__line" [class.clients-tl-node__line--last]="last"></div>
-                            <div class="clients-tl-node__content">
-                              <div class="clients-tl-node__header">
-                                <span class="clients-tl-node__action">{{ entry.summary }}</span>
-                                <span class="clients-tl-node__meta">
-                                  Por <strong>{{ entry.performedBy }}</strong> · {{ entry.performedAt | date:'dd/MM/yyyy HH:mm:ss' }}
-                                </span>
+                            @if (!isLast) {
+                              <div class="carriers-tl-node__line"></div>
+                            }
+                            <div class="carriers-tl-node__content">
+                              <div class="carriers-tl-node__header">
+                                <span class="carriers-tl-node__action">{{ log.summary }}</span>
+                                <span class="carriers-tl-node__tag">&#64;{{ log.performedBy }}</span>
                               </div>
 
-                              @if (entry.details && entry.details.length > 0) {
-                                <div class="clients-tl-node__details">
-                                  @for (det of entry.details; track det.fieldName) {
-                                    <div class="clients-tl-detail-item">
-                                      <span class="clients-tl-detail-field">{{ det.fieldName }}:</span>
-                                      <span class="clients-tl-detail-old">{{ det.oldValue !== null ? det.oldValue : 'null' }}</span>
-                                      <span class="material-symbols-outlined clients-tl-detail-arrow">arrow_forward</span>
-                                      <span class="clients-tl-detail-new">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
+                              @if (log.details && log.details.length > 0) {
+                                <div class="carriers-tl-node__diffs">
+                                  @for (d of log.details; track d.fieldName) {
+                                    <div class="carriers-tl-diff">
+                                      <span class="carriers-tl-diff__field">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                                      @if (d.oldValue !== null && d.oldValue !== undefined && d.oldValue !== '' && d.oldValue !== 'null' && d.oldValue !== d.newValue) {
+                                        <span class="carriers-tl-diff__old">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                        <span class="carriers-tl-diff__arrow">➔</span>
+                                      }
+                                      <span class="carriers-tl-diff__new">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
                                     </div>
                                   }
                                 </div>
                               }
+
+                              <span class="carriers-tl-node__meta">
+                                <span class="material-symbols-outlined text-[13px]">schedule</span>
+                                <span>{{ log.performedAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
+                              </span>
                             </div>
                           </div>
                         }
@@ -524,18 +797,6 @@
                       Activar
                     </button>
                   }
-
-                  @if (canDelete()) {
-                    <button
-                      class="clients-btn clients-btn--danger"
-                      type="button"
-                      [disabled]="isSaving"
-                      (click)="openStatusDialog('delete')"
-                      aria-label="Desactivar o eliminar este cliente">
-                      <span class="material-symbols-outlined">block</span>
-                      Desactivar
-                    </button>
-                  }
                 </div>
               }
 
@@ -559,7 +820,7 @@
                     Guardando...
                   } @else {
                     <span class="material-symbols-outlined">save</span>
-                    {{ formMode() === 'new' ? 'Crear cliente' : 'Guardar cambios' }}
+                    {{ formMode() === 'new' ? 'Crear cliente y destinos' : 'Guardar cambios' }}
                   }
                 </button>
               </div>
@@ -568,7 +829,6 @@
 
           </form>
         </div>
-      }
 
     </main>
 

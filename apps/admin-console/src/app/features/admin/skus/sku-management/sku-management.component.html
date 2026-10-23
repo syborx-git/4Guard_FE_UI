@@ -52,58 +52,102 @@
 
     </div>
 
-    <!-- ── KPI Cards ─────────────────────────────────────────────────── -->
-    <div class="skus-kpi-grid" aria-label="Indicadores de productos">
-
-      <!-- Total SKUs -->
-      <div class="skus-kpi-card skus-kpi-card--total">
-        <div class="skus-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">inventory_2</span>
-        </div>
-        <div class="skus-kpi-card__body">
-          @if (isLoading) {
-            <div class="skus-kpi-card__skeleton"></div>
-          } @else {
-            <span class="skus-kpi-card__value">{{ totalSkus() }}</span>
-          }
-          <span class="skus-kpi-card__label">Total Registrados</span>
-        </div>
-        <div class="skus-kpi-card__bar skus-kpi-card__bar--total"></div>
+    <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
+    <section aria-label="Métricas de SKUs" class="wms-kpi-section">
+      <div class="wms-kpi-header">
+        <span class="wms-kpi-header__title">
+          <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+          <span>Métricas de Catálogo de SKUs</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="wms-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
       </div>
 
-      <!-- SKUs Activos -->
-      <div class="skus-kpi-card skus-kpi-card--active">
-        <div class="skus-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">check_circle</span>
-        </div>
-        <div class="skus-kpi-card__body">
-          @if (isLoading) {
-            <div class="skus-kpi-card__skeleton"></div>
-          } @else {
-            <span class="skus-kpi-card__value">{{ activeSkus() }}</span>
-          }
-          <span class="skus-kpi-card__label">SKUs Activos</span>
-        </div>
-        <div class="skus-kpi-card__bar skus-kpi-card__bar--active"></div>
-      </div>
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+        <div class="wms-kpi-summary-bar animate-fade-in">
+          <div class="wms-kpi-summary-items">
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+              <span class="wms-kpi-summary-label">Total SKUs:</span>
+              <strong class="wms-kpi-summary-value">{{ totalSkus() }}</strong>
+            </div>
 
-      <!-- SKUs Inactivos -->
-      <div class="skus-kpi-card skus-kpi-card--inactive">
-        <div class="skus-kpi-card__icon-wrap">
-          <span class="material-symbols-outlined">pause_circle</span>
-        </div>
-        <div class="skus-kpi-card__body">
-          @if (isLoading) {
-            <div class="skus-kpi-card__skeleton"></div>
-          } @else {
-            <span class="skus-kpi-card__value">{{ inactiveSkus() }}</span>
-          }
-          <span class="skus-kpi-card__label">SKUs Inactivos</span>
-        </div>
-        <div class="skus-kpi-card__bar skus-kpi-card__bar--inactive"></div>
-      </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">Activos:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ activeSkus() }}</strong>
+            </div>
 
-    </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--inactive"></span>
+              <span class="wms-kpi-summary-label">Inactivos:</span>
+              <strong class="wms-kpi-summary-value text-slate-500">{{ inactiveSkus() }}</strong>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="skus-kpi-grid animate-fade-in" aria-label="Indicadores de productos">
+
+          <!-- Total SKUs -->
+          <div class="skus-kpi-card skus-kpi-card--total">
+            <div class="skus-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">inventory_2</span>
+            </div>
+            <div class="skus-kpi-card__body">
+              @if (isLoading) {
+                <div class="skus-kpi-card__skeleton"></div>
+              } @else {
+                <span class="skus-kpi-card__value">{{ totalSkus() }}</span>
+              }
+              <span class="skus-kpi-card__label">Total Registrados</span>
+            </div>
+            <div class="skus-kpi-card__bar skus-kpi-card__bar--total"></div>
+          </div>
+
+          <!-- SKUs Activos -->
+          <div class="skus-kpi-card skus-kpi-card--active">
+            <div class="skus-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="skus-kpi-card__body">
+              @if (isLoading) {
+                <div class="skus-kpi-card__skeleton"></div>
+              } @else {
+                <span class="skus-kpi-card__value">{{ activeSkus() }}</span>
+              }
+              <span class="skus-kpi-card__label">SKUs Activos</span>
+            </div>
+            <div class="skus-kpi-card__bar skus-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- SKUs Inactivos -->
+          <div class="skus-kpi-card skus-kpi-card--inactive">
+            <div class="skus-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">pause_circle</span>
+            </div>
+            <div class="skus-kpi-card__body">
+              @if (isLoading) {
+                <div class="skus-kpi-card__skeleton"></div>
+              } @else {
+                <span class="skus-kpi-card__value">{{ inactiveSkus() }}</span>
+              }
+              <span class="skus-kpi-card__label">SKUs Inactivos</span>
+            </div>
+            <div class="skus-kpi-card__bar skus-kpi-card__bar--inactive"></div>
+          </div>
+
+        </div>
+      }
+    </section>
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════
@@ -125,10 +169,10 @@
             id="sku-search"
             class="skus-search__input"
             type="search"
-            placeholder="Buscar por código SKU, nombre, cliente..."
+            placeholder="Buscar por SKU (ej. 43211385), nombre o cliente..."
             [ngModel]="filterText()"
             (ngModelChange)="updateFilterText($event)"
-            aria-label="Buscar producto"
+            aria-label="Buscar producto por SKU o nombre"
             autocomplete="off"
           />
         </div>
@@ -243,7 +287,8 @@
               <div class="sku-item__body">
                 <div class="sku-item__name">{{ sku.name }}</div>
                 <div class="sku-item__meta">
-                  <span class="sku-item__code">{{ sku.code }}</span>
+                  <span class="sku-item__code" title="Código de Producto / SKU"><strong class="sku-item__sku-label">SKU:</strong> {{ sku.code }}</span>
+                  <span class="sku-item__id-tag font-mono" [title]="'ID Interno de Sistema: ' + sku.id">#{{ getShortId(sku.id) }}</span>
                   <span class="sku-item__unit-tag">{{ sku.unit }}</span>
                   <span
                     class="sku-item__status-badge"
@@ -326,29 +371,7 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="skus-detail" aria-label="Detalle del producto">
 
-      @if (formMode() === 'idle') {
-        <div class="skus-empty-state">
-          <div class="skus-empty-state__graphic" aria-hidden="true">
-            <span class="material-symbols-outlined skus-empty-state__icon">inventory_2</span>
-          </div>
-          <h2 class="skus-empty-state__title">Sin selección</h2>
-          <p class="skus-empty-state__desc">
-            Selecciona un producto / SKU del directorio para consultar su información,
-            o registra uno nuevo.
-          </p>
-          @if (canCreate()) {
-            <button
-              class="skus-btn skus-btn--primary"
-              type="button"
-              (click)="startNewSku()"
-              aria-label="Registrar nuevo producto">
-              <span class="material-symbols-outlined">add</span>
-              Nuevo SKU
-            </button>
-          }
-        </div>
-      } @else {
-        <div class="skus-form-container">
+      <div class="skus-form-container">
 
           <!-- ── Barra de título del formulario ── -->
           <div class="skus-form-header">
@@ -486,22 +509,6 @@
                   }
                 </div>
 
-                <div class="fg-field">
-                  <label class="fg-label fg-label--required" for="status">Estatus Operativo</label>
-                  <select
-                    id="status"
-                    class="fg-select"
-                    [class.fg-input--error]="fieldHasError('status')"
-                    formControlName="status"
-                    aria-required="true">
-                    <option value="ACTIVE">ACTIVO (Disponible para operaciones)</option>
-                    <option value="INACTIVE">INACTIVO (Suspendido)</option>
-                  </select>
-                  @if (fieldHasError('status')) {
-                    <span class="fg-error" role="alert">{{ getFieldError('status') }}</span>
-                  }
-                </div>
-
                 <div class="fg-field fg-field--full">
                   <label class="fg-label" for="description">Descripción Detallada / Observaciones</label>
                   <textarea
@@ -527,8 +534,16 @@
 
                 <div class="skus-readonly-grid">
                   <div class="skus-readonly-field">
-                    <span class="skus-readonly-field__label">ID de Producto (UUID)</span>
-                    <span class="skus-readonly-field__value font-mono">{{ selectedSku()!.id }}</span>
+                    <span class="skus-readonly-field__label">ID de Sistema (8 dígitos)</span>
+                    <span class="skus-readonly-field__value skus-readonly-field__value--id font-mono" [title]="'UUID Completo en BD: ' + selectedSku()!.id">
+                      #{{ getShortId(selectedSku()!.id) }}
+                    </span>
+                  </div>
+                  <div class="skus-readonly-field">
+                    <span class="skus-readonly-field__label">Código SKU de Búsqueda</span>
+                    <span class="skus-readonly-field__value font-mono font-bold skus-readonly-field__value--sku">
+                      {{ selectedSku()!.code }}
+                    </span>
                   </div>
                   <div class="skus-readonly-field">
                     <span class="skus-readonly-field__label">Estatus Actual en BD</span>
@@ -542,6 +557,10 @@
                     </span>
                   </div>
                   <div class="skus-readonly-field">
+                    <span class="skus-readonly-field__label">Versión de Registro</span>
+                    <span class="skus-readonly-field__value font-mono">v{{ selectedSku()!.version || 1 }}</span>
+                  </div>
+                  <div class="skus-readonly-field">
                     <span class="skus-readonly-field__label">Fecha de creación</span>
                     <span class="skus-readonly-field__value">
                       {{ selectedSku()!.createdAt | date:'dd/MM/yyyy HH:mm' }}
@@ -553,67 +572,63 @@
                       {{ selectedSku()!.updatedAt | date:'dd/MM/yyyy HH:mm' }}
                     </span>
                   </div>
-                  <div class="skus-readonly-field">
-                    <span class="skus-readonly-field__label">Versión de Registro</span>
-                    <span class="skus-readonly-field__value font-mono">v{{ selectedSku()!.version || 1 }}</span>
-                  </div>
                 </div>
 
-                <!-- ── Línea de Tiempo de Auditoría BE ── -->
+                <!-- ── LÍNEA DE TIEMPO DE AUDITORÍA HOMOLOGADA ── -->
                 @if (canViewAudit()) {
-                  <div class="skus-timeline-box">
-                    <div class="skus-timeline-header">
-                      <div class="skus-timeline-title">
-                        <span class="material-symbols-outlined">history</span>
-                        <span>Historial de Cambios de Auditoría (GET /api/v1/product-skus/&#123;id&#125;/audit)</span>
+                  <div class="carriers-timeline-preview">
+                    <div class="carriers-timeline-preview__header">
+                      <div class="carriers-timeline-preview__title">
+                        <span class="material-symbols-outlined text-base">timeline</span>
+                        <span>Línea de Tiempo de Auditoría</span>
                       </div>
-                      <button
-                        type="button"
-                        class="skus-btn skus-btn--ghost skus-btn--sm"
-                        (click)="loadAuditLogs(selectedSku()!.id)">
-                        <span class="material-symbols-outlined">refresh</span>
-                        Actualizar
-                      </button>
+                      <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
                     </div>
 
                     @if (isLoadingAudit()) {
-                      <div class="skus-audit-loading">
-                        <span class="material-symbols-outlined spinner">sync</span>
+                      <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined animate-spin text-sm">sync</span>
                         <span>Cargando bitácora de auditoría...</span>
                       </div>
                     } @else if (auditEntries().length === 0) {
-                      <div class="skus-audit-empty">
-                        <span class="material-symbols-outlined">info</span>
-                        <span>No hay eventos de auditoría registrados aún para este SKU.</span>
+                      <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4">
+                        No hay eventos de auditoría registrados para este SKU.
                       </div>
                     } @else {
-                      <div class="skus-timeline-nodes">
-                        @for (entry of auditEntries(); track entry.id; let last = $last) {
-                          <div class="skus-tl-node" [ngClass]="'skus-tl-node--' + (entry.timelineColor || 'update')">
-                            <div class="skus-tl-node__dot">
-                              <span class="material-symbols-outlined">{{ entry.timelineIcon || 'info' }}</span>
+                      <div class="carriers-timeline-preview__nodes">
+                        @for (log of auditEntries(); track log.id || $index; let isLast = $last) {
+                          <div class="carriers-tl-node" [ngClass]="getAuditColorClass(log.action, log.timelineColor)">
+                            <div class="carriers-tl-node__dot">
+                              <span class="material-symbols-outlined text-sm">{{ getAuditIcon(log.action, log.timelineIcon) }}</span>
                             </div>
-                            <div class="skus-tl-node__line" [class.skus-tl-node__line--last]="last"></div>
-                            <div class="skus-tl-node__content">
-                              <div class="skus-tl-node__header">
-                                <span class="skus-tl-node__action">{{ entry.summary }}</span>
-                                <span class="skus-tl-node__meta">
-                                  Por <strong>{{ entry.performedBy }}</strong> · {{ entry.performedAt | date:'dd/MM/yyyy HH:mm:ss' }}
-                                </span>
+                            @if (!isLast) {
+                              <div class="carriers-tl-node__line"></div>
+                            }
+                            <div class="carriers-tl-node__content">
+                              <div class="carriers-tl-node__header">
+                                <span class="carriers-tl-node__action">{{ log.summary }}</span>
+                                <span class="carriers-tl-node__tag">&#64;{{ log.performedBy }}</span>
                               </div>
 
-                              @if (entry.details && entry.details.length > 0) {
-                                <div class="skus-tl-node__details">
-                                  @for (det of entry.details; track det.fieldName) {
-                                    <div class="skus-tl-detail-item">
-                                      <span class="skus-tl-detail-field">{{ det.fieldName }}:</span>
-                                      <span class="skus-tl-detail-old">{{ det.oldValue !== null ? det.oldValue : 'null' }}</span>
-                                      <span class="material-symbols-outlined skus-tl-detail-arrow">arrow_forward</span>
-                                      <span class="skus-tl-detail-new">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
+                              @if (log.details && log.details.length > 0) {
+                                <div class="carriers-tl-node__diffs">
+                                  @for (d of log.details; track d.fieldName) {
+                                    <div class="carriers-tl-diff">
+                                      <span class="carriers-tl-diff__field">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                                      @if (d.oldValue !== null && d.oldValue !== undefined && d.oldValue !== '' && d.oldValue !== 'null' && d.oldValue !== d.newValue) {
+                                        <span class="carriers-tl-diff__old">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                        <span class="carriers-tl-diff__arrow">➔</span>
+                                      }
+                                      <span class="carriers-tl-diff__new">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
                                     </div>
                                   }
                                 </div>
                               }
+
+                              <span class="carriers-tl-node__meta">
+                                <span class="material-symbols-outlined text-[13px]">schedule</span>
+                                <span>{{ log.performedAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
+                              </span>
                             </div>
                           </div>
                         }
@@ -698,7 +713,6 @@
 
           </form>
         </div>
-      }
 
     </main>
 

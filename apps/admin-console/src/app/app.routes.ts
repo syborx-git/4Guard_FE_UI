@@ -8,12 +8,15 @@ import { Routes } from '@angular/router';
 import { authGuard }         from './core/guards/auth.guard';
 import { rbacGuard }         from './core/guards/rbac.guard';
 import { changePasswordGuard } from './core/guards/change-password.guard';
+import { lockoutGuard }      from './core/guards/lockout.guard';
 import { UserRole }           from '@4guard/shared-core';
 
 export const adminRoutes: Routes = [
   // Ruta pública: Login
+  // lockoutGuard: intercepta ANTES del componente para evitar evasion del bloqueo por F5 (HU-010)
   {
     path: 'login',
+    canActivate: [lockoutGuard],
     loadComponent: () =>
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
     title: '4GUARD WMS — Iniciar Sesión',
@@ -40,6 +43,26 @@ export const adminRoutes: Routes = [
     title: '4GUARD WMS — Cambiar Contraseña',
   },
 
+  // Portal Público Móvil de Auto-Registro del Chofer en Caseta (Formato F01-PO-CP-7.1.3-03)
+  {
+    path: 'carrier-checkin',
+    loadComponent: () =>
+      import('./features/security/carrier-checkin/carrier-checkin.component').then(
+        (m) => m.CarrierCheckinComponent
+      ),
+    title: '4GUARD WMS — Auto-Registro de Transporte (Caseta)',
+  },
+  {
+    path: 'driver-checkin',
+    redirectTo: 'carrier-checkin',
+    pathMatch: 'full',
+  },
+  {
+    path: 'security/check-in',
+    redirectTo: 'carrier-checkin',
+    pathMatch: 'full',
+  },
+
   // Rutas protegidas bajo el shell principal
   {
     path: '',
@@ -55,22 +78,21 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Mi Perfil',
       },
 
-      // Dashboard: Acceso a todos los roles autenticados
+      // Dashboard: Acceso con validación RBAC
       {
         path: 'dashboard',
+        canActivate: [rbacGuard],
+        data: { module: 'dashboard' },
         loadChildren: () =>
           import('./features/dashboard/dashboard.routes').then((m) => m.dashboardRoutes),
         title: '4GUARD WMS — Dashboard',
       },
 
-      // Inventario
+      // Redirección de Inventario hacia Almacén / Topología
       {
         path: 'inventory',
-        canActivate: [rbacGuard],
-        data: { module: 'inventory' },
-        loadChildren: () =>
-          import('./features/inventory/inventory.routes').then((m) => m.inventoryRoutes),
-        title: '4GUARD WMS — Inventario',
+        redirectTo: 'catalogs/warehouse',
+        pathMatch: 'prefix',
       },
 
       // Layout y Ubicaciones (HU-127)
@@ -83,14 +105,23 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Gestión de Layout',
       },
 
-      // Recepción
+      // Recepción (Redirección directa a Movimientos de Almacén)
       {
         path: 'receiving',
+        redirectTo: 'warehouse-movements/receiving',
+        pathMatch: 'prefix',
+      },
+
+      // Caseta de Seguridad (Módulo Autónomo Independiente)
+      {
+        path: 'security',
         canActivate: [rbacGuard],
-        data: { module: 'receiving' },
-        loadChildren: () =>
-          import('./features/receiving/receiving.routes').then((m) => m.receivingRoutes),
-        title: '4GUARD WMS — Recepción',
+        data: { module: 'security' },
+        loadComponent: () =>
+          import('./features/security/security-gate/security-gate.component').then(
+            (m) => m.SecurityGateComponent
+          ),
+        title: '4GUARD WMS — Caseta de Seguridad',
       },
 
       // Control de Calidad
@@ -103,14 +134,11 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Control de Calidad',
       },
 
-      // Despacho
+      // Despacho (Redirección unificada a Salidas de Almacén)
       {
         path: 'shipping',
-        canActivate: [rbacGuard],
-        data: { module: 'shipping' },
-        loadChildren: () =>
-          import('./features/shipping/shipping.routes').then((m) => m.shippingRoutes),
-        title: '4GUARD WMS — Despacho',
+        redirectTo: 'warehouse-movements/outbound',
+        pathMatch: 'prefix',
       },
 
       // Control de Usuarios y Seguridad (Homologado)
@@ -266,11 +294,55 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Motor de Reglas de Negocio',
       },
 
+      // Configuración de Alertas y Notificaciones (HU-134)
+      {
+        path: 'alerts-config',
+        canActivate: [rbacGuard],
+        data: { module: 'alerts-config' },
+        loadChildren: () =>
+          import('./features/alerts-config/alerts-config.routes').then((m) => m.alertsConfigRoutes),
+        title: '4GUARD WMS — Configuración de Alertas y Notificaciones',
+      },
+
+      // Movimientos de Almacén (Recepción, Traspasos, Outbound)
+      {
+        path: 'warehouse-movements',
+        canActivate: [rbacGuard],
+        data: { module: 'warehouse-movements' },
+        loadChildren: () =>
+          import('./features/warehouse-movements/warehouse-movements.routes').then(
+            (m) => m.WAREHOUSE_MOVEMENTS_ROUTES
+          ),
+        title: '4GUARD WMS — Movimientos de Almacén',
+      },
+
+      // Catálogos Maestros (Legacy 4SND Optimizado)
+      {
+        path: 'catalogs',
+        canActivate: [rbacGuard],
+        data: { module: 'catalogs' },
+        loadChildren: () =>
+          import('./features/catalogs/catalogs.routes').then((m) => m.catalogsRoutes),
+        title: '4GUARD WMS — Catálogos Maestros',
+      },
+
+      // Consulta de Inventarios y Exportación Excel
+      {
+        path: 'inventory-query',
+        canActivate: [rbacGuard],
+        data: { module: 'inventory-query' },
+        loadChildren: () =>
+          import('./features/inventory-query/inventory-query.routes').then(
+            (m) => m.INVENTORY_QUERY_ROUTES
+          ),
+        title: '4GUARD WMS — Consulta de Inventarios',
+      },
+
       // Redirección por defecto
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
 
-  // Catch-all: redirigir a dashboard o login
-  { path: '**', redirectTo: 'dashboard' },
+  // Catch-all: redirigir a '' (donde authGuard redirige móviles sin sesión a carrier-checkin y escritorio a login)
+  { path: '**', redirectTo: '' },
 ];

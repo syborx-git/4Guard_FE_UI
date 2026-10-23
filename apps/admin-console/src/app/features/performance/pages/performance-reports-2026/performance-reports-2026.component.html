@@ -1,0 +1,694 @@
+<div class="kpi-reports-container">
+
+  <!-- ═════════════════════════════════════════════════════════════════════
+       HEADER DEL SUBMÓDULO & ACCIÓN MAESTRA
+       ═════════════════════════════════════════════════════════════════════ -->
+  <div class="kpi-reports-header">
+    <div class="kpi-reports-header__info">
+      <div class="kpi-reports-badge">
+        <span class="material-symbols-outlined text-sm">verified</span>
+        <span>AUDITORÍA OFICIAL WMS & EXCEL 2026</span>
+      </div>
+      <h2 class="kpi-reports-title">Módulo de KPIs & Reportes Oficiales</h2>
+      <p class="kpi-reports-subtitle">
+        Visualización gráfica ejecutiva y descarga idéntica de libros Excel (.xlsx) con hojas multi-pestaña, fórmulas,
+        semáforos y gráficos nativos integrados.
+      </p>
+    </div>
+
+    <div class="kpi-reports-header__actions">
+      <button type="button" class="kpi-btn-download-main" (click)="downloadCurrentReport()"
+        [disabled]="isDownloading()">
+        <span class="material-symbols-outlined">{{ isDownloading() ? 'progress_activity' : 'file_download' }}</span>
+        <span>{{ isDownloading() ? 'Descargando Libro...' : 'Descargar Libro Activo (.xlsx)' }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════════════════
+       LOS 4 CUADRANTES DE REPORTES
+       ═════════════════════════════════════════════════════════════════════ -->
+  <div class="kpi-quadrants-grid">
+
+    <!-- 1. Descarga -->
+    <div class="kpi-card" [class.kpi-card--active]="activeTab() === 'descarga'" (click)="setTab('descarga')">
+      <div class="kpi-card__top">
+        <div class="kpi-card__icon-box kpi-card__icon-box--descarga">
+          <span class="material-symbols-outlined">move_to_inbox</span>
+        </div>
+        <span class="kpi-card__sheets-tag">2 HOJAS · 2 GRÁFICAS</span>
+      </div>
+      <h3 class="kpi-card__title">KPIs de Descarga</h3>
+      <p class="kpi-card__desc">Tiempos de ciclo en andén, horas reporte caseta, remisiones, 13 columnas y estatus SAP.
+      </p>
+      <div class="kpi-card__footer">
+        <span class="kpi-card__target">Meta: ≤ 01:20 hrs</span>
+        <button type="button" class="kpi-card__btn-quick" (click)="downloadSpecific('descarga', $event)"
+          title="Descargar KPI´S DESCARGA">
+          <span class="material-symbols-outlined">download</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. Carga -->
+    <div class="kpi-card" [class.kpi-card--active]="activeTab() === 'carga'" (click)="setTab('carga')">
+      <div class="kpi-card__top">
+        <div class="kpi-card__icon-box kpi-card__icon-box--carga">
+          <span class="material-symbols-outlined">local_shipping</span>
+        </div>
+        <span class="kpi-card__sheets-tag">4 HOJAS · 4 GRÁFICAS</span>
+      </div>
+      <h3 class="kpi-card__title">KPIs de Carga</h3>
+      <p class="kpi-card__desc">Cumplimiento programa de carga para Embalajes y Culinarios, promedios por turno y
+        semana.</p>
+      <div class="kpi-card__footer">
+        <span class="kpi-card__target">Meta: ≥ 95% Cumpl.</span>
+        <button type="button" class="kpi-card__btn-quick" (click)="downloadSpecific('carga', $event)"
+          title="Descargar KPI´S DE CARGA">
+          <span class="material-symbols-outlined">download</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. Montacarguistas -->
+    <div class="kpi-card" [class.kpi-card--active]="activeTab() === 'montacargas'" (click)="setTab('montacargas')">
+      <div class="kpi-card__top">
+        <div class="kpi-card__icon-box kpi-card__icon-box--montacargas">
+          <span class="material-symbols-outlined">forklift</span>
+        </div>
+        <span class="kpi-card__sheets-tag">2 HOJAS · 1 GRÁFICA</span>
+      </div>
+      <h3 class="kpi-card__title">Movimiento Montacarguistas</h3>
+      <p class="kpi-card__desc">Matriz de productividad individual diaria (días 1 al 31) y semáforo estándar vs
+        intensivo.</p>
+      <div class="kpi-card__footer">
+        <span class="kpi-card__target">Semáforo: 211–233+</span>
+        <button type="button" class="kpi-card__btn-quick" (click)="downloadSpecific('montacargas', $event)"
+          title="Descargar KPI´S MOVIMIENTO DE MONTACARGISTAS">
+          <span class="material-symbols-outlined">download</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 4. Tendencia Inventarios -->
+    <div class="kpi-card" [class.kpi-card--active]="activeTab() === 'inventarios'" (click)="setTab('inventarios')">
+      <div class="kpi-card__top">
+        <div class="kpi-card__icon-box kpi-card__icon-box--inventarios">
+          <span class="material-symbols-outlined">inventory_2</span>
+        </div>
+        <span class="kpi-card__sheets-tag">6 HOJAS · 6 GRÁFICAS</span>
+      </div>
+      <h3 class="kpi-card__title">Tendencia de Inventarios</h3>
+      <p class="kpi-card__desc">Capacidad contratada (18k / 13.5k), excedentes diarios y % de saturación por período
+        quincenal/mensual.</p>
+      <div class="kpi-card__footer">
+        <span class="kpi-card__target">Capacidad: ≤ 95%</span>
+        <button type="button" class="kpi-card__btn-quick" (click)="downloadSpecific('inventarios', $event)"
+          title="Descargar KPI´S TENDENCIA DE INVENTARIOS MENSUAL">
+          <span class="material-symbols-outlined">download</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════════════════
+       DETALLE DEL REPORTE ACTIVO (PANEL ANALÍTICO CON GRÁFICAS Y TABLAS)
+       ═════════════════════════════════════════════════════════════════════ -->
+  <div class="kpi-detail-panel">
+
+    <!-- Header del Cuadrante Seleccionado -->
+    <div class="kpi-detail-panel__header">
+      <div class="kpi-detail-panel__title-wrap">
+        <span class="material-symbols-outlined text-gold">bar_chart</span>
+        <div>
+          <h4 class="kpi-detail-panel__title">
+            @if (activeTab() === 'descarga') { Cuadro de Mando: KPI´S DESCARGA }
+            @else if (activeTab() === 'carga') { Cuadro de Mando: KPI´S DE CARGA }
+            @else if (activeTab() === 'montacargas') { Cuadro de Mando: MOVIMIENTO DE MONTACARGISTAS }
+            @else { Cuadro de Mando: TENDENCIA DE INVENTARIOS MENSUAL }
+          </h4>
+          <span class="kpi-detail-panel__subtitle">
+            Descarga oficial configurada con fecha dinámica y gráficos nativos 3D/2D preservados.
+          </span>
+        </div>
+      </div>
+
+      <button type="button" class="kpi-btn-download-secondary" (click)="downloadCurrentReport()"
+        [disabled]="isDownloading()">
+        <span class="material-symbols-outlined">download</span>
+        <span>Descargar Excel Oficial (.xlsx)</span>
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         1. SECCIÓN DESCARGA
+         ═══════════════════════════════════════════════════════════════════ -->
+    @if (activeTab() === 'descarga') {
+    <!-- GRÁFICAS DE DESCARGA -->
+    <div class="kpi-charts-grid">
+      <!-- Gráfica 1: Promedio Mensual -->
+      <div class="kpi-chart-box">
+        <div class="kpi-chart-box__head">
+          <span class="material-symbols-outlined text-navy">analytics</span>
+          <h5>Gráfica 1: Tiempo Promedio de Descarga Mensual</h5>
+        </div>
+        <div class="kpi-bars-vertical">
+          @for (item of descargaMonthly; track item.label) {
+          <div class="kpi-bar-col">
+            <span class="kpi-bar-val">{{ item.time }}</span>
+            <div class="kpi-bar-track">
+              <div class="kpi-bar-fill" [class.kpi-bar-fill--meta]="item.isMeta"
+                [style.height.%]="(item.minutes / 180) * 100">
+              </div>
+            </div>
+            <span class="kpi-bar-label">{{ item.label }}</span>
+          </div>
+          }
+        </div>
+        <div class="kpi-chart-footer">
+          <span class="kpi-legend-tag"><span class="dot dot--green"></span> Meta (≤ 01:30 hrs)</span>
+          <span class="kpi-legend-tag"><span class="dot dot--blue"></span> Regular</span>
+          <span class="text-xs text-muted">Promedio General: <strong>02:13 hrs</strong></span>
+        </div>
+      </div>
+
+      <!-- Gráfica 2: Ranking por Línea Transportista -->
+      <div class="kpi-chart-box">
+        <div class="kpi-chart-box__head">
+          <span class="material-symbols-outlined text-gold">local_shipping</span>
+          <h5>Gráfica 2: Ranking Promedio por Transportista</h5>
+        </div>
+        <div class="kpi-bars-horizontal">
+          @for (carrier of descargaCarriers; track carrier.name) {
+          <div class="kpi-hbar-row">
+            <span class="kpi-hbar-name">{{ carrier.name }}</span>
+            <div class="kpi-hbar-track">
+              <div class="kpi-hbar-fill" [class.kpi-hbar-fill--optimal]="carrier.status === 'optimal'"
+                [class.kpi-hbar-fill--regular]="carrier.status === 'regular'"
+                [class.kpi-hbar-fill--critical]="carrier.status === 'critical'" [style.width]="carrier.width">
+              </div>
+            </div>
+            <span class="kpi-hbar-time">{{ carrier.time }}</span>
+          </div>
+          }
+        </div>
+        <div class="kpi-chart-footer">
+          <span class="kpi-legend-tag"><span class="dot dot--green"></span> Óptimo (&lt;01:30)</span>
+          <span class="kpi-legend-tag"><span class="dot dot--yellow"></span> Regular (01:30–02:00)</span>
+          <span class="kpi-legend-tag"><span class="dot dot--red"></span> Crítico (&gt;02:00)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA 1: DATOS DESCARGA (13 COLUMNAS COMPLETAS AUDITADAS) -->
+    <div class="kpi-table-wrap">
+      <div class="kpi-sheet-header">
+        <span class="kpi-sheet-name">Hoja 1: Datos descarga (13 Columnas Auditadas)</span>
+        <span class="kpi-sheet-meta">Estatus Físico, Recepción y Estatus SAP Incluidos</span>
+      </div>
+      <div class="table-responsive">
+        <table class="kpi-preview-table">
+          <thead>
+            <tr>
+              <th>FECHA</th>
+              <th>NO.</th>
+              <th>PRODUCTO / DESCRIPCIÓN</th>
+              <th>LÍNEA TRANSPORTISTA</th>
+              <th>NO. ENTRADA (E)</th>
+              <th>REMISIÓN</th>
+              <th>HORA REPORTE</th>
+              <th>HORA SALIDA</th>
+              <th>TIEMPO DESCARGA</th>
+              <th>ESTATUS DESCARGA</th>
+              <th>FÍSICO</th>
+              <th>RECEPCIÓN</th>
+              <th>ESTATUS SISTEMA (SAP)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2026-03-01</td>
+              <td>1</td>
+              <td><strong>DAWN 350 RQ</strong></td>
+              <td>CHAPA</td>
+              <td>E26-001</td>
+              <td>89089386</td>
+              <td>08:30 AM</td>
+              <td>10:15 AM</td>
+              <td>01:45 hrs</td>
+              <td><span class="badge-status-pill badge--success">DESCARGADO</span></td>
+              <td>SI</td>
+              <td>Recibido</td>
+              <td><span class="badge-status-pill badge--sap">INGRESADO EN SAP</span></td>
+            </tr>
+            <tr>
+              <td>2026-03-01</td>
+              <td>2</td>
+              <td><strong>DOLCA 180</strong></td>
+              <td>TUM</td>
+              <td>E26-002</td>
+              <td>89100493</td>
+              <td>09:15 AM</td>
+              <td>10:35 AM</td>
+              <td>01:20 hrs</td>
+              <td><span class="badge-status-pill badge--success">DESCARGADO</span></td>
+              <td>SI</td>
+              <td>Recibido</td>
+              <td><span class="badge-status-pill badge--sap">INGRESADO EN SAP</span></td>
+            </tr>
+            <tr>
+              <td>2026-03-02</td>
+              <td>4</td>
+              <td><strong>MAGGI 1090</strong></td>
+              <td>DIAZ</td>
+              <td>E26-004</td>
+              <td>89100070</td>
+              <td>10:10 AM</td>
+              <td>11:50 AM</td>
+              <td>01:40 hrs</td>
+              <td><span class="badge-status-pill badge--success">DESCARGADO</span></td>
+              <td>SI</td>
+              <td>Recibido</td>
+              <td><span class="badge-status-pill badge--sap">INGRESADO EN SAP</span></td>
+            </tr>
+            <tr>
+              <td>2026-03-04</td>
+              <td>10</td>
+              <td><strong>CASE CORRUGATED</strong></td>
+              <td>CANALEX</td>
+              <td>E26-010</td>
+              <td>4310059398</td>
+              <td>11:58 PM</td>
+              <td>05:20 AM</td>
+              <td>05:22 hrs</td>
+              <td><span class="badge-status-pill badge--success">DESCARGADO</span></td>
+              <td>SI</td>
+              <td>Recibido</td>
+              <td><span class="badge-status-pill badge--sap">INGRESADO EN SAP</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    }
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         2. SECCIÓN CARGA
+         ═══════════════════════════════════════════════════════════════════ -->
+    @if (activeTab() === 'carga') {
+    <div class="kpi-subtabs-bar">
+      <button type="button" class="kpi-subtab-btn" [class.kpi-subtab-btn--active]="cargaSubTab() === 'embalajes'"
+        (click)="setCargaSubTab('embalajes')">
+        <span class="material-symbols-outlined">inventory</span>
+        <span>Línea Embalajes (2 Hojas)</span>
+      </button>
+      <button type="button" class="kpi-subtab-btn" [class.kpi-subtab-btn--active]="cargaSubTab() === 'culinarios'"
+        (click)="setCargaSubTab('culinarios')">
+        <span class="material-symbols-outlined">soup_kitchen</span>
+        <span>Línea Culinarios (2 Hojas)</span>
+      </button>
+    </div>
+
+    <!-- GRÁFICAS DE CARGA -->
+    <div class="kpi-charts-grid">
+      <div class="kpi-chart-box">
+        <div class="kpi-chart-box__head">
+          <span class="material-symbols-outlined text-navy">timeline</span>
+          <h5>Tiempo Promedio Carga Semanal (Culinarios)</h5>
+        </div>
+        <div class="kpi-bars-vertical">
+          @for (sem of cargaSemanas; track sem.sem) {
+          <div class="kpi-bar-col">
+            <span class="kpi-bar-val">{{ sem.time }}</span>
+            <div class="kpi-bar-track">
+              <div class="kpi-bar-fill kpi-bar-fill--carga" [style.height.%]="(sem.minutes / 260) * 100"></div>
+            </div>
+            <span class="kpi-bar-label">{{ sem.sem }}</span>
+          </div>
+          }
+        </div>
+        <div class="kpi-chart-footer">
+          <span class="text-xs text-muted">Meta por Carga: <strong>≤ 01:45 hrs</strong> · Cumplimiento:
+            <strong>92.8%</strong></span>
+        </div>
+      </div>
+
+      <div class="kpi-chart-box">
+        <div class="kpi-chart-box__head">
+          <span class="material-symbols-outlined text-gold">donut_large</span>
+          <h5>Resumen Anual Comparativo (Embalajes)</h5>
+        </div>
+        <div class="kpi-summary-cards-duo">
+          <div class="kpi-stat-card">
+            <span class="kpi-stat-label">Promedio Carga 2025</span>
+            <span class="kpi-stat-value">02:03 hrs</span>
+            <span class="kpi-stat-sub">Base 410 Cargas</span>
+          </div>
+          <div class="kpi-stat-card">
+            <span class="kpi-stat-label">Promedio Carga 2026</span>
+            <span class="kpi-stat-value text-gold">01:46 hrs</span>
+            <span class="kpi-stat-sub text-success">▲ Reducción de 17 min</span>
+          </div>
+        </div>
+        <p class="text-xs text-muted mt-3">
+          Las 4 hojas del libro oficial consolidan las tablas dinámicas y gráficos 3D ('bar3DChart') vinculados
+          directamente con los rangos de celdas.
+        </p>
+      </div>
+    </div>
+
+    <!-- TABLA 2: BASE DE DATOS CARGA (11 COLUMNAS AUDITADAS) -->
+    <div class="kpi-table-wrap">
+      <div class="kpi-sheet-header">
+        <span class="kpi-sheet-name">
+          {{ cargaSubTab() === 'embalajes' ? 'Hoja 1: Base de datos Embalajas' : 'Hoja 3: Base de datos culinarios' }}
+        </span>
+        <span class="kpi-sheet-meta">11 Columnas Oficiales · Horas de Reporte, Salida y Estatus Despacho</span>
+      </div>
+      <div class="table-responsive">
+        <table class="kpi-preview-table">
+          <thead>
+            <tr>
+              <th>AÑO/SEM</th>
+              <th>NO.</th>
+              <th>DESCRIPCIÓN / PRODUCTO</th>
+              <th>IMPORTANCIA / TURNO</th>
+              <th>UNIDAD/TRANSPORTE</th>
+              <th>REMISIÓN</th>
+              <th>HORA REPORTE</th>
+              <th>HORA SALIDA</th>
+              <th>TIEMPO CARGA</th>
+              <th>PROCESO CARGA</th>
+              <th>DESPACHADO</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>sem.46</td>
+              <td>1</td>
+              <td><strong>43800303 Lata Hojalata Dtr 126.7mm</strong></td>
+              <td>Lunes 1er turno</td>
+              <td>U21 / U221 / U236</td>
+              <td>8702009936</td>
+              <td>02:51 AM</td>
+              <td>04:37 AM</td>
+              <td>01:46 hrs</td>
+              <td><span class="badge-status-pill badge--success">CARGADO</span></td>
+              <td><span class="badge-status-pill badge--sap">DESPACHADO</span></td>
+            </tr>
+            <tr>
+              <td>sem.46</td>
+              <td>2</td>
+              <td><strong>41165275 Botella Salsa Inglesa 160g</strong></td>
+              <td>Lunes 2do turno</td>
+              <td>U21 / U221 / U236</td>
+              <td>89005320</td>
+              <td>09:53 AM</td>
+              <td>11:33 AM</td>
+              <td>01:40 hrs</td>
+              <td><span class="badge-status-pill badge--success">CARGADO</span></td>
+              <td><span class="badge-status-pill badge--sap">DESPACHADO</span></td>
+            </tr>
+            <tr>
+              <td>sem.47</td>
+              <td>4</td>
+              <td><strong>44295022 Laminado OPP/MOPP CFMT 4g</strong></td>
+              <td>Martes 1er turno</td>
+              <td>U21 / U221 / U236</td>
+              <td>72473</td>
+              <td>03:42 AM</td>
+              <td>06:50 AM</td>
+              <td>03:08 hrs</td>
+              <td><span class="badge-status-pill badge--success">CARGADO</span></td>
+              <td><span class="badge-status-pill badge--sap">DESPACHADO</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    }
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         3. SECCIÓN MONTACARGUISTAS
+         ═══════════════════════════════════════════════════════════════════ -->
+    @if (activeTab() === 'montacargas') {
+    <div class="kpi-charts-grid">
+      <div class="kpi-chart-box">
+        <div class="kpi-chart-box__head">
+          <span class="material-symbols-outlined text-navy">speed</span>
+          <h5>Eficiencia por Operador (Metas 100-200 vs 211-233)</h5>
+        </div>
+        <div class="kpi-forklift-list">
+          @for (m of montacarguistas; track m.name) {
+          <div class="kpi-forklift-row">
+            <div class="kpi-forklift-info">
+              <span class="font-bold text-sm">{{ m.name }}</span>
+              <span class="text-xs text-muted">{{ m.label }} · Promedio: {{ m.avg }} pallets/día</span>
+            </div>
+            <div class="kpi-forklift-stat">
+              <span class="badge-status-pill" [class.badge--success]="m.status === 'green'"
+                [class.badge--warning]="m.status === 'yellow'">
+                {{ m.pct }}
+              </span>
+              <span class="text-xs font-semibold">{{ m.total }} tarimas</span>
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="kpi-chart-box">
+        <div class="kpi-chart-box__head">
+          <span class="material-symbols-outlined text-gold">traffic</span>
+          <h5>Criterio Oficial de Semáforos WMS</h5>
+        </div>
+        <div class="kpi-semaforo-guide">
+          <div class="kpi-semaforo-item kpi-semaforo-item--green">
+            <span class="dot dot--green"></span>
+            <div>
+              <strong>Alta Eficiencia (211 a 233+ pallets/turno)</strong>
+              <p>Operadores en zona de alta productividad y rendimiento intensivo.</p>
+            </div>
+          </div>
+          <div class="kpi-semaforo-item kpi-semaforo-item--yellow">
+            <span class="dot dot--yellow"></span>
+            <div>
+              <strong>Meta Estándar (100 a 200 pallets/turno)</strong>
+              <p>Cumplimiento operativo normal del centro de distribución.</p>
+            </div>
+          </div>
+          <div class="kpi-semaforo-item kpi-semaforo-item--red">
+            <span class="dot dot--red"></span>
+            <div>
+              <strong>Zona Crítica (&lt; 100 pallets/turno)</strong>
+              <p>Requiere balanceo de andén o revisión de fallas de montacargas.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA 3: MATRIZ MONTACARGUISTAS -->
+    <div class="kpi-table-wrap">
+      <div class="kpi-sheet-header">
+        <span class="kpi-sheet-name">Hoja 1: Base de datos (Matriz Diaria 1..31)</span>
+        <span class="kpi-sheet-meta">Movimientos diarios por turno, total mensual y % meta</span>
+      </div>
+      <div class="table-responsive">
+        <table class="kpi-preview-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>MONTACARGUISTA</th>
+              <th>Día 1</th>
+              <th>Día 2</th>
+              <th>Día 3</th>
+              <th>Día 4</th>
+              <th>Día 5</th>
+              <th>TOTAL DÍAS</th>
+              <th>TOTAL TARIMAS</th>
+              <th>PROMEDIO/DÍA</th>
+              <th>EFICIENCIA</th>
+              <th>SEMÁFORO</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><strong>ALEJANDRO MARTINEZ REYES</strong></td>
+              <td>215</td>
+              <td>230</td>
+              <td>222</td>
+              <td>218</td>
+              <td>235</td>
+              <td>31</td>
+              <td><strong>7,015</strong></td>
+              <td>226</td>
+              <td>113.1%</td>
+              <td><span class="badge-status-pill badge--success">ALTA EFICIENCIA</span></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><strong>SALVADOR MARTINEZ REYES</strong></td>
+              <td>264</td>
+              <td>211</td>
+              <td>260</td>
+              <td>218</td>
+              <td>276</td>
+              <td>31</td>
+              <td><strong>7,150</strong></td>
+              <td>230</td>
+              <td>115.3%</td>
+              <td><span class="badge-status-pill badge--success">ALTA EFICIENCIA</span></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><strong>JOSE LUIS ROJAS CHAVEZ</strong></td>
+              <td>185</td>
+              <td>190</td>
+              <td>175</td>
+              <td>195</td>
+              <td>180</td>
+              <td>31</td>
+              <td><strong>5,780</strong></td>
+              <td>186</td>
+              <td>93.2%</td>
+              <td><span class="badge-status-pill badge--warning">META ESTÁNDAR</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    }
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         4. SECCIÓN TENDENCIA INVENTARIOS
+         ═══════════════════════════════════════════════════════════════════ -->
+    @if (activeTab() === 'inventarios') {
+    <div class="kpi-period-tabs-bar">
+      @for (p of periodosInventario; track p.name) {
+      <button type="button" class="kpi-period-btn" [class.kpi-period-btn--active]="activePeriod() === p.name"
+        (click)="setPeriod(p.name)">
+        <span>{{ p.name }}</span>
+        <span class="kpi-period-badge" [class.kpi-period-badge--warn]="p.status === 'warning'">
+          {{ p.pct }}
+        </span>
+      </button>
+      }
+    </div>
+
+    <!-- GRÁFICAS DE INVENTARIOS -->
+    <div class="kpi-charts-grid">
+      <div class="kpi-chart-box">
+        <div class="kpi-chart-box__head">
+          <span class="material-symbols-outlined text-navy">warehouse</span>
+          <h5>Ocupación vs Límite Contratado Fijo</h5>
+        </div>
+        <div class="kpi-capacity-gauge-wrap">
+          <div class="kpi-capacity-stat">
+            <span class="text-xs text-muted uppercase tracking-wider">Capacidad Contratada</span>
+            <span class="text-2xl font-black text-navy">13,500 / 18,000</span>
+            <span class="text-xs text-gold font-bold">Tarimas Totales</span>
+          </div>
+          <div class="kpi-gauge-bar-track">
+            <div class="kpi-gauge-bar-fill" style="width: 89%;"></div>
+            <div class="kpi-gauge-limit-marker" style="left: 95%;" title="Umbral Crítico (95%)"></div>
+          </div>
+          <div class="flex justify-between text-xs text-muted mt-2">
+            <span>0 pallets</span>
+            <span>Zona Segura (&lt;90%)</span>
+            <span class="text-danger font-bold">Límite 95%</span>
+            <span>100% Saturación</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-chart-box">
+        <div class="kpi-chart-box__head">
+          <span class="material-symbols-outlined text-gold">insights</span>
+          <h5>Comportamiento Mensual 2026 (Gráfico Nativo Excel)</h5>
+        </div>
+        <p class="text-sm text-slate-600">
+          Cada una de las <strong>6 pestañas</strong> quincenales/mensuales cuenta con su propio gráfico nativo
+          incrustado tipo <code>barChart</code>, que compara diariamente la columna <strong># PALLETS</strong> contra
+          <strong>PALLETS FIJOS</strong>.
+        </p>
+        <div class="kpi-sheet-indicator-pills mt-4">
+          <span class="kpi-indicator-pill">✓ Sumatoria Excedentes Automática</span>
+          <span class="kpi-indicator-pill">✓ Fórmula =B2/18000 & =B2/13500</span>
+          <span class="kpi-indicator-pill">✓ Gráfica 3D vinculada por hoja</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA 4: TENDENCIA INVENTARIOS -->
+    <div class="kpi-table-wrap">
+      <div class="kpi-sheet-header">
+        <span class="kpi-sheet-name">Hoja Activa: {{ activePeriod() }}</span>
+        <span class="kpi-sheet-meta">8 Columnas Auditadas · Fórmulas de Excedentes y % Capacidad</span>
+      </div>
+      <div class="table-responsive">
+        <table class="kpi-preview-table">
+          <thead>
+            <tr>
+              <th>FECHA DE INVENTARIO</th>
+              <th># PALLETS</th>
+              <th>PALLETS FIJOS</th>
+              <th>SUMATORIA DE EXCEDENTES</th>
+              <th>COMENTARIO</th>
+              <th>EXCEDENTE</th>
+              <th>COMPROBACIÓN</th>
+              <th>% CAPACIDAD DE ALMACENAJE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2026-04-01</td>
+              <td>13,125</td>
+              <td>13,500</td>
+              <td>-375</td>
+              <td>1er Excedente</td>
+              <td>-375</td>
+              <td>13,125</td>
+              <td><span class="font-bold text-navy">97.22%</span></td>
+            </tr>
+            <tr>
+              <td>2026-04-02</td>
+              <td>13,115</td>
+              <td>13,500</td>
+              <td>-10</td>
+              <td>Excedente por día</td>
+              <td>-385</td>
+              <td>13,115</td>
+              <td><span class="font-bold text-navy">97.15%</span></td>
+            </tr>
+            <tr>
+              <td>2026-04-03</td>
+              <td>13,217</td>
+              <td>13,500</td>
+              <td>102</td>
+              <td>Excedente por día</td>
+              <td>-283</td>
+              <td>13,217</td>
+              <td><span class="font-bold text-navy">97.90%</span></td>
+            </tr>
+            <tr>
+              <td>2026-04-04</td>
+              <td>13,345</td>
+              <td>13,500</td>
+              <td>128</td>
+              <td>Excedente por día</td>
+              <td>-155</td>
+              <td>13,345</td>
+              <td><span class="font-bold text-danger">98.85%</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    }
+
+  </div>
+
+</div>

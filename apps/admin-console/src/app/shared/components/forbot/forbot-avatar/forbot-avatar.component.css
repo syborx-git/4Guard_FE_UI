@@ -1,0 +1,12 @@
+:host {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.forbot-avatar-container {
+  transition: transform 180ms ease;
+}
+
+.forbot-avatar-container:hover {
+  transform: scale(1.05);
+}

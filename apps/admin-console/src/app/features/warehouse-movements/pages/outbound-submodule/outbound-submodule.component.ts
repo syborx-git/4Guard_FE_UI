@@ -1,0 +1,3718 @@
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
+import { ToastService } from '../../../../core/services/toast.service';
+import { PrintService } from '../../../../core/services/print.service';
+import { AuthState } from '../../../../core/auth/auth.state';
+import { ShiftContextService } from '../../../../core/services/shift-context.service';
+import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
+import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
+import { ForkliftOperatorAdminService } from '../../../admin/services/forklift-operator.service';
+import {
+  WarehouseOutbound,
+  OutboundItem,
+  TransportType,
+  TRANSPORT_TYPES,
+  CarrierLineItem,
+  ClientItem,
+  ClientDestination,
+  InventoryBatch,
+  MovementAuditEntry,
+  parseAuditTimestamp,
+  ReceptionPalletItem,
+  RampOccupancyStatus,
+  RampItem,
+} from '../../models/warehouse-movements.models';
+import { PrintDispatchLayoutComponent } from '../../components/print-layouts/print-dispatch-layout.component';
+import { PrintOutboundCancellationLayoutComponent } from '../../components/print-layouts/print-outbound-cancellation-layout.component';
+import { SmartNotificationService } from '../../../../core/services/smart-notification.service';
+
+export interface ForkliftOperatorOption {
+  id: string;
+  name: string;
+  badge: string;
+  jobTitle: string;
+  shift: string;
+  status: string;
+}
+
+export interface AvailableSkuOption {
+  skuCode: string;
+  productName: string;
+  category?: string;
+  clientName?: string;
+  clientCode?: string;
+  totalAvailablePallets: number;
+  totalAvailablePieces: number;
+  batchesCount: number;
+  nearestExpirationDate: string;
+  pabloStatus: 'PABLO_ALERT' | 'OPTIMAL' | 'EXPIRED';
+  pabloLabel: string;
+  pabloColor: 'amber' | 'emerald' | 'rose';
+  daysRemaining: number;
+}
+
+export interface OutboundPalletItem {
+  id: string;
+  palletCode: string;
+  palletNumber?: number;
+  productId: string;
+  description: string;
+  clientName?: string;
+  lotNumber: string;
+  remisionNo: string;
+  expirationDate: string;
+  pieces: number;
+  palletTypeId: string;
+  palletTypeLabel: string;
+  locationCode: string;
+  daysRemaining: number;
+  pabloStatus: 'PABLO_ALERT' | 'OPTIMAL' | 'EXPIRED';
+  pabloLabel: string;
+  pabloColor: 'amber' | 'emerald' | 'rose';
+  isSuggestedFefo: boolean;
+  inventoryStatus: 'AVAILABLE' | 'BLOCKED' | 'EXPIRED';
+  statusLabel: string;
+  statusColor: 'emerald' | 'rose' | 'amber';
+  blockReason?: string;
+  qualityFolio?: string;
+  isSelectableForDispatch: boolean;
+}
+
+import { StarBorderDirective } from '../../../../shared/directives/star-border.directive';
+import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
+
+@Component({
+  selector: 'fg-outbound-submodule',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    RouterLinkActive,
+    StarBorderDirective,
+    SpecularGlowDirective,
+    PrintDispatchLayoutComponent,
+    PrintOutboundCancellationLayoutComponent,
+  ],
+  templateUrl: './outbound-submodule.component.html',
+  styleUrl: './outbound-submodule.component.css',
+})
+export class OutboundSubmoduleComponent implements OnInit {
+  private readonly svc = inject(WarehouseMovementsService);
+  private readonly movementsApi = inject(WarehouseMovementsApiService);
+  private readonly forkliftAdminService = inject(ForkliftOperatorAdminService);
+  private readonly smartNotification = inject(SmartNotificationService);
+  private readonly toast = inject(ToastService);
+  private readonly printService = inject(PrintService);
+  readonly authState = inject(AuthState);
+  readonly shiftContext = inject(ShiftContextService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  goToManageCarriers(): void {
+    this.router.navigate(['/admin/carriers']);
+  }
+
+  protected formatShiftTime(value: string | null): string {
+    return value ? value.slice(0, 5) : '';
+  }
+
+  // ── MODO DEL WORKBENCH ─────────────────────────────────────────────────────
+  formMode = signal<'idle' | 'create' | 'detail'>('idle');
+  selectedOutbound = signal<WarehouseOutbound | null>(null);
+  searchQuery = signal('');
+  statusFilter = signal<string>('ALL');
+  auditEntries = signal<MovementAuditEntry[]>([]);
+
+  // KPIs Homologados (acotados al turno vigente de la sucursal)
+  private isActiveStatus(status: string): boolean {
+    return status !== 'COMPLETED' && status !== 'CANCELLED';
+  }
+
+  protected readonly boardOutbounds = computed(() => {
+    const sessionId = this.shiftContext.activeShift()?.sessionId;
+    const list = this.svc.outbounds();
+    if (!sessionId) return list;
+    return list.filter(
+      (o) => o.shiftSessionId === sessionId || this.isActiveStatus(o.status)
+    );
+  });
+
+  protected isCarryOver(outbound: WarehouseOutbound): boolean {
+    const sessionId = this.shiftContext.activeShift()?.sessionId;
+    return !!sessionId && !!outbound.shiftSessionId && outbound.shiftSessionId !== sessionId
+      && this.isActiveStatus(outbound.status);
+  }
+
+  readonly kpiTotalOutbounds = computed(() => this.boardOutbounds().length);
+  readonly kpiTotalPallets = this.svc.kpiTotalPalletsDispatched;
+  readonly kpiTotalPieces = this.svc.kpiTotalPiecesDispatched;
+  readonly kpiClients = this.svc.kpiDistinctClientsServed;
+  readonly kpiCaseta = computed(() => this.boardOutbounds().filter((o) => o.status === 'REGISTERED').length);
+  readonly kpiInAnden = computed(() => this.boardOutbounds().filter((o) => ['ASSIGNED', 'IN_PROGRESS', 'LOADED'].includes(o.status)).length);
+  readonly kpiCompleted = computed(() => this.boardOutbounds().filter((o) => o.status === 'COMPLETED').length);
+  readonly kpiCancelled = computed(() => this.boardOutbounds().filter((o) => o.status === 'CANCELLED').length);
+
+  // Estado de Compactación de Métricas / KPIs
+  isKpiCollapsed = signal<boolean>(localStorage.getItem('4g_outbound_kpis_collapsed') === 'true');
+
+  toggleKpiCollapse(): void {
+    const next = !this.isKpiCollapsed();
+    this.isKpiCollapsed.set(next);
+    localStorage.setItem('4g_outbound_kpis_collapsed', String(next));
+  }
+
+  // Matriz de Ocupación de Rampas 1-12
+  readonly ramps = this.svc.ramps;
+  rampOccupancyStatus = this.svc.rampOccupancyStatus;
+  totalBusyRampsCount = this.svc.totalBusyRampsCount;
+  totalFreeRampsCount = this.svc.totalFreeRampsCount;
+
+  // Modal Plano de Andenes Interactivo
+  showDockMapModal = signal(false);
+  selectedRampNumber = signal<number>(1);
+  rampSearchQuery = signal<string>('');
+  isRampDropdownOpen = signal<boolean>(false);
+  filteredRamps = computed(() => {
+    const q = this.rampSearchQuery().toLowerCase().trim();
+    const list = this.ramps();
+    if (!q) return list;
+    return list.filter(
+      (rm) =>
+        (rm.name && rm.name.toLowerCase().includes(q)) ||
+        (rm.code && rm.code.toLowerCase().includes(q)) ||
+        String(rm.rampNumber).includes(q)
+    );
+  });
+  observations = signal<string>('');
+
+  // Estados de carga / acción en ciclo operativo
+  isAssigningRamp = signal(false);
+  isStartingLoading = signal(false);
+  isFinishingLoading = signal(false);
+  isCompletingOutbound = signal(false);
+  tempFinishSealNumber = signal('');
+  showAuditTimeline = signal(false);
+
+  toggleShowAuditTimeline(): void {
+    this.showAuditTimeline.update((v) => !v);
+  }
+
+  // Modal de Modificación de Ficha Operativa (Caseta / Transporte / Destino / Sello)
+  showEditCasetaModal = signal(false);
+  editCarrierCode = signal('');
+  editDriverName = signal('');
+  editTractorPlates = signal('');
+  editBoxPlates = signal('');
+  editSealNumber = signal('');
+  editNoEcoTractor = signal('');
+  editNoEcoCaja = signal('');
+  editDestinationId = signal('');
+  editCustomDestinationName = signal('');
+  editCustomDestinationAddress = signal('');
+  isUpdatingCaseta = signal(false);
+
+  // Computed: Indica si la salida ya está cerrada o finalizada (despachada o cancelada)
+  readonly isOutboundClosed = computed(() => {
+    const st = this.selectedOutbound()?.status;
+    return st === 'COMPLETED' || st === 'CANCELLED';
+  });
+
+  // Computed: Determina si se puede modificar la ficha operativa (arribo/caseta/destino/sello)
+  readonly canEditCaseta = computed(() => {
+    const ob = this.selectedOutbound();
+    if (!ob) return false;
+    return ob.status !== 'COMPLETED' && ob.status !== 'CANCELLED';
+  });
+
+  // Computed: Indica si el usuario seleccionó "Otro" en el modal de edición
+  isEditDestinationOther = computed(() => this.editDestinationId() === '__OTHER__');
+
+  // Computed: Destinos disponibles para el modal (filtrados por cliente o catálogo completo)
+  editDestinations = computed(() => {
+    const ob = this.selectedOutbound();
+    const all = this.allDestinations();
+    if (!ob) return all;
+
+    const cCode = (ob.clientCode || '').toLowerCase().trim();
+    const cName = (ob.clientName || '').toLowerCase().trim();
+
+    // 1. Filtrar por coincidencias con el cliente (código, nombre, externalId, etc.)
+    const clientSpecific = all.filter((d) => {
+      if (!d.clientCode) return true;
+      const dCode = d.clientCode.toLowerCase().trim();
+      return (
+        (cCode && (dCode === cCode || dCode.includes(cCode) || cCode.includes(dCode))) ||
+        (cName && (dCode === cName || dCode.includes(cName) || cName.includes(dCode)))
+      );
+    });
+
+    let list = clientSpecific.length > 0 ? clientSpecific : all;
+
+    // Si el destino actual ya asignado ob.destinationId no está en la lista y no es __OTHER__, incluirlo al inicio
+    if (ob.destinationId && ob.destinationId !== '__OTHER__' && !list.some((d) => d.id === ob.destinationId)) {
+      const current = all.find((d) => d.id === ob.destinationId);
+      if (current) {
+        list = [current, ...list];
+      }
+    }
+    return list;
+  });
+
+  // Computed: Dirección del destino seleccionado en el modal para preview inmediato
+  selectedEditDestinationAddress = computed(() => {
+    if (this.isEditDestinationOther()) {
+      return this.editCustomDestinationAddress() || null;
+    }
+    const destId = this.editDestinationId();
+    if (!destId) return null;
+    const d = this.allDestinations().find((item) => item.id === destId);
+    if (!d) return null;
+    return `${d.address || ''}${d.city ? ' — ' + d.city : ''}${d.state ? ', ' + d.state : ''}`.trim() || null;
+  });
+
+  onEditDestinationChange(val: string): void {
+    this.editDestinationId.set(val);
+    if (val === '__OTHER__') {
+      if (!this.editCustomDestinationName()) {
+        const ob = this.selectedOutbound();
+        if (ob?.destinationName && !this.allDestinations().some((d) => d.name === ob.destinationName)) {
+          this.editCustomDestinationName.set(ob.destinationName);
+          this.editCustomDestinationAddress.set(ob.destinationAddress || '');
+        }
+      }
+    } else {
+      const dest = this.allDestinations().find((d) => d.id === val);
+      if (dest) {
+        this.editCustomDestinationName.set(dest.name);
+        this.editCustomDestinationAddress.set(
+          `${dest.address || ''}${dest.city ? ' — ' + dest.city : ''}${dest.state ? ', ' + dest.state : ''}`.trim()
+        );
+      }
+    }
+  }
+
+  openEditCasetaModal(): void {
+    const ob = this.selectedOutbound();
+    if (!ob) return;
+    if (!this.canEditCaseta()) {
+      this.toast.warning('Esta orden ya fue despachada o cancelada; sus datos operativos y de destino están formalmente bloqueados.');
+      return;
+    }
+    this.editCarrierCode.set(ob.carrierCode || '');
+    this.editDriverName.set(ob.driverName || '');
+    this.editTractorPlates.set(ob.tractorPlates || '');
+    this.editBoxPlates.set(ob.boxPlates || '');
+    const seal = (ob.sealNumber === 'PENDIENTE_ANDEN' || ob.sealNumber === 'S/S' || ob.sealNumber === 'PENDIENTE') ? '' : (ob.sealNumber || '');
+    this.editSealNumber.set(seal);
+    this.editNoEcoTractor.set(ob.noEcoTractor || (ob as any).preCheckin?.noEcoTractor || '');
+    this.editNoEcoCaja.set(ob.noEcoCaja || (ob as any).preCheckin?.noEcoCaja || '');
+
+    // Resolviendo el ID del destino si no venía asignado de caseta
+    let matchedDestId = ob.destinationId || '';
+    let customName = '';
+    let customAddress = ob.destinationAddress || '';
+
+    if (matchedDestId === '__OTHER__') {
+      customName = ob.destinationName || '';
+    } else if (matchedDestId) {
+      const match = this.allDestinations().find((d) => d.id === matchedDestId);
+      if (match) {
+        customName = match.name;
+        customAddress = `${match.address || ''}${match.city ? ' — ' + match.city : ''}${match.state ? ', ' + match.state : ''}`.trim();
+      } else if (ob.destinationName) {
+        matchedDestId = '__OTHER__';
+        customName = ob.destinationName;
+      }
+    } else if (ob.destinationName) {
+      const cleanTarget = ob.destinationName.toLowerCase().trim();
+      const match = this.allDestinations().find((d) => {
+        const dName = (d.name || '').toLowerCase().trim();
+        const dAddr = (d.address || '').toLowerCase().trim();
+        return (
+          dName === cleanTarget ||
+          dName.includes(cleanTarget) ||
+          cleanTarget.includes(dName) ||
+          (dAddr && (dAddr.includes(cleanTarget) || cleanTarget.includes(dAddr)))
+        );
+      });
+      if (match) {
+        matchedDestId = match.id;
+        customName = match.name;
+        customAddress = `${match.address || ''}${match.city ? ' — ' + match.city : ''}${match.state ? ', ' + match.state : ''}`.trim();
+      } else {
+        matchedDestId = '__OTHER__';
+        customName = ob.destinationName;
+      }
+    }
+
+    // Fallback inteligente: Si aún no tiene un destino asignado y no es __OTHER__, preseleccionar automáticamente
+    // el primer destino disponible del cliente o catálogo
+    if (!matchedDestId) {
+      const avail = this.editDestinations();
+      if (avail && avail.length > 0) {
+        matchedDestId = avail[0].id;
+        customName = avail[0].name;
+        customAddress = `${avail[0].address || ''}${avail[0].city ? ' — ' + avail[0].city : ''}${avail[0].state ? ', ' + avail[0].state : ''}`.trim();
+      }
+    }
+
+    this.editDestinationId.set(matchedDestId);
+    this.editCustomDestinationName.set(customName);
+    this.editCustomDestinationAddress.set(customAddress);
+    this.showEditCasetaModal.set(true);
+  }
+
+  saveCasetaModifications(): void {
+    const ob = this.selectedOutbound();
+    if (!ob) return;
+    if (!this.canEditCaseta()) {
+      this.toast.warning('No es posible modificar los datos de una salida ya despachada o cancelada.');
+      return;
+    }
+
+    if (!this.editDestinationId()) {
+      this.toast.warning('Debes seleccionar la Planta o Destino de entrega.');
+      return;
+    }
+
+    const isOther = this.editDestinationId() === '__OTHER__';
+    if (isOther && !this.editCustomDestinationName()?.trim()) {
+      this.toast.warning('Por favor escribe el nombre de la Planta / Destino.');
+      return;
+    }
+
+    const sealInput = this.editSealNumber()?.trim();
+    const sealVal = (sealInput && sealInput !== 'PENDIENTE_ANDEN' && sealInput !== 'PENDIENTE' && sealInput !== 'S/S')
+      ? sealInput
+      : (ob.sealNumber || 'PENDIENTE_ANDEN');
+
+    const carrier = this.carriers().find((c) => c.code === this.editCarrierCode());
+    const dest = !isOther ? this.allDestinations().find((d) => d.id === this.editDestinationId()) : null;
+
+    this.isUpdatingCaseta.set(true);
+    const destName = isOther
+      ? this.editCustomDestinationName().trim()
+      : (dest ? dest.name : (ob.destinationName || ''));
+    const destAddress = isOther
+      ? (this.editCustomDestinationAddress()?.trim() || 'Destino especificado manualmente')
+      : (dest
+          ? `${dest.address || ''}${dest.city ? ' — ' + dest.city : ''}${dest.state ? ', ' + dest.state : ''}`.trim()
+          : (ob.destinationAddress || ''));
+
+    const updated: WarehouseOutbound = {
+      ...ob,
+      carrierCode: this.editCarrierCode() || ob.carrierCode,
+      carrierName: carrier ? carrier.name : ob.carrierName,
+      driverName: this.editDriverName() || ob.driverName,
+      tractorPlates: this.editTractorPlates() || ob.tractorPlates,
+      boxPlates: this.editBoxPlates() || ob.boxPlates,
+      sealNumber: sealVal,
+      noEcoTractor: this.editNoEcoTractor() != null ? this.editNoEcoTractor().trim() : (ob.noEcoTractor || ''),
+      noEcoCaja: this.editNoEcoCaja() != null ? this.editNoEcoCaja().trim() : (ob.noEcoCaja || ''),
+      destinationId: isOther ? '__OTHER__' : (this.editDestinationId() || ob.destinationId),
+      destinationName: destName,
+      destinationAddress: destAddress,
+    };
+
+    const isUUID = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+
+    if (ob.id && ob.id.includes('-')) {
+      this.movementsApi.updateOutbound(ob.id, {
+        carrierId: isUUID(this.editCarrierCode()) ? this.editCarrierCode() : undefined,
+        carrierName: updated.carrierName,
+        driverName: updated.driverName,
+        tractorPlates: updated.tractorPlates,
+        boxPlates: updated.boxPlates,
+        sealNumber: updated.sealNumber,
+        noEcoTractor: updated.noEcoTractor,
+        noEcoCaja: updated.noEcoCaja,
+        destinationId: isUUID(this.editDestinationId()) ? this.editDestinationId() : undefined,
+        destinationName: updated.destinationName,
+        destinationAddress: updated.destinationAddress,
+      }).subscribe({
+        next: (resp: any) => {
+          this.isUpdatingCaseta.set(false);
+          const finalData: WarehouseOutbound = {
+            ...updated,
+            destinationName: resp?.destinationName || updated.destinationName,
+            destinationAddress: resp?.destinationAddress || updated.destinationAddress,
+            destinationId: isOther ? '__OTHER__' : (this.editDestinationId() || resp?.destinationId || updated.destinationId),
+            carrierName: resp?.carrierName || updated.carrierName,
+            sealNumber: resp?.sealNumber || updated.sealNumber,
+            noEcoTractor: resp?.noEcoTractor || updated.noEcoTractor,
+            noEcoCaja: resp?.noEcoCaja || updated.noEcoCaja,
+          };
+          this.selectedOutbound.set(finalData);
+          this.svc.outboundsSignal.update((list) => list.map((o) => (o.id === ob.id ? finalData : o)));
+          this.showEditCasetaModal.set(false);
+          this.toast.success('Ficha operativa actualizada exitosamente.');
+          this.loadAuditLogs(ob.id);
+        },
+        error: () => {
+          this.isUpdatingCaseta.set(false);
+          this.selectedOutbound.set(updated);
+          this.svc.outboundsSignal.update((list) => list.map((o) => (o.id === ob.id || o.folio === ob.folio ? updated : o)));
+          this.showEditCasetaModal.set(false);
+          this.toast.success('Ficha operativa actualizada localmente.');
+        },
+      });
+    } else {
+      this.isUpdatingCaseta.set(false);
+      this.selectedOutbound.set(updated);
+      this.svc.outboundsSignal.update((list) => list.map((o) => (o.folio === ob.folio ? updated : o)));
+      this.showEditCasetaModal.set(false);
+      this.toast.success('Ficha operativa actualizada localmente.');
+    }
+  }
+
+  // Índice de fase operativa activa en el Stepper (1 a 5)
+  lifecycleStepIndex = computed(() => {
+    const st = this.selectedOutbound()?.status;
+    switch (st) {
+      case 'REGISTERED': return 1;
+      case 'ASSIGNED': return 2;
+      case 'IN_PROGRESS': return 3;
+      case 'LOADED': return 4;
+      case 'COMPLETED': return 5;
+      case 'CANCELLED': return -1;
+      default: return 1;
+    }
+  });
+
+  // Modal Cancelación con Autorización de Administrador
+  showCancelModal = signal(false);
+  cancelReason = signal('');
+  cancelAdminUser = signal('');
+  cancelAdminPassword = signal('');
+  cancelErrorMessage = signal<string | null>(null);
+  showCancelPassword = signal(false);
+  isCancelling = signal(false);
+
+  toggleShowCancelPassword(): void {
+    this.showCancelPassword.update((v) => !v);
+  }
+
+  // ── MODAL DE SELECCIÓN Y ASIGNACIÓN DE TARIMAS (FEFO / INVENTARIO) ─────────
+  showPalletPickerModal = signal(false);
+  isSavingPalletSelection = signal(false);
+
+  openPalletPickerModal(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+
+    // Si ya tiene ítems en la orden, pre-cargar sus IDs en la selección
+    if (cur.items && cur.items.length > 0) {
+      this.selectedPalletIds.set(cur.items.map((it) => it.id));
+    } else {
+      this.selectedPalletIds.set([]);
+    }
+
+    this.skuSearchQuery.set('');
+    this.selectedSkuCode.set('');
+    this.requestedPalletsCount.set(0);
+    this.fefoQuantityInput.set(1);
+    this.palletTableSearchQuery.set('');
+
+    // Asegurar carga reactiva de lotes e inventario
+    this.svc.reloadInventoryBatches();
+    this.showPalletPickerModal.set(true);
+  }
+
+  closePalletPickerModal(): void {
+    this.showPalletPickerModal.set(false);
+  }
+
+  savePalletSelectionToOrder(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+
+    const selectedPallets = this.selectedPalletItems();
+    if (selectedPallets.length === 0) {
+      this.toast.warning('Debes seleccionar al menos una tarima del inventario para asignar a la orden.');
+      return;
+    }
+
+    const selectedItemIds = selectedPallets.map((p) => p.id);
+    const distinctSkus = new Set(selectedPallets.map((p) => p.productId)).size;
+    const totalPieces = selectedPallets.reduce((acc, p) => acc + p.pieces, 0);
+    this.isSavingPalletSelection.set(true);
+
+    if (cur.id && cur.id.includes('-')) {
+      this.movementsApi.updateOutbound(cur.id, {
+        selectedItemIds: selectedItemIds,
+      }).subscribe({
+        next: () => {
+          this.isSavingPalletSelection.set(false);
+          this.showPalletPickerModal.set(false);
+
+          const updated = this.svc.updateOutbound(cur.id, {
+            items: selectedPallets,
+            totalPallets: selectedPallets.length,
+            totalPieces: totalPieces,
+            distinctSkus: distinctSkus,
+          });
+
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.svc.addOutboundAudit(updated.folio, {
+              id: `aud-out-pal-${Date.now()}`,
+              action: 'TARIMAS_ASIGNADAS',
+              actionLabel: 'Tarimas de Inventario Asignadas (FEFO)',
+              username: this.authState.userFullName() || 'Supervisor WMS',
+              timestamp: new Date().toLocaleString('es-MX'),
+              details: [
+                { fieldName: 'Tarimas Asignadas', newValue: `${selectedPallets.length} tarima(s)` },
+                { fieldName: 'Piezas Totales', newValue: `${totalPieces.toLocaleString()} pz` },
+                { fieldName: 'SKUs Distintos', newValue: `${distinctSkus}` },
+              ],
+            });
+            this.loadAuditLogs(updated.id || updated.folio);
+          }
+
+          this.toast.success(`✓ Se asignaron ${selectedPallets.length} tarimas (${totalPieces.toLocaleString()} pz) a la orden #${cur.folio}.`);
+        },
+        error: () => {
+          this.isSavingPalletSelection.set(false);
+          this.showPalletPickerModal.set(false);
+
+          const updated = this.svc.updateOutbound(cur.id || cur.folio, {
+            items: selectedPallets,
+            totalPallets: selectedPallets.length,
+            totalPieces: totalPieces,
+            distinctSkus: distinctSkus,
+          });
+
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.svc.addOutboundAudit(updated.folio, {
+              id: `aud-out-pal-${Date.now()}`,
+              action: 'TARIMAS_ASIGNADAS',
+              actionLabel: 'Tarimas de Inventario Asignadas (FEFO)',
+              username: this.authState.userFullName() || 'Supervisor WMS',
+              timestamp: new Date().toLocaleString('es-MX'),
+              details: [
+                { fieldName: 'Tarimas Asignadas', newValue: `${selectedPallets.length} tarima(s)` },
+                { fieldName: 'Piezas Totales', newValue: `${totalPieces.toLocaleString()} pz` },
+                { fieldName: 'SKUs Distintos', newValue: `${distinctSkus}` },
+              ],
+            });
+            this.loadAuditLogs(updated.id || updated.folio);
+          }
+
+          this.toast.success(`✓ Se asignaron ${selectedPallets.length} tarimas localmente a la orden #${cur.folio}.`);
+        }
+      });
+    } else {
+      this.isSavingPalletSelection.set(false);
+      this.showPalletPickerModal.set(false);
+
+      const updated = this.svc.updateOutbound(cur.folio, {
+        items: selectedPallets,
+        totalPallets: selectedPallets.length,
+        totalPieces: totalPieces,
+        distinctSkus: distinctSkus,
+      });
+
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.svc.addOutboundAudit(updated.folio, {
+          id: `aud-out-pal-${Date.now()}`,
+          action: 'TARIMAS_ASIGNADAS',
+          actionLabel: 'Tarimas de Inventario Asignadas (FEFO)',
+          username: this.authState.userFullName() || 'Supervisor WMS',
+          timestamp: new Date().toLocaleString('es-MX'),
+          details: [
+            { fieldName: 'Tarimas Asignadas', newValue: `${selectedPallets.length} tarima(s)` },
+            { fieldName: 'Piezas Totales', newValue: `${totalPieces.toLocaleString()} pz` },
+            { fieldName: 'SKUs Distintos', newValue: `${distinctSkus}` },
+          ],
+        });
+        this.loadAuditLogs(updated.folio);
+      }
+
+      this.toast.success(`✓ Se asignaron ${selectedPallets.length} tarimas a la orden #${cur.folio}.`);
+    }
+  }
+
+  // ── MODAL CAMBIO DE NO. REMISIÓN / CARTA PORTE ──────────────────────────────
+  showChangeRemisionModal = signal(false);
+  newRemisionInput = signal('');
+  changeRemisionReason = signal('');
+  changeRemisionAdminUser = signal('');
+  changeRemisionAdminPassword = signal('');
+  changeRemisionError = signal<string | null>(null);
+  showChangeRemisionPassword = signal(false);
+  isChangingRemision = signal(false);
+
+  openChangeRemisionModal(): void {
+    const ob = this.selectedOutbound();
+    this.newRemisionInput.set(ob?.remisionNo || '');
+    this.changeRemisionReason.set('');
+    this.changeRemisionAdminUser.set('');
+    this.changeRemisionAdminPassword.set('');
+    this.changeRemisionError.set(null);
+    this.showChangeRemisionPassword.set(false);
+    this.showChangeRemisionModal.set(true);
+  }
+
+  closeChangeRemisionModal(): void {
+    this.showChangeRemisionModal.set(false);
+  }
+
+  toggleShowChangeRemisionPassword(): void {
+    this.showChangeRemisionPassword.update((v) => !v);
+  }
+
+  confirmChangeRemision(): void {
+    this.changeRemisionError.set(null);
+    const newDoc = this.newRemisionInput().trim();
+    const reason = this.changeRemisionReason().trim();
+    const user = this.changeRemisionAdminUser().trim();
+    const pass = this.changeRemisionAdminPassword().trim();
+    const current = this.selectedOutbound();
+
+    if (!current) return;
+
+    if (!newDoc) {
+      this.changeRemisionError.set('El nuevo número de remisión / carta porte es obligatorio.');
+      return;
+    }
+
+    if (newDoc.toUpperCase() === (current.remisionNo || '').toUpperCase()) {
+      this.changeRemisionError.set('El nuevo número de documento debe ser diferente al actual.');
+      return;
+    }
+
+    if (!reason) {
+      this.changeRemisionError.set('La justificación o motivo del cambio es obligatoria.');
+      return;
+    }
+
+    if (!user || !pass) {
+      this.changeRemisionError.set('Ingresa usuario y contraseña de Supervisor o Administrador.');
+      return;
+    }
+
+    this.isChangingRemision.set(true);
+
+    const adminLabel = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Supervisor Autorizado)`;
+
+    if (current.id && current.id.includes('-')) {
+      this.movementsApi
+        .changeOutboundRemision(current.id, {
+          newDocNumber: newDoc,
+          reason,
+          adminUsername: user,
+          adminPassword: pass,
+        })
+        .subscribe({
+          next: () => {
+            this.isChangingRemision.set(false);
+            this.showChangeRemisionModal.set(false);
+
+            const updated = this.svc.changeOutboundRemision(
+              current.folio,
+              newDoc,
+              reason,
+              adminLabel
+            );
+            if (updated) {
+              this.selectedOutbound.set(updated);
+            }
+            this.loadAuditLogs(current.id || current.folio);
+            this.toast.success(
+              `Remisión / Carta Porte actualizada a '${newDoc}' y auditada en el sistema.`
+            );
+          },
+          error: (err) => {
+            this.isChangingRemision.set(false);
+            const msg =
+              err?.error?.message ||
+              err?.message ||
+              'Error al modificar remisión en el servidor. Verifica credenciales.';
+            this.changeRemisionError.set(msg);
+          },
+        });
+    } else {
+      this.isChangingRemision.set(false);
+      this.showChangeRemisionModal.set(false);
+      const updated = this.svc.changeOutboundRemision(
+        current.folio,
+        newDoc,
+        reason,
+        adminLabel
+      );
+      if (updated) {
+        this.selectedOutbound.set(updated);
+      }
+      this.toast.success(
+        `Remisión / Carta Porte actualizada a '${newDoc}' localmente.`
+      );
+    }
+  }
+
+  // ── MODAL AUTORIZACIÓN DE DESPACHO (CIERRE FORMAL LOADED -> COMPLETED) ──────
+  showAuthorizeModal = signal(false);
+  authLeaderUser = signal('');
+  authLeaderPassword = signal('');
+  authLeaderError = signal<string | null>(null);
+  showAuthLeaderPassword = signal(false);
+  isAuthorizingDispatch = signal(false);
+
+  openAuthorizeModal(): void {
+    this.authLeaderUser.set('');
+    this.authLeaderPassword.set('');
+    this.authLeaderError.set(null);
+    this.showAuthLeaderPassword.set(false);
+    this.showAuthorizeModal.set(true);
+  }
+
+  closeAuthorizeModal(): void {
+    this.showAuthorizeModal.set(false);
+  }
+
+  toggleShowAuthLeaderPassword(): void {
+    this.showAuthLeaderPassword.update((v) => !v);
+  }
+
+  confirmAuthorizeDispatch(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+
+    const user = this.authLeaderUser().trim();
+    const pass = this.authLeaderPassword().trim();
+
+    if (!user || !pass) {
+      this.authLeaderError.set('Ingresa usuario y contraseña de Líder / Supervisor de Almacén.');
+      return;
+    }
+
+    this.isAuthorizingDispatch.set(true);
+    this.authLeaderError.set(null);
+
+    const adminUser = user.toLowerCase().includes('admin')
+      ? 'Gerencia Operativa (Administrador)'
+      : `${user} (Líder / Supervisor Autorizado)`;
+
+    const currentItems = (cur.items && cur.items.length > 0) ? cur.items : this.selectedPalletItems();
+
+    if (cur.id && cur.id.includes('-')) {
+      this.movementsApi.updateOutbound(cur.id, {
+        status: 'COMPLETED',
+        observations: cur.observations || '',
+      }).subscribe({
+        next: () => {
+          this.isAuthorizingDispatch.set(false);
+          this.showAuthorizeModal.set(false);
+          const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser, currentItems);
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.lastCompletedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.showPrintPromptModal.set(true);
+            this.toast.success(`Salida #${updated.folio} autorizada y cerrada exitosamente.`);
+          }
+        },
+        error: (err) => {
+          this.isAuthorizingDispatch.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al autorizar salida en el servidor.';
+          this.authLeaderError.set(msg);
+        }
+      });
+    } else {
+      this.isAuthorizingDispatch.set(false);
+      this.showAuthorizeModal.set(false);
+      const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser, currentItems);
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.lastCompletedOutbound.set(updated);
+        this.loadAuditLogs(updated.id || updated.folio);
+        this.showPrintPromptModal.set(true);
+        this.toast.success(`Salida #${updated.folio} completada y autorizada formalmente.`);
+      }
+    }
+  }
+
+  getInitials(name?: string): string {
+    if (!name) return 'OP';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  formatShift(shift?: string): string {
+    if (!shift) return '--';
+    const s = shift.toUpperCase();
+    if (s.includes('MATUTINO') || s === 'FIRST' || s === '1') return 'Matutino (06:00 - 14:00)';
+    if (s.includes('VESPERTINO') || s === 'SECOND' || s === '2') return 'Vespertino (14:00 - 22:00)';
+    if (s.includes('NOCTURNO') || s === 'THIRD' || s === '3') return 'Nocturno (22:00 - 06:00)';
+    if (s.includes('MIXTO')) return 'Mixto';
+    return shift;
+  }
+
+  onRampMatrixClick(ramp: RampOccupancyStatus): void {
+    if (ramp.status === 'OCCUPIED_OUTBOUND' && ramp.operationFolio) {
+      const match = this.svc.outbounds().find((o) => o.folio === ramp.operationFolio || o.id === ramp.operationFolio);
+      if (match) {
+        this.selectOutboundItem(match);
+      }
+      this.showDockMapModal.set(false);
+    } else if (ramp.status === 'AVAILABLE') {
+      this.selectedRampNumber.set(ramp.rampNumber);
+      this.toast.info(`Rampa ${ramp.rampNumber} seleccionada.`);
+      this.showDockMapModal.set(false);
+    }
+  }
+
+  getRampOccupancy(rampNumber: number): RampOccupancyStatus | undefined {
+    return this.rampOccupancyStatus().find((r) => r.rampNumber === rampNumber);
+  }
+
+  isRampBusy(rampNumber: number, allowedFolio?: string | number): boolean {
+    const occ = this.getRampOccupancy(rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') return false;
+    if (allowedFolio != null && String(occ.operationFolio) === String(allowedFolio)) return false;
+    return true;
+  }
+
+  getRampDisplayLabel(rm: RampItem, currentFolio?: string | number): string {
+    const occ = this.getRampOccupancy(rm.rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') {
+      return `${rm.name} (Libre)`;
+    }
+    if (currentFolio != null && String(occ.operationFolio) === String(currentFolio)) {
+      return `${rm.name} (Asignada a este Folio)`;
+    }
+    if (occ.status === 'OCCUPIED_OUTBOUND') {
+      return `${rm.name} (Ocupada - Salida #${occ.operationFolio})`;
+    }
+    return `${rm.name} (Ocupada - Folio #${occ.operationFolio})`;
+  }
+
+  onRampInput(value: string): void {
+    this.rampSearchQuery.set(value);
+    this.isRampDropdownOpen.set(true);
+
+    const val = value.trim();
+    if (!val) {
+      this.selectedRampNumber.set(0);
+      return;
+    }
+
+    const exact = this.ramps().find(
+      (rm) => rm.name.toLowerCase() === val.toLowerCase() || String(rm.rampNumber) === val || rm.code.toLowerCase() === val.toLowerCase()
+    );
+    if (exact && !this.isRampBusy(exact.rampNumber, this.selectedOutbound()?.folio)) {
+      this.selectedRampNumber.set(exact.rampNumber);
+    }
+  }
+
+  selectRamp(rm: RampItem): void {
+    if (this.isRampBusy(rm.rampNumber, this.selectedOutbound()?.folio)) {
+      const occ = this.getRampOccupancy(rm.rampNumber);
+      const opLabel = occ?.operationType === 'OUTBOUND' ? 'la Salida / Carga' : 'la Recepción / Descarga';
+      this.toast.warning(`⚠️ La ${rm.name} se encuentra ocupada por ${opLabel} (Folio #${occ?.operationFolio || 'Activo'}). Debe liberarse antes de asignarla.`);
+      return;
+    }
+    this.selectedRampNumber.set(rm.rampNumber);
+    this.rampSearchQuery.set(rm.name);
+    this.isRampDropdownOpen.set(false);
+  }
+
+  clearRampSelection(): void {
+    this.selectedRampNumber.set(0);
+    this.rampSearchQuery.set('');
+    this.isRampDropdownOpen.set(false);
+  }
+
+  getRampBadgeInfo(rm: RampItem, currentFolio?: string | number): { label: string; bgClass: string; textClass: string; borderClass: string } {
+    const occ = this.getRampOccupancy(rm.rampNumber);
+    if (!occ || occ.status === 'AVAILABLE') {
+      return {
+        label: 'LIBRE',
+        bgClass: 'bg-emerald-100',
+        textClass: 'text-emerald-900',
+        borderClass: 'border-emerald-300'
+      };
+    }
+    if (currentFolio != null && String(occ.operationFolio) === String(currentFolio)) {
+      return {
+        label: 'ASIGNADA',
+        bgClass: 'bg-blue-100',
+        textClass: 'text-blue-950',
+        borderClass: 'border-blue-300'
+      };
+    }
+    if (occ.status === 'OCCUPIED_OUTBOUND') {
+      return {
+        label: `SALIDA (#${occ.operationFolio})`,
+        bgClass: 'bg-rose-100',
+        textClass: 'text-rose-900',
+        borderClass: 'border-rose-300'
+      };
+    }
+    return {
+      label: `OCUPADA (#${occ.operationFolio})`,
+      bgClass: 'bg-amber-100',
+      textClass: 'text-amber-900',
+      borderClass: 'border-amber-300'
+    };
+  }
+
+  // ── PASO 1: TRANSPORTE / DESTINO / SELLO ──────────────────────────────────
+  currentStep = signal<1 | 2>(1);
+
+  // Catálogos
+  readonly carriers = this.svc.carrierLines;
+  readonly clients = this.svc.clients;
+  readonly transportTypes = TRANSPORT_TYPES;
+  readonly allBatches = this.svc.inventoryBatches;
+
+  // Catálogo completo de SKUs del servidor
+  allCatalogSkus = signal<any[]>([]);
+
+  // Selecciones Paso 1
+  selectedClientCode = signal('');
+  selectedDestinationId = signal('');
+  selectedCarrierCode = signal('');
+  driverName = signal('');
+  noEcoTractor = signal('');
+  noEcoCaja = signal('');
+  tractorPlates = signal('');
+  boxPlates = signal('');
+  selectedTransportType = signal<TransportType | ''>('');
+  sealNumber = signal('');
+
+  // Filtro por Bahía de Origen (Paso 2)
+  selectedOriginBayFilter = signal<string>('ALL');
+
+  // Diálogo interactivo post-éxito: ¿Desea imprimir documento? (Sí/No)
+  showPrintPromptModal = signal(false);
+  lastCompletedOutbound = signal<WarehouseOutbound | null>(null);
+
+  // Computed: Cliente seleccionado
+  selectedClient = computed(() =>
+    this.clients().find((c) => c.code === this.selectedClientCode()) || null
+  );
+
+  selectedClientShortCode = computed(() => {
+    const c = this.selectedClient();
+    return (c as any)?.shortCode || (c?.name ? c.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() : 'CLI');
+  });
+
+  currentDateCompact = computed(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}${mm}${dd}`;
+  });
+
+  // Catálogo completo de destinos (desacoplado y reactivo)
+  readonly allDestinations = this.svc.allDestinations;
+
+  // Computed: Destinos disponibles (catálogo completo de plantas y centros de entrega)
+  destinationsForClient = computed(() => this.allDestinations());
+
+  // Computed: Destino seleccionado (resuelve tanto de la lista global como de específicos)
+  selectedDestination = computed(() =>
+    this.allDestinations().find((d) => d.id === this.selectedDestinationId()) || null
+  );
+
+  // Computed: Transportista seleccionado
+  selectedCarrier = computed(() =>
+    this.carriers().find((c) => c.code === this.selectedCarrierCode()) || null
+  );
+
+  // Validación Paso 1
+  isStep1Valid = computed(() =>
+    Boolean(
+      this.selectedClientCode() &&
+      this.selectedDestinationId() &&
+      this.selectedCarrierCode() &&
+      this.driverName()?.trim() &&
+      this.selectedTransportType() &&
+      this.tractorPlates()?.trim() &&
+      this.boxPlates()?.trim() &&
+      this.sealNumber()?.trim()
+    )
+  );
+
+  // ── PASO 2: ASIGNACIÓN DE MONTACARGUISTA ──────────────────────────────────
+  isLoadingOperators = signal(false);
+  selectedOperatorId = signal<string>('');
+  operatorSearchQuery = signal<string>('');
+  isOperatorDropdownOpen = signal<boolean>(false);
+
+  forkliftOperators = computed<ForkliftOperatorOption[]>(() => {
+    const adminOps = this.forkliftAdminService.activeOperators();
+    if (adminOps && adminOps.length > 0) {
+      return adminOps.map((op) => ({
+        id: op.id,
+        name: op.fullName,
+        badge: op.code,
+        jobTitle: op.jobTitle || 'Almacenista Montacargista',
+        shift: op.shift || (op as any).shiftName || 'Matutino',
+        status: op.status,
+      }));
+    }
+    // Fallback inicial
+    return [
+      { id: '852584b7-37c7-4a5f-b4dc-c7b6097a9c51', name: 'Hector Villalva Ayala', badge: 'MC-001', jobTitle: 'Líder de Turno', shift: 'Turno Matutino CDMX', status: 'ACTIVO' },
+      { id: 'b51345cb-bc76-4b3c-8386-d7595c14a83a', name: 'Alex Gabriel Perez Garduño', badge: 'MC-002', jobTitle: 'Líder de Turno', shift: 'Turno Matutino CDMX', status: 'ACTIVO' },
+      { id: '401954d5-dcc8-48bb-8a17-48a68d31580b', name: 'Alfredo Ramirez Gonzalez', badge: 'MC-003', jobTitle: 'Líder de Turno', shift: 'Turno Matutino CDMX', status: 'ACTIVO' },
+    ];
+  });
+
+  filteredForkliftOperators = computed(() => {
+    const ops = this.forkliftOperators();
+    const q = this.operatorSearchQuery().toLowerCase().trim();
+    if (!q) return ops;
+    return ops.filter(
+      (op) =>
+        op.name.toLowerCase().includes(q) ||
+        op.badge.toLowerCase().includes(q) ||
+        op.jobTitle.toLowerCase().includes(q)
+    );
+  });
+
+  selectedOperator = computed<ForkliftOperatorOption | undefined>(() =>
+    this.forkliftOperators().find((op) => op.id === this.selectedOperatorId())
+  );
+
+  getOperatorAvailability(op: ForkliftOperatorOption): {
+    status: 'DISPONIBLE' | 'EN_OPERACION';
+    label: string;
+    dotClass: string;
+    badgeClass: string;
+  } {
+    return {
+      status: 'DISPONIBLE',
+      label: 'Disponible',
+      dotClass: 'bg-emerald-500',
+      badgeClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
+    };
+  }
+
+  onOperatorInput(val: string): void {
+    this.operatorSearchQuery.set(val);
+    this.isOperatorDropdownOpen.set(true);
+    const exact = this.forkliftOperators().find(
+      (o) => o.name.toLowerCase() === val.toLowerCase().trim()
+    );
+    if (exact) {
+      this.selectedOperatorId.set(exact.id);
+    }
+  }
+
+  selectOperator(op: ForkliftOperatorOption): void {
+    this.selectedOperatorId.set(op.id);
+    this.operatorSearchQuery.set(op.name);
+    this.isOperatorDropdownOpen.set(false);
+  }
+
+  clearOperatorSelection(): void {
+    this.selectedOperatorId.set('');
+    this.operatorSearchQuery.set('');
+    this.isOperatorDropdownOpen.set(false);
+  }
+
+  // ── PASO 2: MOTOR DE REGLA DE PABLO (FEFO) ────────────────────────────────
+  calculateDaysRemaining(expirationDateStr?: string): number {
+    if (!expirationDateStr) return 999;
+    const exp = new Date(expirationDateStr);
+    if (isNaN(exp.getTime())) return 999;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffTime = exp.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  getPabloStatus(expirationDateStr?: string): {
+    status: 'PABLO_ALERT' | 'OPTIMAL' | 'EXPIRED';
+    label: string;
+    color: 'amber' | 'emerald' | 'rose';
+    isCritical: boolean;
+    daysRemaining: number;
+  } {
+    const days = this.calculateDaysRemaining(expirationDateStr);
+    if (days <= 0) {
+      return {
+        status: 'EXPIRED',
+        label: 'Caduco / Bloqueado',
+        color: 'rose',
+        isCritical: true,
+        daysRemaining: days,
+      };
+    }
+    if (days <= 30) {
+      return {
+        status: 'PABLO_ALERT',
+        label: `Alerta Pablo (${days}d)`,
+        color: 'amber',
+        isCritical: true,
+        daysRemaining: days,
+      };
+    }
+    return {
+      status: 'OPTIMAL',
+      label: `Óptimo (${days}d)`,
+      color: 'emerald',
+      isCritical: false,
+      daysRemaining: days,
+    };
+  }
+
+  // ── MOTOR DE GOBERNANZA DE ESTATUS DE INVENTARIO Y CALIDAD (SDOP) ───────────
+  getInventoryStatus(
+    p: any,
+    expDate?: string,
+    pablo?: { status: string; label: string; color: string; daysRemaining: number }
+  ): {
+    status: 'AVAILABLE' | 'BLOCKED' | 'EXPIRED';
+    label: string;
+    color: 'emerald' | 'rose' | 'amber';
+    blockReason?: string;
+    qualityFolio?: string;
+    isSelectable: boolean;
+  } {
+    // 1. Detección de Bloqueo por Calidad / PNC / Cuarentena / Retención
+    const isQualityHold =
+      !!p.isBlocked ||
+      !!p.isQualityBlocked ||
+      p.state === 'IN_QUALITY' ||
+      p.state === 20 ||
+      !!p.quarantineReason ||
+      !!p.blockReason ||
+      (typeof p.palletCode === 'string' &&
+        (p.palletCode.toUpperCase().includes('BLOQ') || p.palletCode.toUpperCase().includes('PNC')));
+
+    if (isQualityHold) {
+      const reason = p.blockReason || p.quarantineReason || 'Retención por Control de Calidad (Inspección PNC)';
+      const folio = p.qualityFolio || p.pncFolio || 'PNC-QM';
+      return {
+        status: 'BLOCKED',
+        label: 'Bloqueado (Calidad)',
+        color: 'rose',
+        blockReason: reason,
+        qualityFolio: folio,
+        isSelectable: false,
+      };
+    }
+
+    // 2. Detección de Caduco / Merma / Destrucción
+    const days = pablo ? pablo.daysRemaining : this.calculateDaysRemaining(expDate);
+    const isExpired = p.state === 'EXPIRED' || p.state === 70 || pablo?.status === 'EXPIRED' || days <= 0;
+
+    if (isExpired) {
+      return {
+        status: 'EXPIRED',
+        label: `Caduco (${days <= 0 ? Math.abs(days) + 'd vencido' : days + 'd'})`,
+        color: 'amber',
+        blockReason: 'Producto caduco - Solo apto para salida por destrucción o merma',
+        isSelectable: false,
+      };
+    }
+
+    // 3. Disponible para despacho comercial estándar (FEFO)
+    return {
+      status: 'AVAILABLE',
+      label: `Disponible (${days}d)`,
+      color: 'emerald',
+      isSelectable: true,
+    };
+  }
+
+  // ── PASO 2: BUSCADOR PREDICTIVO DE PRODUCTOS / SKUS Y ESCÁNER DE UAS ───
+  skuSearchQuery = signal<string>('');
+  isSkuDropdownOpen = signal<boolean>(false);
+  selectedSkuCode = signal<string>('');
+
+  // Lotes disponibles en todo el almacén (sin restricción de cliente para búsqueda libre)
+  availableBatches = computed(() => {
+    return this.allBatches().filter((b) => b.availablePallets > 0);
+  });
+
+  // Catálogo completo consolidado de todos los clientes y stock activo
+  availableCatalogSkus = computed<AvailableSkuOption[]>(() => {
+    const batches = this.availableBatches();
+
+    // Catálogo maestro multicliente
+    const DEFAULT_CATALOG: Record<string, { code: string; name: string; category?: string; clientName: string }[]> = {
+      'NESTLE': [
+        { code: '8500297', name: 'NESCAFE CLASICO 5KG MX', category: 'CAFÉ Y BEBIDAS', clientName: 'Nestlé México' },
+        { code: '12572733', name: 'FFEE-MATE ORIGINAL BOTELLA 12X400G N1', category: 'CREMADORES', clientName: 'Nestlé México' },
+        { code: '12448910', name: 'NESCAFE CLASICO FRASCO 12X200G N1', category: 'CAFÉ Y BEBIDAS', clientName: 'Nestlé México' },
+        { code: '12389412', name: 'NESQUIK CHOCOLATE POLVO 12X357G', category: 'MODIFICADORES', clientName: 'Nestlé México' },
+        { code: '12984711', name: 'CARNATION CLAVEL EVAPORADA 24X360G', category: 'LÁCTEOS', clientName: 'Nestlé México' },
+        { code: '12003948', name: 'CHOCOLATE ABUELITA TABLETA 24X540G', category: 'CHOCOLATES', clientName: 'Nestlé México' },
+      ],
+      'LALA': [
+        { code: '33019284', name: 'LECHE LALA ENTERA 12X1L TETRAPAK', category: 'LÁCTEOS', clientName: 'Grupo Lala' },
+        { code: '33019285', name: 'LECHE LALA DESLACTOSADA 12X1L TETRAPAK', category: 'LÁCTEOS', clientName: 'Grupo Lala' },
+        { code: '33020011', name: 'YOGURT LALA FRESA 24X220G', category: 'YOGURT', clientName: 'Grupo Lala' },
+        { code: '33020055', name: 'QUESO MANCHEGO LALA 12X400G', category: 'QUESOS', clientName: 'Grupo Lala' },
+      ],
+      'BIMBO': [
+        { code: '22019481', name: 'PAN BLANCO BIMBO GRANDE 680G', category: 'PANIFICACIÓN', clientName: 'Grupo Bimbo' },
+        { code: '22019482', name: 'PAN INTEGRAL BIMBO 680G', category: 'PANIFICACIÓN', clientName: 'Grupo Bimbo' },
+        { code: '22030119', name: 'DONAS BIMBO AZUCARADAS 12X105G', category: 'DULCES', clientName: 'Grupo Bimbo' },
+        { code: '22030125', name: 'MANTECADAS BIMBO CON NUEZ 12X125G', category: 'PAN DULCE', clientName: 'Grupo Bimbo' },
+      ],
+      'PLASTICOS': [
+        { code: '44019201', name: 'ENVASE PET 1L CRISTAL BOCA 28MM', category: 'ENVASES', clientName: 'Plásticos y Envases' },
+        { code: '44019202', name: 'TAPA PLASTICA SEGURIDAD 28MM ROJA', category: 'TAPAS', clientName: 'Plásticos y Envases' },
+        { code: '44019203', name: 'BIDON POLIETILENO 20L BLANCO INDUSTRIAL', category: 'INDUSTRIAL', clientName: 'Plásticos y Envases' },
+      ],
+      'ALPURA': [
+        { code: '55019301', name: 'LECHE ALPURA CLASICA 12X1L', category: 'LÁCTEOS', clientName: 'Comercializadora Alpura' },
+        { code: '55019302', name: 'CREMA ALPURA ACIDIFICADA 12X450ML', category: 'CREMAS', clientName: 'Comercializadora Alpura' },
+        { code: '55019303', name: 'MANTEQUILLA ALPURA CON SAL 20X90G', category: 'LÁCTEOS', clientName: 'Comercializadora Alpura' },
+      ],
+    };
+
+    // 1. Recopilar catálogo de la API o fallback
+    const catalogList = this.allCatalogSkus();
+    const matchedCatalog: { code: string; name: string; category?: string; clientName?: string }[] = [];
+
+    if (catalogList && catalogList.length > 0) {
+      for (const item of catalogList) {
+        matchedCatalog.push({
+          code: String(item.code || item.sku || item.id).trim(),
+          name: item.name || item.description || item.code,
+          category: item.category || 'CATÁLOGO',
+          clientName: item.clientName || 'Catálogo General',
+        });
+      }
+    }
+
+    // Agregar todos los productos por defecto de todos los clientes
+    for (const items of Object.values(DEFAULT_CATALOG)) {
+      for (const it of items) {
+        if (!matchedCatalog.some((c) => c.code === it.code)) {
+          matchedCatalog.push(it);
+        }
+      }
+    }
+
+    // 2. Mapear inventario activo por SKU code
+    const inventoryMap = new Map<string, { pallets: number; pieces: number; nearestExp: string; daysRemaining: number; pablo: any }>();
+    for (const b of batches) {
+      const code = String(b.productId || 'SKU-GENERIC').trim();
+      const pablo = this.getPabloStatus(b.expirationDate);
+      const existing = inventoryMap.get(code);
+      if (!existing) {
+        inventoryMap.set(code, {
+          pallets: b.availablePallets,
+          pieces: b.totalPieces,
+          nearestExp: b.expirationDate,
+          daysRemaining: pablo.daysRemaining,
+          pablo: pablo,
+        });
+      } else {
+        existing.pallets += b.availablePallets;
+        existing.pieces += b.totalPieces;
+        if (pablo.daysRemaining < existing.daysRemaining) {
+          existing.nearestExp = b.expirationDate;
+          existing.daysRemaining = pablo.daysRemaining;
+          existing.pablo = pablo;
+        }
+      }
+    }
+
+    // 3. Consolidar todos los productos del catálogo
+    const resultSkus: AvailableSkuOption[] = [];
+    const processedCodes = new Set<string>();
+
+    for (const cat of matchedCatalog) {
+      const code = cat.code;
+      if (processedCodes.has(code)) continue;
+      processedCodes.add(code);
+
+      const inv = inventoryMap.get(code);
+      if (inv && inv.pallets > 0) {
+        resultSkus.push({
+          skuCode: code,
+          productName: cat.name,
+          category: cat.category || 'GENERAL',
+          clientName: cat.clientName || 'General',
+          totalAvailablePallets: inv.pallets,
+          totalAvailablePieces: inv.pieces,
+          batchesCount: 1,
+          nearestExpirationDate: inv.nearestExp,
+          pabloStatus: inv.pablo.status,
+          pabloLabel: inv.pablo.label,
+          pabloColor: inv.pablo.color,
+          daysRemaining: inv.daysRemaining,
+        });
+      } else {
+        // Producto sin stock
+        resultSkus.push({
+          skuCode: code,
+          productName: cat.name,
+          category: cat.category || 'GENERAL',
+          clientName: cat.clientName || 'General',
+          totalAvailablePallets: 0,
+          totalAvailablePieces: 0,
+          batchesCount: 0,
+          nearestExpirationDate: '',
+          pabloStatus: 'OPTIMAL',
+          pabloLabel: '0 tarimas',
+          pabloColor: 'emerald',
+          daysRemaining: 999,
+        });
+      }
+    }
+
+    // 4. Agregar cualquier batch en inventario cuyo SKU no estuviera explícitamente en el catálogo
+    for (const b of batches) {
+      const code = String(b.productId || 'SKU-GENERIC').trim();
+      if (!processedCodes.has(code)) {
+        processedCodes.add(code);
+        const pablo = this.getPabloStatus(b.expirationDate);
+        resultSkus.push({
+          skuCode: code,
+          productName: b.productName || 'Producto General',
+          category: (b as any).category || 'GENERAL',
+          clientName: (b as any).clientName || b.client || 'General',
+          totalAvailablePallets: b.availablePallets,
+          totalAvailablePieces: b.totalPieces,
+          batchesCount: 1,
+          nearestExpirationDate: b.expirationDate,
+          pabloStatus: pablo.status,
+          pabloLabel: pablo.label,
+          pabloColor: pablo.color,
+          daysRemaining: pablo.daysRemaining,
+        });
+      }
+    }
+
+    // Ordenar: Productos con stock primero (ordenados por FEFO / menor daysRemaining), y luego productos sin stock por nombre
+    return resultSkus.sort((a, b) => {
+      if (a.totalAvailablePallets > 0 && b.totalAvailablePallets === 0) return -1;
+      if (a.totalAvailablePallets === 0 && b.totalAvailablePallets > 0) return 1;
+      if (a.totalAvailablePallets > 0 && b.totalAvailablePallets > 0) {
+        return a.daysRemaining - b.daysRemaining;
+      }
+      return a.productName.localeCompare(b.productName);
+    });
+  });
+
+  // Alias para mantener compatibilidad con la vista
+  availableSkusForClient = computed<AvailableSkuOption[]>(() => this.availableCatalogSkus());
+
+  inStockSkusCount = computed(() =>
+    this.availableCatalogSkus().filter((s) => s.totalAvailablePallets > 0).length
+  );
+
+  // Lista plana de todas las tarimas físicas (UAs) en inventario para escaneo instantáneo
+  allFlatPalletsInWarehouse = computed<OutboundPalletItem[]>(() => {
+    const batches = this.availableBatches();
+    const list: OutboundPalletItem[] = [];
+    for (const b of batches) {
+      let pos = 1;
+      for (const p of b.pallets || []) {
+        const expDate = p.expirationDate || b.expirationDate;
+        const pablo = this.getPabloStatus(expDate);
+        const invStatus = this.getInventoryStatus(p, expDate, pablo);
+        list.push({
+          id: p.id,
+          palletCode: p.palletCode,
+          palletNumber: pos++,
+          productId: p.productId || b.productId,
+          description: p.description || b.productName,
+          clientName: (b as any).clientName || b.client || 'General',
+          lotNumber: p.lotNumber || b.lotNumber,
+          remisionNo: b.remisionNo || p.docNumber || (b as any).docNumber || (b as any).sapFolio || '',
+          expirationDate: expDate,
+          pieces: p.pieces,
+          palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
+          palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
+          locationCode: p.locationCode || b.locationCode || 'A-01-N1',
+          daysRemaining: pablo.daysRemaining,
+          pabloStatus: pablo.status,
+          pabloLabel: pablo.label,
+          pabloColor: pablo.color,
+          isSuggestedFefo: false,
+          inventoryStatus: invStatus.status,
+          statusLabel: invStatus.label,
+          statusColor: invStatus.color,
+          blockReason: invStatus.blockReason,
+          qualityFolio: invStatus.qualityFolio,
+          isSelectableForDispatch: invStatus.isSelectable,
+        });
+      }
+    }
+    return list;
+  });
+
+  // ── MOTOR DE BÚSQUEDA MULTI-CRITERIO Y ESCÁNER DE CÓDIGO DE BARRAS ─────────
+  palletSearchMode = signal<'ALL' | 'SKU' | 'UA' | 'LOCATION' | 'LOT'>('ALL');
+
+  setPalletSearchMode(mode: 'ALL' | 'SKU' | 'UA' | 'LOCATION' | 'LOT'): void {
+    this.palletSearchMode.set(mode);
+    this.isSkuDropdownOpen.set(true);
+  }
+
+  // Tarimas coincidentes por código de UA / SSCC, Lote, Bahía, Caducidad o SKU
+  matchingPalletUas = computed<OutboundPalletItem[]>(() => {
+    const q = this.skuSearchQuery().toLowerCase().trim();
+    if (!q || q.length < 1) return [];
+    const mode = this.palletSearchMode();
+    const all = this.allFlatPalletsInWarehouse();
+
+    return all.filter((p) => {
+      const matchUa = p.palletCode.toLowerCase().includes(q) || (p.id && p.id.toLowerCase().includes(q));
+      const matchLot = p.lotNumber && p.lotNumber.toLowerCase().includes(q);
+      const matchLoc = p.locationCode && p.locationCode.toLowerCase().includes(q);
+      const matchProd = (p.productId && p.productId.toLowerCase().includes(q)) || (p.description && p.description.toLowerCase().includes(q));
+      const matchDate = p.expirationDate && p.expirationDate.toLowerCase().includes(q);
+
+      switch (mode) {
+        case 'UA': return matchUa;
+        case 'LOT': return matchLot || matchDate;
+        case 'LOCATION': return matchLoc;
+        case 'SKU': return matchProd;
+        case 'ALL':
+        default:
+          return matchUa || matchLot || matchLoc || matchProd || matchDate;
+      }
+    }).slice(0, 12);
+  });
+
+  filteredAvailableSkus = computed(() => {
+    const mode = this.palletSearchMode();
+    if (mode === 'UA' || mode === 'LOCATION') return [];
+
+    const skus = this.availableCatalogSkus();
+    const q = this.skuSearchQuery().toLowerCase().trim();
+    if (!q) return skus;
+
+    // Si el texto del buscador coincide exactamente con el producto actualmente seleccionado, mostrar todo el catálogo
+    const current = this.selectedSku();
+    if (current && `${current.skuCode} — ${current.productName}`.toLowerCase() === q) {
+      return skus;
+    }
+
+    return skus.filter(
+      (s) =>
+        s.skuCode.toLowerCase().includes(q) ||
+        s.productName.toLowerCase().includes(q) ||
+        (s.clientName && s.clientName.toLowerCase().includes(q)) ||
+        (s.category && s.category.toLowerCase().includes(q)) ||
+        `${s.skuCode} — ${s.productName}`.toLowerCase().includes(q)
+    );
+  });
+
+  filteredSkus = computed(() => this.filteredAvailableSkus());
+
+  selectedSku = computed<AvailableSkuOption | undefined>(() =>
+    this.availableCatalogSkus().find((s) => s.skuCode === this.selectedSkuCode())
+  );
+
+  onSkuInput(val: string): void {
+    this.skuSearchQuery.set(val);
+    this.isSkuDropdownOpen.set(true);
+
+    // Si el usuario borró todo el texto manualmente, resetear solo el foco del SKU activo (no el manifiesto)
+    if (!val.trim()) {
+      this.selectedSkuCode.set('');
+      this.requestedPalletsCount.set(0);
+      return;
+    }
+
+    const exact = this.availableCatalogSkus().find(
+      (s) =>
+        s.skuCode.toLowerCase() === val.toLowerCase().trim() ||
+        s.productName.toLowerCase() === val.toLowerCase().trim()
+    );
+    if (exact) {
+      this.selectedSkuCode.set(exact.skuCode);
+      this.requestedPalletsCount.set(this.selectedPalletsCountForCurrentSku());
+    }
+  }
+
+  onSkuInputFocus(): void {
+    this.isSkuDropdownOpen.set(true);
+  }
+
+  // Manejo de lectura con pistola de código de barras / tablet / teclado
+  handleScannerOrSearchSubmit(): void {
+    let rawVal = this.skuSearchQuery().trim();
+    if (!rawVal) return;
+
+    // Limpiar posibles prefijos GS1 de escáneres ópticos (ej. ]C1, ]e0, etc.)
+    rawVal = rawVal.replace(/^\][A-Za-z0-9]{2}/, '').trim();
+    const val = rawVal.toLowerCase();
+
+    // 1. Buscar coincidencia exacta o por sufijo con código de UA / SSCC
+    const matchingPallet = this.allFlatPalletsInWarehouse().find(
+      (p) =>
+        p.palletCode.toLowerCase() === val ||
+        p.palletCode.toLowerCase().endsWith(val) ||
+        (p.id && p.id.toLowerCase() === val)
+    );
+
+    if (matchingPallet) {
+      this.selectPalletByUa(matchingPallet);
+      return;
+    }
+
+    // 2. Buscar por Bahía / Ubicación exacta (ej. A-01-01)
+    const palletsInBay = this.allFlatPalletsInWarehouse().filter(
+      (p) => p.locationCode && p.locationCode.toLowerCase() === val
+    );
+    if (palletsInBay.length > 0) {
+      this.palletSearchMode.set('LOCATION');
+      this.isSkuDropdownOpen.set(true);
+      return;
+    }
+
+    // 3. Buscar coincidencia exacta por SKU Code
+    const matchingSku = this.availableCatalogSkus().find(
+      (s) =>
+        s.skuCode.toLowerCase() === val ||
+        s.productName.toLowerCase() === val
+    );
+
+    if (matchingSku) {
+      this.selectSku(matchingSku);
+      return;
+    }
+
+    // 4. Si hay una sola UA coincidente, seleccionarla directamente
+    const uas = this.matchingPalletUas();
+    if (uas.length === 1) {
+      this.selectPalletByUa(uas[0]);
+      return;
+    }
+
+    // 5. Si hay un solo resultado de producto filtrado, seleccionarlo
+    const filtered = this.filteredAvailableSkus();
+    if (filtered.length === 1) {
+      this.selectSku(filtered[0]);
+      return;
+    }
+
+    // Abrir dropdown si hay opciones
+    this.isSkuDropdownOpen.set(true);
+  }
+
+  selectPalletByUa(pallet: OutboundPalletItem): void {
+    // Añadir la tarima directamente al carro acumulado del manifiesto
+    if (!this.selectedPalletIds().includes(pallet.id)) {
+      this.selectedPalletIds.update((ids) => [...ids, pallet.id]);
+      this.toast.success(
+        `⚡ Escáner UA: [${pallet.palletCode}] agregada al despacho (${pallet.description || pallet.productId} · Bahía: ${pallet.locationCode} · ${pallet.pieces} pz).`
+      );
+    } else {
+      this.toast.info(`La tarima [UA: ${pallet.palletCode}] ya está en el manifiesto.`);
+    }
+
+    // Limpiar el campo de escáner para permitir escanear la siguiente tarima de inmediato
+    this.selectedSkuCode.set('');
+    this.skuSearchQuery.set('');
+    this.isSkuDropdownOpen.set(false);
+  }
+
+  selectSku(sku: AvailableSkuOption): void {
+    this.selectedSkuCode.set(sku.skuCode);
+    this.skuSearchQuery.set(`${sku.skuCode} — ${sku.productName}`);
+    this.isSkuDropdownOpen.set(false);
+    this.fefoQuantityInput.set(1);
+  }
+
+  clearSkuSelection(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    this.selectedSkuCode.set('');
+    this.skuSearchQuery.set('');
+    this.palletSearchMode.set('ALL');
+    this.requestedPalletsCount.set(0);
+    this.isSkuDropdownOpen.set(true);
+  }
+
+  // ── PASO 2: TARIMAS / PALLETS CON MOTOR FEFO Y BUSCADOR RÁPIDO POR UA ──
+  selectedPalletIds = signal<string[]>([]);
+  fefoQuantityInput = signal<number>(1);
+  requestedPalletsCount = signal<number>(0);
+  palletTableSearchQuery = signal<string>('');
+
+  // Filtro de Estatus de Tarimas (SDOP: Todas / Disponibles / Bloqueados / Caducos)
+  palletStatusFilter = signal<'ALL' | 'AVAILABLE' | 'BLOCKED' | 'EXPIRED'>('ALL');
+
+  setPalletStatusFilter(filter: 'ALL' | 'AVAILABLE' | 'BLOCKED' | 'EXPIRED'): void {
+    this.palletStatusFilter.set(filter);
+  }
+
+  onPalletTableSearchInput(val: string): void {
+    this.palletTableSearchQuery.set(val);
+  }
+
+  clearPalletTableSearch(): void {
+    this.palletTableSearchQuery.set('');
+  }
+
+  // Cantidad de tarimas seleccionadas para el SKU que está enfocado actualmente
+  selectedPalletsCountForCurrentSku = computed(() => {
+    const sku = this.selectedSkuCode();
+    if (!sku) return this.selectedPalletIds().length;
+    const selectedSet = new Set(this.selectedPalletIds());
+    return this.allFlatPalletsInWarehouse().filter(
+      (p) => p.productId === sku && selectedSet.has(p.id)
+    ).length;
+  });
+
+  availablePalletsCountForCurrentSku = computed(() => {
+    const sku = this.selectedSkuCode();
+    if (!sku) return this.allFlatPalletsInWarehouse().length;
+    return this.allFlatPalletsInWarehouse().filter((p) => p.productId === sku).length;
+  });
+
+  // Conteo de tarimas por estatus para el SKU actual
+  availableCountForCurrentSku = computed(() => {
+    const targetSku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const filtered = targetSku ? all.filter((p) => p.productId === targetSku) : all;
+    return filtered.filter((p) => p.inventoryStatus === 'AVAILABLE').length;
+  });
+
+  blockedCountForCurrentSku = computed(() => {
+    const targetSku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const filtered = targetSku ? all.filter((p) => p.productId === targetSku) : all;
+    return filtered.filter((p) => p.inventoryStatus === 'BLOCKED').length;
+  });
+
+  expiredCountForCurrentSku = computed(() => {
+    const targetSku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const filtered = targetSku ? all.filter((p) => p.productId === targetSku) : all;
+    return filtered.filter((p) => p.inventoryStatus === 'EXPIRED').length;
+  });
+
+  totalCountForCurrentSku = computed(() => {
+    const targetSku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const filtered = targetSku ? all.filter((p) => p.productId === targetSku) : all;
+    return filtered.length;
+  });
+
+  maxAvailablePalletsForCurrentSku = computed(() => {
+    const sku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const selectedSet = new Set(this.selectedPalletIds());
+    if (sku) {
+      return all.filter((p) => p.productId === sku && p.inventoryStatus === 'AVAILABLE' && !selectedSet.has(p.id)).length;
+    }
+    return all.filter((p) => p.inventoryStatus === 'AVAILABLE' && !selectedSet.has(p.id)).length;
+  });
+
+  incrementFefoQuantity(): void {
+    const max = this.maxAvailablePalletsForCurrentSku();
+    const cur = this.fefoQuantityInput();
+    if (cur < max) {
+      this.fefoQuantityInput.set(cur + 1);
+    }
+  }
+
+  decrementFefoQuantity(): void {
+    const cur = this.fefoQuantityInput();
+    if (cur > 1) {
+      this.fefoQuantityInput.set(cur - 1);
+    }
+  }
+
+  onFefoQuantityInput(val: number): void {
+    const max = this.maxAvailablePalletsForCurrentSku();
+    const clamped = isNaN(val) ? 1 : Math.max(1, Math.min(val, Math.max(1, max)));
+    this.fefoQuantityInput.set(clamped);
+  }
+
+  allAvailablePalletsForCurrentView = computed<OutboundPalletItem[]>(() => {
+    const batches = this.availableBatches();
+    const targetSku = this.selectedSkuCode();
+    const tableSearch = this.palletTableSearchQuery().toLowerCase().trim();
+    const selectedSet = new Set(this.selectedPalletIds());
+    const statusFilter = this.palletStatusFilter();
+
+    const filteredBatches = targetSku
+      ? batches.filter((b) => b.productId === targetSku)
+      : batches;
+
+    const palletsList: OutboundPalletItem[] = [];
+
+    for (const b of filteredBatches) {
+      let pos = 1;
+      for (const p of b.pallets || []) {
+        // Excluir tarimas que ya están en el manifiesto de salida
+        if (selectedSet.has(p.id)) {
+          pos++;
+          continue;
+        }
+
+        const expDate = p.expirationDate || b.expirationDate;
+        const pablo = this.getPabloStatus(expDate);
+        const invStatus = this.getInventoryStatus(p, expDate, pablo);
+        const loc = p.locationCode || b.locationCode || 'A-01-N1';
+        const palletCode = p.palletCode || '';
+        const lotNumber = p.lotNumber || b.lotNumber || '';
+        const desc = p.description || b.productName || '';
+        const rem = b.remisionNo || '';
+
+        // Filtrar por pestaña de estatus
+        if (statusFilter !== 'ALL' && invStatus.status !== statusFilter) {
+          pos++;
+          continue;
+        }
+
+        const matchesSearch =
+          !tableSearch ||
+          palletCode.toLowerCase().includes(tableSearch) ||
+          lotNumber.toLowerCase().includes(tableSearch) ||
+          rem.toLowerCase().includes(tableSearch) ||
+          desc.toLowerCase().includes(tableSearch) ||
+          loc.toLowerCase().includes(tableSearch) ||
+          String(pos).includes(tableSearch) ||
+          invStatus.label.toLowerCase().includes(tableSearch);
+
+        if (matchesSearch) {
+          palletsList.push({
+            id: p.id,
+            palletCode: palletCode,
+            palletNumber: pos,
+            productId: p.productId || b.productId,
+            description: desc,
+            clientName: (b as any).clientName || b.client || 'General',
+            lotNumber: lotNumber,
+            remisionNo: rem,
+            expirationDate: expDate,
+            pieces: p.pieces,
+            palletTypeId: p.palletTypeId || 'MADERA_ESTANDAR',
+            palletTypeLabel: p.palletTypeLabel || 'Madera Estándar',
+            locationCode: loc,
+            daysRemaining: pablo.daysRemaining,
+            pabloStatus: pablo.status,
+            pabloLabel: pablo.label,
+            pabloColor: pablo.color,
+            isSuggestedFefo: false,
+            inventoryStatus: invStatus.status,
+            statusLabel: invStatus.label,
+            statusColor: invStatus.color,
+            blockReason: invStatus.blockReason,
+            qualityFolio: invStatus.qualityFolio,
+            isSelectableForDispatch: invStatus.isSelectable,
+          });
+        }
+        pos++;
+      }
+    }
+
+    // Ordenamiento: Disponibles primero por FEFO, luego Bloqueados, luego Caducos
+    palletsList.sort((a, b) => {
+      if (a.inventoryStatus === 'AVAILABLE' && b.inventoryStatus !== 'AVAILABLE') return -1;
+      if (a.inventoryStatus !== 'AVAILABLE' && b.inventoryStatus === 'AVAILABLE') return 1;
+      return a.daysRemaining - b.daysRemaining;
+    });
+
+    // Marcar como sugeridos FEFO los primeros que estén disponibles
+    let fefoCount = 0;
+    for (const p of palletsList) {
+      if (p.inventoryStatus === 'AVAILABLE' && fefoCount < 5) {
+        p.isSuggestedFefo = true;
+        fefoCount++;
+      }
+    }
+
+    return palletsList;
+  });
+
+  maxAvailablePallets = computed(() => {
+    return this.allAvailablePalletsForCurrentView().filter(
+      (p) => p.inventoryStatus === 'AVAILABLE'
+    ).length;
+  });
+
+  // Agregar tarimas estrictamente del producto seleccionado por FEFO acumulando en el carro
+  addFefoPalletsForCurrentSku(count?: number): void {
+    const sku = this.selectedSkuCode();
+    const all = this.allFlatPalletsInWarehouse();
+    const selectedSet = new Set(this.selectedPalletIds());
+
+    const pool = all.filter((p) => {
+      const matchSku = !sku || p.productId === sku;
+      const isAvailable = p.inventoryStatus === 'AVAILABLE';
+      const notSelected = !selectedSet.has(p.id);
+      return matchSku && isAvailable && notSelected;
+    });
+
+    pool.sort((a, b) => a.daysRemaining - b.daysRemaining);
+
+    const qty = count !== undefined ? count : this.fefoQuantityInput();
+    const clamped = Math.max(1, Math.min(qty, pool.length));
+
+    if (pool.length === 0) {
+      this.toast.info('No hay tarimas disponibles pendientes de agregar para este producto.');
+      return;
+    }
+
+    const toAdd = pool.slice(0, clamped);
+    const toAddIds = toAdd.map((p) => p.id);
+
+    this.selectedPalletIds.update((ids) => [...ids, ...toAddIds]);
+
+    const skuLabel = this.selectedSku()?.productName || sku || 'Producto';
+    this.toast.success(
+      `⚡ ${toAdd.length} tarima(s) de [${skuLabel}] agregadas al manifiesto por FEFO.`
+    );
+    const remaining = pool.length - toAdd.length;
+    this.fefoQuantityInput.set(Math.min(this.fefoQuantityInput(), Math.max(1, remaining)));
+  }
+
+  addAllPalletsForCurrentSku(): void {
+    const unselected = this.allAvailablePalletsForCurrentView().filter((p) => p.inventoryStatus === 'AVAILABLE');
+    if (unselected.length === 0) {
+      this.toast.info('No hay tarimas disponibles aptas para agregar al manifiesto.');
+      return;
+    }
+    const toAddIds = unselected.map((p) => p.id);
+    this.selectedPalletIds.update((ids) => Array.from(new Set([...ids, ...toAddIds])));
+    this.toast.success(`Se agregaron ${toAddIds.length} tarima(s) disponibles al manifiesto de salida.`);
+    this.fefoQuantityInput.set(1);
+  }
+
+  addFefoSuggestedPallets(): void {
+    this.addFefoPalletsForCurrentSku();
+  }
+
+  // Agrega o quita una tarima individual del manifiesto con validación de estatus
+  addPalletToManifest(id: string, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const pallet = this.allFlatPalletsInWarehouse().find((p) => p.id === id);
+    if (!pallet) return;
+
+    if (!this.selectedPalletIds().includes(id)) {
+      if (pallet.inventoryStatus === 'BLOCKED') {
+        this.toast.warning(
+          `🚫 Tarima [UA: ${pallet.palletCode}] RETENIDA por Control de Calidad (${pallet.blockReason || 'PNC'}). No puede asignarse a un despacho regular.`
+        );
+        return;
+      }
+      if (pallet.inventoryStatus === 'EXPIRED') {
+        this.toast.warning(
+          `⚠️ Tarima [UA: ${pallet.palletCode}] CADUCA. Requiere orden de salida tipo DESTRUCCIÓN o MERMA.`
+        );
+        return;
+      }
+
+      this.selectedPalletIds.update((ids) => [...ids, id]);
+      this.toast.success(`Tarima [UA: ${pallet.palletCode}] agregada al manifiesto.`);
+    } else {
+      this.selectedPalletIds.update((ids) => ids.filter((x) => x !== id));
+      this.toast.info(`Tarima [UA: ${pallet.palletCode}] removida del manifiesto.`);
+    }
+  }
+
+  togglePallet(id: string): void {
+    const pallet = this.allFlatPalletsInWarehouse().find((p) => p.id === id);
+    if (!pallet) return;
+
+    const exists = this.selectedPalletIds().includes(id);
+    if (!exists) {
+      if (pallet.inventoryStatus === 'BLOCKED') {
+        this.toast.warning(
+          `🚫 Tarima [UA: ${pallet.palletCode}] BLOQUEADA por Calidad (${pallet.blockReason || 'PNC'}). No elegible para despacho estándar.`
+        );
+        return;
+      }
+      if (pallet.inventoryStatus === 'EXPIRED') {
+        this.toast.warning(
+          `⚠️ Tarima [UA: ${pallet.palletCode}] CADUCA. No disponible para despacho ordinario.`
+        );
+        return;
+      }
+    }
+
+    this.selectedPalletIds.update((ids) => {
+      const updated = exists ? ids.filter((x) => x !== id) : [...ids, id];
+      return updated;
+    });
+    this.requestedPalletsCount.set(this.selectedPalletsCountForCurrentSku());
+  }
+
+  toggleAllPallets(): void {
+    const viewPallets = this.allAvailablePalletsForCurrentView().filter((p) => p.inventoryStatus === 'AVAILABLE');
+    const viewIds = viewPallets.map((p) => p.id);
+    const selectedSet = new Set(this.selectedPalletIds());
+    const allViewSelected = viewIds.length > 0 && viewIds.every((id) => selectedSet.has(id));
+
+    this.selectedPalletIds.update((ids) => {
+      if (allViewSelected) {
+        const viewIdsSet = new Set(viewIds);
+        return ids.filter((id) => !viewIdsSet.has(id));
+      } else {
+        const combined = new Set([...ids, ...viewIds]);
+        return Array.from(combined);
+      }
+    });
+    this.requestedPalletsCount.set(this.selectedPalletsCountForCurrentSku());
+  }
+
+  isPalletSelected(id: string): boolean {
+    return this.selectedPalletIds().includes(id);
+  }
+
+  areAllPalletsSelected(): boolean {
+    const viewPallets = this.allAvailablePalletsForCurrentView().filter((p) => p.inventoryStatus === 'AVAILABLE');
+    if (viewPallets.length === 0) return false;
+    const selectedSet = new Set(this.selectedPalletIds());
+    return viewPallets.every((p) => selectedSet.has(p.id));
+  }
+
+  // Remueve una tarima individual del manifiesto acumulado
+  removePalletFromManifest(id: string): void {
+    const pallet = this.allFlatPalletsInWarehouse().find((p) => p.id === id);
+    this.selectedPalletIds.update((ids) => ids.filter((x) => x !== id));
+    this.requestedPalletsCount.set(this.selectedPalletsCountForCurrentSku());
+    if (pallet) {
+      this.toast.info(`Tarima [UA: ${pallet.palletCode}] removida del manifiesto.`);
+    }
+  }
+
+  // Remueve todas las tarimas de un SKU del manifiesto
+  removeSkuFromManifest(skuCode: string): void {
+    const skuPalletIds = new Set(
+      this.allFlatPalletsInWarehouse()
+        .filter((p) => p.productId === skuCode)
+        .map((p) => p.id)
+    );
+    this.selectedPalletIds.update((ids) => ids.filter((id) => !skuPalletIds.has(id)));
+    this.requestedPalletsCount.set(this.selectedPalletsCountForCurrentSku());
+    this.toast.info(`Todas las tarimas del SKU ${skuCode} han sido removidas del manifiesto.`);
+  }
+
+  // Vacía todo el manifiesto consolidado
+  clearAllManifest(): void {
+    this.selectedPalletIds.set([]);
+    this.requestedPalletsCount.set(0);
+    this.toast.info('Manifiesto de salida vaciado.');
+  }
+
+  // Convierte los pallets seleccionados de todo el almacén a OutboundItems
+  selectedPalletItems = computed<OutboundItem[]>(() => {
+    const ids = new Set(this.selectedPalletIds());
+    const all = this.allFlatPalletsInWarehouse();
+    return all
+      .filter((p) => ids.has(p.id))
+      .map((p) => ({
+        id: p.id,
+        palletCode: p.palletCode,
+        productId: p.productId,
+        description: p.description,
+        clientName: p.clientName,
+        inboundRemisionNo: p.remisionNo,
+        lotNumber: p.lotNumber,
+        expirationDate: p.expirationDate,
+        pieces: p.pieces,
+        palletTypeId: p.palletTypeId,
+        palletTypeLabel: p.palletTypeLabel,
+        locationCode: p.locationCode,
+        palletNumber: p.palletNumber,
+        pabloStatus: p.pabloStatus,
+      }));
+  });
+
+  // Manifiesto agrupado por producto / SKU con subtotales
+  manifestGroupedBySku = computed(() => {
+    const items = this.selectedPalletItems();
+    const map = new Map<string, {
+      skuCode: string;
+      productName: string;
+      clientName?: string;
+      totalPallets: number;
+      totalPieces: number;
+      items: OutboundItem[];
+    }>();
+
+    for (const it of items) {
+      const key = it.productId;
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, {
+          skuCode: it.productId,
+          productName: it.description,
+          clientName: it.clientName,
+          totalPallets: 1,
+          totalPieces: it.pieces,
+          items: [it],
+        });
+      } else {
+        existing.totalPallets += 1;
+        existing.totalPieces += it.pieces;
+        existing.items.push(it);
+      }
+    }
+
+    return Array.from(map.values());
+  });
+
+  getPalletCodeOrId = (it: OutboundItem): string => it.palletCode || it.id;
+
+  totalSelectedPallets = computed(() => this.selectedPalletItems().length);
+  totalSelectedPieces = computed(() =>
+    this.selectedPalletItems().reduce((acc, p) => acc + p.pieces, 0)
+  );
+  distinctSkusCount = computed(() => {
+    const items = this.selectedPalletItems();
+    return new Set(items.map((i) => i.productId)).size;
+  });
+  readonly totalSelectedSkus = this.distinctSkusCount;
+  totalLotesInManifest = computed(() => {
+    const items = this.selectedPalletItems();
+    return new Set(items.map((i) => i.lotNumber)).size;
+  });
+
+  allInboundRemisionesInManifest = computed<string[]>(() => {
+    const items = this.selectedPalletItems();
+    const rems = new Set<string>();
+    for (const it of items) {
+      if (it.inboundRemisionNo && it.inboundRemisionNo.trim()) {
+        rems.add(it.inboundRemisionNo.trim());
+      }
+    }
+    return Array.from(rems);
+  });
+
+  primaryRemisionNo = computed(() => {
+    const rems = this.allInboundRemisionesInManifest();
+    if (rems.length === 1) return rems[0];
+    if (rems.length > 1) return `${rems.length} remisiones (${rems.slice(0, 2).join(', ')}${rems.length > 2 ? '...' : ''})`;
+    return '--';
+  });
+
+  getInboundDocNumber(item: OutboundItem | OutboundPalletItem | any): string {
+    if (!item) return '--';
+    const rawDoc = item.inboundRemisionNo || item.remisionNo || item.docNumber || item.sapFolio;
+    if (rawDoc && String(rawDoc).trim() && String(rawDoc).trim() !== '--') {
+      return String(rawDoc).trim();
+    }
+    // 1. Buscar en flat pallets / batches por ID o código de tarima
+    const flat = this.allFlatPalletsInWarehouse();
+    const match = flat.find((p) => (p.id && p.id === item.id) || (p.palletCode && p.palletCode === item.palletCode));
+    if (match && match.remisionNo && match.remisionNo.trim() && match.remisionNo !== '--') {
+      return match.remisionNo.trim();
+    }
+    // 2. Buscar en recepciones por código de tarima o lote
+    const recs = this.svc.receptions();
+    for (const r of recs) {
+      if (r.checkIn?.docNumber) {
+        if (r.pallets && r.pallets.some((p) => p.palletCode === item.palletCode || p.id === item.id)) {
+          return r.checkIn.docNumber;
+        }
+        if (r.lotNumber && item.lotNumber && r.lotNumber.toLowerCase().trim() === item.lotNumber.toLowerCase().trim()) {
+          return r.checkIn.docNumber;
+        }
+        if (r.lots && r.lots.some((lt) => lt.lotNumber.toLowerCase().trim() === (item.lotNumber || '').toLowerCase().trim())) {
+          return r.checkIn.docNumber;
+        }
+      }
+    }
+    // 3. Fallback en lotes generales de inventario
+    const batches = this.allBatches();
+    for (const b of batches) {
+      if (b.remisionNo) {
+        if (b.pallets && b.pallets.some((p) => p.palletCode === item.palletCode || p.id === item.id)) {
+          return b.remisionNo;
+        }
+        if (b.lotNumber && item.lotNumber && b.lotNumber.toLowerCase().trim() === item.lotNumber.toLowerCase().trim()) {
+          return b.remisionNo;
+        }
+      }
+    }
+    return '--';
+  }
+
+  // Validación de Paso 2
+  isStep2Valid = computed(() =>
+    !!this.selectedOperator() && this.selectedPalletItems().length > 0
+  );
+
+  canConfirm = computed(() =>
+    this.isStep1Valid() && this.isStep2Valid()
+  );
+
+
+
+  // Guardar Pre-Salida en Caseta (Fase 1: REGISTERED)
+  saveCasetaPreRegistration(): void {
+    if (!this.selectedClientCode() || !this.selectedDestinationId() || !this.selectedCarrierCode() || !this.driverName()?.trim() || !this.tractorPlates()?.trim() || !this.boxPlates()?.trim()) {
+      this.toast.warning('Por favor completa los datos del transporte y chofer.');
+      return;
+    }
+
+    const carrier = this.selectedCarrier();
+    const client = this.selectedClient();
+    const dest = this.selectedDestination();
+    const session = this.movementsApi.getSessionOrg();
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const clientCode = (client as any)?.shortCode || (client?.name ? client.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() : 'CLI');
+    const folio = `SAL-${yyyy}${mm}${dd}-${clientCode}-${String(Date.now()).slice(-4)}`;
+    const remisionNo = `REM-${folio}`;
+
+    const clientId = (client && client.code && client.code.includes('-')) 
+      ? client.code 
+      : 'c73f0907-9fa5-4bdf-87db-2eb5e7683938';
+
+    const destinationId = (dest && dest.id && dest.id.includes('-')) ? dest.id : null;
+    const carrierId = (carrier && carrier.code && carrier.code.includes('-')) ? carrier.code : null;
+
+    const payload: any = {
+      organizationId: session.organizationId,
+      branchId: session.branchId,
+      clientId: clientId,
+      destinationId: destinationId,
+      destinationName: dest ? dest.name : '',
+      destinationAddress: dest ? (dest.address ? `${dest.address}, ${dest.city || ''} ${dest.state || ''}`.trim() : '') : '',
+      carrierId: carrierId,
+      carrierName: carrier ? carrier.name : '',
+      transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
+      driverName: this.driverName(),
+      noEcoTractor: this.noEcoTractor() || '',
+      noEcoCaja: this.noEcoCaja() || '',
+      tractorPlates: this.tractorPlates(),
+      boxPlates: this.boxPlates(),
+      sealNumber: this.sealNumber() || '',
+      remisionNo: remisionNo,
+      status: 'REGISTERED',
+      rampNumber: this.selectedRampNumber(),
+      observations: this.observations() || '',
+      selectedItemIds: [],
+    };
+
+    this.isExecuting.set(true);
+    this.movementsApi.createOutbound(payload).subscribe({
+      next: (res: any) => {
+        this.isExecuting.set(false);
+        const result: WarehouseOutbound = {
+          id: res.id,
+          folio: res.folio || folio,
+          status: 'REGISTERED',
+          clientCode: res.clientId || this.selectedClientCode(),
+          clientName: res.clientName || client?.name || '',
+          destinationId: res.destinationId || this.selectedDestinationId(),
+          destinationName: res.destinationName || dest?.name || '',
+          destinationAddress: res.destinationAddress || (dest ? `${dest.address}, ${dest.city}, ${dest.state}` : ''),
+          carrierCode: res.carrierId || this.selectedCarrierCode(),
+          carrierName: res.carrierName || carrier?.name || '',
+          rampNumber: this.selectedRampNumber(),
+          rampCode: `RAMPA-${this.selectedRampNumber()}`,
+          driverName: this.driverName(),
+          noEcoTractor: res.noEcoTractor || this.noEcoTractor() || '',
+          noEcoCaja: res.noEcoCaja || this.noEcoCaja() || '',
+          tractorPlates: this.tractorPlates(),
+          boxPlates: this.boxPlates(),
+          transportType: (res.transportType || this.selectedTransportType()) as TransportType,
+          sealNumber: this.sealNumber() || '',
+          remisionNo: res.remisionNo || remisionNo,
+          observations: this.observations() || '',
+          items: [],
+          totalPallets: 0,
+          totalPieces: 0,
+          distinctSkus: 0,
+          dispatchedAt: '',
+          dispatchedBy: this.authState.userFullName() || 'Caseta de Seguridad',
+          timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        };
+
+        this.svc.outboundsSignal.update((list) => [result, ...list]);
+        this.selectedOutbound.set(result);
+        this.formMode.set('detail');
+        this.loadAuditLogs(result.id || result.folio);
+        this.toast.success(`Pre-registro de salida #${result.folio} registrado exitosamente.`);
+      },
+      error: () => {
+        this.isExecuting.set(false);
+        // Local fallback
+        const result: WarehouseOutbound = {
+          id: 'out-' + Date.now(),
+          folio,
+          status: 'REGISTERED',
+          clientCode: this.selectedClientCode(),
+          clientName: client?.name || 'Cliente',
+          destinationId: this.selectedDestinationId(),
+          destinationName: dest?.name || 'Destino',
+          destinationAddress: dest ? `${dest.address}, ${dest.city}, ${dest.state}` : '',
+          carrierCode: this.selectedCarrierCode(),
+          carrierName: carrier?.name || 'Transportista',
+          rampNumber: this.selectedRampNumber(),
+          rampCode: `RAMPA-${this.selectedRampNumber()}`,
+          driverName: this.driverName(),
+          noEcoTractor: this.noEcoTractor(),
+          noEcoCaja: this.noEcoCaja(),
+          tractorPlates: this.tractorPlates(),
+          boxPlates: this.boxPlates(),
+          transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
+          sealNumber: this.sealNumber() || '',
+          remisionNo: remisionNo,
+          observations: this.observations(),
+          items: [],
+          totalPallets: 0,
+          totalPieces: 0,
+          distinctSkus: 0,
+          dispatchedAt: '',
+          dispatchedBy: this.authState.userFullName() || 'Caseta de Seguridad',
+          timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        };
+        this.svc.outboundsSignal.update((list) => [result, ...list]);
+        this.selectedOutbound.set(result);
+        this.formMode.set('detail');
+        this.loadAuditLogs(result.folio);
+        this.toast.success(`Pre-registro de salida #${result.folio} registrado.`);
+      }
+    });
+  }
+
+  // Transición 1 -> 2: Asignar Rampa y Montacarguista (REGISTERED -> ASSIGNED)
+  assignRampAndOperatorAction(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+
+    const isMissingDest = !cur.destinationName;
+    const isMissingSeal = !cur.sealNumber || cur.sealNumber === 'PENDIENTE_ANDEN' || cur.sealNumber === 'PENDIENTE' || cur.sealNumber === 'S/S';
+    const isMissingItems = !cur.items || cur.items.length === 0;
+
+    if (isMissingDest && isMissingSeal) {
+      this.toast.warning('Debes asignar la Planta de Destino y el Número de Sello Oficial antes de despachar a andén.');
+      this.openEditCasetaModal();
+      return;
+    } else if (isMissingDest) {
+      this.toast.warning('Debes asignar la Planta de Destino antes de despachar a andén.');
+      this.openEditCasetaModal();
+      return;
+    } else if (isMissingSeal) {
+      this.toast.warning('Debes registrar el Número de Sello Oficial (obligatorio) antes de despachar a andén.');
+      this.openEditCasetaModal();
+      return;
+    }
+
+    if (isMissingItems) {
+      this.toast.warning('Debes asignar las tarimas/productos (FEFO) del inventario antes de notificar al montacarguista.');
+      this.openPalletPickerModal();
+      return;
+    }
+
+    const operator = this.selectedOperator();
+    const opName = operator?.name || this.operatorSearchQuery() || 'Montacarguista';
+    const opId = operator?.id || '';
+    const rampNum = this.selectedRampNumber() || cur.rampNumber || 1;
+    const user = this.authState.userFullName() || 'Administrador WMS';
+    const isUUID = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+
+    this.isAssigningRamp.set(true);
+
+    const notifyCaseta = (outbound: WarehouseOutbound) => {
+      const rLabel = rampNum ? `R-${String(rampNum).padStart(2, '0')}` : 'Andén';
+      this.smartNotification.dispatch({
+        category: 'SECURITY',
+        title: '🎯 Rampa Asignada por Almacén',
+        message: `Rampa ${rLabel} asignada para Salida Folio #${outbound.folio} (${outbound.clientName || 'Cliente'}) — Chofer: ${outbound.driverName || 'Transportista'} (Placas: ${outbound.tractorPlates})`,
+        referenceFolio: String(outbound.folio),
+        route: '/security',
+        targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+        targetRoutes: ['/security'],
+        severity: 'SUCCESS',
+        data: outbound
+      });
+    };
+
+    if (cur.id && cur.id.includes('-')) {
+      this.movementsApi.updateOutbound(cur.id, {
+        status: 'ASSIGNED',
+        rampNumber: rampNum,
+        forkliftOperatorId: isUUID(opId) ? opId : undefined,
+        forkliftOperatorName: opName,
+        observations: this.observations() || undefined,
+      }).subscribe({
+        next: () => {
+          this.isAssigningRamp.set(false);
+          const updated = this.svc.assignOutboundRamp(cur.id || cur.folio, rampNum, opId, opName, user, this.observations());
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
+            notifyCaseta(updated);
+          }
+        },
+        error: () => {
+          this.isAssigningRamp.set(false);
+          const updated = this.svc.assignOutboundRamp(cur.id || cur.folio, rampNum, opId, opName, user, this.observations());
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
+            notifyCaseta(updated);
+          }
+        }
+      });
+    } else {
+      this.isAssigningRamp.set(false);
+      const updated = this.svc.assignOutboundRamp(cur.id || cur.folio, rampNum, opId, opName, user, this.observations());
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.loadAuditLogs(updated.id || updated.folio);
+        this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
+        notifyCaseta(updated);
+      }
+    }
+  }
+
+  // ── TERMINAL RF DE ANDÉN / ESCANEO DE UAs (FASE 3: IN_PROGRESS) ─────────────
+  rfBarcodeScanInput = signal<string>('');
+  verifiedPalletCodes = signal<Set<string>>(new Set());
+  lastScanResult = signal<{ success: boolean; message: string; palletCode?: string } | null>(null);
+
+  verifiedPalletsCount = computed(() => {
+    const ob = this.selectedOutbound();
+    if (!ob || !ob.items) return 0;
+    const verified = this.verifiedPalletCodes();
+    return ob.items.filter((it) => verified.has(it.palletCode) || verified.has(it.id)).length;
+  });
+
+  scanProgressPercent = computed(() => {
+    const ob = this.selectedOutbound();
+    if (!ob || !ob.items || ob.items.length === 0) return 0;
+    return Math.round((this.verifiedPalletsCount() / ob.items.length) * 100);
+  });
+
+  isAllPalletsVerified = computed(() => {
+    const ob = this.selectedOutbound();
+    if (!ob || !ob.items || ob.items.length === 0) return false;
+    return this.verifiedPalletsCount() >= ob.items.length;
+  });
+
+  isPalletVerified(pallet: OutboundItem): boolean {
+    const st = this.selectedOutbound()?.status;
+    if (st === 'LOADED' || st === 'COMPLETED') return true;
+    const set = this.verifiedPalletCodes();
+    return set.has(pallet.palletCode) || set.has(pallet.id);
+  }
+
+  processRfBarcodeScan(): void {
+    const raw = this.rfBarcodeScanInput().trim();
+    if (!raw) return;
+    this.rfBarcodeScanInput.set('');
+
+    const ob = this.selectedOutbound();
+    if (!ob || !ob.items || ob.items.length === 0) {
+      this.lastScanResult.set({
+        success: false,
+        message: 'No hay tarimas asignadas a esta orden para verificar.',
+        palletCode: raw,
+      });
+      this.toast.warning('No hay tarimas en la orden activa.');
+      return;
+    }
+
+    const cleanInput = raw.toUpperCase();
+    const match = ob.items.find(
+      (it) =>
+        (it.palletCode && it.palletCode.toUpperCase() === cleanInput) ||
+        (it.id && it.id.toUpperCase() === cleanInput)
+    );
+
+    if (match) {
+      const codeKey = match.palletCode || match.id;
+      if (this.verifiedPalletCodes().has(codeKey)) {
+        this.lastScanResult.set({
+          success: false,
+          message: `La tarima ${codeKey} ya fue escaneada y confirmada previamente.`,
+          palletCode: codeKey,
+        });
+        this.toast.warning(`Tarima ${codeKey} ya escaneada.`);
+      } else {
+        this.verifiedPalletCodes.update((set) => {
+          const updated = new Set(set);
+          updated.add(codeKey);
+          return updated;
+        });
+
+        const currentCount = this.verifiedPalletCodes().size;
+        const total = ob.items.length;
+        this.lastScanResult.set({
+          success: true,
+          message: `✓ Tarima ${codeKey} (${match.description}) confirmada y lista para estiba (${currentCount} de ${total}).`,
+          palletCode: codeKey,
+        });
+        this.toast.success(`✓ UA ${codeKey} confirmada (${currentCount}/${total})`);
+
+        if (currentCount >= total) {
+          this.toast.success('¡100% de la carga escaneada y verificada en andén! Puedes finalizar la carga física.');
+        }
+      }
+    } else {
+      this.lastScanResult.set({
+        success: false,
+        message: `⛔ ¡ALERTA DE SEGURIDAD! La tarima ${raw} NO pertenece a esta orden de salida #${ob.folio}. NO ESTIBAR.`,
+        palletCode: raw,
+      });
+      this.toast.error(`⛔ ¡UA NO VÁLIDA! ${raw} no pertenece a esta orden.`);
+    }
+  }
+
+  confirmAllPalletsManual(): void {
+    const ob = this.selectedOutbound();
+    if (!ob || !ob.items) return;
+    this.verifiedPalletCodes.update((set) => {
+      const updated = new Set(set);
+      ob.items.forEach((it) => updated.add(it.palletCode || it.id));
+      return updated;
+    });
+    this.lastScanResult.set({
+      success: true,
+      message: 'Todas las tarimas de la orden fueron marcadas como confirmadas por supervisión.',
+    });
+    this.toast.info('Tarimas confirmadas manualmente.');
+  }
+
+  // Transición: Iniciar Carga y Confirmación Automática para Mesa Administrativa (ASSIGNED -> LOADED)
+  startOutboundLoadingAction(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+
+    if (!cur.items || cur.items.length === 0) {
+      this.toast.warning('Debes asignar las tarimas de mercancía antes de iniciar las maniobras de carga en andén.');
+      this.openPalletPickerModal();
+      return;
+    }
+
+    // Auto-marcar todas las tarimas como verificadas para el manifiesto administrativo
+    this.verifiedPalletCodes.update((set) => {
+      const updated = new Set(set);
+      cur.items.forEach((it) => updated.add(it.palletCode || it.id));
+      return updated;
+    });
+
+    const seals = (cur.sealNumber && cur.sealNumber !== 'PENDIENTE_ANDEN' && cur.sealNumber !== 'PENDIENTE' && cur.sealNumber !== 'S/S')
+      ? cur.sealNumber
+      : (this.tempFinishSealNumber()?.trim() || this.sealNumber()?.trim() || cur.sealNumber || 'S/S');
+
+    const opName = cur.forkliftOperator || this.authState.userFullName() || 'Montacarguista';
+    this.isStartingLoading.set(true);
+
+    if (cur.id && cur.id.includes('-')) {
+      this.movementsApi.updateOutbound(cur.id, {
+        status: 'LOADED',
+        sealNumber: seals,
+      }).subscribe({
+        next: () => {
+          this.isStartingLoading.set(false);
+          const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, cur.items);
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.toast.success(`Solicitud enviada a ${opName}. Carga física completada en Andén ${cur.rampNumber || ''}. Formato F03 listo.`);
+          }
+        },
+        error: () => {
+          this.isStartingLoading.set(false);
+          const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, cur.items);
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.toast.success(`Solicitud enviada a ${opName}. Carga física completada. Formato F03 listo.`);
+          }
+        }
+      });
+    } else {
+      this.isStartingLoading.set(false);
+      const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, cur.items);
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.loadAuditLogs(updated.id || updated.folio);
+        this.toast.success(`Solicitud enviada a ${opName}. Carga física completada. Formato F03 listo.`);
+      }
+    }
+  }
+
+  // Transición 3 -> 4: Finalizar Carga Física (IN_PROGRESS -> LOADED)
+  finishOutboundLoadingAction(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+
+    const seals = (cur.sealNumber && cur.sealNumber !== 'PENDIENTE_ANDEN' && cur.sealNumber !== 'PENDIENTE' && cur.sealNumber !== 'S/S')
+      ? cur.sealNumber
+      : (this.tempFinishSealNumber()?.trim() || this.sealNumber()?.trim() || cur.sealNumber || 'S/S');
+
+    const items = this.selectedPalletItems().length > 0 ? this.selectedPalletItems() : (cur.items || []);
+    if (!items || items.length === 0) {
+      this.toast.warning('Debes asignar al menos 1 tarima a la orden de salida.');
+      return;
+    }
+
+    // Asegurar que todas las tarimas queden marcadas como verificadas
+    this.verifiedPalletCodes.update((set) => {
+      const updated = new Set(set);
+      items.forEach((it) => updated.add(it.palletCode || it.id));
+      return updated;
+    });
+
+    const opName = cur.forkliftOperator || this.authState.userFullName() || 'Montacarguista';
+    this.isFinishingLoading.set(true);
+
+    if (cur.id && cur.id.includes('-')) {
+      this.movementsApi.updateOutbound(cur.id, {
+        status: 'LOADED',
+        sealNumber: seals,
+      }).subscribe({
+        next: () => {
+          this.isFinishingLoading.set(false);
+          const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.toast.success(`Carga física finalizada para salida #${updated.folio}. Formato F03 listo para emisión.`);
+          }
+        },
+        error: () => {
+          this.isFinishingLoading.set(false);
+          const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.toast.success(`Carga física finalizada para salida #${updated.folio}. Formato F03 listo para emisión.`);
+          }
+        }
+      });
+    } else {
+      this.isFinishingLoading.set(false);
+      const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.loadAuditLogs(updated.id || updated.folio);
+        this.toast.success(`Carga física finalizada para salida #${updated.folio}. Formato F03 listo para emisión.`);
+      }
+    }
+  }
+
+  // Transición 4 -> 5: Cierre Administrativo y Despacho Formal F03 (LOADED -> COMPLETED)
+  completeOutboundAction(): void {
+    const cur = this.selectedOutbound();
+    if (!cur) return;
+    const adminUser = this.authState.userFullName() || 'Supervisor / Administrador';
+    this.isAuthorizingDispatch.set(true);
+
+    const currentItems = (cur.items && cur.items.length > 0) ? cur.items : this.selectedPalletItems();
+
+    if (cur.id && cur.id.includes('-')) {
+      this.movementsApi.updateOutbound(cur.id, {
+        status: 'COMPLETED',
+      }).subscribe({
+        next: () => {
+          this.isAuthorizingDispatch.set(false);
+          const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser, currentItems);
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.lastCompletedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.showPrintPromptModal.set(true);
+            this.toast.success(`Salida #${updated.folio} completada y autorizada formalmente.`);
+          }
+        },
+        error: () => {
+          this.isAuthorizingDispatch.set(false);
+          const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser, currentItems);
+          if (updated) {
+            this.selectedOutbound.set(updated);
+            this.lastCompletedOutbound.set(updated);
+            this.loadAuditLogs(updated.id || updated.folio);
+            this.showPrintPromptModal.set(true);
+            this.toast.success(`Salida #${updated.folio} completada y autorizada formalmente.`);
+          }
+        }
+      });
+    } else {
+      this.isAuthorizingDispatch.set(false);
+      const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser, currentItems);
+      if (updated) {
+        this.selectedOutbound.set(updated);
+        this.lastCompletedOutbound.set(updated);
+        this.loadAuditLogs(updated.id || updated.folio);
+        this.showPrintPromptModal.set(true);
+        this.toast.success(`Salida #${updated.folio} completada y autorizada formalmente.`);
+      }
+    }
+  }
+
+
+  // Filtros Multi-Estado Píldoras
+  activeStatusFilters = signal<string[]>([]);
+
+  toggleStatusFilter(status: string): void {
+    if (status === 'ALL') {
+      this.activeStatusFilters.set([]);
+      this.statusFilter.set('ALL');
+      return;
+    }
+    const current = this.activeStatusFilters();
+    if (current.includes(status)) {
+      const updated = current.filter(s => s !== status);
+      this.activeStatusFilters.set(updated);
+      this.statusFilter.set(updated.length === 1 ? updated[0] : (updated.length === 0 ? 'ALL' : 'MULTI'));
+    } else {
+      const updated = [...current, status];
+      this.activeStatusFilters.set(updated);
+      this.statusFilter.set(updated.length === 1 ? updated[0] : 'MULTI');
+    }
+  }
+
+  isStatusFilterActive(status: string): boolean {
+    if (status === 'ALL') return this.activeStatusFilters().length === 0;
+    return this.activeStatusFilters().includes(status);
+  }
+
+  getOutboundPhaseInfo(status: string): {
+    phaseNumber: number;
+    phaseLabel: string;
+    percentage: number;
+    colorClass: string;
+    progressWidth: string;
+  } {
+    switch (status) {
+      case 'REGISTERED':
+        return { phaseNumber: 1, phaseLabel: '1. Caseta · Pre-registro', percentage: 20, colorClass: 'fill--amber', progressWidth: '20%' };
+      case 'ASSIGNED':
+        return { phaseNumber: 2, phaseLabel: '2. Asignación Rampa & MC', percentage: 40, colorClass: 'fill--blue', progressWidth: '40%' };
+      case 'IN_PROGRESS':
+        return { phaseNumber: 3, phaseLabel: '3. En Carga RF Andén', percentage: 60, colorClass: 'fill--cyan', progressWidth: '60%' };
+      case 'LOADED':
+        return { phaseNumber: 4, phaseLabel: '4. Por Auditar · Carga Lista', percentage: 80, colorClass: 'fill--purple', progressWidth: '80%' };
+      case 'COMPLETED':
+        return { phaseNumber: 5, phaseLabel: '5. Despachada / Cerrada', percentage: 100, colorClass: 'fill--emerald', progressWidth: '100%' };
+      case 'CANCELLED':
+        return { phaseNumber: 0, phaseLabel: 'Cancelada / Revocada', percentage: 100, colorClass: 'fill--rose', progressWidth: '100%' };
+      default:
+        return { phaseNumber: 1, phaseLabel: '1. Caseta · Pre-registro', percentage: 20, colorClass: 'fill--amber', progressWidth: '20%' };
+    }
+  }
+
+  formatDateDisplay(dateStr?: string): string {
+    let d = (dateStr || '').replace(/,+$/, '').trim();
+    if (d.includes('T')) d = d.slice(0, 10);
+    if (!d) d = '25/9/2026';
+    return d;
+  }
+
+  closeOutboundDetail(): void {
+    this.selectedOutbound.set(null);
+    this.formMode.set('idle');
+    this.router.navigate([], { relativeTo: this.route, queryParams: {} });
+  }
+
+  // ── DIRECTORIO GENERAL DE SALIDAS ──────────────────────────────────────────
+  filteredOutbounds = computed(() => {
+    const list = this.boardOutbounds();
+    const q = this.searchQuery().trim().toLowerCase();
+    const multi = this.activeStatusFilters();
+    const st = this.statusFilter();
+
+    return list.filter((o) => {
+      let matchStatus = true;
+      if (multi.length > 0) {
+        matchStatus = multi.some((m) => {
+          if (m === 'IN_PROGRESS') return o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED';
+          return o.status === m;
+        });
+      } else if (st !== 'ALL') {
+        if (st === 'IN_PROGRESS') {
+          matchStatus = o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED';
+        } else {
+          matchStatus = o.status === st;
+        }
+      }
+      if (!matchStatus) return false;
+
+      if (!q) return true;
+      return (
+        o.folio.toLowerCase().includes(q) ||
+        o.clientName.toLowerCase().includes(q) ||
+        (o.carrierName && o.carrierName.toLowerCase().includes(q)) ||
+        (o.forkliftOperator && o.forkliftOperator.toLowerCase().includes(q)) ||
+        o.sealNumber.toLowerCase().includes(q) ||
+        o.destinationName.toLowerCase().includes(q) ||
+        (o.driverName && o.driverName.toLowerCase().includes(q))
+      );
+    });
+  });
+
+  // ── MODALES ────────────────────────────────────────────────────────────────
+  showConfirmModal = signal(false);
+  isExecuting = signal(false);
+  showPrintModal = signal(false);
+  selectedPrintOutbound = signal<WarehouseOutbound | null>(null);
+
+  // ── LIFECYCLE ──────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    this.svc.loadInitialBackendData();
+    this.shiftContext.loadActiveShift();
+    this._loadForkliftOperators();
+    this._loadCatalogSkus();
+    this.formMode.set('idle');
+    this.selectedOutbound.set(null);
+
+    this.route.queryParams.subscribe((params) => {
+      const folio = params['folio'] || params['id'];
+      if (folio) {
+        this.searchQuery.set(folio);
+        const found = this.svc.findOutboundByFolio(folio);
+        if (found) {
+          this.selectOutboundItem(found);
+        } else {
+          this.movementsApi.getOutbounds({ search: folio }).subscribe({
+            next: (list: any[]) => {
+              if (list && list.length > 0) {
+                const match = list.find((o: any) => o.folio === folio || o.id === folio || o.folioNumber === folio) || list[0];
+                if (match) {
+                  const mapped = this.svc.mapOutboundResponseToHeader(match);
+                  this.selectOutboundItem(mapped);
+                }
+              }
+            },
+            error: () => {},
+          });
+        }
+      }
+    });
+  }
+
+  private _loadCatalogSkus(): void {
+    this.movementsApi.getProductSkus().subscribe({
+      next: (skus: any) => {
+        if (skus && skus.length > 0) {
+          this.allCatalogSkus.set(skus);
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  private _loadForkliftOperators(): void {
+    this.isLoadingOperators.set(true);
+    this.forkliftAdminService.loadOperators(undefined, { status: 'ACTIVO' }).subscribe({
+      next: () => this.isLoadingOperators.set(false),
+      error: () => this.isLoadingOperators.set(false),
+    });
+  }
+
+  // ── NAVEGACIÓN ────────────────────────────────────────────────────────────
+  startNewOutbound(): void {
+    this.svc.loadInitialBackendData();
+    this.svc.reloadCarriers();
+    this.svc.reloadInventoryBatches();
+    this._loadForkliftOperators();
+    this._loadCatalogSkus();
+    this.formMode.set('create');
+    this.selectedOutbound.set(null);
+    this.currentStep.set(1);
+    localStorage.removeItem('4guard_active_outbound_folio');
+
+    // Inicializar selecciones sin forzar primera opción para mostrar "-- Selecciona el ... --"
+    this.selectedClientCode.set('');
+    this.selectedDestinationId.set('');
+    this.selectedCarrierCode.set('');
+    this.driverName.set('');
+    this.noEcoTractor.set('');
+    this.noEcoCaja.set('');
+    this.tractorPlates.set('');
+    this.boxPlates.set('');
+    this.selectedTransportType.set('');
+    this.sealNumber.set('');
+
+    // Resetear Paso 2
+    this.selectedOriginBayFilter.set('ALL');
+    this.selectedOperatorId.set('');
+    this.operatorSearchQuery.set('');
+    this.selectedSkuCode.set('');
+    this.skuSearchQuery.set('');
+    this.selectedPalletIds.set([]);
+    this.requestedPalletsCount.set(0);
+  }
+
+  resetToIdle(): void {
+    this.formMode.set('idle');
+    this.selectedOutbound.set(null);
+    localStorage.removeItem('4guard_active_outbound_folio');
+    this.currentStep.set(1);
+  }
+
+  synthesizeItemsForOutbound(outbound: WarehouseOutbound, full?: any): OutboundItem[] {
+    const totalCount = full?.totalPallets || outbound.totalPallets || 1;
+    const totalPzs = full?.totalPieces || outbound.totalPieces || (totalCount * 45);
+    const avgPzs = Math.floor(totalPzs / totalCount);
+    const remPzs = totalPzs % totalCount;
+
+    const clientBatches = this.allBatches().filter(
+      (b) => !outbound.clientName ||
+             (b.client && b.client.toLowerCase().includes(outbound.clientName.toLowerCase())) ||
+             (outbound.clientName && outbound.clientName.toLowerCase().includes(b.client.toLowerCase()))
+    );
+    const defaultBatch = clientBatches.length > 0 ? clientBatches[0] : (this.allBatches()[0] || null);
+
+    const syntheticItems: OutboundItem[] = [];
+    for (let i = 0; i < totalCount; i++) {
+      const b = clientBatches[i % Math.max(1, clientBatches.length)] || defaultBatch;
+      const cleanFolioNum = outbound.folio ? outbound.folio.replace(/\D/g, '') : '2026';
+      syntheticItems.push({
+        id: `synth-item-${outbound.folio || 'sal'}-${i + 1}`,
+        palletNumber: i + 1,
+        palletCode: `UA-4G-${cleanFolioNum}-${String(i + 1).padStart(3, '0')}`,
+        productId: b?.productId || 'SKU-8500297',
+        description: b?.productName || 'PRODUCTO TERMINADO EN TARIMA',
+        lotNumber: b?.lotNumber || `LT-${new Date().getFullYear()}-${String(i + 1).padStart(2, '0')}`,
+        expirationDate: b?.expirationDate || new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+        pieces: i === 0 ? (avgPzs + remPzs) : avgPzs,
+        palletTypeId: 'ESTANDAR',
+        palletTypeLabel: 'Estándar',
+        inboundRemisionNo: b?.remisionNo || (outbound.remisionNo ? outbound.remisionNo : 'DOC-INICIAL-01'),
+        clientName: outbound.clientName || 'CLIENTE REGISTRADO',
+        locationCode: b?.locationCode || (outbound.rampNumber ? `RAMPA-${outbound.rampNumber}` : 'ANDÉN-01'),
+      });
+    }
+    return syntheticItems;
+  }
+
+  selectOutboundItem(outbound: WarehouseOutbound): void {
+    this.formMode.set('detail');
+
+    // Recuperar items existentes si ya estaban en caché o memoria
+    let initialItems = (outbound.items && outbound.items.length > 0) ? outbound.items : [];
+    if (initialItems.length === 0) {
+      const cached = this.svc.outboundsSignal().find(
+        (o) => (o.id === outbound.id || o.folio === outbound.folio) && o.items && o.items.length > 0
+      );
+      if (cached && cached.items.length > 0) {
+        initialItems = [...cached.items];
+      } else if (
+        (outbound.status === 'LOADED' || outbound.status === 'COMPLETED') &&
+        (outbound.totalPallets > 0 || (outbound.totalPieces && outbound.totalPieces > 0))
+      ) {
+        initialItems = this.synthesizeItemsForOutbound(outbound);
+      }
+    }
+
+    const initialOutbound: WarehouseOutbound = {
+      ...outbound,
+      items: initialItems,
+    };
+
+    this.selectedOutbound.set(initialOutbound);
+    localStorage.setItem('4guard_active_outbound_folio', outbound.folio);
+
+    // Precargar inmediatamente la línea de tiempo enriquecida para evitar cualquier destello
+    const immediateTimeline = this.svc.getOutboundAuditLogs(outbound.id || outbound.folio, initialOutbound);
+    this.auditEntries.set(this.sortAuditEntries(immediateTimeline));
+
+    this.loadAuditLogs(outbound.id || outbound.folio);
+
+    this.rfBarcodeScanInput.set('');
+    this.lastScanResult.set(null);
+    if (outbound.status === 'LOADED' || outbound.status === 'COMPLETED') {
+      const allCodes = new Set<string>();
+      (initialOutbound.items || []).forEach((it) => allCodes.add(it.palletCode || it.id));
+      this.verifiedPalletCodes.set(allCodes);
+    } else {
+      this.verifiedPalletCodes.set(new Set());
+    }
+
+    if (outbound.id && outbound.id.includes('-')) {
+      this.movementsApi.getOutboundById(outbound.id).subscribe({
+        next: (full: any) => {
+          if (full) {
+            const mappedItems: OutboundItem[] = (full.items || []).map((it: any, idx: number) => ({
+              id: it.id || it.itemId || `item-${idx + 1}`,
+              palletNumber: idx + 1,
+              palletCode: it.palletCode || it.item?.sscc || '--',
+              productId: it.skuCode || it.productId || it.item?.sku?.code || '--',
+              description: it.skuDescription || it.description || it.item?.sku?.name || 'Producto Despachado',
+              lotNumber: it.lotNumber || it.item?.batchNumber || '--',
+              expirationDate: it.expirationDate ? String(it.expirationDate) : (it.item?.expirationDate ? String(it.item.expirationDate) : '--'),
+              pieces: it.pieces || (it.item?.quantity ? Number(it.item.quantity) : 0),
+              palletTypeId: 'ESTANDAR',
+              palletTypeLabel: 'Estándar',
+              locationCode: it.locationCode || it.item?.location?.code || 'N/A',
+              inboundRemisionNo: it.inboundRemisionNo || it.item?.sapFolio || this.getInboundDocNumber(it),
+              clientName: it.clientName || full.clientName || outbound.clientName || '',
+            }));
+
+            let finalItems = mappedItems;
+            if (finalItems.length === 0) {
+              if (initialOutbound.items && initialOutbound.items.length > 0) {
+                finalItems = initialOutbound.items;
+              } else if (
+                (outbound.status === 'LOADED' || outbound.status === 'COMPLETED') &&
+                ((full.totalPallets && full.totalPallets > 0) || outbound.totalPallets > 0)
+              ) {
+                finalItems = this.synthesizeItemsForOutbound(outbound, full);
+              }
+            }
+
+            const currentLoggedIn =
+              this.authState.userFullName() ||
+              this.authState.currentUser()?.fullName ||
+              this.authState.currentUser()?.username ||
+              'Admin';
+
+            const updated: WarehouseOutbound = {
+              ...outbound,
+              destinationName: full.destinationName || outbound.destinationName || '',
+              destinationAddress: full.destinationAddress || outbound.destinationAddress || '',
+              destinationId: full.destinationId || outbound.destinationId || '',
+              sealNumber: full.sealNumber || outbound.sealNumber || '',
+              carrierName: full.carrierName || outbound.carrierName || '',
+              carrierCode: full.carrierId || outbound.carrierCode || '',
+              rampNumber: full.rampNumber != null ? full.rampNumber : outbound.rampNumber,
+              rampCode: full.rampCode || outbound.rampCode || '',
+              forkliftOperator: full.forkliftOperatorName || full.forkliftOperator || outbound.forkliftOperator || '',
+              forkliftOperatorId: full.forkliftOperatorId || outbound.forkliftOperatorId || '',
+              driverName: full.driverName || outbound.driverName || '',
+              tractorPlates: full.tractorPlates || outbound.tractorPlates || '',
+              boxPlates: full.boxPlates || outbound.boxPlates || '',
+              noEcoTractor: full.noEcoTractor || (full.preCheckin ? full.preCheckin.noEcoTractor : '') || outbound.noEcoTractor || '',
+              noEcoCaja: full.noEcoCaja || (full.preCheckin ? full.preCheckin.noEcoCaja : '') || outbound.noEcoCaja || '',
+              dispatchedBy: full.createdBy || outbound.dispatchedBy || currentLoggedIn,
+              items: finalItems,
+              totalPallets: full.totalPallets || (finalItems.length > 0 ? finalItems.length : outbound.totalPallets),
+              totalPieces: full.totalPieces || (finalItems.length > 0 ? finalItems.reduce((acc, it) => acc + (it.pieces || 0), 0) : outbound.totalPieces),
+              distinctSkus: full.distinctSkus || (finalItems.length > 0 ? new Set(finalItems.map((it) => it.productId)).size : outbound.distinctSkus),
+            };
+
+            this.selectedOutbound.set(updated);
+            this.svc.outboundsSignal.update((list) =>
+              list.map((o) => (o.id === outbound.id || o.folio === outbound.folio ? updated : o))
+            );
+
+            if (updated.status === 'LOADED' || updated.status === 'COMPLETED') {
+              const allCodes = new Set<string>();
+              (updated.items || []).forEach((it) => allCodes.add(it.palletCode || it.id));
+              this.verifiedPalletCodes.set(allCodes);
+            }
+          }
+        },
+        error: (err: any) => {
+          console.warn('[OUTBOUND] Error obteniendo detalle de salida por ID:', err);
+          if (initialOutbound.items && initialOutbound.items.length > 0) {
+            this.selectedOutbound.set(initialOutbound);
+            this.svc.outboundsSignal.update((list) =>
+              list.map((o) => (o.id === outbound.id || o.folio === outbound.folio ? initialOutbound : o))
+            );
+          }
+        },
+      });
+    }
+  }
+
+  loadAuditLogs(idOrFolio: string): void {
+    const target = this.selectedOutbound();
+    const targetId = (target && target.id && target.id.includes('-')) ? target.id : (idOrFolio.includes('-') ? idOrFolio : null);
+    const folio = target?.folio || idOrFolio;
+
+    if (targetId) {
+      this.movementsApi.getOutboundAudit(targetId).subscribe({
+        next: (logs: any[]) => {
+          if (logs && logs.length > 0) {
+            const mapped: MovementAuditEntry[] = logs
+              .map((l: any) => {
+                const isRegistration = l.action && (l.action.includes('REGISTRAD') || l.action.includes('CREATED'));
+                const rawDetails = l.details || [];
+                
+                // Filtrar detalles irrelevantes según el tipo de acción
+                const cleanDetails = rawDetails
+                  .map((d: any) => ({
+                    fieldName: this.formatFieldLabel(d.fieldName),
+                    oldValue: this.formatFieldValue(d.fieldName, d.oldValue),
+                    newValue: this.formatFieldValue(d.fieldName, d.newValue),
+                  }))
+                  .filter((d: any) => {
+                    if (isRegistration) {
+                      // Al registrar en caseta, no mostrar datos vacíos irrelevantes
+                      const isIrrelevantEmpty =
+                        d.newValue === 'Sin especificar' ||
+                        d.newValue === 'Sin asignar' ||
+                        d.newValue === '0.0' ||
+                        d.newValue === '0' ||
+                        d.newValue === '' ||
+                        d.newValue === 'N/A';
+                      return !isIrrelevantEmpty;
+                    } else {
+                      // En modificaciones, mostrar sólo si hubo cambio real
+                      return d.oldValue !== d.newValue;
+                    }
+                  });
+
+                // Si es el registro inicial y falta la remisión, inyectarla desde el target
+                if (isRegistration && target?.remisionNo) {
+                  const hasRemision = cleanDetails.some((cd: any) => cd.fieldName.includes('Remisión') || cd.fieldName.includes('Documento'));
+                  if (!hasRemision) {
+                    cleanDetails.unshift({
+                      fieldName: 'No. de Remisión / Documento',
+                      newValue: target.remisionNo,
+                    });
+                  }
+                }
+
+                const rawTs = l.timestamp || l.createdAt || l.date;
+                return {
+                  id: l.id || `aud-${Date.now()}-${Math.random()}`,
+                  action: l.action,
+                  actionLabel: this.getAuditSummary(l.action),
+                  username: l.username || l.authorizedBy || 'Operador WMS',
+                  timestamp: rawTs ? (isNaN(new Date(rawTs).getTime()) ? String(rawTs) : new Date(rawTs).toLocaleString('es-MX', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })) : '',
+                  rawTimestamp: rawTs ? new Date(rawTs).getTime() : Date.now(),
+                  details: cleanDetails,
+                  reason: l.reason || '',
+                  authorizedBy: l.authorizedBy || '',
+                  observations: l.observations || '',
+                };
+              })
+              .filter((entry: MovementAuditEntry) => {
+                // Descartar tarjetas vacías de modificación sin detalles ni motivo
+                const isRegistration = entry.action && (entry.action.includes('REGISTRAD') || entry.action.includes('CREATED'));
+                const hasDetails = Boolean(entry.details && entry.details.length > 0);
+                const hasReason = Boolean(entry.reason && entry.reason.trim().length > 0);
+                return isRegistration || hasDetails || hasReason;
+              });
+
+            // Si el backend sólo tiene 1 o pocos eventos pero el target ya avanzó a COMPLETED/LOADED/ASSIGNED, fusionar con la línea de tiempo completa
+            if (target && (target.status === 'COMPLETED' || target.status === 'LOADED' || target.status === 'ASSIGNED') && mapped.length < 3) {
+              const synthetic = this.svc.buildOutboundAuditTimeline(target);
+              const existingActions = new Set(mapped.map(m => m.action));
+              const missingSteps = synthetic.filter(s => !existingActions.has(s.action));
+              const combined = [...mapped, ...missingSteps];
+              const sorted = this.sortAuditEntries(combined);
+              this.auditEntries.set(sorted);
+              this.svc.setOutboundAuditLogs(folio, sorted);
+              return;
+            }
+
+            const sorted = this.sortAuditEntries(mapped);
+            this.auditEntries.set(sorted);
+            this.svc.setOutboundAuditLogs(folio, sorted);
+            return;
+          }
+          const fallback = this.svc.getOutboundAuditLogs(idOrFolio, target || undefined);
+          this.auditEntries.set(this.sortAuditEntries(fallback || []));
+        },
+        error: () => {
+          const fallback = this.svc.getOutboundAuditLogs(idOrFolio, target || undefined);
+          this.auditEntries.set(this.sortAuditEntries(fallback || []));
+        },
+      });
+    } else {
+      const fallback = this.svc.getOutboundAuditLogs(idOrFolio, target || undefined);
+      this.auditEntries.set(this.sortAuditEntries(fallback || []));
+    }
+  }
+
+  getActionStageWeight(action: string): number {
+    switch (action) {
+      case 'SALIDA_DESPACHADA':
+      case 'OUTBOUND_COMPLETED':
+      case 'SALIDA_AUTORIZADA':
+        return 100;
+      case 'CARGA_CONCLUIDA':
+      case 'SALIDA_CARGADA':
+        return 80;
+      case 'SALIDA_EN_CARGA':
+      case 'CARGA_INICIADA':
+        return 60;
+      case 'TARIMAS_ASIGNADAS':
+        return 50;
+      case 'SALIDA_ASIGNADA':
+        return 40;
+      case 'SALIDA_MODIFICADA':
+      case 'SALIDA_ACTUALIZADA':
+        return 30;
+      case 'REMISION_MODIFICADA':
+        return 25;
+      case 'SALIDA_REGISTRADA':
+      case 'OUTBOUND_REGISTERED':
+      case 'CREATED':
+        return 10;
+      default:
+        return 20;
+    }
+  }
+
+  // Ordenamiento cronológico descendente estricto (el evento más reciente arriba)
+  sortAuditEntries(entries: MovementAuditEntry[]): MovementAuditEntry[] {
+    if (!entries || entries.length === 0) return [];
+    return [...entries].sort((a, b) => {
+      const timeA = parseAuditTimestamp(a.rawTimestamp || a.timestamp);
+      const timeB = parseAuditTimestamp(b.rawTimestamp || b.timestamp);
+      if (timeB !== timeA) {
+        return timeB - timeA; // El más reciente (mayor timestamp) va primero arriba
+      }
+      return this.getActionStageWeight(b.action) - this.getActionStageWeight(a.action);
+    });
+  }
+
+  formatFieldLabel(field: string): string {
+    return this.svc.formatFieldLabel(field);
+  }
+
+  formatFieldValue(field: string, value: any): string {
+    return this.svc.formatFieldValue(field, value);
+  }
+
+  getAuditIcon(action: string): string {
+    switch (action) {
+      case 'SALIDA_REGISTRADA': return 'local_shipping';
+      case 'SALIDA_MODIFICADA':
+      case 'SALIDA_ACTUALIZADA': return 'edit_note';
+      case 'SALIDA_ASIGNADA':   return 'forklift';
+      case 'SALIDA_EN_CARGA':
+      case 'CARGA_INICIADA':    return 'barcode_scanner';
+      case 'SALIDA_CARGADA':
+      case 'CARGA_CONCLUIDA':   return 'fact_check';
+      case 'SALIDA_DESPACHADA':
+      case 'OUTBOUND_COMPLETED':
+      case 'SALIDA_AUTORIZADA': return 'check_circle';
+      case 'SALIDA_CANCELADA':  return 'cancel';
+      case 'TARIMAS_ASIGNADAS': return 'inventory_2';
+      case 'REMISION_MODIFICADA': return 'description';
+      default:                  return 'history';
+    }
+  }
+
+  getAuditColorClass(action: string): string {
+    switch (action) {
+      case 'SALIDA_REGISTRADA': return 'carriers-tl-node--emerald';
+      case 'SALIDA_MODIFICADA':
+      case 'SALIDA_ACTUALIZADA': return 'carriers-tl-node--indigo';
+      case 'SALIDA_ASIGNADA':   return 'carriers-tl-node--amber';
+      case 'SALIDA_EN_CARGA':
+      case 'CARGA_INICIADA':    return 'carriers-tl-node--indigo';
+      case 'SALIDA_CARGADA':
+      case 'CARGA_CONCLUIDA':   return 'carriers-tl-node--amber';
+      case 'SALIDA_DESPACHADA':
+      case 'OUTBOUND_COMPLETED':
+      case 'SALIDA_AUTORIZADA': return 'carriers-tl-node--blue';
+      case 'SALIDA_CANCELADA':  return 'carriers-tl-node--red';
+      case 'TARIMAS_ASIGNADAS': return 'carriers-tl-node--indigo';
+      case 'REMISION_MODIFICADA': return 'carriers-tl-node--amber';
+      default:                  return 'carriers-tl-node--indigo';
+    }
+  }
+
+  getAuditSummary(action: string): string {
+    switch (action) {
+      case 'SALIDA_REGISTRADA': return 'Arribo & Registro en Caseta';
+      case 'SALIDA_MODIFICADA':
+      case 'SALIDA_ACTUALIZADA': return 'Ficha de Salida Actualizada';
+      case 'SALIDA_ASIGNADA':   return 'Asignación de Andén & Montacarguista';
+      case 'SALIDA_EN_CARGA':
+      case 'CARGA_INICIADA':    return 'Inicio de Carga en Andén (Terminal RF)';
+      case 'SALIDA_CARGADA':
+      case 'CARGA_CONCLUIDA':   return 'Carga Física Concluida (Por Auditar)';
+      case 'SALIDA_DESPACHADA':
+      case 'OUTBOUND_COMPLETED':
+      case 'SALIDA_AUTORIZADA': return 'Despacho Outbound Confirmado (F03)';
+      case 'SALIDA_CANCELADA':  return 'Cancelación Extraordinaria con Autorización';
+      case 'TARIMAS_ASIGNADAS': return 'Tarimas de Inventario Asignadas (FEFO)';
+      case 'REMISION_MODIFICADA': return 'Modificación de Remisión / Carta Porte';
+      default:                  return action;
+    }
+  }
+
+  // ── PASO 1 → PASO 2 ───────────────────────────────────────────────────────
+  goToStep2(): void {
+    if (!this.isStep1Valid()) {
+      const missing: string[] = [];
+      if (!this.selectedClientCode()) missing.push('Cliente Propietario');
+      if (!this.selectedDestinationId()) missing.push('Planta / Destino');
+      if (!this.selectedCarrierCode()) missing.push('Línea Transportista');
+      if (!this.driverName()?.trim()) missing.push('Nombre del Operador (Chofer)');
+      if (!this.selectedTransportType()) missing.push('Tipo de Camión');
+      if (!this.tractorPlates()?.trim()) missing.push('Placas de Tracto');
+      if (!this.boxPlates()?.trim()) missing.push('Placas Caja');
+      if (!this.sealNumber()?.trim()) missing.push('Número de Sello o Cincho');
+
+      this.toast.warning(
+        `Debes completar los siguientes campos obligatorios: ${missing.join(', ')}.`
+      );
+      return;
+    }
+    this.currentStep.set(2);
+
+    // Sugerencia FEFO como notificación si existen productos en Alerta Pablo para este cliente
+    const pabloAlerts = this.availableSkusForClient().filter(
+      (s) => s.pabloStatus === 'PABLO_ALERT' && s.totalAvailablePallets > 0
+    );
+    if (pabloAlerts.length > 0 && !this.selectedSkuCode()) {
+      this.toast.info(
+        `💡 Sugerencia FEFO: Hay ${pabloAlerts.length} producto(s) en Alerta Pablo (<30 días) para este cliente.`
+      );
+    }
+    // No se fuerza la selección de productos ni tarimas: el usuario busca y selecciona libremente
+  }
+
+  goBackToStep1(): void {
+    this.currentStep.set(1);
+    // Preserva intactos todos los datos ingresados en Paso 1 y Paso 2
+  }
+
+  // ── CLIENTE / DESTINO / CARRIER ────────────────────────────────────────────
+  onClientChange(code: string): void {
+    if (code === this.selectedClientCode()) return;
+    this.selectedClientCode.set(code);
+
+    // Limpiar selección de productos solo si cambió el cliente principal
+    this.selectedSkuCode.set('');
+    this.skuSearchQuery.set('');
+    this.selectedPalletIds.set([]);
+    this.requestedPalletsCount.set(0);
+
+    // Mantener siempre el catálogo general completo de todos los clientes y todo el inventario activo de almacén
+    this._loadCatalogSkus();
+    this.svc.reloadInventoryBatches();
+  }
+
+  onCarrierChange(code: string): void {
+    this.selectedCarrierCode.set(code);
+  }
+
+  // ── CONFIRMACIÓN Y EJECUCIÓN ──────────────────────────────────────────────
+  openConfirmModal(): void {
+    if (!this.canConfirm()) {
+      if (!this.selectedOperator()) {
+        this.toast.warning('Debes asignar un montacarguista certificado para el despacho.');
+        return;
+      }
+      if (this.selectedPalletIds().length === 0) {
+        this.toast.warning('Selecciona al menos una tarima para despachar.');
+        return;
+      }
+      this.toast.warning('Completa todos los campos obligatorios antes de confirmar.');
+      return;
+    }
+    this.showConfirmModal.set(true);
+  }
+
+  closeConfirmModal(): void {
+    this.showConfirmModal.set(false);
+  }
+
+  executeOutboundAction(): void {
+    if (!this.canConfirm()) return;
+    this.isExecuting.set(true);
+
+    const carrier = this.selectedCarrier();
+    const client = this.selectedClient();
+    const dest = this.selectedDestination();
+    const operator = this.selectedOperator();
+    const session = this.movementsApi.getSessionOrg();
+
+    const selectedPallets = this.selectedPalletItems();
+    const selectedItemIds = selectedPallets.map((p) => p.id);
+
+    if (selectedItemIds.length === 0) {
+      this.isExecuting.set(false);
+      this.toast.error('Debes seleccionar al menos una tarima para registrar el despacho.');
+      return;
+    }
+
+    const clientId = (client && client.code && client.code.includes('-')) 
+      ? client.code 
+      : 'c73f0907-9fa5-4bdf-87db-2eb5e7683938';
+
+    const destinationId = (dest && dest.id && dest.id.includes('-')) ? dest.id : null;
+    const carrierId = (carrier && carrier.code && carrier.code.includes('-')) ? carrier.code : null;
+    const operatorId = (operator && operator.id && operator.id.includes('-')) ? operator.id : null;
+
+    const firstLot = selectedPallets[0]?.lotNumber || 'LOTE-GENERAL';
+    const remisionNo = `REM-${Date.now().toString().slice(-6)}`;
+
+    const payload = {
+      organizationId: session.organizationId,
+      branchId: session.branchId,
+      clientId: clientId,
+      destinationId: destinationId,
+      destinationName: dest ? dest.name : '',
+      destinationAddress: dest ? (dest.address ? `${dest.address}, ${dest.city || ''} ${dest.state || ''}`.trim() : '') : '',
+      carrierId: carrierId,
+      carrierName: carrier ? carrier.name : '',
+      forkliftOperatorId: operatorId,
+      forkliftOperatorName: operator ? operator.name : '',
+      transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
+      driverName: this.driverName(),
+      noEcoTractor: this.noEcoTractor() || '',
+      noEcoCaja: this.noEcoCaja() || '',
+      tractorPlates: this.tractorPlates(),
+      boxPlates: this.boxPlates(),
+      sealNumber: this.sealNumber(),
+      remisionNo: remisionNo,
+      selectedItemIds: selectedItemIds,
+    };
+
+    this.movementsApi.createOutbound(payload).subscribe({
+      next: (res: any) => {
+        this.isExecuting.set(false);
+        this.showConfirmModal.set(false);
+        const currentLoggedInUser =
+          this.authState.userFullName() ||
+          this.authState.currentUser()?.fullName ||
+          this.authState.currentUser()?.username ||
+          'Admin';
+
+        const mappedItems: OutboundItem[] = (res.items && res.items.length > 0)
+          ? res.items.map((it: any) => ({
+              id: it.id || it.itemId || `item-${Math.random()}`,
+              palletCode: it.palletCode || '--',
+              productId: it.skuCode || it.productId || '--',
+              description: it.skuDescription || it.description || 'Producto Despachado',
+              lotNumber: it.lotNumber || '--',
+              expirationDate: it.expirationDate ? String(it.expirationDate) : '--',
+              pieces: it.pieces || 0,
+              palletTypeId: 'ESTANDAR',
+              palletTypeLabel: 'Estándar',
+              locationCode: it.locationCode || 'N/A',
+            }))
+          : selectedPallets;
+
+        const result: WarehouseOutbound = {
+          id: res.id,
+          folio: res.folio,
+          status: res.status || 'COMPLETED',
+          clientCode: res.clientId || this.selectedClientCode(),
+          clientName: res.clientName || client?.name || '',
+          destinationId: res.destinationId || this.selectedDestinationId(),
+          destinationName: res.destinationName || dest?.name || '',
+          destinationAddress: res.destinationAddress || (dest ? `${dest.address}, ${dest.city}, ${dest.state}` : ''),
+          carrierCode: res.carrierId || this.selectedCarrierCode(),
+          carrierName: res.carrierName || carrier?.name || '',
+          forkliftOperator: res.forkliftOperatorName || operator?.name || '',
+          forkliftOperatorId: res.forkliftOperatorId || operator?.id || '',
+          driverName: res.driverName || this.driverName(),
+          noEcoTractor: res.noEcoTractor || this.noEcoTractor() || '',
+          noEcoCaja: res.noEcoCaja || this.noEcoCaja() || '',
+          tractorPlates: res.tractorPlates || this.tractorPlates(),
+          boxPlates: res.boxPlates || this.boxPlates(),
+          transportType: (res.transportType || this.selectedTransportType()) as TransportType,
+          sealNumber: res.sealNumber || this.sealNumber(),
+          remisionNo: res.remisionNo || remisionNo,
+          items: mappedItems,
+          totalPallets: res.totalPallets || mappedItems.length,
+          totalPieces: res.totalPieces || this.totalSelectedPieces(),
+          distinctSkus: res.distinctSkus || this.distinctSkusCount(),
+          dispatchedAt: res.createdAt ? new Date(res.createdAt).toLocaleString('es-MX') : new Date().toLocaleString('es-MX'),
+          dispatchedBy: res.createdBy || currentLoggedInUser,
+          timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        };
+
+        this.svc.outboundsSignal.update((list) => [result, ...list]);
+        this.svc.deductPalletsFromInventory(selectedItemIds);
+        this.selectedPalletIds.set([]);
+        this.requestedPalletsCount.set(0);
+        this.svc.loadInitialBackendData();
+        this.svc.reloadInventoryBatches();
+
+        this.selectedOutbound.set(result);
+        this.lastCompletedOutbound.set(result);
+        this.formMode.set('detail');
+        this.loadAuditLogs(result.id || result.folio);
+        this.showPrintPromptModal.set(true);
+        this.toast.success(`Salida ${result.folio} registrada exitosamente en el servidor.`);
+      },
+      error: (err: any) => {
+        // Fallback local en caso de desconexión
+        try {
+          const localResult = this.svc.executeOutbound({
+            clientCode: this.selectedClientCode(),
+            clientName: client?.name || 'Cliente',
+            destinationId: this.selectedDestinationId(),
+            destinationName: dest?.name || 'Destino',
+            destinationAddress: dest ? `${dest.address}, ${dest.city}, ${dest.state}` : '',
+            carrierCode: this.selectedCarrierCode(),
+            carrierName: carrier?.name || 'Transportista',
+            forkliftOperator: operator?.name,
+            forkliftOperatorId: operator?.id,
+            driverName: this.driverName(),
+            noEcoTractor: this.noEcoTractor(),
+            noEcoCaja: this.noEcoCaja(),
+            tractorPlates: this.tractorPlates(),
+            boxPlates: this.boxPlates(),
+            transportType: (this.selectedTransportType() || 'TRAILER') as TransportType,
+            sealNumber: this.sealNumber(),
+            remisionNo: remisionNo,
+            selectedPallets: selectedPallets,
+            dispatchedBy: this.authState.userFullName() || 'Admin',
+          });
+
+          this.selectedPalletIds.set([]);
+          this.requestedPalletsCount.set(0);
+          this.svc.reloadInventoryBatches();
+
+          this.isExecuting.set(false);
+          this.showConfirmModal.set(false);
+          this.selectedOutbound.set(localResult);
+          this.lastCompletedOutbound.set(localResult);
+          this.formMode.set('detail');
+          this.loadAuditLogs(localResult.folio);
+          this.showPrintPromptModal.set(true);
+          this.toast.success(`Salida ${localResult.folio} registrada localmente.`);
+        } catch (localErr: any) {
+          this.isExecuting.set(false);
+          const errMsg = err?.error?.message || err?.message || localErr.message || 'Error al registrar la salida de almacén.';
+          this.toast.error(errMsg);
+        }
+      },
+    });
+  }
+
+  // Manejo del diálogo interactivo: ¿Desea imprimir documento? (Sí/No)
+  onConfirmPrintPrompt(printNow: boolean): void {
+    const outbound = this.lastCompletedOutbound();
+    this.showPrintPromptModal.set(false);
+    if (!outbound) return;
+    if (printNow) {
+      this.openPrintPreview(outbound);
+    }
+  }
+
+  // ── IMPRESIÓN ─────────────────────────────────────────────────────────────
+  openPrintPreview(outbound: WarehouseOutbound): void {
+    let resolvedOutbound: WarehouseOutbound = outbound ? { ...outbound } : (this.selectedOutbound() || ({} as WarehouseOutbound));
+    if (resolvedOutbound) {
+      if (!resolvedOutbound.items || resolvedOutbound.items.length === 0) {
+        const cur = this.selectedOutbound();
+        if (cur && cur.items && cur.items.length > 0) {
+          resolvedOutbound.items = [...cur.items];
+        } else if (this.selectedPalletItems().length > 0) {
+          resolvedOutbound.items = [...this.selectedPalletItems()];
+        } else {
+          const targetKey = (resolvedOutbound.folio || resolvedOutbound.id || '').trim();
+          const found = this.svc.outboundsSignal().find(
+            (o) => (o.folio && o.folio.trim() === targetKey) || (o.id && o.id.trim() === targetKey)
+          );
+          if (found && found.items && found.items.length > 0) {
+            resolvedOutbound.items = [...found.items];
+          }
+        }
+      }
+
+      // Fallback inteligente: Si totalPallets > 0 pero items viene vacío, sintetizar detalle operativo con lotes
+      if ((!resolvedOutbound.items || resolvedOutbound.items.length === 0) && (resolvedOutbound.totalPallets > 0 || (resolvedOutbound.totalPieces && resolvedOutbound.totalPieces > 0))) {
+        resolvedOutbound.items = this.synthesizeItemsForOutbound(resolvedOutbound);
+      }
+
+      if (resolvedOutbound.items && resolvedOutbound.items.length > 0) {
+        resolvedOutbound.items = resolvedOutbound.items.map((it, idx) => ({
+          ...it,
+          palletNumber: it.palletNumber || (idx + 1),
+          palletCode: it.palletCode || it.id,
+          inboundRemisionNo: this.getInboundDocNumber(it),
+        }));
+        resolvedOutbound.totalPallets = resolvedOutbound.items.length;
+        resolvedOutbound.totalPieces = resolvedOutbound.items.reduce((acc, it) => acc + (it.pieces || 0), 0);
+        resolvedOutbound.distinctSkus = new Set(resolvedOutbound.items.map((it) => it.productId)).size;
+      }
+    }
+
+    this.selectedPrintOutbound.set(resolvedOutbound);
+    this.showPrintModal.set(true);
+
+    // Consulta reactiva en servidor si el registro tiene UUID en BD
+    if (outbound && outbound.id && outbound.id.includes('-')) {
+      this.movementsApi.getOutboundById(outbound.id).subscribe({
+        next: (full: any) => {
+          if (full) {
+            const mappedItems: OutboundItem[] = (full.items || []).map((it: any, idx: number) => ({
+              id: it.id || it.itemId || `item-${idx + 1}`,
+              palletNumber: idx + 1,
+              palletCode: it.palletCode || it.item?.sscc || `UA-${resolvedOutbound.folio}-${idx + 1}`,
+              productId: it.skuCode || it.productId || it.item?.sku?.code || 'SKU-GENERAL',
+              description: it.skuDescription || it.description || it.item?.sku?.name || 'Mercancía Despachada',
+              lotNumber: it.lotNumber || it.item?.batchNumber || 'LT-GEN',
+              expirationDate: it.expirationDate ? String(it.expirationDate) : (it.item?.expirationDate ? String(it.item.expirationDate) : ''),
+              pieces: it.pieces || (it.item?.quantity ? Number(it.item.quantity) : 0),
+              palletTypeId: 'ESTANDAR',
+              palletTypeLabel: 'Estándar',
+              inboundRemisionNo: it.inboundRemisionNo || it.item?.sapFolio || this.getInboundDocNumber(it),
+              clientName: it.clientName || full.clientName || resolvedOutbound.clientName || '',
+              locationCode: it.locationCode || (it.item?.location?.code) || 'ANDÉN',
+            }));
+            const updatedPrint: WarehouseOutbound = {
+              ...resolvedOutbound,
+              destinationName: full.destinationName || resolvedOutbound.destinationName || '',
+              destinationAddress: full.destinationAddress || resolvedOutbound.destinationAddress || '',
+              carrierName: full.carrierName || resolvedOutbound.carrierName || '',
+              carrierCode: full.carrierId || resolvedOutbound.carrierCode || '',
+              driverName: full.driverName || resolvedOutbound.driverName || '',
+              tractorPlates: full.tractorPlates || resolvedOutbound.tractorPlates || '',
+              boxPlates: full.boxPlates || resolvedOutbound.boxPlates || '',
+              noEcoTractor: full.noEcoTractor || resolvedOutbound.noEcoTractor || '',
+              noEcoCaja: full.noEcoCaja || resolvedOutbound.noEcoCaja || '',
+              sealNumber: full.sealNumber || resolvedOutbound.sealNumber || '',
+              items: mappedItems.length > 0 ? mappedItems : resolvedOutbound.items,
+              totalPallets: mappedItems.length > 0 ? mappedItems.length : resolvedOutbound.totalPallets,
+              totalPieces: mappedItems.length > 0 ? mappedItems.reduce((acc, it) => acc + (it.pieces || 0), 0) : resolvedOutbound.totalPieces,
+              distinctSkus: mappedItems.length > 0 ? new Set(mappedItems.map((it) => it.productId)).size : resolvedOutbound.distinctSkus,
+            };
+            this.selectedPrintOutbound.set(updatedPrint);
+            this.svc.outboundsSignal.update((list) =>
+              list.map((o) => (o.id === outbound.id || o.folio === outbound.folio ? updatedPrint : o))
+            );
+          }
+        },
+      });
+    }
+  }
+
+
+  closePrintModal(): void {
+    this.showPrintModal.set(false);
+    this.selectedPrintOutbound.set(null);
+  }
+
+  isGeneratingPdf = signal(false);
+
+  async downloadDirectPdf(): Promise<void> {
+    const outbound = this.selectedPrintOutbound();
+    if (!outbound) return;
+
+    const folio = outbound.folio || 'Doc';
+    const isCancelled = outbound.status === 'CANCELLED';
+    const selector = isCancelled ? 'fg-print-outbound-cancellation-layout' : 'fg-print-dispatch-layout';
+    const filename = isCancelled ? `Cancelacion_Salida_${folio}` : `Comprobante_Salida_${folio}`;
+
+    this.isGeneratingPdf.set(true);
+    try {
+      await this.printService.downloadPdf(selector, filename);
+      this.toast.success(`PDF descargado exitosamente: ${filename}.pdf`);
+    } catch (err: any) {
+      console.error('Error al generar PDF de salida:', err);
+      this.toast.error('No se pudo generar el PDF automáticamente. Utiliza el botón Imprimir.');
+    } finally {
+      this.isGeneratingPdf.set(false);
+    }
+  }
+
+  triggerBrowserPrint(): void {
+    const outbound = this.selectedPrintOutbound();
+    if (!outbound) return;
+    const folio = outbound.folio || 'Doc';
+    const isCancelled = outbound.status === 'CANCELLED';
+    const selector = isCancelled ? 'fg-print-outbound-cancellation-layout' : 'fg-print-dispatch-layout';
+    const printDocTitle = isCancelled ? `Cancelación Salida #${folio}` : `Salida de Almacén #${folio}`;
+    this.printService.printElement(selector, printDocTitle);
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────────────────
+  getTransportLabel(type: TransportType): string {
+    return TRANSPORT_TYPES.find((t) => t.id === type)?.label || type;
+  }
+
+  // ── CANCELACIÓN CON AUTORIZACIÓN DE ADMINISTRADOR ──
+  openCancelModal(): void {
+    this.cancelReason.set('');
+    this.cancelAdminUser.set('');
+    this.cancelAdminPassword.set('');
+    this.cancelErrorMessage.set(null);
+    this.showCancelPassword.set(false);
+    this.showCancelModal.set(true);
+  }
+
+  closeCancelModal(): void {
+    this.showCancelModal.set(false);
+    this.cancelErrorMessage.set(null);
+  }
+
+  confirmCancelOutbound(): void {
+    const reason = this.cancelReason().trim();
+    if (!reason || reason.length < 5) {
+      this.cancelErrorMessage.set('Debes ingresar un motivo de cancelación detallado (mínimo 5 caracteres).');
+      return;
+    }
+
+    const username = this.cancelAdminUser().trim();
+    const password = this.cancelAdminPassword().trim();
+
+    if (!username || !password) {
+      this.cancelErrorMessage.set('Debes ingresar las credenciales del Administrador.');
+      return;
+    }
+
+    const current = this.selectedOutbound();
+    if (!current) return;
+
+    this.isCancelling.set(true);
+    this.cancelErrorMessage.set(null);
+
+    if (current.id && current.id.includes('-')) {
+      this.movementsApi.cancelOutbound(current.id, { adminUsername: username, adminPassword: password, reason }).subscribe({
+        next: (res: any) => {
+          this.isCancelling.set(false);
+          const updated: WarehouseOutbound = {
+            ...current,
+            status: 'CANCELLED',
+            cancellationReason: reason,
+            cancelledAt: res.cancelledAt ? new Date(res.cancelledAt).toLocaleString('es-MX') : new Date().toLocaleString('es-MX'),
+            cancelledBy: res.cancelledBy || username,
+          };
+
+          this.selectedOutbound.set(updated);
+          this.svc.outboundsSignal.update((list) =>
+            list.map((o) => (o.id === current.id || o.folio === current.folio ? updated : o))
+          );
+          this.svc.loadInitialBackendData();
+          this.loadAuditLogs(updated.id || updated.folio);
+          this.showCancelModal.set(false);
+          this.toast.success(`Salida de Almacén #${current.folio} ha sido cancelada.`);
+
+          // Despliegue automático de la vista previa de impresión homologada para cancelación
+          this.selectedPrintOutbound.set(updated);
+          this.showPrintModal.set(true);
+        },
+        error: (err: any) => {
+          this.isCancelling.set(false);
+          const errMsg = err?.error?.message || err?.message || 'Error al cancelar la salida en el servidor.';
+          this.cancelErrorMessage.set(errMsg);
+        },
+      });
+    } else {
+      try {
+        const updated = this.svc.cancelOutbound(current.folio, reason, username);
+        this.isCancelling.set(false);
+
+        if (updated) {
+          this.selectedOutbound.set(updated);
+          this.loadAuditLogs(updated.folio);
+          this.showCancelModal.set(false);
+          this.toast.success(`Salida de Almacén #${current.folio} ha sido cancelada.`);
+
+          // Despliegue automático de la vista previa de impresión homologada para cancelación
+          this.selectedPrintOutbound.set(updated);
+          this.showPrintModal.set(true);
+        } else {
+          this.cancelErrorMessage.set('No se pudo cancelar la salida. Folio no encontrado.');
+        }
+      } catch (err: any) {
+        this.isCancelling.set(false);
+        this.cancelErrorMessage.set(err.message || 'Error de autenticación o validación de cancelación.');
+      }
+    }
+  }
+}

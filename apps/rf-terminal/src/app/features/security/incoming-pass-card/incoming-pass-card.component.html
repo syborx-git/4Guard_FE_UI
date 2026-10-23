@@ -1,0 +1,110 @@
+<article
+  class="rf-pass-card"
+  [class.rf-pass-card--inbound]="pass.operationType === 'INBOUND'"
+  [class.rf-pass-card--outbound]="pass.operationType === 'OUTBOUND'"
+  [class.rf-pass-card--active]="isLoaded"
+  (click)="onCardClick()"
+  role="button"
+  tabindex="0"
+  [attr.aria-label]="'Solicitud de acceso: ' + pass.driverName + ', ' + pass.carrierName">
+
+  <!-- 1. Header con Badge Operativo + Tiempo + Botón Rechazar Discreto -->
+  <header class="rf-pass-card__header">
+    <div class="rf-pass-card__badge-group">
+      <span class="rf-pass-card__op-pill" [class.is-inbound]="pass.operationType === 'INBOUND'">
+        <span class="material-symbols-outlined rf-pass-card__op-icon">
+          {{ pass.operationType === 'INBOUND' ? 'south_east' : 'north_east' }}
+        </span>
+        <span class="rf-pass-card__op-text">
+          {{ pass.operationType === 'INBOUND' ? 'Descarga' : 'Carga' }}
+        </span>
+      </span>
+
+      <span class="rf-pass-card__time-pill">
+        <span class="material-symbols-outlined text-[13px]">schedule</span>
+        <span>{{ formattedStay }}</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- 2. Identidad del Transporte y Operador -->
+  <div class="rf-pass-card__identity">
+    <div class="rf-pass-card__carrier-bar">
+      <span class="material-symbols-outlined text-amber-500 text-[15px]">local_shipping</span>
+      <h4 class="rf-pass-card__carrier-title" [title]="pass.carrierName">
+        {{ pass.carrierName }}
+      </h4>
+    </div>
+
+    <div class="rf-pass-card__driver-box">
+      <div class="rf-pass-card__driver-avatar" aria-hidden="true">
+        {{ driverInitials }}
+      </div>
+      <div class="rf-pass-card__driver-details">
+        <span class="rf-pass-card__driver-name" [title]="pass.driverName">
+          {{ pass.driverName }}
+        </span>
+        <span class="rf-pass-card__driver-contact">
+          <span class="material-symbols-outlined text-[12px] opacity-70">call</span>
+          <span>{{ pass.driverPhone || 'Sin teléfono' }}</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Métricas Clave y Datos Duros (Placas y Remisión) -->
+  <div class="rf-pass-card__metrics-grid">
+    <div class="rf-pass-card__metric-col">
+      <span class="rf-pass-card__metric-label">Tracto</span>
+      <strong class="rf-pass-card__metric-val font-mono">{{ pass.tractorPlates || '—' }}</strong>
+    </div>
+
+    <div class="rf-pass-card__metric-col">
+      <span class="rf-pass-card__metric-label">Caja</span>
+      <strong class="rf-pass-card__metric-val font-mono">{{ pass.boxPlates || '—' }}</strong>
+    </div>
+
+    <div class="rf-pass-card__metric-col rf-pass-card__metric-col--doc">
+      <span class="rf-pass-card__metric-label">Remisión / Doc</span>
+      <strong class="rf-pass-card__metric-val rf-pass-card__metric-val--doc font-mono" [title]="pass.documentNumber">
+        {{ pass.documentNumber || 'S/N' }}
+      </strong>
+    </div>
+  </div>
+
+  <!-- 4. Footer de Acción Directa e Indicador de Estado -->
+  <footer class="rf-pass-card__footer">
+    @if (isLoaded) {
+      <div class="rf-pass-card__loaded-banner">
+        <span class="material-symbols-outlined text-emerald-500 text-[16px]">task_alt</span>
+        <span class="rf-pass-card__loaded-text">Cargado en Formato F01</span>
+      </div>
+      <button
+        type="button"
+        class="rf-pass-card__btn-cancel-load"
+        (click)="onReject($event)"
+        title="Descartar / Rechazar solicitud">
+        <span class="material-symbols-outlined text-[14px]">cancel</span>
+        <span>Rechazar</span>
+      </button>
+    } @else {
+      <div class="rf-pass-card__action-group">
+        <button
+          type="button"
+          class="rf-pass-card__btn-load-action"
+          (click)="onActionClick($event)">
+          <span class="material-symbols-outlined text-[16px]">touch_app</span>
+          <span>Cargar F01</span>
+        </button>
+        <button
+          type="button"
+          class="rf-pass-card__btn-cancel-load"
+          (click)="onReject($event)"
+          title="Rechazar y descartar solicitud">
+          <span class="material-symbols-outlined text-[14px]">delete</span>
+          <span>Rechazar</span>
+        </button>
+      </div>
+    }
+  </footer>
+</article>

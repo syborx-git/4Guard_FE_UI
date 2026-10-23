@@ -1,0 +1,213 @@
+<div class="target-modal-backdrop" (click)="close()" role="dialog" aria-modal="true">
+  <div class="target-modal-panel" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="target-modal-header">
+      <div class="target-modal-title-row">
+        <div class="target-icon-wrap">
+          <span class="material-symbols-outlined">tune</span>
+        </div>
+        <div>
+          <h2>Configuración Dinámica de Metas y Objetivos Operativos</h2>
+          <p>Ajusta los umbrales de evaluación de rendimiento y SLAs según los acuerdos de tu operación</p>
+        </div>
+      </div>
+      <button type="button" class="target-btn-close" (click)="close()" aria-label="Cerrar modal">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Alert si se guardó -->
+    @if (saveSuccess()) {
+      <div class="target-alert-success">
+        <span class="material-symbols-outlined">check_circle</span>
+        <span>¡Metas actualizadas exitosamente! Los indicadores y semáforos se han recalculado.</span>
+      </div>
+    }
+
+    <!-- Body con formularios ordenados -->
+    <div class="target-modal-body">
+
+      <!-- Sección 1: SLAs y Eficiencia de Almacén -->
+      <div class="target-section-title">
+        <span class="material-symbols-outlined">verified</span>
+        <span>1. SLAs y Capacidad de Almacén</span>
+      </div>
+
+      <div class="target-grid">
+        <!-- 1. Meta Ocupación de Almacén -->
+        <div class="target-field-card">
+          <div class="target-field-top">
+            <label for="occupancyTarget">
+              <span class="material-symbols-outlined field-icon">warehouse</span>
+              <span>Meta Ocupación Máxima (%)</span>
+            </label>
+            <span class="target-val-badge font-mono">{{ formData().targetOccupancyPercentage }}%</span>
+          </div>
+          <input
+            id="occupancyTarget"
+            type="range"
+            min="50"
+            max="95"
+            step="1"
+            [ngModel]="formData().targetOccupancyPercentage"
+            (ngModelChange)="formData().targetOccupancyPercentage = $event"
+            class="target-slider" />
+          <small class="target-hint">Rango recomendado: 60% – 85% para evitar saturación</small>
+        </div>
+
+        <!-- 2. Meta Exactitud de Inventario (IRA) -->
+        <div class="target-field-card">
+          <div class="target-field-top">
+            <label for="iraTarget">
+              <span class="material-symbols-outlined field-icon">inventory_2</span>
+              <span>Meta Exactitud de Inventario IRA (%)</span>
+            </label>
+            <span class="target-val-badge target-val-badge--success font-mono">{{ formData().targetIraPercentage }}%</span>
+          </div>
+          <input
+            id="iraTarget"
+            type="range"
+            min="90"
+            max="100"
+            step="0.1"
+            [ngModel]="formData().targetIraPercentage"
+            (ngModelChange)="formData().targetIraPercentage = $event"
+            class="target-slider" />
+          <small class="target-hint">Estándar 3PL Clase Mundial: ≥ 99.5%</small>
+        </div>
+
+        <!-- 3. Meta OTIF -->
+        <div class="target-field-card">
+          <div class="target-field-top">
+            <label for="otifTarget">
+              <span class="material-symbols-outlined field-icon">local_shipping</span>
+              <span>Meta Cumplimiento a Tiempo (OTIF %)</span>
+            </label>
+            <span class="target-val-badge target-val-badge--success font-mono">{{ formData().targetOtifPercentage }}%</span>
+          </div>
+          <input
+            id="otifTarget"
+            type="range"
+            min="85"
+            max="100"
+            step="0.5"
+            [ngModel]="formData().targetOtifPercentage"
+            (ngModelChange)="formData().targetOtifPercentage = $event"
+            class="target-slider" />
+          <small class="target-hint">Nivel de servicio comprometido con el cliente: ≥ 98.0%</small>
+        </div>
+      </div>
+
+      <!-- Sección 2: Tiempos de Ciclo y Productividad -->
+      <div class="target-section-title" style="margin-top: 1rem;">
+        <span class="material-symbols-outlined">speed</span>
+        <span>2. Tiempos de Ciclo & Productividad del Personal</span>
+      </div>
+
+      <div class="target-grid">
+        <!-- 4. Dock-to-Stock Horas -->
+        <div class="target-field-card">
+          <div class="target-field-top">
+            <label for="dockToStockTarget">
+              <span class="material-symbols-outlined field-icon">hourglass_top</span>
+              <span>Meta Dock-to-Stock (Horas)</span>
+            </label>
+            <span class="target-val-badge target-val-badge--gold font-mono">{{ formData().targetDockToStockHours }} hrs</span>
+          </div>
+          <input
+            id="dockToStockTarget"
+            type="range"
+            min="0.5"
+            max="6.0"
+            step="0.1"
+            [ngModel]="formData().targetDockToStockHours"
+            (ngModelChange)="formData().targetDockToStockHours = $event"
+            class="target-slider" />
+          <small class="target-hint">Tiempo desde descarga hasta rack final (Meta ≤ 2.0h)</small>
+        </div>
+
+        <!-- 5. Ciclo de Orden Horas -->
+        <div class="target-field-card">
+          <div class="target-field-top">
+            <label for="orderCycleTarget">
+              <span class="material-symbols-outlined field-icon">timer</span>
+              <span>Meta Ciclo de Orden (Horas)</span>
+            </label>
+            <span class="target-val-badge target-val-badge--gold font-mono">{{ formData().targetOrderCycleHours }} hrs</span>
+          </div>
+          <input
+            id="orderCycleTarget"
+            type="range"
+            min="1.0"
+            max="10.0"
+            step="0.2"
+            [ngModel]="formData().targetOrderCycleHours"
+            (ngModelChange)="formData().targetOrderCycleHours = $event"
+            class="target-slider" />
+          <small class="target-hint">Desde liberación de pedido hasta embarque (Meta ≤ 4.0h)</small>
+        </div>
+
+        <!-- 6. PPH Montacarguistas -->
+        <div class="target-field-card">
+          <div class="target-field-top">
+            <label for="pphTarget">
+              <span class="material-symbols-outlined field-icon">forklift</span>
+              <span>Meta Montacargas (PPH / Tarimas/Hr)</span>
+            </label>
+            <span class="target-val-badge target-val-badge--primary font-mono">{{ formData().targetForkliftPph }} /h</span>
+          </div>
+          <input
+            id="pphTarget"
+            type="range"
+            min="3.0"
+            max="12.0"
+            step="0.5"
+            [ngModel]="formData().targetForkliftPph"
+            (ngModelChange)="formData().targetForkliftPph = $event"
+            class="target-slider" />
+          <small class="target-hint">Rendimiento mínimo por operador de montacargas por turno</small>
+        </div>
+
+        <!-- 7. Descarga Inbound Minutos -->
+        <div class="target-field-card">
+          <div class="target-field-top">
+            <label for="inboundTarget">
+              <span class="material-symbols-outlined field-icon">dock</span>
+              <span>Meta Tiempo de Descarga (Minutos)</span>
+            </label>
+            <span class="target-val-badge target-val-badge--gold font-mono">{{ formData().targetInboundUnloadMinutes }} min</span>
+          </div>
+          <input
+            id="inboundTarget"
+            type="range"
+            min="15"
+            max="90"
+            step="5"
+            [ngModel]="formData().targetInboundUnloadMinutes"
+            (ngModelChange)="formData().targetInboundUnloadMinutes = $event"
+            class="target-slider" />
+          <small class="target-hint">Estancia máxima del tráiler en andén (Meta ≤ 45 min)</small>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer con acciones -->
+    <div class="target-modal-footer">
+      <button type="button" class="target-btn-secondary" (click)="resetDefaults()">
+        <span class="material-symbols-outlined">restart_alt</span>
+        <span>Valores Recomendados</span>
+      </button>
+
+      <div class="target-modal-footer-right">
+        <button type="button" class="target-btn-cancel" (click)="close()">Cancelar</button>
+        <button type="button" class="target-btn-primary" (click)="saveTargets()">
+          <span class="material-symbols-outlined">save</span>
+          <span>Guardar y Aplicar Metas</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>

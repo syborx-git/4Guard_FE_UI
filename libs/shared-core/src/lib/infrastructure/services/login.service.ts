@@ -47,30 +47,45 @@ export class LoginService {
     let role = UserRole.ADMIN;
     let fullName = 'Carlos Herrera';
 
-    if (email.includes('manager')) {
-      role = UserRole.WAREHOUSE_MANAGER;
-      fullName = 'Sofía Ramírez';
-    } else if (email.includes('dock')) {
-      role = UserRole.DOCK_SUPERVISOR;
-      fullName = 'Miguel Torres';
-    } else if (email.includes('qm')) {
+    // Extraer solo la parte local del usuario para no colisionar con el dominio @4guard.mx
+    const userPrefix = email.split('@')[0];
+
+    if (userPrefix.includes('director') || userPrefix.includes('admin') || userPrefix.includes('ceo')) {
+      role = UserRole.ADMIN;
+      fullName = 'Ing. Carlos Herrera (Director General)';
+    } else if (userPrefix.includes('manager') || userPrefix.includes('gerente')) {
+      role = UserRole.OPERATIONS_MANAGER;
+      fullName = 'Ing. Roberto Garza (Gerente Operaciones)';
+    } else if (userPrefix.includes('coord')) {
+      role = UserRole.OPERATIONS_COORDINATOR;
+      fullName = 'Lic. Fernando Lozano (Coordinador Operaciones)';
+    } else if (userPrefix.includes('super') || userPrefix.includes('sup')) {
+      role = UserRole.OPERATIONS_SUPERVISOR;
+      fullName = 'Ing. Héctor Salinas (Supervisor Operaciones)';
+    } else if (userPrefix.includes('control') || userPrefix.includes('mesa')) {
+      role = UserRole.CONTROL_DESK;
+      fullName = 'Lic. Patricia Gómez (Mesa de Control)';
+    } else if (userPrefix.includes('lider') || userPrefix.includes('shift')) {
+      role = UserRole.SHIFT_LEADER;
+      fullName = 'Ricardo Peña (Líder de Turno)';
+    } else if (userPrefix.includes('qm') || userPrefix.includes('calidad')) {
       role = UserRole.QM_INSPECTOR;
-      fullName = 'Ana López';
-    } else if (email.includes('op')) {
+      fullName = 'Dra. Elena Ramos (Inspector de Calidad)';
+    } else if (userPrefix.includes('security') || userPrefix.includes('guard') || userPrefix.includes('caseta') || userPrefix.includes('vigilant')) {
+      role = UserRole.SECURITY_GUARD;
+      fullName = 'Carlos Mendoza (Guardia Caseta)';
+    } else if (userPrefix.includes('montacarg') || userPrefix.includes('operad') || userPrefix.includes('fork') || userPrefix.includes('op')) {
       role = UserRole.WAREHOUSE_OPERATOR;
-      fullName = 'Roberto Sánchez';
-    } else if (email.includes('auditor')) {
-      role = UserRole.AUDITOR;
-      fullName = 'David Salazar';
-    } else if (email.includes('client')) {
-      role = UserRole.CLIENT;
-      fullName = 'Representante Nestlé';
+      fullName = 'Oficial Montacarguista';
+    } else {
+      role = UserRole.WAREHOUSE_OPERATOR;
+      fullName = 'Oficial Montacarguista';
     }
 
     // Asignar sucursal según el correo electrónico para simular la base de datos
     const isQueretaro = email.includes('qro') || email.includes('queretaro');
-    const branchId = isQueretaro ? 'BR-QRO-01' : 'BR-TOL-01';
-    const branchName = isQueretaro ? '4GUARD Querétaro' : '4GUARD Toluca';
+    const branchId = isQueretaro ? 'BR-QRO-01' : 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+    const branchName = isQueretaro ? '4GUARD Querétaro' : 'CENTRO DE DISTRIBUCION CDMX';
 
     const mockUser = {
       id: `u-${role.toLowerCase()}`,

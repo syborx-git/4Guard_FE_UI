@@ -1,0 +1,2602 @@
+<!-- receiving-center.component.html -->
+<!-- HU-028 — Centro de Recepciones y Agenda de Citas de Recepción (Product Polish Final) -->
+
+<section class="rc-page" aria-label="Centro de Recepciones">
+
+  <!-- ════════════════════════════════════════════════════════
+       HERO OPERATIVO CON RESUMEN EJECUTIVO TÁCTICO
+       ════════════════════════════════════════════════════════ -->
+  <header class="rc-hero">
+    <div class="rc-hero__left">
+      <div class="rc-hero__icon-wrap" aria-hidden="true">
+        <span class="material-symbols-outlined">calendar_month</span>
+      </div>
+      <div>
+        <div class="rc-hero__eyebrow">CONSOLA OPERATIVA · TORRE DE CONTROL DE RECEPCIÓN</div>
+        <h1 class="rc-hero__title">Centro de Recepciones & Agenda de Citas</h1>
+        <p class="rc-hero__subtitle">
+          Supervisión en tiempo real del flujo de patio, andenes de descarga, registro de llegada de transportes y avance de conciliación.
+        </p>
+      </div>
+    </div>
+
+    <!-- Mini Resumen Ejecutivo Táctico -->
+    <div class="rc-hero__summary-strip" aria-label="Resumen ejecutivo del día">
+      <div class="rc-hero__summary-item">
+        <span class="rc-hero__summary-val">{{ todayCount() }}</span>
+        <span class="rc-hero__summary-lbl">Hoy</span>
+      </div>
+      <div class="rc-hero__summary-item">
+        <span class="rc-hero__summary-val rc-hero__summary-val--arrived">{{ kpiArrived() }}</span>
+        <span class="rc-hero__summary-lbl">En Sitio</span>
+      </div>
+      <div class="rc-hero__summary-item">
+        <span class="rc-hero__summary-val rc-hero__summary-val--active">{{ kpiInReceiving() }}</span>
+        <span class="rc-hero__summary-lbl">Activas</span>
+      </div>
+      <div class="rc-hero__summary-item">
+        <span class="rc-hero__summary-val">42m</span>
+        <span class="rc-hero__summary-lbl">Prom. Atención</span>
+      </div>
+      <div class="rc-hero__summary-item" [class.rc-hero__summary-item--warning]="kpiDelayed() > 0">
+        <span class="rc-hero__summary-val" [class.rc-txt-warning]="kpiDelayed() > 0">{{ kpiDelayed() }}</span>
+        <span class="rc-hero__summary-lbl">Retrasadas</span>
+      </div>
+    </div>
+
+    <div class="rc-hero__actions">
+      <button
+        type="button"
+        class="rc-btn rc-btn--ghost"
+        (click)="resetDemoData()"
+        title="Restablecer los 6 escenarios de prueba demo para Muelle"
+        aria-label="Restablecer datos demo">
+        <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+        Restablecer Datos Demo
+      </button>
+      <button
+        type="button"
+        class="rc-btn rc-btn--ghost"
+        (click)="isAuditDrawerOpen.set(true)"
+        aria-label="Ver auditoría">
+        <span class="material-symbols-outlined" aria-hidden="true">policy</span>
+        Ver auditoría
+      </button>
+      <button
+        id="rc-btn-new-appointment"
+        type="button"
+        class="rc-btn rc-btn--primary"
+        (click)="openCreateDrawer()"
+        aria-label="Programar recepción">
+        <span class="material-symbols-outlined" aria-hidden="true">add</span>
+        Programar Recepción
+      </button>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════
+       TARJETA DESTACADA: RECEPCIÓN EN CURSO (TORRE DE CONTROL)
+       ════════════════════════════════════════════════════════ -->
+  <section class="rc-active-reception-section" aria-label="Recepción activa en curso">
+    @if (activeReception()) {
+      <div class="rc-active-card">
+        <div class="rc-active-card__header">
+          <div class="rc-active-card__live-tag">
+            <span class="rc-pulse-dot" aria-hidden="true"></span>
+            <span>RECEPCIÓN EN CURSO</span>
+          </div>
+          <span class="rc-active-card__dock-badge">
+            <span class="material-symbols-outlined" aria-hidden="true">warehouse</span>
+            Andén {{ activeReception()!.appointment.dockNumber }}
+          </span>
+        </div>
+
+        <div class="rc-active-card__body">
+          <div class="rc-active-card__main-info">
+            <div class="rc-active-card__asn-wrap">
+              <span class="rc-active-card__asn">{{ activeReception()!.appointment.asnReference }}</span>
+              <span class="rc-active-card__id">{{ activeReception()!.appointment.id }}</span>
+            </div>
+            <div class="rc-active-card__details">
+              <span class="rc-active-card__detail-item">
+                <span class="material-symbols-outlined" aria-hidden="true">store</span>
+                <strong>Proveedor:</strong> {{ activeReception()!.appointment.supplierName }}
+              </span>
+              <span class="rc-active-card__detail-item">
+                <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+                <strong>Transporte:</strong> {{ activeReception()!.appointment.carrierName }} ({{ activeReception()!.appointment.arrivalData?.actualPlates || activeReception()!.appointment.expectedPlates }})
+              </span>
+              <span class="rc-active-card__detail-item">
+                <span class="material-symbols-outlined" aria-hidden="true">person</span>
+                <strong>Operador:</strong> {{ activeReception()!.operatorName }}
+              </span>
+            </div>
+          </div>
+
+          <div class="rc-active-card__stats">
+            <div class="rc-active-card__stat-item">
+              <span class="rc-active-card__stat-val">{{ activeReception()!.elapsedMinutes }} min</span>
+              <span class="rc-active-card__stat-lbl">Tiempo Transcurrido</span>
+            </div>
+            <div class="rc-active-card__stat-item">
+              <span class="rc-active-card__stat-val">{{ activeReception()!.reconciledLinesCount }} / {{ activeReception()!.totalLinesCount }}</span>
+              <span class="rc-active-card__stat-lbl">Líneas Conciliadas</span>
+            </div>
+            <div class="rc-active-card__stat-item">
+              <span class="rc-active-card__stat-val rc-active-card__stat-val--step">{{ activeReception()!.currentStepLabel }}</span>
+              <span class="rc-active-card__stat-lbl">Fase Actual</span>
+            </div>
+          </div>
+
+          <div class="rc-active-card__action">
+            <button
+              id="rc-btn-active-continue"
+              type="button"
+              class="rc-btn rc-btn--gold rc-btn--lg"
+              (click)="onContinueReceiving(activeReception()!.appointment)">
+              <span class="material-symbols-outlined" aria-hidden="true">fast_forward</span>
+              Continuar Recepción
+            </button>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="rc-active-empty-card">
+        <div class="rc-active-empty-card__content">
+          <span class="material-symbols-outlined rc-active-empty-card__icon" aria-hidden="true">sensors_off</span>
+          <div>
+            <h3 class="rc-active-empty-card__title">Sin recepción activa en este momento</h3>
+            <p class="rc-active-empty-card__desc">Selecciona una cita en estado <strong>Vehículo en Sitio</strong> y presiona "Iniciar Recepción" para comenzar la descarga en La Bóveda.</p>
+          </div>
+        </div>
+      </div>
+    }
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       KPI STRIP INTERACTIVO (5 Tarjetas - Filtros al clic)
+       ════════════════════════════════════════════════════════ -->
+  <section class="rc-kpi-strip" aria-label="Indicadores de recepciones e interactividad">
+
+    <!-- KPI 1: Programadas -->
+    <div
+      class="rc-kpi-card rc-kpi-card--clickable"
+      [class.rc-kpi-card--active]="statusFilter() === 'SCHEDULED'"
+      (click)="toggleKpiFilter('SCHEDULED')"
+      role="button"
+      tabindex="0"
+      title="Filtrar citas programadas">
+      <div class="rc-kpi-card__body">
+        <span class="rc-kpi-card__value">{{ kpiScheduled() }}</span>
+        <span class="rc-kpi-card__label">Programadas</span>
+        <span class="rc-kpi-card__sub">Pendientes de llegada</span>
+      </div>
+      <div class="rc-kpi-card__icon-wrap">
+        <span class="material-symbols-outlined" aria-hidden="true">event</span>
+      </div>
+    </div>
+
+    <!-- KPI 2: Vehículos en Sitio -->
+    <div
+      class="rc-kpi-card rc-kpi-card--arrived rc-kpi-card--clickable"
+      [class.rc-kpi-card--active]="statusFilter() === 'ARRIVED'"
+      (click)="toggleKpiFilter('ARRIVED')"
+      role="button"
+      tabindex="0"
+      title="Filtrar vehículos en sitio">
+      <div class="rc-kpi-card__body">
+        <span class="rc-kpi-card__value">{{ kpiArrived() }}</span>
+        <span class="rc-kpi-card__label">Vehículos en Sitio</span>
+        <span class="rc-kpi-card__sub">Listos para iniciar</span>
+      </div>
+      <div class="rc-kpi-card__icon-wrap">
+        <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+      </div>
+    </div>
+
+    <!-- KPI 3: En Proceso -->
+    <div
+      class="rc-kpi-card rc-kpi-card--receiving rc-kpi-card--clickable"
+      [class.rc-kpi-card--active]="statusFilter() === 'IN_RECEIVING'"
+      (click)="toggleKpiFilter('IN_RECEIVING')"
+      role="button"
+      tabindex="0"
+      title="Filtrar recepciones en curso">
+      <div class="rc-kpi-card__body">
+        <span class="rc-kpi-card__value">{{ kpiInReceiving() }}</span>
+        <span class="rc-kpi-card__label">En Recepción</span>
+        <span class="rc-kpi-card__sub">En La Bóveda Wizard</span>
+      </div>
+      <div class="rc-kpi-card__icon-wrap">
+        <span class="material-symbols-outlined" aria-hidden="true">move_to_inbox</span>
+      </div>
+    </div>
+
+    <!-- KPI 4: Cuadraturas Completadas -->
+    <div
+      class="rc-kpi-card rc-kpi-card--completed rc-kpi-card--clickable"
+      [class.rc-kpi-card--active]="statusFilter() === 'COMPLETED'"
+      (click)="toggleKpiFilter('COMPLETED')"
+      role="button"
+      tabindex="0"
+      title="Filtrar cuadraturas completadas">
+      <div class="rc-kpi-card__body">
+        <span class="rc-kpi-card__value">{{ kpiCompleted() }}</span>
+        <span class="rc-kpi-card__label">Cuadraturas Completadas</span>
+        <span class="rc-kpi-card__sub">Conciliadas al 100%</span>
+      </div>
+      <div class="rc-kpi-card__icon-wrap">
+        <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+      </div>
+    </div>
+
+    <!-- KPI 5: Retrasadas -->
+    <div
+      class="rc-kpi-card rc-kpi-card--clickable"
+      [class.rc-kpi-card--delayed]="kpiDelayed() > 0"
+      [class.rc-kpi-card--active]="statusFilter() === 'DELAYED'"
+      (click)="toggleKpiFilter('DELAYED')"
+      role="button"
+      tabindex="0"
+      title="Filtrar citas retrasadas">
+      <div class="rc-kpi-card__body">
+        <span class="rc-kpi-card__value">{{ kpiDelayed() }}</span>
+        <span class="rc-kpi-card__label">Retrasadas</span>
+        <span class="rc-kpi-card__sub">Demora de horario</span>
+      </div>
+      <div class="rc-kpi-card__icon-wrap">
+        <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       TOOLBAR & PESTAÑAS (AGENDA | RECEPCIONES DE HOY | HISTORIAL)
+       ════════════════════════════════════════════════════════ -->
+  <section class="rc-toolbar-container">
+    
+    <!-- Pestañas con Contadores Integrados -->
+    <div class="rc-tabs" role="tablist" aria-label="Navegación de citas">
+      <button
+        type="button"
+        role="tab"
+        class="rc-tab"
+        [class.rc-tab--active]="activeTab() === 'AGENDA'"
+        (click)="activeTab.set('AGENDA')"
+        [attr.aria-selected]="activeTab() === 'AGENDA'">
+        <span class="material-symbols-outlined" aria-hidden="true">view_week</span>
+        Agenda
+        <span class="rc-tab__count">({{ agendaCount() }})</span>
+      </button>
+
+      <button
+        type="button"
+        role="tab"
+        class="rc-tab"
+        [class.rc-tab--active]="activeTab() === 'TODAY'"
+        (click)="activeTab.set('TODAY')"
+        [attr.aria-selected]="activeTab() === 'TODAY'">
+        <span class="material-symbols-outlined" aria-hidden="true">today</span>
+        Hoy
+        <span class="rc-tab__count">({{ todayCount() }})</span>
+      </button>
+
+      <button
+        type="button"
+        role="tab"
+        class="rc-tab"
+        [class.rc-tab--active]="activeTab() === 'HISTORY'"
+        (click)="activeTab.set('HISTORY')"
+        [attr.aria-selected]="activeTab() === 'HISTORY'">
+        <span class="material-symbols-outlined" aria-hidden="true">history</span>
+        Historial
+        <span class="rc-tab__count">({{ historyCount() }})</span>
+      </button>
+    </div>
+
+    <!-- Filtros de búsqueda y estado -->
+    <div class="rc-filters-bar">
+      <!-- Buscador -->
+      <div class="rc-search-wrap">
+        <span class="material-symbols-outlined rc-search-icon" aria-hidden="true">search</span>
+        <input
+          type="text"
+          class="rc-search-input"
+          placeholder="Buscar por ASN, Proveedor, Transportista o ID…"
+          [value]="searchQuery()"
+          (input)="searchQuery.set($any($event.target).value)"
+          aria-label="Buscar citas"
+        />
+        @if (searchQuery()) {
+          <button type="button" class="rc-search-clear" (click)="searchQuery.set('')">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        }
+      </div>
+
+      <!-- Filtro Estado -->
+      <select
+        class="rc-select-filter"
+        [value]="statusFilter()"
+        (change)="statusFilter.set($any($event.target).value)"
+        aria-label="Filtrar por estado">
+        <option value="ALL">Todos los estados</option>
+        <option value="SCHEDULED">Programada</option>
+        <option value="CONFIRMED">Confirmada</option>
+        <option value="ARRIVED">Vehículo en Sitio</option>
+        <option value="IN_RECEIVING">En Recepción</option>
+        <option value="COMPLETED">Cuadratura Completada</option>
+        <option value="NO_SHOW">No Show</option>
+        <option value="CANCELLED">Cancelada</option>
+        <option value="REJECTED">Rechazada</option>
+      </select>
+
+      <!-- Filtro Andén -->
+      <select
+        class="rc-select-filter"
+        [value]="dockFilter()"
+        (change)="dockFilter.set($any($event.target).value)"
+        aria-label="Filtrar por andén">
+        <option value="ALL">Todos los andenes</option>
+        @for (dock of docks; track dock) {
+          <option [value]="dock">{{ dock }}</option>
+        }
+      </select>
+    </div>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       TABLA PRINCIPAL DE CITAS ENRIQUECIDA
+       ════════════════════════════════════════════════════════ -->
+  <main class="rc-table-card" role="region" aria-label="Tabla de citas de recepción">
+    
+    @if (filteredAppointments().length === 0) {
+      <div class="rc-empty-state">
+        <span class="material-symbols-outlined rc-empty-state__icon" aria-hidden="true">event_busy</span>
+        <h3 class="rc-empty-state__title">No se encontraron citas de recepción</h3>
+        <p class="rc-empty-state__text">Intenta ajustar los criterios de búsqueda o programa una nueva recepción.</p>
+        <button type="button" class="rc-btn rc-btn--primary" (click)="openCreateDrawer()">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span>
+          Programar Recepción
+        </button>
+      </div>
+    } @else {
+      <div class="rc-table-wrap">
+        <table class="rc-table" aria-label="Listado de citas de recepción">
+          <thead>
+            <tr>
+              <th scope="col">Hora / Fecha</th>
+              <th scope="col">ASN / Referencia</th>
+              <th scope="col">Proveedor & Mercancía</th>
+              <th scope="col">Transportista & Contexto</th>
+              <th scope="col">Sucursal</th>
+              <th scope="col">Andén</th>
+              <th scope="col">Estado & Etapa</th>
+              <th scope="col" class="rc-table__th-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (appt of filteredAppointments(); track appt.id) {
+              <tr [class.rc-table__tr--selected]="service.selectedAppointmentId() === appt.id">
+                
+                <!-- 1. Hora / Fecha -->
+                <td class="rc-table__td-time">
+                  <div class="rc-time-main">
+                    <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+                    <strong class="rc-time-title">{{ appt.scheduledTime }}</strong>
+                  </div>
+                  <span class="rc-time-sub">{{ formatDate(appt.scheduledDate) }}</span>
+                </td>
+
+                <!-- 2. ASN & Bloques Visuales (Prioridad, Motor Operativo, OC & Caseta) -->
+                <td>
+                  <div class="rc-asn-main">
+                    <strong class="rc-asn-title">{{ appt.asnReference }}</strong>
+                  </div>
+
+
+                  <div class="rc-asn-sub-wrap">
+                    <span class="rc-asn-sub">{{ appt.id }}</span>
+
+                    <!-- Botón Interactivo de Consulta Documental de OC (HU-029 Evolución - Ajustes #3 y #11) -->
+                    @if (appt.poNumber) {
+                      <button
+                        type="button"
+                        class="rc-po-doc-btn"
+                        (click)="openPODetailDrawer(appt)"
+                        [title]="'Consultar expediente documental de la Orden de Compra ' + appt.poNumber">
+                        <span class="material-symbols-outlined rc-po-doc-icon" aria-hidden="true">description</span>
+                        <span class="rc-po-doc-text">{{ appt.poNumber }}</span>
+                      </button>
+                    } @else {
+                      <span class="rc-po-doc-btn rc-po-doc-btn--disabled" title="Esta recepción fue registrada sin Orden de Compra asociada.">
+                        <span class="material-symbols-outlined rc-po-doc-icon" aria-hidden="true">do_not_disturb_on</span>
+                        <span class="rc-po-doc-text">Sin OC</span>
+                      </span>
+                    }
+
+                    
+                    <!-- Tarjeta Compacta del Motor Operativo (EVOLUTION PASS - Punto 1) -->
+                    <div class="rc-smart-engine-card" (click)="openPriorityDrawer(appt)" title="Ver análisis del Motor Operativo de Reglas de Negocio">
+                      <div class="rc-smart-engine-head">
+                        <span class="material-symbols-outlined" aria-hidden="true">smart_toy</span>
+                        <strong>MOTOR OPERATIVO</strong>
+                      </div>
+                      <button type="button" class="rc-smart-engine-btn" (click)="openPriorityDrawer(appt)">
+                        Ver análisis →
+                      </button>
+                      <div class="rc-smart-engine-body">
+                        <div class="rc-smart-engine-col">
+                          <span class="rc-smart-engine-label">Prioridad sugerida</span>
+                          <span class="rc-smart-engine-val" [class.val--p1]="(priorityService.calculateSuggestedPriority(appt).priority) === 'URGENT'" [class.val--p2]="(priorityService.calculateSuggestedPriority(appt).priority) === 'HIGH'">
+                            {{ enterprisePriorityLabels[priorityService.calculateSuggestedPriority(appt).priority] }}
+                          </span>
+                        </div>
+                        <div class="rc-smart-engine-col">
+                          <span class="rc-smart-engine-label">Puntaje Operativo</span>
+                          <span class="rc-smart-engine-score" title="Escala acumulativa basada en factores operativos (Prioridad inicial, retraso, tiempo patio, tipo)">
+                            <strong>{{ getFormattedScore(priorityService.calculateSuggestedPriority(appt).score) }}</strong>
+                          </span>
+                        </div>
+                      </div>
+                      
+                    </div>
+
+                    <div class="rc-badges-flex">
+                      <!-- Bloque de Estado Documental (OC) -->
+                      <div class="rc-badge-block rc-badge-block--doc">
+                        <span class="rc-badge-block__label">Documental</span>
+                        <span
+                          class="rc-po-badge"
+                          [class]="poStatusClasses[appt.poValidationStatus || 'PENDING']"
+                          (click)="openPOValidationDrawer(appt)"
+                          role="button"
+                          tabindex="0"
+                          [title]="appt.poValidationStatus === 'VALIDATED' ? 'La Orden de Compra fue validada correctamente.' : 'Validación Documental vs Orden de Compra'">
+                          <span class="material-symbols-outlined" aria-hidden="true">
+                            {{ appt.poValidationStatus === 'VALIDATED' ? 'check_circle' : (appt.poValidationStatus === 'REJECTED' ? 'cancel' : 'warning') }}
+                          </span>
+                          {{ poStatusLabels[appt.poValidationStatus || 'PENDING'] }}
+                        </span>
+                      </div>
+
+                      <!-- Bloque de Estado de Caseta (Check-In) -->
+                      <div class="rc-badge-block rc-badge-block--gate">
+                        <span class="rc-badge-block__label">Caseta & Arribo</span>
+                        <div
+                          class="rc-checkin-smart-badge"
+                          [class]="arrivalClearanceClasses[appt.arrivalClearanceStatus || 'PENDING']"
+                          (click)="openCheckInDrawer(appt)"
+                          role="button"
+                          tabindex="0"
+                          title="Evaluación de Arribo: Se validarán Placas, Proveedor, Sellos, Sucursal y Seguridad.">
+                          <div class="rc-checkin-smart-main">
+                            <span class="material-symbols-outlined" aria-hidden="true">smart_toy</span>
+                            <strong>{{ enterpriseCheckInLabels[appt.arrivalClearanceStatus || 'PENDING'] }}</strong>
+                          </div>
+                          <span class="rc-checkin-smart-sub">
+                            {{ enterpriseCheckInSubtexts[appt.arrivalClearanceStatus || 'PENDING'] }}
+                          </span>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </td>
+
+                <!-- 3. Proveedor & Mercancía Esperada -->
+                <td>
+                  <div class="rc-cell-title">{{ appt.supplierName }}</div>
+                  <div class="rc-cell-sub rc-skus-badge">
+                    <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+                    {{ getSkusSummary(appt.lines) }}
+                  </div>
+                </td>
+
+                <!-- 4. Transportista & Contexto Operativo -->
+                <td>
+                  <div class="rc-cell-title">{{ appt.carrierName }}</div>
+                  <div class="rc-cell-sub">
+                    <span class="rc-mono-plates">
+                      {{ appt.arrivalData?.actualPlates || appt.expectedPlates }}
+                    </span>
+                    @if (getDelayMinutes(appt) > 0) {
+                      <span class="rc-delay-tag">
+                        <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                        Retraso {{ getDelayMinutes(appt) }} min
+                      </span>
+                    }
+                  </div>
+                </td>
+
+                <!-- 5. Sucursal -->
+                <td>
+                  <span class="rc-cell-title">{{ appt.branchName }}</span>
+                </td>
+
+                <!-- 6. Muelle (HU-030) -->
+                <td>
+                  <button type="button" class="rc-dock-btn" (click)="openDockDrawer(appt)" title="Asignación Operativa de Muelle">
+                    <span class="material-symbols-outlined" aria-hidden="true">meeting_room</span>
+                    <span class="rc-dock-btn__text">{{ appt.dockNumber ? 'Muelle ' + appt.dockNumber : 'Sin Asignar' }}</span>
+                    @if (appt.dockAssignmentStatus === 'OCCUPIED') {
+                      <span class="rc-dock-chip dock-chip--occupied">Ocupado</span>
+                    } @else if (appt.dockAssignmentStatus === 'RESERVED') {
+                      <span class="rc-dock-chip dock-chip--reserved">Reservado</span>
+                    } @else if (appt.dockAssignmentStatus === 'POSITIONING') {
+                      <span class="rc-dock-chip dock-chip--positioning">En Tránsito</span>
+                    } @else if (appt.dockAssignmentStatus === 'RELEASED') {
+                      <span class="rc-dock-chip dock-chip--released">Liberado</span>
+                    } @else if (appt.dockAssignmentStatus === 'REASSIGNED') {
+                      <span class="rc-dock-chip dock-chip--assigned">Reasignado</span>
+                    } @else if (appt.dockAssignmentStatus === 'EXPIRED') {
+                      <span class="rc-dock-chip dock-chip--warning">Expirado</span>
+                    } @else {
+                      <span class="rc-dock-chip dock-chip--unassigned">Sin Asignar</span>
+                    }
+                  </button>
+                </td>
+
+
+                <!-- 7. Estado & Etapa FSM (Requisito 8) -->
+                <td>
+                  <div class="rc-status-stack">
+                    <!-- Stepper de Etapa FSM -->
+                    <div class="rc-fsm-stage-tag" [class]="getFsmStageInfo(appt.status).cssClass">
+                      <span class="rc-fsm-stage-step">{{ getFsmStageInfo(appt.status).step }}</span>
+                      <span class="rc-fsm-stage-label">{{ getFsmStageInfo(appt.status).label }}</span>
+                    </div>
+
+                    <span class="rc-badge" [class]="statusClasses[appt.status]">
+                      {{ statusLabels[appt.status] }}
+                    </span>
+                    <span class="rc-status-context">{{ getArrivalContext(appt) }}</span>
+
+                    <!-- Contrato Visual de Preparación Operativa (Fase 1 Lograda) -->
+                    <div class="rc-readiness-badge" [class]="getOperationalReadiness(appt).overallClass" [title]="'Contrato de Preparación Operativa: ' + getOperationalReadiness(appt).overallLabel">
+                      <span class="material-symbols-outlined" aria-hidden="true">
+                        {{ getOperationalReadiness(appt).overallState === 'READY' ? 'verified' : (getOperationalReadiness(appt).overallState === 'READY_WITH_WARNINGS' ? 'warning' : 'block') }}
+                      </span>
+                      <span class="rc-readiness-label">{{ getOperationalReadiness(appt).overallLabel }}</span>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Acciones FSM Condicionales -->
+                <td class="rc-table__td-actions">
+                  <div class="rc-actions-group">
+                    
+                    @switch (appt.status) {
+                      @case ('DRAFT') {
+                        <button type="button" class="rc-btn rc-btn--primary rc-btn--xs" (click)="openEditDrawer(appt, 'EDIT')">
+                          Completar
+                        </button>
+                        <button type="button" class="rc-btn rc-btn--danger-ghost rc-btn--xs" (click)="openCancelModal(appt)">
+                          Cancelar
+                        </button>
+                      }
+
+                      @case ('SCHEDULED') {
+                        <button type="button" class="rc-btn rc-btn--success rc-btn--xs" (click)="onConfirmAppointment(appt)">
+                          Confirmar Cita
+                        </button>
+                        <button type="button" class="rc-btn rc-btn--secondary rc-btn--xs" (click)="openReprogramModal(appt)">
+                          Reprogramar
+                        </button>
+                        <button type="button" class="rc-btn rc-btn--ghost rc-btn--xs" (click)="onMarkNoShow(appt)">
+                          No Show
+                        </button>
+                      }
+
+                      @case ('CONFIRMED') {
+                        <button type="button" class="rc-btn rc-btn--primary rc-btn--xs" (click)="openCheckInDrawer(appt)">
+                          <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+                          Registrar Llegada
+                        </button>
+                        <button type="button" class="rc-btn rc-btn--secondary rc-btn--xs" (click)="openReprogramModal(appt)">
+                          Reprogramar
+                        </button>
+                        <button type="button" class="rc-btn rc-btn--danger-ghost rc-btn--xs" (click)="openCancelModal(appt)">
+                          Cancelar
+                        </button>
+                      }
+
+                      @case ('ARRIVED') {
+                        @if (
+                          (appt.poValidationStatus === 'VALIDATED' || appt.poValidationStatus === 'EXCEPTED' || appt.poValidationStatus === 'NOT_REQUIRED') &&
+                          (appt.arrivalClearanceStatus === 'CLEARED' || appt.arrivalClearanceStatus === 'WARNING_CLEARED')
+                        ) {
+                          <button id="rc-btn-prepare-reception" type="button" class="rc-btn rc-btn--gold rc-btn--xs" (click)="onPrepareReceptionCreation(appt)" title="Planeación completada. La creación de la sesión operativa se habilitará en la Consola de Ejecución (HU-016/HU-017)">
+                            <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+                            Preparar creación de recepción
+                          </button>
+                        } @else if (appt.arrivalClearanceStatus === 'BLOCKED') {
+                          <button type="button" class="rc-btn rc-btn--danger-ghost rc-btn--xs" (click)="openCheckInDrawer(appt)" title="El vehículo presenta incidencias críticas de arribo sin resolver">
+                            <span class="material-symbols-outlined" aria-hidden="true">report_problem</span>
+                            Arribo Bloqueado
+                          </button>
+                        } @else if (appt.arrivalClearanceStatus === 'REVIEW_REQUIRED') {
+                          <button type="button" class="rc-btn rc-btn--warning-ghost rc-btn--xs" (click)="openCheckInDrawer(appt)" title="El arribo requiere revisión de un supervisor">
+                            <span class="material-symbols-outlined" aria-hidden="true">quick_reference_all</span>
+                            En Revisión Patio
+                          </button>
+                        } @else if (appt.arrivalClearanceStatus === 'REJECTED_AT_GATE') {
+                          <button type="button" class="rc-btn rc-btn--danger-ghost rc-btn--xs" disabled title="Unidad rechazada en caseta">
+                            <span class="material-symbols-outlined" aria-hidden="true">block</span>
+                            Rechazado Caseta
+                          </button>
+                        } @else if (appt.poValidationStatus === 'PENDING' || appt.poValidationStatus === 'REJECTED') {
+                          <button type="button" class="rc-btn rc-btn--secondary rc-btn--xs" (click)="openPOValidationDrawer(appt)" title="Validación documental pendiente contra la Orden de Compra">
+                            <span class="material-symbols-outlined" aria-hidden="true">pending_actions</span>
+                            Validación OC Pendiente
+                          </button>
+                        } @else {
+                          <button type="button" class="rc-btn rc-btn--secondary rc-btn--xs" (click)="openCheckInDrawer(appt)" title="Check-In del transporte pendiente">
+                            <span class="material-symbols-outlined" aria-hidden="true">pending_actions</span>
+                            Check-In Pendiente
+                          </button>
+                        }
+                      }
+
+                      @case ('IN_RECEIVING') {
+                        <button id="rc-btn-continue-receiving" type="button" class="rc-btn rc-btn--gold rc-btn--xs" (click)="onContinueReceiving(appt)">
+                          <span class="material-symbols-outlined" aria-hidden="true">fast_forward</span>
+                          Continuar
+                        </button>
+                      }
+
+                      @case ('COMPLETED') {
+                        <button type="button" class="rc-btn rc-btn--ghost rc-btn--xs" (click)="openEditDrawer(appt, 'VIEW')">
+                          <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                          Consultar
+                        </button>
+                      }
+
+                      @case ('CANCELLED') {
+                        <button type="button" class="rc-btn rc-btn--ghost rc-btn--xs" (click)="openEditDrawer(appt, 'VIEW')">
+                          Ver Detalle
+                        </button>
+                      }
+
+                      @case ('NO_SHOW') {
+                        <button type="button" class="rc-btn rc-btn--secondary rc-btn--xs" (click)="openEditDrawer(appt, 'CLONE')">
+                          <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+                          Nueva cita basada en esta
+                        </button>
+                      }
+
+                      @case ('REJECTED') {
+                        <button type="button" class="rc-btn rc-btn--ghost rc-btn--xs" (click)="openEditDrawer(appt, 'VIEW')">
+                          Ver Incidencia
+                        </button>
+                      }
+                    }
+
+                  </div>
+                </td>
+
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+  </main>
+
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     DRAWER LATERAL PREMIUM (NUEVA CITA / EDITAR / CLONAR)
+     ════════════════════════════════════════════════════════ -->
+@if (isDrawerOpen()) {
+  <div class="rc-drawer-overlay" (click)="closeDrawer()"></div>
+  <aside class="rc-drawer" role="dialog" aria-modal="true" aria-label="Drawer de cita">
+    
+    <!-- Drawer Header -->
+    <header class="rc-drawer__header">
+      <div class="rc-drawer__title-wrap">
+        <span class="material-symbols-outlined rc-drawer__icon" aria-hidden="true">event_available</span>
+        <div>
+          <h2 class="rc-drawer__title">
+            @switch (drawerMode()) {
+              @case ('CREATE') { Programar Nueva Recepción }
+              @case ('EDIT') { Editar Cita {{ editingAppointmentId() }} }
+              @case ('VIEW') { Detalle de Cita {{ editingAppointmentId() }} (Solo Lectura) }
+              @case ('CLONE') { Programar Recepción (Clonada desde No Show) }
+            }
+          </h2>
+          <p class="rc-drawer__subtitle">Captura la planeación operativa para el andén y patio.</p>
+        </div>
+      </div>
+      <button type="button" class="rc-btn-icon" (click)="closeDrawer()" aria-label="Cerrar drawer">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </header>
+
+    <!-- Formulario en Drawer -->
+    <form class="rc-drawer__body" [formGroup]="appointmentForm" (ngSubmit)="onSubmitAppointment()">
+      
+      @if (formErrorMessage()) {
+        <div class="rc-alert-error" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">error_outline</span>
+          <span>{{ formErrorMessage() }}</span>
+        </div>
+      }
+
+      <!-- SECCIÓN 1: INFORMACIÓN GENERAL -->
+      <section class="rc-form-section">
+        <h3 class="rc-form-section__title">
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          1. Información General
+        </h3>
+
+        <div class="rc-form-row">
+          <div class="rc-form-field">
+            <label class="rc-label">Cliente / Owner <span class="rc-req">*</span></label>
+            <select class="rc-select" formControlName="clientId">
+              @for (c of clients; track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Proveedor <span class="rc-req">*</span></label>
+            <select class="rc-select" formControlName="supplierId">
+              @for (s of suppliers; track s.id) {
+                <option [value]="s.id" [disabled]="!s.active">
+                  {{ s.name }} {{ !s.active ? '(Inactivo)' : '' }}
+                </option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="rc-form-row">
+          <div class="rc-form-field">
+            <label class="rc-label">Tipo de Recepción <span class="rc-req">*</span></label>
+            <select class="rc-select" formControlName="receptionType">
+              <option value="NATIONAL">Nacional</option>
+              <option value="IMPORT">Importación</option>
+              <option value="RETURN">Devolución</option>
+            </select>
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">ASN / Referencia <span class="rc-req">*</span></label>
+            <input type="text" class="rc-input" formControlName="asnReference" placeholder="Ej. ASN-2026-9901" />
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Prioridad <span class="rc-req">*</span></label>
+            <select class="rc-select" formControlName="priority">
+              <option value="NORMAL">Normal</option>
+              <option value="HIGH">Alta</option>
+              <option value="URGENT">Urgente</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="rc-form-field rc-form-field--full">
+          <label class="rc-label">Observaciones</label>
+          <textarea class="rc-textarea" formControlName="observations" rows="2" placeholder="Notas internas para el equipo de patio..."></textarea>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 2: PROGRAMACIÓN DE ANDÉN -->
+      <section class="rc-form-section">
+        <h3 class="rc-form-section__title">
+          <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+          2. Programación de Horario y Andén
+        </h3>
+
+        <div class="rc-form-row">
+          <div class="rc-form-field">
+            <label class="rc-label">Fecha Programada <span class="rc-req">*</span></label>
+            <input type="date" class="rc-input" formControlName="scheduledDate" />
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Hora Estimada <span class="rc-req">*</span></label>
+            <input type="time" class="rc-input" formControlName="scheduledTime" />
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Duración (min) <span class="rc-req">*</span></label>
+            <input type="number" class="rc-input" formControlName="durationMinutes" min="15" max="480" step="15" />
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Andén Asignado <span class="rc-req">*</span></label>
+            <select class="rc-select" formControlName="dockNumber">
+              @for (d of docks; track d) {
+                <option [value]="d">{{ d }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 3: TRANSPORTE ESPERADO -->
+      <section class="rc-form-section">
+        <h3 class="rc-form-section__title">
+          <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+          3. Transporte Esperado
+        </h3>
+
+        <div class="rc-form-row">
+          <div class="rc-form-field">
+            <label class="rc-label">Transportista <span class="rc-req">*</span></label>
+            <select class="rc-select" formControlName="carrierId">
+              @for (c of carriers; track c.id) {
+                <option [value]="c.id" [disabled]="c.suspended">
+                  {{ c.name }} {{ c.suspended ? '(Suspendido)' : '' }}
+                </option>
+              }
+            </select>
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Placas Esperadas <span class="rc-req">*</span></label>
+            <input type="text" class="rc-input rc-input--mono" formControlName="expectedPlates" placeholder="77-AB-9C" />
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Chofer Esperado (Opcional)</label>
+            <input type="text" class="rc-input" formControlName="expectedDriver" placeholder="Nombre completo..." />
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Tipo de Vehículo <span class="rc-req">*</span></label>
+            <select class="rc-select" formControlName="vehicleType">
+              @for (v of vehicleTypes; track v) {
+                <option [value]="v">{{ v }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 4: MERCANCÍA ESPERADA (TABLA EDITABLE) -->
+      <section class="rc-form-section">
+        <div class="rc-form-section__header">
+          <h3 class="rc-form-section__title">
+            <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+            4. Mercancía Esperada
+          </h3>
+          @if (drawerMode() !== 'VIEW') {
+            <button type="button" class="rc-btn rc-btn--ghost rc-btn--xs" (click)="addFormLine()">
+              <span class="material-symbols-outlined" aria-hidden="true">add</span>
+              Agregar Línea
+            </button>
+          }
+        </div>
+
+        <div class="rc-lines-table-wrap" formArrayName="lines">
+          <table class="rc-lines-table">
+            <thead>
+              <tr>
+                <th scope="col">SKU <span class="rc-req">*</span></th>
+                <th scope="col">Descripción <span class="rc-req">*</span></th>
+                <th scope="col">Cant. Esperada <span class="rc-req">*</span></th>
+                <th scope="col">Unidad <span class="rc-req">*</span></th>
+                <th scope="col">Lote Esperado</th>
+                @if (drawerMode() !== 'VIEW') {
+                  <th scope="col"></th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (lineGroup of linesFormArray.controls; track $index) {
+                <tr [formGroupName]="$index">
+                  <td>
+                    <input type="text" class="rc-input rc-input--sm rc-input--mono" formControlName="sku" placeholder="SKU-000" />
+                  </td>
+                  <td>
+                    <input type="text" class="rc-input rc-input--sm" formControlName="description" placeholder="Descripción producto..." />
+                  </td>
+                  <td style="width: 90px;">
+                    <input type="number" class="rc-input rc-input--sm" formControlName="expectedQty" min="1" step="1" />
+                  </td>
+                  <td style="width: 100px;">
+                    <select class="rc-select rc-select--sm" formControlName="unit">
+                      <option value="Caja">Caja</option>
+                      <option value="Tarima">Tarima</option>
+                      <option value="Pieza">Pieza</option>
+                      <option value="Tambor">Tambor</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input type="text" class="rc-input rc-input--sm rc-input--mono" formControlName="expectedLot" placeholder="LOT-..." />
+                  </td>
+                  @if (drawerMode() !== 'VIEW') {
+                    <td>
+                      <button type="button" class="rc-btn-icon rc-btn-icon--danger" (click)="removeFormLine($index)" title="Eliminar línea">
+                        <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                      </button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Drawer Footer Actions -->
+      <footer class="rc-drawer__footer">
+        <button type="button" class="rc-btn rc-btn--secondary" (click)="closeDrawer()">
+          {{ drawerMode() === 'VIEW' ? 'Cerrar' : 'Cancelar' }}
+        </button>
+        @if (drawerMode() !== 'VIEW') {
+          <button type="submit" class="rc-btn rc-btn--primary">
+            <span class="material-symbols-outlined" aria-hidden="true">save</span>
+            {{ drawerMode() === 'EDIT' ? 'Guardar Cambios' : 'Guardar Programación' }}
+          </button>
+        }
+      </footer>
+
+    </form>
+
+  </aside>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL DE REGISTRAR LLEGADA FÍSICA (CONFIRMED -> ARRIVED)
+     ════════════════════════════════════════════════════════ -->
+@if (isArrivalModalOpen()) {
+  <div class="rc-modal-overlay">
+    <div class="rc-modal" role="dialog" aria-modal="true" aria-labelledby="rc-modal-arrival-title">
+      <header class="rc-modal__header">
+        <span class="material-symbols-outlined rc-modal__icon" aria-hidden="true">local_shipping</span>
+        <h2 class="rc-modal__title" id="rc-modal-arrival-title">Registrar Llegada de Vehículo</h2>
+      </header>
+      <form [formGroup]="arrivalForm" (ngSubmit)="submitArrival()">
+        <div class="rc-modal__body">
+          <p class="rc-modal__text">
+            Confirma la llegada física del transporte al patio o andén para habilitar el inicio de la recepción.
+          </p>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Placas Reales <span class="rc-req">*</span></label>
+            <input type="text" class="rc-input rc-input--mono" formControlName="actualPlates" placeholder="77-AB-9C" />
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Chofer Real (Opcional)</label>
+            <input type="text" class="rc-input" formControlName="actualDriver" placeholder="Nombre chofer..." />
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Sello Primario de Seguridad <span class="rc-req">*</span></label>
+            <input type="text" class="rc-input rc-input--mono" formControlName="sealPrimary" placeholder="SL-991823" />
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Sello Secundario (Opcional)</label>
+            <input type="text" class="rc-input rc-input--mono" formControlName="sealSecondary" placeholder="SL-991824" />
+          </div>
+        </div>
+        <footer class="rc-modal__footer">
+          <button type="button" class="rc-btn rc-btn--secondary" (click)="isArrivalModalOpen.set(false)">Cancelar</button>
+          <button type="submit" class="rc-btn rc-btn--primary">
+            <span class="material-symbols-outlined" aria-hidden="true">check</span>
+            Confirmar Llegada
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL DE REPROGRAMAR CITA
+     ════════════════════════════════════════════════════════ -->
+@if (isReprogramModalOpen()) {
+  <div class="rc-modal-overlay">
+    <div class="rc-modal" role="dialog" aria-modal="true" aria-labelledby="rc-modal-reprogram-title">
+      <header class="rc-modal__header">
+        <span class="material-symbols-outlined rc-modal__icon" aria-hidden="true">update</span>
+        <h2 class="rc-modal__title" id="rc-modal-reprogram-title">Reprogramar Recepción Auditada</h2>
+      </header>
+      <form [formGroup]="reprogramForm" (ngSubmit)="submitReprogram()">
+        <div class="rc-modal__body">
+          <p class="rc-modal__text">
+            Ingresa la nueva fecha, hora y andén. La acción quedará registrada permanentemente en la auditoría conservando el estado.
+          </p>
+
+          <div class="rc-form-row">
+            <div class="rc-form-field">
+              <label class="rc-label">Nueva Fecha <span class="rc-req">*</span></label>
+              <input type="date" class="rc-input" formControlName="newDate" />
+            </div>
+
+            <div class="rc-form-field">
+              <label class="rc-label">Nueva Hora <span class="rc-req">*</span></label>
+              <input type="time" class="rc-input" formControlName="newTime" />
+            </div>
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Nuevo Andén <span class="rc-req">*</span></label>
+            <select class="rc-select" formControlName="newDock">
+              @for (d of docks; track d) {
+                <option [value]="d">{{ d }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Motivo de Reprogramación <span class="rc-req">*</span></label>
+            <textarea class="rc-textarea" formControlName="reason" rows="2" placeholder="Explica la causa de la reprogramación..."></textarea>
+          </div>
+        </div>
+        <footer class="rc-modal__footer">
+          <button type="button" class="rc-btn rc-btn--secondary" (click)="isReprogramModalOpen.set(false)">Cancelar</button>
+          <button type="submit" class="rc-btn rc-btn--primary">
+            <span class="material-symbols-outlined" aria-hidden="true">save</span>
+            Guardar Reprogramación
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL DE CANCELAR CITA
+     ════════════════════════════════════════════════════════ -->
+@if (isCancelModalOpen()) {
+  <div class="rc-modal-overlay">
+    <div class="rc-modal rc-modal--danger" role="dialog" aria-modal="true" aria-labelledby="rc-modal-cancel-title">
+      <header class="rc-modal__header">
+        <span class="material-symbols-outlined rc-modal__icon rc-modal__icon--danger" aria-hidden="true">cancel</span>
+        <h2 class="rc-modal__title" id="rc-modal-cancel-title">Cancelar Cita de Recepción</h2>
+      </header>
+      <form [formGroup]="cancelForm" (ngSubmit)="submitCancel()">
+        <div class="rc-modal__body">
+          <p class="rc-modal__text">
+            ¿Estás seguro de cancelar esta cita? Esta acción liberará el andén asignado.
+          </p>
+
+          <div class="rc-form-field">
+            <label class="rc-label">Motivo de Cancelación <span class="rc-req">*</span></label>
+            <textarea class="rc-textarea" formControlName="reason" rows="3" placeholder="Ingresa la razón de cancelación..."></textarea>
+          </div>
+        </div>
+        <footer class="rc-modal__footer">
+          <button type="button" class="rc-btn rc-btn--secondary" (click)="isCancelModalOpen.set(false)">Volver</button>
+          <button type="submit" class="rc-btn rc-btn--danger">
+            <span class="material-symbols-outlined" aria-hidden="true">block</span>
+            Confirmar Cancelación
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     DRAWER DE AUDITORÍA (HU-028 TIMELINE VISUAL)
+     ════════════════════════════════════════════════════════ -->
+@if (isAuditDrawerOpen()) {
+  <div class="rc-drawer-overlay" (click)="isAuditDrawerOpen.set(false)"></div>
+  <aside class="rc-drawer rc-drawer--audit" role="dialog" aria-modal="true" aria-label="Auditoría">
+    <header class="rc-drawer__header">
+      <div class="rc-drawer__title-wrap">
+        <span class="material-symbols-outlined rc-drawer__icon" aria-hidden="true">policy</span>
+        <div>
+          <h2 class="rc-drawer__title">Auditoría Operativa de Citas</h2>
+          <p class="rc-drawer__subtitle">Trazabilidad en tiempo real de eventos FSM y compuertas del Centro de Recepciones</p>
+        </div>
+      </div>
+      <button type="button" class="rc-btn-icon" (click)="isAuditDrawerOpen.set(false)">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </header>
+    <div class="rc-drawer__body">
+      @if (service.auditLog().length === 0) {
+        <div class="rc-empty-state">
+          <span class="material-symbols-outlined rc-empty-state__icon" aria-hidden="true">history</span>
+          <p>Sin registros de auditoría almacenados.</p>
+        </div>
+      } @else {
+        <div class="rc-audit-timeline-container">
+          @for (log of service.auditLog(); track log.id) {
+            <div class="rc-audit-timeline-item">
+              <div class="rc-audit-timeline-node">
+                <span class="material-symbols-outlined rc-audit-node-icon" [class]="getAuditIconClass(log.action)">
+                  {{ getAuditIcon(log.action) }}
+                </span>
+                <div class="rc-audit-timeline-line"></div>
+              </div>
+              <div class="rc-audit-card">
+                <div class="rc-audit-card__head">
+                  <span class="rc-audit-action">{{ log.action }}</span>
+                  <span class="rc-audit-time">{{ formatDateTime(log.performedAt) }}</span>
+                </div>
+                <div class="rc-audit-card__sub">
+                  Cita: <strong>{{ log.appointmentId }}</strong> · Usuario: {{ log.performedBy }}
+                </div>
+                @if (log.reason) {
+                  <div class="rc-audit-reason">Motivo: {{ log.reason }}</div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </aside>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     DRAWER LATERAL ENTERPRISE: VALIDACIÓN DOCUMENTAL (HU-029)
+     ════════════════════════════════════════════════════════ -->
+@if (isPOValidationDrawerOpen() && currentPOValidationResult()) {
+  <div class="rc-drawer-overlay" (click)="closePOValidationDrawer()"></div>
+  <aside class="rc-drawer rc-drawer--po" role="dialog" aria-modal="true" aria-label="Validación Documental">
+    
+    <!-- Drawer Header -->
+    <header class="rc-drawer__header">
+      <div class="rc-drawer__title-wrap">
+        <span class="material-symbols-outlined rc-drawer__icon" aria-hidden="true">assignment_turned_in</span>
+        <div>
+          <h2 class="rc-drawer__title">Validación Documental</h2>
+          <p class="rc-drawer__subtitle">
+            Cita <strong>{{ selectedPOValidationAppt()?.id }}</strong> · {{ selectedPOValidationAppt()?.asnReference }} vs OC <strong>{{ currentPOValidationResult()?.poNumber }}</strong>
+          </p>
+        </div>
+      </div>
+      <button type="button" class="rc-btn-icon" (click)="closePOValidationDrawer()" aria-label="Cerrar drawer">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </header>
+
+    <div class="rc-drawer__body">
+      
+      <!-- Banner de Error/Alerta si lo hay -->
+      @if (poDrawerErrorMessage()) {
+        <div class="rc-alert-error" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">error_outline</span>
+          <span>{{ poDrawerErrorMessage() }}</span>
+        </div>
+      }
+
+      <!-- 1. PANEL EJECUTIVO RESUMEN (TORRE DE CONTROL DOCUMENTAL CON KPI GAUGE) -->
+      <section class="po-exec-summary">
+        <div class="po-gauge-wrap">
+          <div class="po-gauge-circle" [class]="getPOMatchPercentClass(currentPOValidationResult()!.overallMatchPercent)">
+            <div class="po-gauge-inner">
+              <span class="po-gauge-val">{{ currentPOValidationResult()!.overallMatchPercent }}%</span>
+              <span class="po-gauge-lbl">Conciliado</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="po-exec-metrics">
+          <div class="po-metric-box">
+            <span class="po-metric-val po-txt-success">{{ currentPOValidationResult()!.matchLines }}</span>
+            <span class="po-metric-lbl">Conciliadas</span>
+          </div>
+          <div class="po-metric-box">
+            <span class="po-metric-val po-txt-warning">{{ currentPOValidationResult()!.discrepancyLines }}</span>
+            <span class="po-metric-lbl">Discrepancias</span>
+          </div>
+          <div class="po-metric-box">
+            <span class="po-metric-val">{{ currentPOValidationResult()!.totalLines }}</span>
+            <span class="po-metric-lbl">Total Líneas</span>
+          </div>
+        </div>
+
+        <div class="po-exec-status">
+          <div class="po-status-row">
+            <span class="po-status-lbl">Resultado Técnico:</span>
+            <span class="po-outcome-tag" [class.po-outcome-tag--match]="currentPOValidationResult()!.calculatedOutcome === 'MATCH'" [class.po-outcome-tag--diff]="currentPOValidationResult()!.calculatedOutcome === 'WITH_DIFFERENCES'" [class.po-outcome-tag--blocked]="currentPOValidationResult()!.calculatedOutcome === 'BLOCKED'">
+              {{ currentPOValidationResult()!.calculatedOutcome }}
+            </span>
+          </div>
+          <div class="po-status-row">
+            <span class="po-status-lbl">Decisión Operativa:</span>
+            <span class="rc-badge" [class]="poStatusClasses[currentPOValidationResult()!.validationStatus]">
+              {{ poStatusLabels[currentPOValidationResult()!.validationStatus] }}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- EXPLICACIÓN DINÁMICA DEL RESULTADO TÉCNICO -->
+      <div class="po-outcome-explanation-card" [class.po-outcome-explanation-card--blocked]="currentPOValidationResult()!.calculatedOutcome === 'BLOCKED'" [class.po-outcome-explanation-card--match]="currentPOValidationResult()!.calculatedOutcome === 'MATCH'" [class.po-outcome-explanation-card--diff]="currentPOValidationResult()!.calculatedOutcome === 'WITH_DIFFERENCES'">
+        <span class="material-symbols-outlined" aria-hidden="true">
+          {{ currentPOValidationResult()!.calculatedOutcome === 'BLOCKED' ? 'report' : (currentPOValidationResult()!.calculatedOutcome === 'MATCH' ? 'verified' : 'help_outline') }}
+        </span>
+        <p>{{ getPOOutcomeExplanation(currentPOValidationResult()!.calculatedOutcome) }}</p>
+      </div>
+
+      <!-- 2. RESUMEN CRUZADO CITA VS ORDEN DE COMPRA -->
+      <section class="rc-form-section">
+        <h3 class="rc-form-section__title">
+          <span class="material-symbols-outlined" aria-hidden="true">quick_reference_all</span>
+          Resumen Cruzado de Cabecera
+        </h3>
+
+        <div class="po-grid-summary">
+          <div class="po-grid-card">
+            <h4 class="po-grid-card__title">Datos de la Cita de Recepción</h4>
+            <div class="po-grid-item"><span>Cita ID:</span> <strong>{{ selectedPOValidationAppt()?.id }}</strong></div>
+            <div class="po-grid-item"><span>ASN:</span> <strong>{{ selectedPOValidationAppt()?.asnReference }}</strong></div>
+            <div class="po-grid-item"><span>Cliente 3PL:</span> <strong>{{ selectedPOValidationAppt()?.clientName }}</strong></div>
+            <div class="po-grid-item"><span>Proveedor:</span> <strong>{{ selectedPOValidationAppt()?.supplierName }}</strong></div>
+            <div class="po-grid-item"><span>Sucursal:</span> <strong>{{ selectedPOValidationAppt()?.branchName }}</strong></div>
+          </div>
+
+          <div class="po-grid-card">
+            <h4 class="po-grid-card__title">Datos de la Orden de Compra (PO)</h4>
+            <div class="po-grid-item"><span>Número OC:</span> <strong>{{ currentPOValidationResult()?.poNumber }}</strong></div>
+            <div class="po-grid-item"><span>Estatus OC:</span> <span class="po-chip-info">{{ selectedPOValidationAppt()?.poNumber ? 'RELEASED' : 'NO_FOUND' }}</span></div>
+            <div class="po-grid-item"><span>Emisión:</span> <strong>2026-07-20</strong></div>
+            <div class="po-grid-item"><span>Vencimiento:</span> <strong>2026-08-30</strong></div>
+            <div class="po-grid-item"><span>Fingerprint:</span> <span class="rc-mono-plates" style="font-size:0.6rem;">{{ currentPOValidationResult()?.sourceFingerprint }}</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. ALERTAS DE DISCREPANCIAS CLASIFICADAS POR SEVERIDAD -->
+      @if (currentPOValidationResult()!.discrepancies.length > 0) {
+        <section class="po-discrepancies-banner">
+          <div class="po-discrepancies-banner__head">
+            <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+            <strong>Inconsistencias Documentales Detectadas ({{ currentPOValidationResult()!.discrepancies.length }})</strong>
+          </div>
+          <div class="po-discrepancies-list">
+            @for (disc of currentPOValidationResult()!.discrepancies; track disc) {
+              <span class="po-disc-tag" [class]="getDiscrepancySeverityInfo(disc).class">
+                <span class="material-symbols-outlined" aria-hidden="true">{{ getDiscrepancySeverityInfo(disc).icon }}</span>
+                <strong>[{{ getDiscrepancySeverityInfo(disc).label }}]</strong> {{ discrepancyLabels[disc] || disc }}
+              </span>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- 4. TABLA COMPARATIVA LÍNEA POR LÍNEA (PENDING QTY VS APPOINTMENT QTY) -->
+      <section class="rc-form-section">
+        <h3 class="rc-form-section__title">
+          <span class="material-symbols-outlined" aria-hidden="true">compare_arrows</span>
+          Comparación de Mercancía (Cantidad Pendiente OC vs Cita)
+        </h3>
+
+        <div class="rc-lines-table-wrap">
+          <table class="rc-lines-table po-comp-table">
+            <thead>
+              <tr>
+                <th scope="col">SKU</th>
+                <th scope="col">Descripción</th>
+                <th scope="col">Pendiente OC</th>
+                <th scope="col">Cant. Cita</th>
+                <th scope="col">Unidad</th>
+                <th scope="col">Resultado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of currentPOValidationResult()!.lineResults; track line.lineId) {
+                <tr [class.po-line-match]="line.status === 'MATCH'" [class.po-line-disc]="line.status !== 'MATCH'">
+                  <td><strong class="rc-mono-plates">{{ line.sku }}</strong></td>
+                  <td>{{ line.description }}</td>
+                  <td><strong>{{ line.pendingPOQty }}</strong></td>
+                  <td><strong>{{ line.appointmentQty }}</strong></td>
+                  <td>{{ line.unitAppointment }}</td>
+                  <td>
+                    @switch (line.status) {
+                      @case ('MATCH') {
+                        <span class="po-line-tag po-line-tag--match">
+                          <span class="material-symbols-outlined" aria-hidden="true">check_circle</span> Match 100%
+                        </span>
+                      }
+                      @case ('DISCREPANCY') {
+                        <span class="po-line-tag po-line-tag--disc">
+                          <span class="material-symbols-outlined" aria-hidden="true">error</span> Discrepancia
+                        </span>
+                      }
+                      @case ('EXTRA_IN_APPOINTMENT') {
+                        <span class="po-line-tag po-line-tag--extra">
+                          <span class="material-symbols-outlined" aria-hidden="true">add_alert</span> SKU No en OC
+                        </span>
+                      }
+                      @case ('MISSING_IN_APPOINTMENT') {
+                        <span class="po-line-tag po-line-tag--missing">
+                          <span class="material-symbols-outlined" aria-hidden="true">remove_circle</span> Omitido en Cita
+                        </span>
+                      }
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5. HISTORIAL DE DECISIÓN O EXCEPCIÓN PREVIA -->
+      @if (currentPOValidationResult()!.supervisorException) {
+        <section class="po-exception-box">
+          <div class="po-exception-box__head">
+            <span class="material-symbols-outlined" aria-hidden="true">verified_user</span>
+            <strong>Excepción Autorizada por Supervisor</strong>
+          </div>
+          <p class="po-exception-box__reason">
+            "{{ currentPOValidationResult()!.supervisorException?.reason }}"
+          </p>
+          <span class="po-exception-box__meta">
+            Autorizó: {{ currentPOValidationResult()!.supervisorException?.authorizedBy }} el {{ formatDateTime(currentPOValidationResult()!.supervisorException?.authorizedAt || '') }}
+          </span>
+        </section>
+      }
+
+      @if (currentPOValidationResult()!.notRequiredReason) {
+        <section class="po-not-required-box">
+          <div class="po-not-required-box__head">
+            <span class="material-symbols-outlined" aria-hidden="true">rule</span>
+            <strong>Exención de Orden de Compra (NOT_REQUIRED)</strong>
+          </div>
+          <p class="po-not-required-box__reason">
+            "{{ currentPOValidationResult()!.notRequiredReason }}"
+          </p>
+        </section>
+      }
+
+      <!-- 6. ACCIONES DEL SUPERVISOR (SEGUN MODO) -->
+      @switch (poDrawerMode()) {
+        @case ('OVERVIEW') {
+          <div class="po-actions-strip">
+            
+            @if (currentPOValidationResult()!.calculatedOutcome === 'MATCH' && currentPOValidationResult()!.validationStatus !== 'VALIDATED') {
+              <button
+                type="button"
+                class="rc-btn rc-btn--primary"
+                (click)="confirmPOValidation()">
+                <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                Confirmar Validación
+              </button>
+            }
+
+            @if (currentPOValidationResult()!.calculatedOutcome === 'WITH_DIFFERENCES' && currentPOValidationResult()!.validationStatus !== 'EXCEPTED') {
+              <button
+                type="button"
+                class="rc-btn rc-btn--gold"
+                (click)="poDrawerMode.set('EXCEPTION_FORM')">
+                <span class="material-symbols-outlined" aria-hidden="true">policy</span>
+                Autorizar Excepción
+              </button>
+            }
+
+            @if (currentPOValidationResult()!.calculatedOutcome === 'BLOCKED') {
+              <div class="po-blocked-notice">
+                <span class="material-symbols-outlined" aria-hidden="true">block</span>
+                <span>Esta validación contiene discrepancias críticas bloqueantes (Sucursal, Cliente, Proveedor u OC Cancelada). No es posible autorizar excepción. Se requiere rechazar o corregir en origen.</span>
+              </div>
+            }
+
+            @if (currentPOValidationResult()!.validationStatus !== 'REJECTED') {
+              <button
+                type="button"
+                class="rc-btn rc-btn--danger-ghost"
+                (click)="poDrawerMode.set('REJECT_FORM')">
+                <span class="material-symbols-outlined" aria-hidden="true">cancel</span>
+                Rechazar
+              </button>
+            }
+
+            @if (currentPOValidationResult()!.validationStatus !== 'NOT_REQUIRED') {
+              <button
+                type="button"
+                class="rc-btn rc-btn--ghost"
+                (click)="poDrawerMode.set('NOT_REQUIRED_FORM')">
+                <span class="material-symbols-outlined" aria-hidden="true">do_not_disturb_on</span>
+                Exentar / Sin OC
+              </button>
+            }
+
+          </div>
+        }
+
+        @case ('EXCEPTION_FORM') {
+          <div class="po-action-form">
+            <h4 class="po-action-form__title">Autorizar Excepción por Diferencias Documentales</h4>
+            <p class="po-action-form__desc">
+              Ingresa la justificación operativa obligatoria. La acción quedará registrada en auditoría con tu usuario y rol de Supervisor/Manager.
+            </p>
+            <div class="rc-form-field">
+              <label class="rc-label">Motivo de Excepción <span class="rc-req">* (mínimo 10 caracteres)</span></label>
+              <textarea
+                class="rc-textarea"
+                rows="3"
+                placeholder="Explicación detallada de la autorización de discrepancia..."
+                [value]="poExceptionReason()"
+                (input)="poExceptionReason.set($any($event.target).value)"></textarea>
+            </div>
+            <div class="po-action-form__btns">
+              <button type="button" class="rc-btn rc-btn--secondary" (click)="poDrawerMode.set('OVERVIEW')">Volver</button>
+              <button type="button" class="rc-btn rc-btn--gold" (click)="authorizePOException()">
+                <span class="material-symbols-outlined" aria-hidden="true">policy</span>
+                Confirmar Autorización de Excepción
+              </button>
+            </div>
+          </div>
+        }
+
+        @case ('REJECT_FORM') {
+          <div class="po-action-form po-action-form--danger">
+            <h4 class="po-action-form__title">Rechazar Validación Documental</h4>
+            <p class="po-action-form__desc">
+              El rechazo bloqueará el inicio de la recepción física hasta que se solucionen las inconsistencias con el cliente.
+            </p>
+            <div class="rc-form-field">
+              <label class="rc-label">Motivo de Rechazo</label>
+              <textarea
+                class="rc-textarea"
+                rows="3"
+                placeholder="Explicar las causas del rechazo..."
+                [value]="poRejectionReason()"
+                (input)="poRejectionReason.set($any($event.target).value)"></textarea>
+            </div>
+            <div class="po-action-form__btns">
+              <button type="button" class="rc-btn rc-btn--secondary" (click)="poDrawerMode.set('OVERVIEW')">Volver</button>
+              <button type="button" class="rc-btn rc-btn--danger" (click)="rejectPOValidation()">
+                <span class="material-symbols-outlined" aria-hidden="true">block</span>
+                Confirmar Rechazo
+              </button>
+            </div>
+          </div>
+        }
+
+        @case ('NOT_REQUIRED_FORM') {
+          <div class="po-action-form">
+            <h4 class="po-action-form__title">Marcar Recepción como Exenta de OC (NOT_REQUIRED)</h4>
+            <p class="po-action-form__desc">
+              Aplica para transferencias entre almacenes propios o devoluciones sin Orden de Compra.
+            </p>
+            <div class="rc-form-field">
+              <label class="rc-label">Motivo de Exención <span class="rc-req">* (mínimo 10 caracteres)</span></label>
+              <textarea
+                class="rc-textarea"
+                rows="3"
+                placeholder="Indicar folio de transferencia interna o causa de exención de OC..."
+                [value]="poNotRequiredReason()"
+                (input)="poNotRequiredReason.set($any($event.target).value)"></textarea>
+            </div>
+            <div class="po-action-form__btns">
+              <button type="button" class="rc-btn rc-btn--secondary" (click)="poDrawerMode.set('OVERVIEW')">Volver</button>
+              <button type="button" class="rc-btn rc-btn--primary" (click)="markPONotRequired()">
+                <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                Confirmar Exención Sin OC
+              </button>
+            </div>
+          </div>
+        }
+      }
+
+    </div>
+
+    <footer class="rc-drawer__footer">
+      <button type="button" class="rc-btn rc-btn--secondary" (click)="closePOValidationDrawer()">Cerrar</button>
+    </footer>
+
+  </aside>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     DRAWER ENTERPRISE: CHECK-IN DEL TRANSPORTE (HU-027)
+     Compuerta Operativa de Inspección y Confirmación de Arribo
+     ════════════════════════════════════════════════════════ -->
+@if (isCheckInDrawerOpen() && selectedCheckInAppt()) {
+  <div class="rc-drawer-overlay" (click)="closeCheckInDrawer()"></div>
+  <aside class="rc-drawer rc-drawer--checkin" role="dialog" aria-modal="true">
+
+    <header class="rc-drawer__header">
+      <div class="rc-drawer__header-title">
+        <span class="material-symbols-outlined rc-drawer__icon" aria-hidden="true">local_shipping</span>
+        <div>
+          <h2 class="rc-drawer__title">Check-In del Transporte</h2>
+          <p class="rc-drawer__subtitle">
+            Inspección física en caseta y validación de correspondencia con la cita programada
+          </p>
+        </div>
+      </div>
+      <button type="button" class="rc-drawer__close" (click)="closeCheckInDrawer()" aria-label="Cerrar Check-In">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </header>
+
+    <div class="rc-drawer__body">
+
+      <!-- Banners de Alerta / Mensajes -->
+      @if (checkInErrorMessage()) {
+        <div class="po-blocked-notice">
+          <span class="material-symbols-outlined" aria-hidden="true">error</span>
+          <span>{{ checkInErrorMessage() }}</span>
+        </div>
+      }
+
+      @if (checkInSuccessMessage()) {
+        <div class="po-success-notice">
+          <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+          <span>{{ checkInSuccessMessage() }}</span>
+        </div>
+      }
+
+      <!-- 1. TARJETA SUPERIOR: ESTADO GENERAL DE CHECK-IN OPERATIVO -->
+      <div class="checkin-top-status-card">
+        <div class="checkin-top-status-head">
+          <span class="material-symbols-outlined" aria-hidden="true">verified</span>
+          <strong>CHECK-IN OPERATIVO</strong>
+          <span class="checkin-status-badge"
+            [class.checkin-status-badge--waiting]="!currentCheckInRecord() && selectedCheckInAppt()?.status !== 'ARRIVED'"
+            [class.checkin-status-badge--validating]="!currentCheckInRecord() && selectedCheckInAppt()?.status === 'ARRIVED'"
+            [class.checkin-status-badge--blocked]="currentCheckInRecord()?.clearanceStatus === 'BLOCKED' || currentCheckInRecord()?.clearanceStatus === 'REJECTED_AT_GATE'"
+            [class.checkin-status-badge--authorized]="currentCheckInRecord()?.clearanceStatus === 'CLEARED' || currentCheckInRecord()?.clearanceStatus === 'WARNING_CLEARED'">
+            {{ !currentCheckInRecord() ? (selectedCheckInAppt()?.status === 'ARRIVED' ? 'Validando' : 'Esperando') : (currentCheckInRecord()?.clearanceStatus === 'BLOCKED' || currentCheckInRecord()?.clearanceStatus === 'REJECTED_AT_GATE' ? 'Bloqueado' : 'Autorizado') }}
+          </span>
+        </div>
+
+        <div class="checkin-top-metrics">
+          <div class="po-metric-box">
+            <span class="po-metric-val">{{ currentCheckInRecord()?.incidents?.length || 0 }}</span>
+            <span class="po-metric-lbl">Incidencias</span>
+          </div>
+          <div class="po-metric-box">
+            <span class="po-metric-val po-txt-success">
+              {{ selectedCheckInAppt()?.lines?.length || 0 }}
+            </span>
+            <span class="po-metric-lbl">SKUs Cita</span>
+          </div>
+          <div class="po-metric-box">
+            <span class="po-metric-val" style="color:var(--ac-gold);">
+              {{ currentCheckInRecord()?.accessGate || 'Caseta A1' }}
+            </span>
+            <span class="po-metric-lbl">Punto Acceso</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. TARJETA PROMINENTE DE CLEARANCE DE ARRIBO -->
+      <div class="checkin-clearance-card" [class.checkin-clearance-card--cleared]="(currentCheckInRecord()?.clearanceStatus || selectedCheckInAppt()?.arrivalClearanceStatus) === 'CLEARED' || (currentCheckInRecord()?.clearanceStatus || selectedCheckInAppt()?.arrivalClearanceStatus) === 'WARNING_CLEARED'" [class.checkin-clearance-card--review]="(currentCheckInRecord()?.clearanceStatus || selectedCheckInAppt()?.arrivalClearanceStatus) === 'REVIEW_REQUIRED'" [class.checkin-clearance-card--blocked]="(currentCheckInRecord()?.clearanceStatus || selectedCheckInAppt()?.arrivalClearanceStatus) === 'BLOCKED' || (currentCheckInRecord()?.clearanceStatus || selectedCheckInAppt()?.arrivalClearanceStatus) === 'REJECTED_AT_GATE'">
+        <div class="checkin-clearance-badge-wrap">
+          <span class="rc-po-badge" [class]="arrivalClearanceClasses[currentCheckInRecord()?.clearanceStatus || selectedCheckInAppt()?.arrivalClearanceStatus || 'PENDING']">
+            <span class="material-symbols-outlined" aria-hidden="true">security</span>
+            {{ arrivalClearanceLabels[currentCheckInRecord()?.clearanceStatus || selectedCheckInAppt()?.arrivalClearanceStatus || 'PENDING'] }}
+          </span>
+          <span class="checkin-gate-decision">Decisión: <strong>{{ getGateDecisionLabel(currentCheckInRecord()) }}</strong></span>
+        </div>
+        <p class="checkin-clearance-explanation">
+          {{ getClearanceExplanation(currentCheckInRecord()?.clearanceStatus || selectedCheckInAppt()?.arrivalClearanceStatus) }}
+        </p>
+      </div>
+
+      <!-- VISTAS SEGÚN MODO DE DRAWER -->
+      @switch (checkInDrawerMode()) {
+        @case ('CHECKIN_FORM') {
+
+          <!-- SECCIÓN 1: INFORMACIÓN ESPERADA (CITA/ASN CONSULTIVA) -->
+          <section class="rc-form-section">
+            <h3 class="rc-form-section__title">
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              1. Información Esperada (Cita Agendada)
+            </h3>
+            <div class="po-grid-summary">
+              <div class="po-grid-card">
+                <h4 class="po-grid-card__title">Cita & Transporte Agendado</h4>
+                <div class="po-grid-item"><span>Cita ID:</span> <strong>{{ selectedCheckInAppt()?.id }}</strong></div>
+                <div class="po-grid-item"><span>ASN Ref:</span> <strong>{{ selectedCheckInAppt()?.asnReference }}</strong></div>
+                <div class="po-grid-item"><span>Proveedor:</span> <strong>{{ selectedCheckInAppt()?.supplierName }}</strong></div>
+                <div class="po-grid-item"><span>Transportista:</span> <strong>{{ selectedCheckInAppt()?.carrierName }}</strong></div>
+                <div class="po-grid-item"><span>Placas Esperadas:</span> <strong class="rc-mono-plates">{{ selectedCheckInAppt()?.expectedPlates }}</strong></div>
+                <div class="po-grid-item"><span>Andén Asignado:</span> <strong>{{ selectedCheckInAppt()?.dockNumber }}</strong></div>
+              </div>
+
+              <div class="po-grid-card">
+                <h4 class="po-grid-card__title">Mercancía Esperada (Consultiva)</h4>
+                <div class="po-grid-item"><span>Total SKUs:</span> <strong>{{ selectedCheckInAppt()?.lines?.length || 0 }} SKUs</strong></div>
+                @for (line of selectedCheckInAppt()?.lines || []; track line.lineId) {
+                  <div class="po-grid-item">
+                    <span>{{ line.sku }} ({{ line.description }}):</span>
+                    <strong>{{ line.expectedQty }} {{ line.unit }}</strong>
+                  </div>
+                }
+                <div class="po-grid-item" style="margin-top:0.3rem; font-size:0.65rem; color:var(--ac-txt-3);">
+                  <em>* Consulta informativa. No altera inventario ni registra cantidades físicas.</em>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- SECCIÓN 2: INFORMACIÓN PRESENTADA (FORMULARIO DE INSPECCIÓN CON MICROINTERACCIONES EN VIVO) -->
+          <section class="rc-form-section">
+            <h3 class="rc-form-section__title">
+              <span class="material-symbols-outlined" aria-hidden="true">fact_check</span>
+              2. Información Presentada en Caseta
+            </h3>
+
+            <form [formGroup]="arrivalForm" (ngSubmit)="submitTransportCheckIn()" class="checkin-form-wrap">
+
+              <div class="rc-form-row">
+                <div class="rc-form-field">
+                  <label class="rc-label">
+                    Placas Reales del Vehículo <span class="rc-req">*</span>
+                    @if (arrivalForm.get('actualPlates')?.value) {
+                      <span class="micro-badge micro-badge--success">✔ Capturado</span>
+                    }
+                  </label>
+                  <input type="text" class="rc-input rc-input--mono" formControlName="actualPlates" placeholder="77-AB-9C" />
+                </div>
+
+                <div class="rc-form-field">
+                  <label class="rc-label">
+                    Chofer Presentado
+                    @if (arrivalForm.get('actualDriver')?.value) {
+                      <span class="micro-badge micro-badge--success">✔ Identificado</span>
+                    }
+                  </label>
+                  <input type="text" class="rc-input" formControlName="actualDriver" placeholder="Nombre chofer real..." />
+                </div>
+              </div>
+
+              <div class="rc-form-row">
+                <div class="rc-form-field">
+                  <label class="rc-label">Empresa Transportista Real</label>
+                  <input type="text" class="rc-input" formControlName="actualCarrier" placeholder="Línea transportista real..." />
+                </div>
+
+                <div class="rc-form-field">
+                  <label class="rc-label">Tipo de Vehículo Presentado <span class="rc-req">*</span></label>
+                  <select class="rc-select" formControlName="actualVehicleType">
+                    <option value="Tráiler 53ft">Tráiler 53ft (Caja Seca)</option>
+                    <option value="Tractor 48ft">Tractor 48ft</option>
+                    <option value="Torton 15 Ton">Torton 15 Ton</option>
+                    <option value="Rabon 8 Ton">Rabón 8 Ton</option>
+                    <option value="Camioneta 3.5 Ton">Camioneta 3.5 Ton</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="rc-form-row">
+                <div class="rc-form-field">
+                  <label class="rc-label">
+                    Sello Primario de Seguridad <span class="rc-req">*</span>
+                    @if (arrivalForm.get('sealPrimary')?.value) {
+                      <span class="micro-badge micro-badge--success">✔ Registrado</span>
+                    }
+                  </label>
+                  <input type="text" class="rc-input rc-input--mono" formControlName="sealPrimary" placeholder="SL-991823" />
+                </div>
+
+                <div class="rc-form-field">
+                  <label class="rc-label">
+                    Condición Física del Sello <span class="rc-req">*</span>
+                    @if (arrivalForm.get('sealPrimaryCondition')?.value === 'INTACT') {
+                      <span class="micro-badge micro-badge--success">✔ INTACTO</span>
+                    } @else if (arrivalForm.get('sealPrimaryCondition')?.value === 'DAMAGED') {
+                      <span class="micro-badge micro-badge--warning">⚠ DAÑADO</span>
+                    } @else if (arrivalForm.get('sealPrimaryCondition')?.value === 'BROKEN' || arrivalForm.get('sealPrimaryCondition')?.value === 'MISSING') {
+                      <span class="micro-badge micro-badge--danger">✖ ROTO / FALTANTE</span>
+                    }
+                  </label>
+                  <select class="rc-select" formControlName="sealPrimaryCondition">
+                    <option value="INTACT">INTACTO (Sin alteraciones)</option>
+                    <option value="DAMAGED">DAÑADO (Maltratado / Doblado)</option>
+                    <option value="BROKEN">ROTO / VIOLADO</option>
+                    <option value="MISSING">FALTANTE (Sin sello)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="rc-form-row">
+                <div class="rc-form-field">
+                  <label class="rc-label">Sello Secundario (Opcional)</label>
+                  <input type="text" class="rc-input rc-input--mono" formControlName="sealSecondary" placeholder="SL-991824" />
+                </div>
+
+                <div class="rc-form-field">
+                  <label class="rc-label">Punto de Acceso / Caseta <span class="rc-req">*</span></label>
+                  <input type="text" class="rc-input" formControlName="accessGate" placeholder="Caseta Principal A1" />
+                </div>
+              </div>
+
+              <div class="rc-form-field">
+                <label class="rc-label">Observaciones u Anotaciones de Caseta</label>
+                <textarea class="rc-textarea" formControlName="observations" rows="2" placeholder="Comentarios de arribo..."></textarea>
+              </div>
+
+              <!-- BOTÓN PRINCIPAL CON ESTADO ENTERPRISE & SPINNER -->
+              <div class="po-actions-strip" style="margin-top:1rem;">
+                <button
+                  type="submit"
+                  class="rc-btn rc-btn--primary checkin-btn-main"
+                  [disabled]="arrivalForm.invalid || isCheckInProcessing()">
+                  @if (isCheckInProcessing()) {
+                    <span class="material-symbols-outlined spin" aria-hidden="true">sync</span>
+                    Procesando Check-In...
+                  } @else {
+                    <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                    Ejecutar Check-In y Evaluar Arribo
+                  }
+                </button>
+
+                @if (currentCheckInRecord() && currentCheckInRecord()?.clearanceStatus !== 'REJECTED_AT_GATE') {
+                  <button type="button" class="rc-btn rc-btn--danger-ghost" (click)="checkInDrawerMode.set('REJECT_GATE_FORM')">
+                    <span class="material-symbols-outlined" aria-hidden="true">block</span>
+                    Rechazar en Caseta
+                  </button>
+                }
+              </div>
+            </form>
+          </section>
+
+          <!-- SECCIÓN 3: RESULTADO DEL CHECK-IN & CHECKLIST VIVO EN TIEMPO REAL -->
+          <section class="rc-form-section">
+            <h3 class="rc-form-section__title">
+              <span class="material-symbols-outlined" aria-hidden="true">checklist</span>
+              3. Checklist Vivo de Inspección Operativa
+            </h3>
+
+            <div class="checkin-live-grid">
+              @for (item of getCheckInLiveChecklist(); track item.label) {
+                <div class="checkin-live-item" [class.checkin-live-item--valid]="item.valid === true" [class.checkin-live-item--warning]="item.warning === true" [class.checkin-live-item--invalid]="item.valid === false && !item.warning">
+                  <span class="material-symbols-outlined checkin-live-icon" aria-hidden="true">
+                    {{ item.valid === true ? 'check_circle' : (item.warning === true ? 'warning' : 'cancel') }}
+                  </span>
+                  <span class="checkin-live-label">{{ item.label }}</span>
+                </div>
+              }
+            </div>
+
+            <!-- TARJETA RESUMEN DE CHECK-IN COMPLETADO -->
+            @if (currentCheckInRecord()) {
+              <div class="checkin-completed-summary-card">
+                <div class="checkin-completed-head">
+                  <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+                  <div>
+                    <strong>CHECK-IN REGISTRADO EN SISTEMA</strong>
+                    <span class="checkin-completed-sub">Cita {{ currentCheckInRecord()?.appointmentId }} · Auditado</span>
+                  </div>
+                </div>
+                <div class="checkin-completed-grid">
+                  <div><span>Transportista:</span> <strong>{{ currentCheckInRecord()?.actualCarrier }}</strong></div>
+                  <div><span>Chofer:</span> <strong>{{ currentCheckInRecord()?.actualDriver }}</strong></div>
+                  <div><span>Hora Arribo:</span> <strong>{{ formatDateTime(currentCheckInRecord()?.arrivedAt) }}</strong></div>
+                  <div><span>Registró:</span> <strong>{{ currentCheckInRecord()?.registeredBy }} ({{ currentCheckInRecord()?.userRole }})</strong></div>
+                  <div><span>Clearance:</span> <strong>{{ arrivalClearanceLabels[currentCheckInRecord()!.clearanceStatus] }}</strong></div>
+                  <div><span>Incidencias:</span> <strong>{{ currentCheckInRecord()?.incidents?.length || 0 }} detectadas</strong></div>
+                </div>
+                <div class="checkin-completed-actions">
+                  @if (currentCheckInRecord()?.clearanceStatus === 'CLEARED' || currentCheckInRecord()?.clearanceStatus === 'WARNING_CLEARED') {
+                    <button type="button" class="rc-btn rc-btn--gold" (click)="onStartReceiving(selectedCheckInAppt()!)">
+                      <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+                      Continuar Recepción Física
+                    </button>
+                  }
+                  <button type="button" class="rc-btn rc-btn--secondary" (click)="closeCheckInDrawer()">Cerrar</button>
+                </div>
+              </div>
+            }
+
+            <!-- LISTADO DE INCIDENCIAS DETECTADAS CON ACCIONES DE SUPERVISOR -->
+            @if (currentCheckInRecord() && (currentCheckInRecord()?.incidents?.length || 0) > 0) {
+              <div class="po-discrepancies-banner" style="margin-top:1rem;">
+                <div class="po-discrepancies-banner__head">
+                  <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                  <strong>Incidencias Detectadas en el Arribo ({{ currentCheckInRecord()?.incidents?.length }})</strong>
+                </div>
+                <div class="incidents-list-wrap">
+                  @for (inc of currentCheckInRecord()?.incidents || []; track inc.id) {
+                    <div class="incident-item-card" [class.incident-item-card--critical]="inc.severity === 'CRITICAL'" [class.incident-item-card--warning]="inc.severity === 'WARNING'">
+                      <div class="incident-item-head">
+                        <span class="incident-severity-badge" [class.incident-severity-badge--critical]="inc.severity === 'CRITICAL'" [class.incident-severity-badge--warning]="inc.severity === 'WARNING'">
+                          {{ inc.severity }}
+                        </span>
+                        <strong>{{ inc.title }}</strong>
+                        <span class="incident-status-tag">{{ inc.status }}</span>
+                      </div>
+                      <p class="incident-desc">{{ inc.description }}</p>
+                      @if (inc.expectedValue || inc.actualValue) {
+                        <div class="incident-vals">
+                          <span>Esperado: <strong>{{ inc.expectedValue || 'N/A' }}</strong></span>
+                          <span>Presentado: <strong>{{ inc.actualValue || 'N/A' }}</strong></span>
+                        </div>
+                      }
+
+                      @if (inc.status === 'OPEN' && inc.authorizable) {
+                        <button type="button" class="rc-btn rc-btn--gold rc-btn--xs" style="margin-top:0.4rem;" (click)="openIncidentResolveForm(inc)">
+                          <span class="material-symbols-outlined" aria-hidden="true">policy</span>
+                          Autorizar Excepción por Supervisor
+                        </button>
+                      } @else if (inc.status === 'OPEN' && !inc.authorizable) {
+                        <div class="incident-no-auth-msg">
+                          <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+                          Incidencia crítica de seguridad. No autorizable mediante excepción.
+                        </div>
+                      } @else if (inc.status === 'AUTHORIZED') {
+                        <div class="incident-resolved-info">
+                          Autorizado por: {{ inc.resolvedBy }} (Motivo: {{ inc.resolutionReason }})
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </section>
+
+        }
+
+        @case ('INCIDENT_RESOLVE_FORM') {
+          <div class="po-action-form">
+            <h4 class="po-action-form__title">Autorizar Excepción de Incidencia de Arribo</h4>
+            <p class="po-action-form__desc">
+              Incidencia: <strong>{{ selectedIncidentForResolve()?.title }}</strong>. Ingresa la justificación operativa obligatoria. La acción quedará registrada en auditoría con tu rol de Supervisor.
+            </p>
+            <div class="rc-form-field">
+              <label class="rc-label">Motivo de Autorización <span class="rc-req">* (mínimo 10 caracteres)</span></label>
+              <textarea
+                class="rc-textarea"
+                rows="3"
+                placeholder="Explicación de la causa y protocolo de autorización..."
+                [value]="incidentResolutionReason()"
+                (input)="incidentResolutionReason.set($any($event.target).value)"></textarea>
+            </div>
+            <div class="po-action-form__btns">
+              <button type="button" class="rc-btn rc-btn--secondary" (click)="checkInDrawerMode.set('CHECKIN_FORM')">Volver</button>
+              <button type="button" class="rc-btn rc-btn--gold" (click)="authorizeArrivalIncident()">
+                <span class="material-symbols-outlined" aria-hidden="true">policy</span>
+                Confirmar Autorización de Incidencia
+              </button>
+            </div>
+          </div>
+        }
+
+        @case ('REJECT_GATE_FORM') {
+          <div class="po-action-form po-action-form--danger">
+            <h4 class="po-action-form__title">Rechazar Unidad en Caseta de Acceso (REJECTED_AT_GATE)</h4>
+            <p class="po-action-form__desc">
+              La unidad no será autorizada a ingresar al patio o andenes. Se conservará la trazabilidad física del intento de llegada.
+            </p>
+            <div class="rc-form-field">
+              <label class="rc-label">Motivo del Rechazo en Caseta <span class="rc-req">* (mínimo 10 caracteres)</span></label>
+              <textarea
+                class="rc-textarea"
+                rows="3"
+                placeholder="Explicar las causas del rechazo de la unidad..."
+                [value]="incidentResolutionReason()"
+                (input)="incidentResolutionReason.set($any($event.target).value)"></textarea>
+            </div>
+            <div class="po-action-form__btns">
+              <button type="button" class="rc-btn rc-btn--secondary" (click)="checkInDrawerMode.set('CHECKIN_FORM')">Volver</button>
+              <button type="button" class="rc-btn rc-btn--danger" (click)="rejectTransportAtGate()">
+                <span class="material-symbols-outlined" aria-hidden="true">block</span>
+                Confirmar Rechazo en Caseta
+              </button>
+            </div>
+          </div>
+        }
+      }
+
+    </div>
+
+    <footer class="rc-drawer__footer">
+      <button type="button" class="rc-btn rc-btn--secondary" (click)="closeCheckInDrawer()">Cerrar</button>
+    </footer>
+
+  </aside>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL COMPACTO DE PRIORIZACIÓN OPERATIVA (HU-026)
+     ════════════════════════════════════════════════════════ -->
+@if (isPriorityModalOpen() && selectedAppointmentForPriority()) {
+  <div class="rc-modal-backdrop" (click)="closePriorityModal()">
+    <div class="rc-modal rc-modal--priority" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="priority-modal-title">
+      
+      <header class="rc-modal__header">
+        <div class="rc-modal__title-wrap">
+          <span class="material-symbols-outlined rc-modal__icon" aria-hidden="true">tune</span>
+          <div>
+            <h3 id="priority-modal-title" class="rc-modal__title">Priorización Operativa de Recepción</h3>
+            <span class="rc-modal__sub">{{ selectedAppointmentForPriority()!.asnReference }} · Cita {{ selectedAppointmentForPriority()!.id }}</span>
+          </div>
+        </div>
+        <button type="button" class="rc-modal__close" (click)="closePriorityModal()" aria-label="Cerrar modal">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </header>
+
+      <form [formGroup]="priorityForm" (ngSubmit)="savePriorityChange()" class="rc-modal__body">
+
+        <!-- Banner Explicativo de Recomendación del Motor -->
+        @if (currentPrioritySuggestion()) {
+          <div class="po-outcome-explanation-card po-outcome-explanation-card--match" style="margin-top:0;">
+            <span class="material-symbols-outlined" aria-hidden="true">smart_toy</span>
+            <div>
+              <strong>Recomendación del Sistema: {{ priorityLabels[currentPrioritySuggestion()!.priority] }}</strong> (Score: {{ currentPrioritySuggestion()!.score }} pts)
+              <ul class="po-factors-list">
+                @for (factor of currentPrioritySuggestion()!.factors; track factor.code) {
+                  <li>• {{ priorityFactorLabels[factor.code](factor) }}: <strong>+{{ factor.points }} pts</strong></li>
+                }
+                @if (currentPrioritySuggestion()!.factors.length === 0) {
+                  <li>• Sin factores de urgencia acumulados (Cita a tiempo)</li>
+                }
+              </ul>
+            </div>
+          </div>
+        }
+
+        <!-- Advertencia de Control de Abuso (Si hay >=3 URGENTES) -->
+        @if (priorityForm.get('newPriority')?.value === 'URGENT' && activeUrgentCount() >= 3) {
+          <div class="po-outcome-explanation-card po-outcome-explanation-card--diff" style="margin-top:0.5rem;">
+            <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+            <div>
+              <strong>Advertencia de Control de Abuso:</strong> Existen {{ activeUrgentCount() }} recepciones marcadas como URGENTES en la sucursal. Cuando todo es urgente, la prioridad pierde efectividad operativa.
+            </div>
+          </div>
+        }
+
+        <!-- Mensaje de Error en Modal -->
+        @if (priorityErrorMessage()) {
+          <div class="rc-alert rc-alert--danger" style="margin-top:0.5rem;">
+            <span class="material-symbols-outlined" aria-hidden="true">error</span>
+            <span>{{ priorityErrorMessage() }}</span>
+          </div>
+        }
+
+        <!-- Selector de Nueva Prioridad -->
+        <div class="rc-form-field" style="margin-top:0.75rem;">
+          <label class="rc-label">Seleccionar Prioridad Aplicada <span class="rc-req">*</span></label>
+          <div class="po-priority-toggle-options">
+            <label class="po-priority-option" [class.po-priority-option--selected]="priorityForm.get('newPriority')?.value === 'NORMAL'">
+              <input type="radio" formControlName="newPriority" value="NORMAL" />
+              <span class="po-priority-option__title">Normal</span>
+              <span class="po-priority-option__sub">Atención según agenda</span>
+            </label>
+            <label class="po-priority-option po-priority-option--high" [class.po-priority-option--selected]="priorityForm.get('newPriority')?.value === 'HIGH'">
+              <input type="radio" formControlName="newPriority" value="HIGH" />
+              <span class="po-priority-option__title">Alta</span>
+              <span class="po-priority-option__sub">Atención preferente</span>
+            </label>
+            <label class="po-priority-option po-priority-option--urgent" [class.po-priority-option--selected]="priorityForm.get('newPriority')?.value === 'URGENT'">
+              <input type="radio" formControlName="newPriority" value="URGENT" />
+              <span class="po-priority-option__title">Urgente</span>
+              <span class="po-priority-option__sub">Atención inmediata</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Campos de Justificación Manual (Obligatorio para HIGH y URGENT) -->
+        @if (priorityForm.get('newPriority')?.value !== currentPrioritySuggestion()?.priority || priorityForm.get('newPriority')?.value !== 'NORMAL') {
+          <div class="rc-form-row" style="margin-top:0.75rem;">
+            <div class="rc-form-field">
+              <label class="rc-label">Categoría del Motivo</label>
+              <select formControlName="reasonCode" class="rc-select">
+                @for (code of priorityReasonCodesList; track code) {
+                  <option [value]="code">{{ priorityReasonLabels[code] }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="rc-form-field">
+              <label class="rc-label">Política de Vigencia</label>
+              <select formControlName="expirationPolicy" class="rc-select">
+                <option value="UNTIL_RECEIVING_START">Hasta iniciar recepción</option>
+                <option value="SPECIFIC_TIME">Hora específica</option>
+                <option value="PERMANENT">Permanente</option>
+              </select>
+            </div>
+          </div>
+
+          @if (priorityForm.get('expirationPolicy')?.value === 'SPECIFIC_TIME') {
+            <div class="rc-form-field">
+              <label class="rc-label">Fecha y Hora Límite de Expiración</label>
+              <input type="datetime-local" formControlName="expiresAt" class="rc-input" />
+            </div>
+          }
+
+          <div class="rc-form-field">
+            <label class="rc-label">
+              Justificación de la Decisión
+              @if (priorityForm.get('newPriority')?.value === 'URGENT' || priorityForm.get('newPriority')?.value === 'HIGH') {
+                <span class="rc-req">* (Mínimo 10 caracteres)</span>
+              }
+            </label>
+            <textarea
+              formControlName="reason"
+              class="rc-textarea"
+              rows="3"
+              placeholder="Explicar las causas de negocio u operativas por las que se asigna o modifica la prioridad..."></textarea>
+          </div>
+        }
+
+        <!-- Recordatorio de Compuertas Seguras -->
+        <div class="po-gatekeeper-notice">
+          <span class="material-symbols-outlined" aria-hidden="true">shield</span>
+          <span>
+            <strong>Seguridad de Compuertas:</strong> La prioridad ordena la atención en patio y andenes, pero <strong>NUNCA omite</strong> la validación documental de OC ni la autorización de caseta.
+          </span>
+        </div>
+
+        <footer class="rc-modal__footer">
+          @if (selectedAppointmentForPriority()?.priorityDecision?.source === 'MANUAL') {
+            <button
+              type="button"
+              class="rc-btn rc-btn--warning-ghost"
+              (click)="revertPriorityOverride(selectedAppointmentForPriority()!); closePriorityModal()"
+              title="Revertir intervención manual y regresar a la sugerencia actual">
+              <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+              Revertir Override
+            </button>
+          }
+          <button type="button" class="rc-btn rc-btn--secondary" (click)="closePriorityModal()">Cancelar</button>
+          <button type="submit" class="rc-btn rc-btn--gold">
+            <span class="material-symbols-outlined" aria-hidden="true">save</span>
+            Guardar Prioridad
+          </button>
+        </footer>
+
+      </form>
+
+    </div>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     DRAWER ENTERPRISE: MOTOR DE PRIORIZACIÓN OPERATIVA (HU-026 EVOLUTION PASS)
+     ════════════════════════════════════════════════════════ -->
+@if (isPriorityDrawerOpen() && selectedAppointmentForPriority()) {
+  <div class="rc-drawer-overlay" (click)="closePriorityDrawer()"></div>
+  <aside class="rc-drawer rc-drawer--priority-engine" role="dialog" aria-modal="true" aria-labelledby="priority-drawer-title">
+      
+      <!-- HEADER PRINCIPAL (Requisito 1) -->
+      <header class="rc-drawer__header">
+        <div class="rc-drawer__title-wrap">
+          <span class="material-symbols-outlined rc-drawer__icon" aria-hidden="true">dashboard_customize</span>
+          <div>
+            <h3 id="priority-drawer-title" class="rc-drawer__title">CENTRO DE DECISIÓN OPERATIVA</h3>
+            <p class="rc-drawer__subtitle">Motor de Priorización basado en reglas de negocio explicables.</p>
+          </div>
+        </div>
+        <button type="button" class="rc-drawer__close" (click)="closePriorityDrawer()" aria-label="Cerrar panel de decisión">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </header>
+
+      <div class="rc-drawer__body">
+
+        <!-- NAVEGACIÓN DE SECCIONES INTERNAS -->
+        <div class="rc-drawer-tabs">
+          <button
+            type="button"
+            class="rc-drawer-tab"
+            [class.rc-drawer-tab--active]="priorityDrawerTab() === 'ANALYSIS'"
+            (click)="priorityDrawerTab.set('ANALYSIS')">
+            <span class="material-symbols-outlined" aria-hidden="true">analytics</span>
+            Análisis y Recomendación
+          </button>
+          <button
+            type="button"
+            class="rc-drawer-tab"
+            [class.rc-drawer-tab--active]="priorityDrawerTab() === 'OVERRIDE_FORM'"
+            (click)="priorityDrawerTab.set('OVERRIDE_FORM')">
+            <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+            Comparación de Decisiones
+          </button>
+        </div>
+
+        @if (priorityDrawerTab() === 'ANALYSIS') {
+          <!-- VISTA 1: ANÁLISIS OPERATIVO Y RECOMENDACIÓN -->
+          <section class="po-analysis-section">
+
+            <!-- ══ BLOQUE A: CONFIANZA DEL MOTOR (Punto 7) ══ -->
+            <div class="po-confidence-card">
+              <div class="po-confidence-top">
+                <div class="po-confidence-left">
+                  <span class="po-confidence-title">
+                    <span class="material-symbols-outlined" aria-hidden="true">smart_toy</span>
+                    Confianza del Motor
+                  </span>
+                  <span class="po-confidence-pct">
+                    {{ currentPrioritySuggestion()?.priority === 'URGENT' ? '98' : (currentPrioritySuggestion()?.priority === 'HIGH' ? '91' : '85') }}%
+                  </span>
+                </div>
+                <div class="po-confidence-right">
+                  <span class="po-confidence-check">✓ Historial de proveedor</span>
+                  <span class="po-confidence-check">✓ SLA comprometido</span>
+                  <span class="po-confidence-check">✓ Estado en patio</span>
+                  <span class="po-confidence-check">✓ Disponibilidad andenes</span>
+                  <span class="po-confidence-check">✓ Reglas de negocio</span>
+                  <span class="po-confidence-check">✓ Estado documental</span>
+                </div>
+              </div>
+              <div class="po-confidence-bar-wrap">
+                <div class="po-confidence-bar"
+                  [style.width]="(currentPrioritySuggestion()?.priority === 'URGENT' ? 98 : (currentPrioritySuggestion()?.priority === 'HIGH' ? 91 : 85)) + '%'">
+                </div>
+              </div>
+            </div>
+
+            <!-- ══ BLOQUE B: SCORE CARD PROTAGONISTA (Punto 1) ══ -->
+            <div class="po-score-hero-card">
+              <div class="po-score-hero__num"
+                [class.po-score-hero__num--p1]="currentPrioritySuggestion()?.priority === 'URGENT'"
+                [class.po-score-hero__num--p2]="currentPrioritySuggestion()?.priority === 'HIGH'">
+                {{ currentPrioritySuggestion()?.score || 0 }}
+              </div>
+              <div class="po-score-hero__info">
+                <span class="po-score-hero__label">Puntaje Operativo</span>
+                <div class="po-score-hero__bar-wrap">
+                  <div class="po-score-hero__bar"
+                    [style.width]="(currentPrioritySuggestion()?.score || 0) + '%'"
+                    [class.po-score-hero__bar--p1]="currentPrioritySuggestion()?.priority === 'URGENT'"
+                    [class.po-score-hero__bar--p2]="currentPrioritySuggestion()?.priority === 'HIGH'">
+                  </div>
+                </div>
+                <div class="po-score-hero__meta">
+                  <span class="po-score-hero__conf"
+                    [class.po-score-hero__conf--high]="(currentPrioritySuggestion()?.score || 0) >= 70"
+                    [class.po-score-hero__conf--mid]="(currentPrioritySuggestion()?.score || 0) >= 40 && (currentPrioritySuggestion()?.score || 0) < 70">
+                    {{ (currentPrioritySuggestion()?.score || 0) >= 70 ? 'Confianza Alta' : ((currentPrioritySuggestion()?.score || 0) >= 40 ? 'Confianza Media' : 'Confianza Baja') }}
+                  </span>
+                  <span class="po-kpi-val-badge"
+                    [class.val--p1]="currentPrioritySuggestion()?.priority === 'URGENT'"
+                    [class.val--p2]="currentPrioritySuggestion()?.priority === 'HIGH'">
+                    <span class="material-symbols-outlined" aria-hidden="true">
+                      {{ enterprisePriorityIcons[currentPrioritySuggestion()?.priority || 'NORMAL'] }}
+                    </span>
+                    {{ enterprisePriorityLabels[currentPrioritySuggestion()?.priority || 'NORMAL'] }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ══ BLOQUE C: FACTORES COMO TARJETAS DE EXPLICACIÓN (Punto 2) ══ -->
+            <div class="po-factors-wrap">
+              <h4 class="po-section-title">
+                <span class="material-symbols-outlined" aria-hidden="true">fact_check</span>
+                ¿Por qué el sistema recomienda esta prioridad?
+              </h4>
+              <div class="po-factor-list">
+                @for (factor of (currentPrioritySuggestion()?.factors || []); track factor.code) {
+                  <div class="po-factor-card">
+                    <div class="po-factor-card__check">
+                      <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                    </div>
+                    <div class="po-factor-card__body">
+                      <div class="po-factor-card__top">
+                        <strong class="po-factor-card__name">{{ getRuleDetails(selectedAppointmentForPriority()!, factor.code).name }}</strong>
+                        <span class="po-factor-card__pts">+{{ factor.points }} pts</span>
+                      </div>
+                      <span class="po-factor-card__val">{{ getRuleDetails(selectedAppointmentForPriority()!, factor.code).observedValue }}</span>
+                      <span class="po-factor-card__contrib"
+                        [class.po-factor-card__contrib--high]="getRuleDetails(selectedAppointmentForPriority()!, factor.code).impact === 'Alto' || getRuleDetails(selectedAppointmentForPriority()!, factor.code).impact === 'Muy Alto'"
+                        [class.po-factor-card__contrib--mid]="getRuleDetails(selectedAppointmentForPriority()!, factor.code).impact === 'Medio'">
+                        Contribución {{ getRuleDetails(selectedAppointmentForPriority()!, factor.code).impact }}
+                      </span>
+                    </div>
+                  </div>
+                }
+                @if ((currentPrioritySuggestion()?.factors?.length || 0) === 0) {
+                  <div class="po-factor-card">
+                    <div class="po-factor-card__check">
+                      <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                    </div>
+                    <div class="po-factor-card__body">
+                      <div class="po-factor-card__top">
+                        <strong class="po-factor-card__name">Atención en Ventana Normal</strong>
+                        <span class="po-factor-card__pts">+0 pts</span>
+                      </div>
+                      <span class="po-factor-card__val">Sin incidencias críticas detectadas</span>
+                      <span class="po-factor-card__contrib">Contribución Normal</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- ══ BLOQUE D: IMPACTO SI NO ES ATENDIDA (Punto 3 — colores) ══ -->
+            <div class="po-impact-visual-section">
+              <h4 class="po-section-title po-txt-warning">
+                <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                Impacto si esta recomendación no es atendida
+              </h4>
+              <div class="po-impact-visual-grid">
+                <div class="po-impact-chip po-impact-chip--amber">
+                  <span class="po-impact-chip__icon material-symbols-outlined" aria-hidden="true">factory</span>
+                  <span class="po-impact-chip__label">Producción</span>
+                  <span class="po-impact-chip__dot">🟠</span>
+                </div>
+                <div class="po-impact-chip po-impact-chip--green">
+                  <span class="po-impact-chip__icon material-symbols-outlined" aria-hidden="true">gavel</span>
+                  <span class="po-impact-chip__label">SLA</span>
+                  <span class="po-impact-chip__dot">🟢</span>
+                </div>
+                <div class="po-impact-chip po-impact-chip--red">
+                  <span class="po-impact-chip__icon material-symbols-outlined" aria-hidden="true">local_shipping</span>
+                  <span class="po-impact-chip__label">Andén</span>
+                  <span class="po-impact-chip__dot">🔴</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ══ BLOQUE E: TIMELINE REDISEÑADO (Punto 4) ══ -->
+            <div class="po-timeline-v2">
+              <h5 class="po-timeline-v2__title">
+                <span class="material-symbols-outlined" aria-hidden="true">timeline</span>
+                Flujo Operativo en Vivo
+              </h5>
+              <div class="po-timeline-v2__steps">
+
+                <div class="po-tl-step po-tl-step--done">
+                  <div class="po-tl-step__marker">
+                    <span class="material-symbols-outlined" aria-hidden="true">psychology</span>
+                  </div>
+                  <div class="po-tl-step__content">
+                    <span class="po-tl-step__actor">🧠 IA Operativa</span>
+                    <span class="po-tl-step__time">{{ getCurrentFormattedTime() }}</span>
+                    <strong class="po-tl-step__event">Evaluación completada</strong>
+                    <span class="po-tl-step__detail">{{ currentPrioritySuggestion()?.factors?.length || 0 }} reglas evaluadas en tiempo real.</span>
+                  </div>
+                </div>
+
+                <div class="po-tl-step po-tl-step--done">
+                  <div class="po-tl-step__marker">
+                    <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+                  </div>
+                  <div class="po-tl-step__content">
+                    <span class="po-tl-step__actor">⚙ Motor de Prioridad</span>
+                    <span class="po-tl-step__time">{{ getCurrentFormattedTime() }}</span>
+                    <strong class="po-tl-step__event">Puntaje {{ currentPrioritySuggestion()?.score }}/100</strong>
+                    <span class="po-tl-step__detail">Recomendación: {{ enterprisePriorityLabels[currentPrioritySuggestion()?.priority || 'NORMAL'] }}</span>
+                  </div>
+                </div>
+
+                <div class="po-tl-step" [class.po-tl-step--done]="selectedAppointmentForPriority()?.priorityDecision?.source === 'MANUAL'" [class.po-tl-step--pending]="selectedAppointmentForPriority()?.priorityDecision?.source !== 'MANUAL'">
+                  <div class="po-tl-step__marker">
+                    <span class="material-symbols-outlined" aria-hidden="true">person</span>
+                  </div>
+                  <div class="po-tl-step__content">
+                    <span class="po-tl-step__actor">👤 Supervisor</span>
+                    <span class="po-tl-step__time">{{ selectedAppointmentForPriority()?.priorityDecision?.source === 'MANUAL' ? getCurrentFormattedTime() : 'Pendiente' }}</span>
+                    <strong class="po-tl-step__event">{{ selectedAppointmentForPriority()?.priorityDecision?.source === 'MANUAL' ? 'Decisión registrada' : 'Esperando decisión' }}</strong>
+                    <span class="po-tl-step__detail">{{ selectedAppointmentForPriority()?.priorityDecision?.source === 'MANUAL' ? 'Intervención manual auditada.' : 'El supervisor tomará la decisión final.' }}</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </section>
+        } @else {
+          <!-- VISTA 2: COMPARACIÓN DE DECISIONES Y FORMULARIO DE DECISIÓN DEL SUPERVISOR (Requisitos 7, 8, 9) -->
+          <section class="po-override-section">
+
+            <!-- ══ BLOQUE 1: COMPARACIÓN VISUAL SISTEMA → TU DECISIÓN (Punto 1) ══ -->
+            <div class="po-compare-banner">
+              <div class="po-compare-side po-compare-side--system">
+                <span class="po-compare-side__label">
+                  <span class="material-symbols-outlined" aria-hidden="true">smart_toy</span>
+                  RECOMENDACIÓN DEL SISTEMA
+                </span>
+                <span class="po-compare-side__badge"
+                  [class.po-compare-badge--p1]="currentPrioritySuggestion()?.priority === 'URGENT'"
+                  [class.po-compare-badge--p2]="currentPrioritySuggestion()?.priority === 'HIGH'"
+                  [class.po-compare-badge--p3]="currentPrioritySuggestion()?.priority === 'NORMAL'">
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ enterprisePriorityIcons[currentPrioritySuggestion()?.priority || 'NORMAL'] }}
+                  </span>
+                  {{ enterprisePriorityLabels[currentPrioritySuggestion()?.priority || 'NORMAL'] }}
+                </span>
+                <span class="po-compare-side__sub">{{ currentPrioritySuggestion()?.score }}/100 pts · Motor automático</span>
+              </div>
+
+              <div class="po-compare-arrow">
+                <span class="material-symbols-outlined" aria-hidden="true">south</span>
+              </div>
+
+              <div class="po-compare-side po-compare-side--supervisor">
+                <span class="po-compare-side__label">
+                  <span class="material-symbols-outlined" aria-hidden="true">person</span>
+                  TU DECISIÓN
+                </span>
+                <span class="po-compare-side__badge po-compare-side__badge--live"
+                  [class.po-compare-badge--p1]="priorityForm.get('newPriority')?.value === 'URGENT'"
+                  [class.po-compare-badge--p2]="priorityForm.get('newPriority')?.value === 'HIGH'"
+                  [class.po-compare-badge--p3]="priorityForm.get('newPriority')?.value === 'NORMAL'">
+                  {{ enterprisePriorityLabels[priorityForm.get('newPriority')?.value || 'NORMAL'] }}
+                </span>
+                <span class="po-compare-side__sub">Intervención manual · Supervisor</span>
+              </div>
+            </div>
+
+            <!-- Formulario de Selección -->
+            <form [formGroup]="priorityForm" (ngSubmit)="saveCustomPriorityOverride()" class="po-override-form">
+
+              @if (priorityErrorMessage()) {
+                <div class="rc-alert rc-alert--danger">
+                  <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                  <span>{{ priorityErrorMessage() }}</span>
+                </div>
+              }
+
+              <!-- Selector de Prioridades P1, P2, P3 -->
+              <div class="rc-form-field">
+                <label class="rc-label">Seleccionar Nueva Prioridad <span class="rc-req">*</span></label>
+                <div class="po-priority-toggle-options">
+                  <label class="po-priority-option po-priority-option--p1" [class.po-priority-option--selected]="priorityForm.get('newPriority')?.value === 'URGENT'">
+                    <input type="radio" formControlName="newPriority" value="URGENT" />
+                    <span class="po-priority-option__title">P1 • CRÍTICA</span>
+                    <span class="po-priority-option__sub">Atención inmediata en andén</span>
+                  </label>
+                  <label class="po-priority-option po-priority-option--p2" [class.po-priority-option--selected]="priorityForm.get('newPriority')?.value === 'HIGH'">
+                    <input type="radio" formControlName="newPriority" value="HIGH" />
+                    <span class="po-priority-option__title">P2 • ALTA</span>
+                    <span class="po-priority-option__sub">Atención preferente</span>
+                  </label>
+                  <label class="po-priority-option po-priority-option--p3" [class.po-priority-option--selected]="priorityForm.get('newPriority')?.value === 'NORMAL'">
+                    <input type="radio" formControlName="newPriority" value="NORMAL" />
+                    <span class="po-priority-option__title">P3 • NORMAL</span>
+                    <span class="po-priority-option__sub">Atención según agenda</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Motivo del Cambio -->
+              <div class="rc-form-field">
+                <label class="rc-label">Motivo del Cambio <span class="rc-req">*</span></label>
+                <select formControlName="reasonCode" class="rc-select">
+                  <option value="CUSTOMER_COMMITMENT">Cliente Premium</option>
+                  <option value="COMMERCIAL_COMMITMENT">Compromiso Comercial</option>
+                  <option value="PRODUCTION_IMPACT">Producción</option>
+                  <option value="MANAGEMENT_DECISION">Solicitud Dirección</option>
+                  <option value="OPERATIONAL_INCIDENT">Incidencia Operativa</option>
+                  <option value="LOGISTICS_DELAY">Retraso Logístico</option>
+                  <option value="OTHER">Otro</option>
+                </select>
+              </div>
+
+              <!-- Justificación -->
+              <div class="rc-form-field">
+                <label class="rc-label">
+                  Justificación Operativa Detallada
+                  @if (priorityForm.get('reasonCode')?.value === 'OTHER') {
+                    <span class="rc-req">* (Obligatorio mínimo 30 caracteres)</span>
+                  } @else {
+                    <span class="rc-req">* (Mínimo 10 caracteres)</span>
+                  }
+                </label>
+                <textarea
+                  formControlName="reason"
+                  class="rc-textarea"
+                  rows="3"
+                  placeholder="Explicar las causas de negocio u operativas por las cuales el supervisor modifica la recomendación del motor..."></textarea>
+              </div>
+
+            </form>
+
+            <!-- ══ BLOQUE 2: IMPACTO ESTIMADO DINÁMICO (Punto 2 — El más importante) ══ -->
+            <div class="po-impact-card">
+              <h5 class="po-impact-card__title">
+                <span class="material-symbols-outlined" aria-hidden="true">warning_amber</span>
+                Impacto Estimado de tu Decisión
+              </h5>
+              <div class="po-impact-rows">
+                <div class="po-impact-row">
+                  <span class="po-impact-row__icon material-symbols-outlined" aria-hidden="true">schedule</span>
+                  <span class="po-impact-row__label">Tiempo estimado de espera adicional</span>
+                  <span class="po-impact-row__value"
+                    [class.po-impact-row__value--ok]="priorityForm.get('newPriority')?.value === 'URGENT'"
+                    [class.po-impact-row__value--warn]="priorityForm.get('newPriority')?.value === 'HIGH'"
+                    [class.po-impact-row__value--alert]="priorityForm.get('newPriority')?.value === 'NORMAL'">
+                    @if (priorityForm.get('newPriority')?.value === 'URGENT') { Sin espera adicional }
+                    @else if (priorityForm.get('newPriority')?.value === 'HIGH') { +18 minutos }
+                    @else { +45 minutos }
+                  </span>
+                </div>
+                <div class="po-impact-row">
+                  <span class="po-impact-row__icon material-symbols-outlined" aria-hidden="true">factory</span>
+                  <span class="po-impact-row__label">Puede retrasar producción</span>
+                  <span class="po-impact-row__value"
+                    [class.po-impact-row__value--ok]="priorityForm.get('newPriority')?.value === 'URGENT'"
+                    [class.po-impact-row__value--warn]="priorityForm.get('newPriority')?.value === 'HIGH'"
+                    [class.po-impact-row__value--alert]="priorityForm.get('newPriority')?.value === 'NORMAL'">
+                    @if (priorityForm.get('newPriority')?.value === 'URGENT') { Bajo }
+                    @else if (priorityForm.get('newPriority')?.value === 'HIGH') { Moderado }
+                    @else { Alto }
+                  </span>
+                </div>
+                <div class="po-impact-row">
+                  <span class="po-impact-row__icon material-symbols-outlined" aria-hidden="true">local_shipping</span>
+                  <span class="po-impact-row__label">Otro camión ocupará prioridad de andén</span>
+                  <span class="po-impact-row__value"
+                    [class.po-impact-row__value--ok]="priorityForm.get('newPriority')?.value === 'URGENT'"
+                    [class.po-impact-row__value--alert]="priorityForm.get('newPriority')?.value !== 'URGENT'">
+                    @if (priorityForm.get('newPriority')?.value === 'URGENT') { No }
+                    @else { Sí }
+                  </span>
+                </div>
+                <div class="po-impact-row">
+                  <span class="po-impact-row__icon material-symbols-outlined" aria-hidden="true">gavel</span>
+                  <span class="po-impact-row__label">Riesgo SLA comprometido</span>
+                  <span class="po-impact-row__value"
+                    [class.po-impact-row__value--ok]="priorityForm.get('newPriority')?.value === 'URGENT'"
+                    [class.po-impact-row__value--warn]="priorityForm.get('newPriority')?.value === 'HIGH'"
+                    [class.po-impact-row__value--alert]="priorityForm.get('newPriority')?.value === 'NORMAL'">
+                    @if (priorityForm.get('newPriority')?.value === 'NORMAL') { Medio }
+                    @else { Bajo }
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ══ BLOQUE 3: LA DECISIÓN QUEDARÁ REGISTRADA (Punto 3) ══ -->
+            <div class="po-audit-preview-card">
+              <div class="po-audit-preview-head">
+                <span class="material-symbols-outlined" aria-hidden="true">policy</span>
+                <strong>La decisión quedará registrada</strong>
+              </div>
+              <div class="po-audit-preview-grid">
+                <div class="po-audit-preview-row">
+                  <span class="po-audit-preview-row__key">Usuario</span>
+                  <strong class="po-audit-preview-row__val">Carlos Mendoza — OPERATIONS_SUPERVISOR</strong>
+                </div>
+                <div class="po-audit-preview-row">
+                  <span class="po-audit-preview-row__key">Sucursal</span>
+                  <strong class="po-audit-preview-row__val">{{ selectedAppointmentForPriority()!.branchName }} (BR-TOL-01)</strong>
+                </div>
+                <div class="po-audit-preview-row">
+                  <span class="po-audit-preview-row__key">Sistema recomendó</span>
+                  <strong class="po-audit-preview-row__val"
+                    [class.po-audit-val--p1]="currentPrioritySuggestion()?.priority === 'URGENT'"
+                    [class.po-audit-val--p2]="currentPrioritySuggestion()?.priority === 'HIGH'">
+                    {{ enterprisePriorityLabels[currentPrioritySuggestion()?.priority || 'NORMAL'] }}
+                  </strong>
+                </div>
+                <div class="po-audit-preview-row">
+                  <span class="po-audit-preview-row__key">Supervisor seleccionó</span>
+                  <strong class="po-audit-preview-row__val"
+                    [class.po-audit-val--p1]="priorityForm.get('newPriority')?.value === 'URGENT'"
+                    [class.po-audit-val--p2]="priorityForm.get('newPriority')?.value === 'HIGH'">
+                    {{ enterprisePriorityLabels[priorityForm.get('newPriority')?.value || 'NORMAL'] }}
+                  </strong>
+                </div>
+                <div class="po-audit-preview-row">
+                  <span class="po-audit-preview-row__key">Motivo</span>
+                  <strong class="po-audit-preview-row__val">{{ priorityReasonLabels[priorityForm.get('reasonCode')?.value] || 'Compromiso Comercial' }}</strong>
+                </div>
+                <div class="po-audit-preview-row">
+                  <span class="po-audit-preview-row__key">Fecha</span>
+                  <strong class="po-audit-preview-row__val">{{ getCurrentFormattedTime() }} hrs — Tiempo Real</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- ══ BLOQUE 4: ADVERTENCIA PROFESIONAL ELEGANTE (Punto 5) ══ -->
+            <div class="po-professional-notice">
+              <span class="material-symbols-outlined po-professional-notice__icon" aria-hidden="true">verified_user</span>
+              <div class="po-professional-notice__body">
+                <span class="po-professional-notice__title">Atención antes de confirmar</span>
+                <span class="po-professional-notice__text">Esta modificación reemplazará la recomendación automática del Motor Operativo. <strong>La decisión será auditada permanentemente en la bitácora del sistema.</strong></span>
+              </div>
+            </div>
+
+          </section>
+        }
+
+      </div>
+
+      <!-- FOOTER ENTERPRISE -->
+      <footer class="rc-drawer__footer">
+        @if (priorityDrawerTab() === 'ANALYSIS') {
+          <button type="button" class="rc-btn rc-btn--secondary" (click)="closePriorityDrawer()">Cerrar</button>
+          <button type="button" class="rc-btn rc-btn--warning-ghost" (click)="priorityDrawerTab.set('OVERRIDE_FORM')">
+            <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+            ✏ Modificar Decisión
+          </button>
+          <button type="button" class="rc-btn rc-btn--gold" (click)="acceptSystemRecommendation()">
+            <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+            Aceptar recomendación del sistema
+          </button>
+        } @else {
+          <button type="button" class="rc-btn rc-btn--secondary" (click)="priorityDrawerTab.set('ANALYSIS')">Volver al análisis</button>
+          <button type="button" class="rc-btn rc-btn--gold rc-btn--decision" (click)="showOverrideConfirm.set(true)">
+            <span class="material-symbols-outlined" aria-hidden="true">verified</span>
+            Confirmar excepción operativa
+          </button>
+        }
+      </footer>
+
+      <!-- ══ DIÁLOGO DE CONFIRMACIÓN DE EXCEPCIÓN (Punto 8) ══ -->
+      @if (showOverrideConfirm()) {
+        <div class="po-confirm-overlay" (click)="showOverrideConfirm.set(false)">
+          <div class="po-confirm-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="override-confirm-title">
+            <div class="po-confirm-dialog__icon">
+              <span class="material-symbols-outlined" aria-hidden="true">warning_amber</span>
+            </div>
+            <h4 class="po-confirm-dialog__title" id="override-confirm-title">¿Desea sobrescribir la recomendación del Motor Operativo?</h4>
+            <p class="po-confirm-dialog__body">Esta acción reemplazará la sugerencia automática y quedará registrada <strong>permanentemente en la bitácora de auditoría</strong>.</p>
+            <div class="po-confirm-dialog__actions">
+              <button type="button" class="rc-btn rc-btn--secondary" (click)="showOverrideConfirm.set(false)">Cancelar</button>
+              <button type="button" class="rc-btn rc-btn--gold" (click)="showOverrideConfirm.set(false); saveCustomPriorityOverride()">
+                <span class="material-symbols-outlined" aria-hidden="true">verified</span>
+                Sobrescribir recomendación
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+  </aside>
+}
+
+<!-- ════════════════════════════════════════════════════════
+     DRAWER ENTERPRISE: CONSULTA Y ANÁLISIS DOCUMENTAL DE OC (HU-029 Evolución)
+     ════════════════════════════════════════════════════════ -->
+<app-purchase-order-detail-drawer
+  [isOpen]="isPODetailDrawerOpen()"
+  [appointment]="selectedPODetailAppt()"
+  (closeDrawer)="closePODetailDrawer()"
+  (openPOValidation)="openPOValidationDrawer($event); closePODetailDrawer()">
+</app-purchase-order-detail-drawer>
+
+<!-- ════════════════════════════════════════════════════════
+     DRAWER ENTERPRISE: ASIGNACIÓN OPERATIVA DE MUELLE DE DESCARGA (HU-030)
+     ════════════════════════════════════════════════════════ -->
+<app-dock-assignment-drawer
+  [isOpen]="isDockDrawerOpen()"
+  [appointment]="selectedDockAppt()"
+  (closeDrawer)="closeDockDrawer()"
+  (dockStatusUpdated)="onDockStatusUpdated($event)">
+</app-dock-assignment-drawer>
+
+<!-- ════════════════════════════════════════════════════════
+     DIÁLOGO INFORMATIVO: CONTRATO DE PREPARACIÓN OPERATIVA (FASE 1 → FASE 2)
+     ════════════════════════════════════════════════════════ -->
+@if (showPhase2Notice() && phase2NoticeAppt()) {
+  <div class="po-confirm-overlay" (click)="showPhase2Notice.set(false)">
+    <div class="po-confirm-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="phase2-notice-title">
+      <div class="po-confirm-dialog__icon" style="background: rgba(46, 125, 50, 0.15); color: #2e7d32;">
+        <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+      </div>
+      <h4 class="po-confirm-dialog__title" id="phase2-notice-title">Planeación Operativa Completada (Fase 1)</h4>
+      <p class="po-confirm-dialog__body">
+        La recepción para la cita <strong>{{ phase2NoticeAppt()?.asnReference }}</strong> ({{ phase2NoticeAppt()?.supplierName }}) ha cumplido con los prerrequisitos logísticos de planeación:
+      </p>
+      
+      <div class="rc-readiness-summary-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; text-align: left;">
+        @for (req of getOperationalReadiness(phase2NoticeAppt()).requirements; track req.name) {
+          <div class="rc-readiness-summary-item" style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #cfd8dc;">
+            <span class="material-symbols-outlined" style="font-size: 1.1rem; color: #4caf50;" aria-hidden="true">
+              {{ req.status === 'SUCCESS' ? 'check_circle' : (req.status === 'WARNING' ? 'warning' : 'block') }}
+            </span>
+            <div>
+              <strong>{{ req.name }}:</strong> {{ req.detail }}
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="po-notice-callout" style="background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; padding: 0.75rem; border-radius: 4px; text-align: left; font-size: 0.8rem; color: #ffe082; margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: flex-start;">
+        <span class="material-symbols-outlined" style="font-size: 1.2rem; color: #ffc107;" aria-hidden="true">info</span>
+        <span>
+          <strong>Transición a Ejecución Logística:</strong> La creación de la Sesión Operativa y el inicio de la descarga física se habilitará en la Consola de Ejecución de Patio/Andén mediante <strong>HU-016 / HU-017</strong>.
+        </span>
+      </div>
+
+      <div class="po-confirm-dialog__actions">
+        <button type="button" class="rc-btn rc-btn--gold" (click)="showPhase2Notice.set(false)">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+

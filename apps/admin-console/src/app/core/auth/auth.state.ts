@@ -7,7 +7,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { SessionStorageService } from '../services/session-storage.service';
 import { AuthService } from '../services/auth.service';
-import { AuthenticatedUser, JwtSession } from '../models/auth.models';
+import { AuthenticatedUser, JwtSession, ShiftType } from '../models/auth.models';
 
 @Injectable({
   providedIn: 'root'
@@ -21,11 +21,16 @@ export class AuthState {
   private readonly _currentUser = signal<AuthenticatedUser | null>(this.sessionStorageService.getUser());
   private readonly _accessToken = signal<string | null>(this.sessionStorageService.getAccessToken());
   private readonly _refreshToken = signal<string | null>(this.sessionStorageService.getRefreshToken());
+  private readonly _currentShift = signal<ShiftType>(this._currentUser()?.shift || 'TURNO 1');
 
   // ─── Señales Públicas Read-Only ───────────────────────────────────────────
   readonly currentUser = this._currentUser.asReadonly();
   readonly accessToken = this._accessToken.asReadonly();
   readonly refreshToken = this._refreshToken.asReadonly();
+  readonly currentShift = this._currentShift.asReadonly();
+
+  // ─── Señales Computadas Derivadas ──────────────────────────────────────────
+  readonly userShiftBadge = computed(() => this._currentShift() || 'TURNO 1');
 
   // ─── Señales Computadas Derivadas ──────────────────────────────────────────
   readonly isAuthenticated = computed(() => {
@@ -110,7 +115,40 @@ export class AuthState {
     this.setSession(session);
     if (session.user.changePasswordRequired) {
       this.router.navigate(['/change-password']);
+      return;
+    }
+
+    const normLoginRole = (session.user.role || '').toUpperCase();
+    if (
+      normLoginRole === 'SECURITY_GUARD' ||
+      normLoginRole === 'ROLE_SECURITY_GUARD' ||
+      normLoginRole === 'VIGILANCIA' ||
+      normLoginRole === 'ROLE_VIGILANCIA' ||
+      normLoginRole === 'GUARD' ||
+      normLoginRole === 'ROLE_GUARD' ||
+      normLoginRole.includes('GUARD') ||
+      normLoginRole.includes('VIGILAN') ||
+      normLoginRole.includes('CASETA')
+    ) {
+      localStorage.removeItem('4g_return_url');
+      localStorage.removeItem('4g_pending_process_name');
+      this.router.navigate(['/security']);
+      return;
+    }
+
+    const returnUrl = localStorage.getItem('4g_return_url');
+    const pendingProcess = localStorage.getItem('4g_pending_process_name');
+
+    if (returnUrl && returnUrl !== '/dashboard') {
+      if (pendingProcess) {
+        localStorage.setItem('4g_resumed_process_name', pendingProcess);
+      }
+      localStorage.removeItem('4g_return_url');
+      localStorage.removeItem('4g_pending_process_name');
+      this.router.navigateByUrl(returnUrl);
     } else {
+      localStorage.removeItem('4g_return_url');
+      localStorage.removeItem('4g_pending_process_name');
       this.router.navigate(['/dashboard']);
     }
   }
@@ -133,20 +171,127 @@ export class AuthState {
   }
 
   /**
+   * Bloquea la estación de trabajo preservando la ruta y el formulario activo en memoria.
+   */
+  lockWorkstation(): void {
+    const currentUrl = this.router.url;
+    if (currentUrl && currentUrl !== '/login') {
+      localStorage.setItem('4g_return_url', currentUrl);
+      localStorage.setItem('4g_pending_process_name', 'Proceso de Trabajo Activo en Andén');
+    }
+    this.logout('inactivity');
+  }
+
+  /**
+   * Conmuta atómicamente la señal del usuario/operador activo mediante PIN de 4 dígitos.
+   */
+  switchOperator(newOperator: AuthenticatedUser, pin: string): boolean {
+    const expectedPin = newOperator.pinCode || '1234';
+    if (pin.trim() !== expectedPin) {
+      return false;
+    }
+
+    const updatedUser: AuthenticatedUser = {
+      ...newOperator,
+      shift: newOperator.shift || 'TURNO 1'
+    };
+
+    const session = this.sessionStorageService.getSession();
+    if (session) {
+      session.user = updatedUser;
+      this.sessionStorageService.saveSession(session);
+    } else {
+      this.sessionStorageService.saveSession({
+        accessToken: 'dev-switch-token',
+        refreshToken: 'dev-refresh-token',
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        user: updatedUser
+      });
+    }
+
+    this._currentUser.set(updatedUser);
+    this._currentShift.set(updatedUser.shift || 'TURNO 1');
+
+    if (this.canAccessModule('security') && !this.canAccessModule('dashboard')) {
+      const currentUrl = this.router.url;
+      if (!currentUrl.startsWith('/security')) {
+        this.router.navigate(['/security']);
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Verifica si el usuario actual tiene acceso a un módulo específico (Compatibilidad).
    */
   canAccessModule(module: string): boolean {
-    const role = this.role();
-    if (!role) return false;
+    const rawRole = this.role();
+    if (!rawRole) return false;
 
-    // Los Administradores y Gerentes de Operaciones tienen acceso completo
+    const normRole = String(rawRole).trim().toUpperCase();
+
+    // Super Administradores, Administradores, Gerentes y Supervisores de Operaciones tienen acceso completo
     if (
-      role === 'ROLE_ADMIN' ||
-      role === 'ADMIN' ||
-      role === 'OPERATIONS_MANAGER' ||
-      role === 'ROLE_OPERATIONS_MANAGER'
+      normRole === 'SUPER_ADMIN' ||
+      normRole === 'ROLE_SUPER_ADMIN' ||
+      normRole === 'ROLE_ADMIN' ||
+      normRole === 'ADMIN' ||
+      normRole === 'OPERATIONS_MANAGER' ||
+      normRole === 'ROLE_OPERATIONS_MANAGER' ||
+      normRole === 'OPERATIONS_COORDINATOR' ||
+      normRole === 'ROLE_OPERATIONS_COORDINATOR' ||
+      normRole === 'CEO' ||
+      normRole === 'ROLE_CEO' ||
+      normRole === 'WAREHOUSE_MANAGER' ||
+      normRole === 'ROLE_WAREHOUSE_MANAGER' ||
+      normRole === 'OPERATIONS_SUPERVISOR' ||
+      normRole === 'ROLE_OPERATIONS_SUPERVISOR' ||
+      normRole === 'WAREHOUSE_SUPERVISOR' ||
+      normRole === 'ROLE_WAREHOUSE_SUPERVISOR'
     ) {
       return true;
+    }
+
+    // 1. Guardia de Seguridad: acceso EXCLUSIVO a Caseta (security) y Dashboard
+    if (
+      normRole === 'SECURITY_GUARD' ||
+      normRole === 'ROLE_SECURITY_GUARD' ||
+      normRole === 'GUARD' ||
+      normRole === 'ROLE_GUARD' ||
+      normRole.includes('GUARD') ||
+      normRole.includes('CASETA')
+    ) {
+      return module === 'security' || module === 'dashboard';
+    }
+
+    // 2. Control de Calidad: acceso EXCLUSIVO a Calidad (quality) y Dashboard
+    if (
+      normRole === 'QM_INSPECTOR' ||
+      normRole === 'ROLE_QM_INSPECTOR' ||
+      normRole.includes('QUALITY') ||
+      normRole.includes('INSPECTOR')
+    ) {
+      return module === 'quality' || module === 'dashboard';
+    }
+
+    // 3. Mesa de Control y Líder de Turno: Dashboard + Recepción + Almacén/Topología + Inventarios
+    if (
+      normRole === 'CONTROL_DESK' ||
+      normRole === 'ROLE_CONTROL_DESK' ||
+      normRole === 'SHIFT_LEADER' ||
+      normRole === 'ROLE_SHIFT_LEADER'
+    ) {
+      return (
+        module === 'dashboard' ||
+        module === 'warehouse-movements' ||
+        module === 'receiving' ||
+        module === 'shipping' ||
+        module === 'catalogs' ||
+        module === 'layout' ||
+        module === 'inventory' ||
+        module === 'inventory-query'
+      );
     }
 
     const permissions = this.permissions();
@@ -172,24 +317,34 @@ export class AuthState {
         return true; // Acceso total habilitado para desarrollo y testing
       case 'suppliers':
         return true; // Acceso total habilitado para desarrollo y testing
+      case 'warehouse-movements':
+        return true;
+      case 'catalogs':
+        return true;
+      case 'inventory-query':
+        return true;
       case 'performance':
         return true; // Acceso total habilitado para desarrollo y testing
       case 'shifts':
         return true; // Acceso total habilitado para desarrollo y testing (HU-140)
       case 'business-rules':
         return true; // Acceso total habilitado para evaluación (HU-131)
+      case 'alerts-config':
+        return true; // Acceso total habilitado para evaluación (HU-134)
+      case 'security':
+        return true; // Acceso total al nuevo módulo autónomo de Seguridad (Caseta)
       case 'user-activity':
         // HU-146: Solo OPERATIONS_SUPERVISOR, SHIFT_LEADER y OPERATIONS_MANAGER.
         // NOTA: La validación definitiva de RLS y permisos se ejecuta en el backend.
         // El frontend solo controla la visibilidad de la opción de menú y la ruta.
         return (
-          role === 'OPERATIONS_SUPERVISOR' ||
-          role === 'OPERATIONS_MANAGER' ||
-          role === 'SHIFT_LEADER' ||
-          role === 'ROLE_ADMIN' ||
-          role === 'ADMIN' ||
-          role === 'ROLE_WAREHOUSE_MANAGER' ||
-          role === 'WAREHOUSE_MANAGER'
+          normRole === 'OPERATIONS_SUPERVISOR' ||
+          normRole === 'OPERATIONS_MANAGER' ||
+          normRole === 'SHIFT_LEADER' ||
+          normRole === 'ROLE_ADMIN' ||
+          normRole === 'ADMIN' ||
+          normRole === 'ROLE_WAREHOUSE_MANAGER' ||
+          normRole === 'WAREHOUSE_MANAGER'
         );
       default:
         return false;

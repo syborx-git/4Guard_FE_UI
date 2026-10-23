@@ -71,77 +71,6 @@ import {
   AUDIT_ACTION_COLORS,
 } from '../models/carrier.model';
 
-// ─── Datos Mock ───────────────────────────────────────────────────────────────
-// TODO: Eliminar este bloque cuando el backend de /api/v1/carriers esté disponible.
-// Los datos mock son ficticios y representan transportistas del entorno 4GUARD.
-
-const MOCK_CARRIERS: Carrier[] = [
-  {
-    id: 'car-001',
-    businessName: 'Transportes del Noreste S.A. de C.V.',
-    tradeName: 'TransNoreste',
-    rfc: 'TNO890314AB2',
-    carrierType: 'EXTERNAL',
-    status: 'ACTIVE',
-    contactName: 'Roberto Garza Hernández',
-    phone: '8181234567',
-    email: 'rgarza@transnoreste.com.mx',
-    serviceType: 'FTL',
-    coverage: 'Noreste, Centro y Bajío (NL, CDMX, QRO, GTO)',
-    coverageRegions: ['NL', 'CDMX', 'QRO', 'GTO'],
-    supportedVehicleTypes: ['DRY_BOX', 'TRACTOR_TRAILER', 'FLATBED'],
-    permitNumber: 'SCT-NL-00234-2022',
-    preferredClients: ['Lala S.A.', 'FEMSA Distribución', 'Grupo Bimbo'],
-    notes: 'Transportista preferencial para rutas de alto volumen. Contrato vigente hasta 2027.',
-    createdAt: '2024-01-15T09:00:00Z',
-    updatedAt: '2025-11-20T14:30:00Z',
-    createdBy: 'admin',
-    updatedBy: 'jperez',
-  },
-  {
-    id: 'car-002',
-    businessName: 'Logística Integral del Valle S.A. de C.V.',
-    tradeName: 'LogiValle 3PL',
-    rfc: 'LIV031122CD5',
-    carrierType: 'THIRD_PARTY_3PL',
-    status: 'ACTIVE',
-    contactName: 'Ana Martínez Soto',
-    phone: '5512345678',
-    email: 'amartinez@logivalle.mx',
-    serviceType: 'LTL',
-    coverage: 'Centro de México (CDMX, EDO. MÉX, HGO, MOR, TLX)',
-    coverageRegions: ['CDMX', 'MEX', 'HGO', 'MOR', 'TLX'],
-    supportedVehicleTypes: ['DRY_BOX', 'REFRIGERATED_BOX', 'VAN'],
-    permitNumber: 'SCT-CDMX-00891-2023',
-    preferredClients: ['Walmart de México', 'Soriana'],
-    notes: 'Proveedor certificado 3PL. Maneja carga refrigerada para perecederos.',
-    createdAt: '2024-03-08T10:15:00Z',
-    updatedAt: '2025-09-12T11:00:00Z',
-    createdBy: 'admin',
-    updatedBy: 'admin',
-  },
-  {
-    id: 'car-003',
-    businessName: 'Distribuciones Toluca Express S.A. de C.V.',
-    tradeName: 'Toluca Express',
-    rfc: 'DTE120501FG9',
-    carrierType: 'OWN_TRANSPORT',
-    status: 'SUSPENDED',
-    contactName: 'Miguel Ángel Torres',
-    phone: '7221098765',
-    email: 'mtorres@tolucaexpress.com',
-    serviceType: 'LAST_MILE',
-    coverage: 'Estado de México y Toluca metropolitana',
-    coverageRegions: ['MEX'],
-    supportedVehicleTypes: ['RABON', 'TORTON', 'VAN'],
-    notes: 'Suspendido por incumplimiento de tiempo de entrega. Revisión pendiente con gerencia.',
-    createdAt: '2024-06-20T08:00:00Z',
-    updatedAt: '2026-02-14T16:45:00Z',
-    createdBy: 'jperez',
-    updatedBy: 'supervisor01',
-  },
-];
-
 // ─── Mapeos de Vehículos ──────────────────────────────────────────────────────
 const VEHICLE_MAP_FE_TO_BE: Record<string, string> = {
   DRY_BOX: 'CAJA_SECA',
@@ -457,17 +386,18 @@ export class CarrierService {
       organizationId: orgId,
       name: dto.businessName,
       tradeName: dto.tradeName,
-      taxId: dto.rfc,
-      carrierType: dto.carrierType,
-      contactName: dto.contactName,
-      contactPhone: dto.phone,
-      contactEmail: dto.email,
-      serviceType: dto.serviceType,
-      permitNumber: dto.permitNumber || null,
-      geographicCoverage: dto.coverage,
-      notes: dto.notes || null,
+      taxId: dto.rfc ? dto.rfc.trim() : null,
+      carrierType: dto.carrierType || 'EXTERNAL',
+      contactName: dto.contactName ? dto.contactName.trim() : null,
+      contactPhone: dto.phone ? dto.phone.trim() : null,
+      contactEmail: dto.email ? dto.email.trim() : null,
+      serviceType: dto.serviceType || 'FTL',
+      permitNumber: dto.permitNumber ? dto.permitNumber.trim() : null,
+      geographicCoverage: dto.coverage ? dto.coverage.trim() : null,
+      notes: dto.notes ? dto.notes.trim() : null,
       vehicleTypes: (dto.supportedVehicleTypes || []).map(vt => VEHICLE_MAP_FE_TO_BE[vt] || vt),
-      preferredClientIds: []
+      preferredClientIds: [],
+      status: dto.status || 'ACTIVE'
     };
 
     return this.http.post<CarrierApiResponse<any>>(this.API_URL, payload).pipe(
@@ -504,15 +434,15 @@ export class CarrierService {
       organizationId: orgId,
       name: dto.businessName,
       tradeName: dto.tradeName,
-      taxId: dto.rfc,
-      carrierType: dto.carrierType,
-      contactName: dto.contactName,
-      contactPhone: dto.phone,
-      contactEmail: dto.email,
-      serviceType: dto.serviceType,
-      permitNumber: dto.permitNumber || null,
-      geographicCoverage: dto.coverage,
-      notes: dto.notes || null,
+      taxId: dto.rfc ? dto.rfc.trim() : null,
+      carrierType: dto.carrierType || existing?.carrierType || 'EXTERNAL',
+      contactName: dto.contactName ? dto.contactName.trim() : null,
+      contactPhone: dto.phone ? dto.phone.trim() : null,
+      contactEmail: dto.email ? dto.email.trim() : null,
+      serviceType: dto.serviceType || existing?.serviceType || 'FTL',
+      permitNumber: dto.permitNumber ? dto.permitNumber.trim() : null,
+      geographicCoverage: dto.coverage ? dto.coverage.trim() : null,
+      notes: dto.notes ? dto.notes.trim() : null,
       vehicleTypes: (dto.supportedVehicleTypes || []).map(vt => VEHICLE_MAP_FE_TO_BE[vt] || vt),
       preferredClientIds: [],
       status: (dto as any).status || existing?.status || 'ACTIVE',
@@ -530,6 +460,27 @@ export class CarrierService {
       }),
       catchError(err => this.handleError(err))
     );
+  }
+
+  /**
+   * Valida si un RFC (taxId) ya está registrado en el sistema para otro transportista.
+   * GET /api/v1/carriers/validate-rfc?taxId=...&organizationId=...[&excludeId=...]
+   */
+  validateTaxId(taxId: string, organizationId?: string, excludeId?: string): Observable<CarrierApiResponse<string>> {
+    if (this.USE_MOCK) {
+      return of({ success: true, message: 'RFC disponible', data: taxId, timestamp: new Date().toISOString() });
+    }
+
+    const orgId = organizationId || this.getSessionOrgId();
+    let url = `${this.API_URL}/validate-rfc?taxId=${encodeURIComponent(taxId.trim())}`;
+    if (orgId) {
+      url += `&organizationId=${orgId}`;
+    }
+    if (excludeId) {
+      url += `&excludeId=${excludeId}`;
+    }
+
+    return this.http.get<CarrierApiResponse<string>>(url);
   }
 
   /**

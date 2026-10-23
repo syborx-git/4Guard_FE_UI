@@ -1,14 +1,68 @@
-/* ================================================================
-   RECEPCIÓN — LA BÓVEDA
-   SynexIA Light / réplica visual de Google AI Studio
-   ================================================================ */
-
 :host {
   display: block;
   width: 100%;
   min-height: 100%;
-  color: #172033;
-  font-family: 'DM Sans', sans-serif;
+
+  /* ── 1. Tokens Modo Claro (Default / Synexia Light) ── */
+  --bg-page:            radial-gradient(circle at 90% 5%, rgba(197, 168, 107, 0.08), transparent 30rem), #f5f4f0;
+  --surface-card:       rgba(255, 255, 255, 0.94);
+  --surface-secondary:  #ffffff;
+  --surface-input:      rgba(255, 255, 255, 0.92);
+  --border-card:        rgba(76, 86, 105, 0.10);
+  --border-card-hover:  rgba(197, 168, 107, 0.35);
+  --shadow-card:        0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+
+  --text-primary:       #1c2940;
+  --text-secondary:     #5a6477;
+  --text-muted:         #8b94a3;
+
+  --gold:               #c5a86b;
+  --gold-light:         #e0c87a;
+  --gold-bg:            rgba(197, 168, 107, 0.10);
+  --gold-border:        rgba(197, 168, 107, 0.28);
+
+  --success:            #208457;
+  --success-dark:       #136240;
+  --success-bg:         rgba(32, 132, 87, 0.09);
+  --success-border:     rgba(32, 132, 87, 0.20);
+
+  --danger:             #c84949;
+  --danger-bg:          rgba(200, 73, 73, 0.09);
+  --danger-border:      rgba(200, 73, 73, 0.20);
+
+  color: var(--text-primary);
+  background: var(--bg-page);
+  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+}
+
+/* ── 2. Tokens Modo Oscuro (.theme-dark / .dark) ── */
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --bg-page:            radial-gradient(circle at 90% 5%, rgba(208, 175, 103, 0.05), transparent 30rem), #0b1119;
+  --surface-card:       rgba(17, 26, 38, 0.94);
+  --surface-secondary:  rgba(23, 35, 50, 0.98);
+  --surface-input:      #121c29;
+  --border-card:        rgba(255, 255, 255, 0.08);
+  --border-card-hover:  rgba(208, 175, 103, 0.35);
+  --shadow-card:        0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --text-primary:       #edf1f5;
+  --text-secondary:     #9aa6b4;
+  --text-muted:         #667585;
+
+  --gold:               #d0af67;
+  --gold-light:         #e1c47c;
+  --gold-bg:            rgba(208, 175, 103, 0.12);
+  --gold-border:        rgba(208, 175, 103, 0.25);
+
+  --success:            #67c78b;
+  --success-dark:       #4caf70;
+  --success-bg:         rgba(76, 175, 112, 0.12);
+  --success-border:     rgba(76, 175, 112, 0.24);
+
+  --danger:             #ef7773;
+  --danger-bg:          rgba(239, 83, 80, 0.12);
+  --danger-border:      rgba(239, 83, 80, 0.24);
 }
 
 /* ══════════════════════════════════════════════════════════

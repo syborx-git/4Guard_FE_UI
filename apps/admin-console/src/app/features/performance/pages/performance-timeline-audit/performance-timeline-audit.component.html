@@ -1,0 +1,219 @@
+<div class="perf-timeline-view">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       MACRO KPIS DE AUDITORÍA & TRAZABILIDAD (PABLO REQUIREMENTS)
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="perf-audit-kpis">
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--primary">
+        <span class="material-symbols-outlined">timeline</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <span class="perf-kpi-pill-label">Eventos Auditados</span>
+        <strong class="perf-kpi-pill-value">{{ events().length }}</strong>
+        <small>Acciones registradas en timeline</small>
+      </div>
+    </div>
+
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--gold">
+        <span class="material-symbols-outlined">timer</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <span class="perf-kpi-pill-label">Tiempo Total de Ciclo</span>
+        <strong class="perf-kpi-pill-value">73.9 <small class="unit">min</small></strong>
+        <small>Puerta a puerta (Caseta ➔ Salida)</small>
+      </div>
+    </div>
+
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--success">
+        <span class="material-symbols-outlined">verified</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <span class="perf-kpi-pill-label">Candados de Calidad</span>
+        <strong class="perf-kpi-pill-value">100%</strong>
+        <small>F01 17/17 + Peso Packing (±2%)</small>
+      </div>
+    </div>
+
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--info">
+        <span class="material-symbols-outlined">qr_code_2</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <span class="perf-kpi-pill-label">Folio Auditado</span>
+        <strong class="perf-kpi-pill-value" style="font-size: 1.1rem;">{{ folioFilter() || 'FOL-ACTIVO' }}</strong>
+        <small>Trazabilidad por tarima SSCC</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       LÍNEA DE TIEMPO AUDITADA DE MOVIMIENTOS (TIMELINE CRONOLÓGICO)
+       ════════════════════════════════════════════════════════════════ -->
+  <section class="perf-section">
+    <div class="perf-section__header">
+      <div class="perf-section__title">
+        <span class="material-symbols-outlined">history_edu</span>
+        <div>
+          <h2>Línea de Tiempo Auditada de Operadores (Trazabilidad SSCC)</h2>
+          <p>Historial cronológico segundo a segundo asociando usuario, fecha, hora, ubicación y candados de validación</p>
+        </div>
+      </div>
+
+      <div class="perf-toolbar">
+        <div class="perf-search-box">
+          <span class="material-symbols-outlined">tag</span>
+          <input
+            type="text"
+            placeholder="Folio de remisión..."
+            [ngModel]="folioFilter()"
+            (ngModelChange)="folioFilter.set($event)"
+            class="perf-search-input" />
+        </div>
+
+        <div class="perf-search-box">
+          <span class="material-symbols-outlined">barcode</span>
+          <input
+            type="text"
+            placeholder="Código SSCC..."
+            [ngModel]="ssccFilter()"
+            (ngModelChange)="ssccFilter.set($event)"
+            class="perf-search-input" />
+        </div>
+
+        <button type="button" class="perf-btn-search" (click)="onSearch()">
+          <span class="material-symbols-outlined">search</span>
+          <span>Consultar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Pestañas de filtro por operación -->
+    <div class="perf-filter-pills">
+      <button
+        type="button"
+        class="perf-filter-pill"
+        [class.perf-filter-pill--active]="operationTypeFilter() === 'ALL'"
+        (click)="setOpFilter('ALL')">
+        <span>Todas las Operaciones</span>
+      </button>
+      <button
+        type="button"
+        class="perf-filter-pill"
+        [class.perf-filter-pill--active]="operationTypeFilter() === 'PRE_CHECKIN_CASETA'"
+        (click)="setOpFilter('PRE_CHECKIN_CASETA')">
+        <span>Pre-Registro QR</span>
+      </button>
+      <button
+        type="button"
+        class="perf-filter-pill"
+        [class.perf-filter-pill--active]="operationTypeFilter() === 'DESCARGA_RAMPA'"
+        (click)="setOpFilter('DESCARGA_RAMPA')">
+        <span>Descarga Rampa</span>
+      </button>
+      <button
+        type="button"
+        class="perf-filter-pill"
+        [class.perf-filter-pill--active]="operationTypeFilter() === 'ACOMODO_PUTAWAY'"
+        (click)="setOpFilter('ACOMODO_PUTAWAY')">
+        <span>Acomodo Putaway</span>
+      </button>
+      <button
+        type="button"
+        class="perf-filter-pill"
+        [class.perf-filter-pill--active]="operationTypeFilter() === 'SURTIDO_PICKING'"
+        (click)="setOpFilter('SURTIDO_PICKING')">
+        <span>Surtido Picking</span>
+      </button>
+      <button
+        type="button"
+        class="perf-filter-pill"
+        [class.perf-filter-pill--active]="operationTypeFilter() === 'VALIDACION_PESO_F01'"
+        (click)="setOpFilter('VALIDACION_PESO_F01')">
+        <span>Validación Peso & F01</span>
+      </button>
+      <button
+        type="button"
+        class="perf-filter-pill"
+        [class.perf-filter-pill--active]="operationTypeFilter() === 'DESPACHO_EMBARQUE'"
+        (click)="setOpFilter('DESPACHO_EMBARQUE')">
+        <span>Despacho T1</span>
+      </button>
+    </div>
+
+    <!-- ── TIMELINE VERTICAL ── -->
+    <div class="perf-timeline-container">
+      @for (ev of events(); track ev.eventId; let idx = $index) {
+        <div class="perf-timeline-item">
+          <!-- Nodo conector -->
+          <div class="perf-timeline-node">
+            <div class="perf-timeline-badge" [class.perf-timeline-badge--gold]="idx === events().length - 1">
+              @if (ev.operationType === 'PRE_CHECKIN_CASETA') {
+                <span class="material-symbols-outlined">qr_code_scanner</span>
+              } @else if (ev.operationType === 'DESCARGA_RAMPA') {
+                <span class="material-symbols-outlined">download</span>
+              } @else if (ev.operationType === 'ACOMODO_PUTAWAY') {
+                <span class="material-symbols-outlined">shelves</span>
+              } @else if (ev.operationType === 'SURTIDO_PICKING') {
+                <span class="material-symbols-outlined">shopping_cart_checkout</span>
+              } @else if (ev.operationType === 'VALIDACION_PESO_F01') {
+                <span class="material-symbols-outlined">scale</span>
+              } @else {
+                <span class="material-symbols-outlined">lock_clock</span>
+              }
+            </div>
+            @if (idx < events().length - 1) {
+              <div class="perf-timeline-line"></div>
+            }
+          </div>
+
+          <!-- Contenido de la tarjeta de evento -->
+          <div class="perf-timeline-card">
+            <div class="perf-timeline-card__top">
+              <div>
+                <div class="perf-timeline-op-title">
+                  <span class="perf-op-tag">{{ ev.operationType.replace('_', ' ') }}</span>
+                  <span class="perf-folio-tag">Folio: {{ ev.folio }}</span>
+                  <span class="perf-sscc-tag font-mono">SSCC: {{ ev.sscc }}</span>
+                </div>
+                <div class="perf-timeline-operator">
+                  <span class="material-symbols-outlined">person</span>
+                  <strong>{{ ev.operatorName }}</strong>
+                  <span class="perf-code-tag">({{ ev.operatorCode }})</span>
+                </div>
+              </div>
+
+              <div class="perf-timeline-card__meta">
+                <span class="perf-time-stamp font-mono">
+                  <span class="material-symbols-outlined">schedule</span>
+                  {{ ev.timestamp | date:'HH:mm:ss · dd/MMM/yyyy' }}
+                </span>
+                <span class="perf-duration-pill font-mono">
+                  {{ ev.durationSeconds }}s ({{ (ev.durationSeconds / 60) | number:'1.1-1' }} min)
+                </span>
+              </div>
+            </div>
+
+            <p class="perf-timeline-details">{{ ev.details }}</p>
+
+            <div class="perf-timeline-card__bottom">
+              <div class="perf-locations-flow">
+                <span class="perf-loc-pill">{{ ev.sourceLocation }}</span>
+                <span class="material-symbols-outlined perf-flow-arrow">arrow_forward</span>
+                <span class="perf-loc-pill perf-loc-pill--dest">{{ ev.targetLocation }}</span>
+              </div>
+
+              <div class="perf-quality-lock-badge">
+                <span class="material-symbols-outlined">check_circle</span>
+                <span>Candado Calidad: {{ ev.qualityLockStatus }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+</div>

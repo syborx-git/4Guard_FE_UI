@@ -14,6 +14,22 @@ export const adminRoutes: Routes = [
     title: '4GUARD WMS — Gestión de Usuarios',
   },
   {
+    path: 'remissions-history',
+    loadComponent: () =>
+      import('./remission-history/remission-history.component').then(
+        (m) => m.RemissionHistoryComponent
+      ),
+    title: '4GUARD WMS — Historial de Remisiones',
+  },
+  {
+    path: 'audit',
+    loadComponent: () =>
+      import('./audit-console/audit-console.component').then(
+        (m) => m.AuditConsoleComponent
+      ),
+    title: '4GUARD WMS — Consola de Auditoría',
+  },
+  {
     path: 'carriers',
     loadChildren: () =>
       import('./carriers/carriers.routes').then((m) => m.carriersRoutes),
@@ -66,6 +82,28 @@ export const adminRoutes: Routes = [
     loadChildren: () =>
       import('./roles/roles.routes').then((m) => m.rolesRoutes),
     title: '4GUARD WMS — Roles y Matriz de Permisos',
+  },
+  {
+    path: 'user-activity',
+    loadChildren: () =>
+      import('../user-activity/user-activity.routes').then((m) => m.userActivityRoutes),
+    title: '4GUARD WMS — Actividad por Usuario',
+  },
+  {
+    path: 'shifts',
+    redirectTo: '/shifts',
+    pathMatch: 'full',
+  },
+  {
+    path: 'forklift-operators',
+    loadComponent: () =>
+      import('./forklift-operators/forklift-operators.component').then((m) => m.ForkliftOperatorsComponent),
+    title: '4GUARD WMS — Administración de Montacarguistas',
+  },
+  {
+    path: 'alerts-config',
+    redirectTo: '/alerts-config',
+    pathMatch: 'full',
   },
 ];
 

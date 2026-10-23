@@ -1,0 +1,297 @@
+<div class="perf-operators-view">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       1. RESUMEN EJECUTIVO DE PRODUCTIVIDAD CON METAS DINÁMICAS
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="perf-personnel-kpis">
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--primary">
+        <span class="material-symbols-outlined">badge</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <span class="perf-kpi-pill-label">Personal Activo</span>
+        <strong class="perf-kpi-pill-value">{{ activePersonnelCount() }}</strong>
+        <small>Montacarguistas evaluados</small>
+      </div>
+    </div>
+
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--gold">
+        <span class="material-symbols-outlined">speed</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <div class="pill-label-row">
+          <span class="perf-kpi-pill-label">Productividad Promedio</span>
+          <button type="button" class="perf-btn-mini-target" (click)="perfService.openTargetModal()" title="Modificar meta PPH">
+            <span class="material-symbols-outlined">tune</span>
+            <span>Meta: ≥ {{ perfService.userTargets().targetForkliftPph }}</span>
+          </button>
+        </div>
+        <strong class="perf-kpi-pill-value">{{ avgProductivityPph() }} <small class="unit">PPH</small></strong>
+        <small>Tarimas movidas por hora/operador</small>
+      </div>
+    </div>
+
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--success">
+        <span class="material-symbols-outlined">task_alt</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <span class="perf-kpi-pill-label">Cumplimiento Global</span>
+        <strong class="perf-kpi-pill-value">{{ globalCompliance() }}%</strong>
+        <small>Sobre la meta de movimientos de jornada</small>
+      </div>
+    </div>
+
+    <div class="perf-kpi-pill-card">
+      <div class="perf-kpi-pill-icon perf-kpi-pill-icon--info">
+        <span class="material-symbols-outlined">verified</span>
+      </div>
+      <div class="perf-kpi-pill-info">
+        <span class="perf-kpi-pill-label">Certificación DC-3</span>
+        <strong class="perf-kpi-pill-value">{{ dc3CertificationPercentage() }}%</strong>
+        <small>Personal acreditado STPS vigente</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       2. EFICIENCIA Y CUMPLIMIENTO POR TURNO (FILTROS INTERACTIVOS)
+       ════════════════════════════════════════════════════════════════ -->
+  <section class="perf-section">
+    <div class="perf-section__header">
+      <div class="perf-section__title">
+        <span class="material-symbols-outlined">schedule</span>
+        <div>
+          <h2>Eficiencia Operativa por Turno de Trabajo</h2>
+          <p>Turnos sincronizados en tiempo real. Haz clic en una tarjeta de turno para filtrar el ranking.</p>
+        </div>
+      </div>
+      <div class="perf-header-actions">
+        @if (selectedShiftId()) {
+          <button type="button" class="perf-btn-reset-filter" (click)="selectShift(null)">
+            <span class="material-symbols-outlined">filter_alt_off</span>
+            <span>Ver Todos los Turnos</span>
+          </button>
+        }
+        <span class="perf-counter">{{ perfService.shiftProductivity().length }} Turnos en Operación</span>
+      </div>
+    </div>
+
+    <div class="perf-shifts-grid">
+      @for (shift of perfService.shiftProductivity(); track shift.shiftId) {
+        <article
+          class="perf-shift-card"
+          [class.perf-shift-card--selected]="selectedShiftId() === shift.shiftId"
+          (click)="selectShift(shift.shiftId)"
+          tabindex="0"
+          role="button"
+          aria-label="Filtrar por turno">
+          <div class="perf-shift-card__top">
+            <div>
+              <div class="perf-shift-card__title-row">
+                <h3 class="perf-shift-name">{{ shift.shiftName }}</h3>
+                @if (selectedShiftId() === shift.shiftId) {
+                  <span class="perf-selected-chip">Filtro Activo</span>
+                }
+              </div>
+              <span class="perf-shift-time">
+                <span class="material-symbols-outlined">history_toggle_off</span>
+                {{ shift.timeRange }}
+              </span>
+            </div>
+            <span class="perf-status-badge" [ngClass]="'perf-status-badge--' + shift.status.toLowerCase()">
+              {{ shift.status === 'OPTIMAL' ? 'En Meta' : (shift.status === 'WARNING' ? 'Atención' : 'Crítico') }}
+            </span>
+          </div>
+
+          <div class="perf-shift-metrics-row">
+            <div class="perf-shift-metric">
+              <span>Operadores</span>
+              <strong>{{ shift.activeOperatorsCount }}</strong>
+            </div>
+            <div class="perf-shift-metric">
+              <span>Movimientos</span>
+              <strong>{{ shift.totalMovements }}</strong>
+            </div>
+            <div class="perf-shift-metric">
+              <span>PPH Promedio</span>
+              <strong class="font-mono text-gold">{{ shift.avgMovementsPerHour }} /h</strong>
+            </div>
+          </div>
+
+          <div class="perf-shift-progress">
+            <div class="perf-shift-progress__label">
+              <span>Cumplimiento de Meta ({{ perfService.userTargets().targetForkliftPph }} PPH)</span>
+              <strong [class.text-success]="shift.compliancePercentage >= 100" [class.text-warning]="shift.compliancePercentage < 100">
+                {{ shift.compliancePercentage }}%
+              </strong>
+            </div>
+            <div class="perf-progress-bar">
+              <div
+                class="perf-progress-bar__fill"
+                [class.perf-progress-bar__fill--success]="shift.compliancePercentage >= 100"
+                [class.perf-progress-bar__fill--warning]="shift.compliancePercentage < 100"
+                [style.width.%]="shift.compliancePercentage > 100 ? 100 : shift.compliancePercentage">
+              </div>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       3. GRÁFICA VISUAL DE PRODUCTIVIDAD & RANKING DE MONTACARGUISTAS
+       ════════════════════════════════════════════════════════════════ -->
+  <section class="perf-section">
+    <div class="perf-section__header">
+      <div class="perf-section__title">
+        <span class="material-symbols-outlined">leaderboard</span>
+        <div>
+          <h2>Ranking Individual & Gráfica de Rendimiento (PPH)</h2>
+          <p>Comparativa visual de tarimas por hora vs. Meta ({{ perfService.userTargets().targetForkliftPph }} PPH) y certificación DC-3</p>
+        </div>
+      </div>
+      <div class="perf-toolbar">
+        <div class="perf-search-box">
+          <span class="material-symbols-outlined">search</span>
+          <input
+            type="text"
+            placeholder="Buscar por nombre, código MC, DC-3..."
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            class="perf-search-input" />
+        </div>
+
+        <button type="button" class="perf-btn-mini-target" (click)="perfService.openTargetModal()">
+          <span class="material-symbols-outlined">tune</span>
+          <span>Ajustar Meta PPH</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Gráfica de Barras Visual de Productividad por Operador -->
+    <div class="perf-operator-bars-grid">
+      @for (op of filteredOperators(); track op.operatorId) {
+        <div class="perf-op-bar-card">
+          <div class="perf-op-bar-top">
+            <div class="perf-op-identity">
+              <span class="material-symbols-outlined op-icon">forklift</span>
+              <div>
+                <strong>{{ op.fullName }}</strong>
+                <small>{{ op.shiftName }}</small>
+              </div>
+            </div>
+            <div class="perf-op-pph-val">
+              <span class="val font-mono"><strong>{{ op.movementsPerHour }}</strong> PPH</span>
+              <span class="badge" [class.badge--optimal]="op.movementsPerHour >= perfService.userTargets().targetForkliftPph">
+                {{ op.movementsPerHour >= perfService.userTargets().targetForkliftPph ? 'Cumple Meta' : 'Bajo Meta' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Barra de comparación visual vs Meta del Usuario -->
+          <div class="perf-op-progress-track">
+            <div
+              class="perf-op-progress-fill"
+              [style.width.%]="(op.movementsPerHour / (perfService.userTargets().targetForkliftPph * 1.5)) * 100"
+              [class.fill--optimal]="op.movementsPerHour >= perfService.userTargets().targetForkliftPph"
+              [class.fill--warning]="op.movementsPerHour < perfService.userTargets().targetForkliftPph">
+            </div>
+            <div
+              class="perf-op-target-line"
+              [style.left.%]="(perfService.userTargets().targetForkliftPph / (perfService.userTargets().targetForkliftPph * 1.5)) * 100"
+              [title]="'Meta: ' + perfService.userTargets().targetForkliftPph + ' PPH'">
+            </div>
+          </div>
+
+          <div class="perf-op-footer-info">
+            <span>{{ op.totalMovements }} Movs Totales ({{ op.receptionsHandled }} Rec / {{ op.transfersCompleted }} Acom / {{ op.outboundsDispatched }} Sal)</span>
+            <span class="dc3-tag font-mono">{{ op.licenseNumberDc3 }}</span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Tabla Detallada -->
+    @if (filteredOperators().length === 0) {
+      <div class="perf-empty-state">
+        <span class="material-symbols-outlined">person_search</span>
+        <h3>No se encontraron operadores</h3>
+        <p>No hay personal asignado a los criterios o turno seleccionado.</p>
+        <button type="button" class="perf-btn-reset" (click)="clearFilters()">Restablecer Filtros</button>
+      </div>
+    } @else {
+      <div class="perf-table-wrap" style="margin-top: 1rem;">
+        <table class="perf-table">
+          <thead>
+            <tr>
+              <th>Operador / Código</th>
+              <th>Puesto & Turno</th>
+              <th>Certificación DC-3</th>
+              <th class="text-center">Recepción</th>
+              <th class="text-center">Acomodo</th>
+              <th class="text-center">Salidas</th>
+              <th class="text-center">Total Movs</th>
+              <th class="text-center">PPH (Tarimas/Hr)</th>
+              <th class="text-center">Cumplimiento Meta</th>
+              <th class="text-right">Desempeño</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (op of filteredOperators(); track op.operatorId) {
+              <tr>
+                <td>
+                  <div class="perf-operator-cell">
+                    <div class="perf-operator-avatar">
+                      <span class="material-symbols-outlined">person</span>
+                    </div>
+                    <div>
+                      <strong>{{ op.fullName }}</strong>
+                      <span class="perf-code-tag">{{ op.operatorCode }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="perf-job-cell">
+                    <span>{{ op.jobTitle }}</span>
+                    <small>{{ op.shiftName }}</small>
+                  </div>
+                </td>
+                <td>
+                  <div class="perf-license-cell">
+                    <code>{{ op.licenseNumberDc3 }}</code>
+                    <span class="perf-badge-license" [class.perf-badge-license--valid]="op.licenseStatus === 'VIGENTE'">
+                      {{ op.licenseStatus }}
+                    </span>
+                  </div>
+                </td>
+                <td class="text-center font-mono">{{ op.receptionsHandled }}</td>
+                <td class="text-center font-mono">{{ op.transfersCompleted }}</td>
+                <td class="text-center font-mono">{{ op.outboundsDispatched }}</td>
+                <td class="text-center font-mono font-bold">{{ op.totalMovements }}</td>
+                <td class="text-center">
+                  <span class="perf-pph-pill" [class.perf-pph-pill--optimal]="op.movementsPerHour >= perfService.userTargets().targetForkliftPph">
+                    {{ op.movementsPerHour }} /h
+                  </span>
+                </td>
+                <td class="text-center font-mono">
+                  <strong [class.text-success]="op.movementsPerHour >= perfService.userTargets().targetForkliftPph" [class.text-warning]="op.movementsPerHour < perfService.userTargets().targetForkliftPph">
+                    {{ (op.movementsPerHour / perfService.userTargets().targetForkliftPph * 100).toFixed(1) }}%
+                  </strong>
+                </td>
+                <td class="text-right">
+                  <span class="perf-status-badge" [ngClass]="op.movementsPerHour >= perfService.userTargets().targetForkliftPph ? 'perf-status-badge--optimal' : 'perf-status-badge--warning'">
+                    {{ op.movementsPerHour >= perfService.userTargets().targetForkliftPph ? 'Óptimo' : 'Atención' }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+</div>

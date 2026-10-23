@@ -1,0 +1,877 @@
+<!--
+  forklift-operators.component.html
+  HU-142 — Gestión de Montacarguistas — 4GUARD WMS
+  100% Homologado con Transportistas (carrier-management) & Clientes
+-->
+
+<div class="carriers-page">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="carriers-header">
+
+    <div class="carriers-header__top">
+
+      <div class="carriers-header__left">
+        <div class="carriers-header__icon-wrap">
+          <span class="material-symbols-outlined carriers-header__icon">engineering</span>
+        </div>
+
+        <div class="carriers-header__copy">
+          <div class="carriers-header__eyebrow">
+            <a routerLink="/admin" class="carriers-header__eyebrow-tag" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="carriers-header__eyebrow-sep">·</span>
+            <span>Catálogo Maestro</span>
+          </div>
+          <h1 class="carriers-header__title">Gestión de Montacarguistas</h1>
+          <p class="carriers-header__subtitle">
+            Administra los operadores certificados responsables de la carga, descarga y movimiento de mercancía en andenes
+          </p>
+        </div>
+      </div>
+
+      <button
+        id="btn-new-operator"
+        class="carriers-btn carriers-btn--primary"
+        type="button"
+        (click)="startNewOperator()"
+        aria-label="Registrar nuevo montacarguista">
+        <span class="material-symbols-outlined">add</span>
+        Nuevo montacarguista
+      </button>
+
+    </div>
+
+    <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
+    <section aria-label="Métricas de Montacarguistas" class="wms-kpi-section">
+      <div class="wms-kpi-header">
+        <span class="wms-kpi-header__title">
+          <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+          <span>Métricas de Operadores WMS</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="wms-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
+      </div>
+
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+        <div class="wms-kpi-summary-bar animate-fade-in">
+          <div class="wms-kpi-summary-items">
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+              <span class="wms-kpi-summary-label">Total:</span>
+              <strong class="wms-kpi-summary-value">{{ totalOperators() }}</strong>
+            </div>
+
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">Activos:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ activeOperatorsCount() }}</strong>
+            </div>
+
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">DC-3 Vigentes:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ validLicensesCount() }}</strong>
+            </div>
+
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--warning"></span>
+              <span class="wms-kpi-summary-label">Licencias en Alerta:</span>
+              <strong class="wms-kpi-summary-value text-amber-500">{{ alertLicensesCount() }}</strong>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="carriers-kpi-grid animate-fade-in" aria-label="Indicadores de montacarguistas">
+
+          <!-- Total -->
+          <div class="carriers-kpi-card carriers-kpi-card--total">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">engineering</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading()) {
+                <div class="skeleton skeleton--kpi"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ totalOperators() }}</span>
+              }
+              <span class="carriers-kpi-card__label">Total</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--total"></div>
+          </div>
+
+          <!-- Activos -->
+          <div class="carriers-kpi-card carriers-kpi-card--active">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">check_circle</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading()) {
+                <div class="skeleton skeleton--kpi"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ activeOperatorsCount() }}</span>
+              }
+              <span class="carriers-kpi-card__label">Activos</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- Licencias DC-3 Vigentes -->
+          <div class="carriers-kpi-card carriers-kpi-card--active">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">verified</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading()) {
+                <div class="skeleton skeleton--kpi"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ validLicensesCount() }}</span>
+              }
+              <span class="carriers-kpi-card__label">DC-3 Vigentes</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--active"></div>
+          </div>
+
+          <!-- Licencias en Alerta -->
+          <div class="carriers-kpi-card carriers-kpi-card--suspended">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-symbols-outlined">warning</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              @if (isLoading()) {
+                <div class="skeleton skeleton--kpi"></div>
+              } @else {
+                <span class="carriers-kpi-card__value">{{ alertLicensesCount() }}</span>
+              }
+              <span class="carriers-kpi-card__label">Licencias en Alerta</span>
+            </div>
+            <div class="carriers-kpi-card__bar carriers-kpi-card__bar--suspended"></div>
+          </div>
+
+        </div>
+      }
+    </section>
+
+  </header>
+
+  <!-- Toast Alert -->
+  @if (toastMessage()) {
+    <div
+      class="carriers-alert"
+      [ngClass]="{
+        'carriers-alert--success': toastMessage()?.type === 'success',
+        'carriers-alert--error': toastMessage()?.type === 'error'
+      }"
+      role="status"
+    >
+      <span class="material-symbols-outlined">
+        {{ toastMessage()?.type === 'success' ? 'check_circle' : 'error' }}
+      </span>
+      <span>{{ toastMessage()?.text }}</span>
+      <button type="button" (click)="toastMessage.set(null)" style="margin-left: auto; background: none; border: none; cursor: pointer; color: inherit;">
+        <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
+      </button>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SPLIT VIEW 35/65 (MASTER/DETAIL)
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="carriers-split">
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA IZQUIERDA — Directorio (35%)
+         ───────────────────────────────────────────────────────────── -->
+    <aside class="carriers-directory" aria-label="Directorio de montacarguistas">
+
+      <!-- Buscador y Filtros -->
+      <div class="carriers-directory__filters">
+
+        <div class="carriers-search">
+          <span class="material-symbols-outlined carriers-search__icon" aria-hidden="true">search</span>
+          <input
+            id="operator-search"
+            class="carriers-search__input"
+            type="search"
+            placeholder="Nombre, código o licencia DC-3…"
+            [value]="searchTerm()"
+            (input)="searchTerm.set($any($event.target).value)"
+            aria-label="Buscar montacarguista por nombre, código o licencia DC-3"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="carriers-filters-row">
+          <div class="carriers-filter-group">
+            <select
+              id="filter-license"
+              class="carriers-filter-select"
+              [value]="licenseFilter()"
+              (change)="licenseFilter.set($any($event.target).value)"
+              aria-label="Filtrar por estatus de licencia">
+              <option value="ALL">Todas las licencias</option>
+              <option value="VIGENTE">Licencia Vigente</option>
+              <option value="POR_VENCER">Por Vencer (&lt; 30 días)</option>
+              <option value="VENCIDA">Licencia Vencida</option>
+            </select>
+          </div>
+
+          @if (searchTerm() || licenseFilter() !== 'ALL') {
+            <button
+              class="carriers-filter-clear"
+              type="button"
+              (click)="clearFilters()"
+              title="Limpiar filtros"
+              aria-label="Limpiar filtros">
+              <span class="material-symbols-outlined">filter_alt_off</span>
+            </button>
+          }
+        </div>
+
+        <p class="carriers-search__hint">
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          Filtra por nombre, código o licencia DC-3
+        </p>
+      </div>
+
+      <!-- Estados de la Lista -->
+      @if (isLoading()) {
+        <div class="carriers-directory__list" aria-busy="true" aria-label="Cargando montacarguistas">
+          @for (i of [1,2,3,4]; track i) {
+            <div class="carrier-item carrier-item--skeleton">
+              <div class="skeleton skeleton--avatar"></div>
+              <div class="carrier-item__body">
+                <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                <div class="skeleton skeleton--line skeleton--line-medium"></div>
+                <div class="skeleton skeleton--line skeleton--line-short"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (loadError()) {
+        <div class="carriers-state carriers-state--error" role="alert">
+          <div class="carriers-state__icon-wrap">
+            <span class="material-symbols-outlined carriers-state__icon">cloud_off</span>
+          </div>
+          <p class="carriers-state__title">Error de conexión</p>
+          <p class="carriers-state__desc">{{ loadError() }}</p>
+          <button class="carriers-btn carriers-btn--ghost carriers-btn--sm" type="button" (click)="reloadOperators()">
+            <span class="material-symbols-outlined">refresh</span>
+            Reintentar
+          </button>
+        </div>
+      } @else if (isListEmpty()) {
+        <div class="carriers-state" role="status">
+          <div class="carriers-state__icon-wrap">
+            <span class="material-symbols-outlined carriers-state__icon">engineering</span>
+          </div>
+          <p class="carriers-state__title">Sin registros</p>
+          <p class="carriers-state__desc">No hay montacarguistas registrados aún en la base de datos.</p>
+          <button class="carriers-btn carriers-btn--primary carriers-btn--sm" type="button" (click)="startNewOperator()">
+            <span class="material-symbols-outlined">add</span>
+            Registrar el primero
+          </button>
+        </div>
+      } @else if (hasNoResults()) {
+        <div class="carriers-state" role="status">
+          <div class="carriers-state__icon-wrap">
+            <span class="material-symbols-outlined carriers-state__icon">search_off</span>
+          </div>
+          <p class="carriers-state__title">Sin coincidencias</p>
+          <p class="carriers-state__desc">Ningún operador coincide con los filtros aplicados.</p>
+          <button class="carriers-btn carriers-btn--ghost carriers-btn--sm" type="button" (click)="clearFilters()">
+            <span class="material-symbols-outlined">filter_alt_off</span>
+            Limpiar filtros
+          </button>
+        </div>
+      } @else {
+        <!-- Lista de Operadores -->
+        <ul class="carriers-directory__list" role="listbox" aria-label="Lista de montacarguistas">
+          @for (op of filteredOperators(); track op.id) {
+            <li
+              class="carrier-item"
+              [class.carrier-item--selected]="selectedOperatorId() === op.id"
+              [class.carrier-item--suspended]="op.licenseStatus === 'POR_VENCER'"
+              [class.carrier-item--inactive]="op.licenseStatus === 'VENCIDA'"
+              role="option"
+              [attr.aria-selected]="selectedOperatorId() === op.id"
+              (click)="selectOperator(op)"
+              tabindex="0">
+
+              <!-- Avatar -->
+              <div class="carrier-avatar avatar--external" aria-hidden="true">
+                {{ (op.firstName ? op.firstName[0] : '') + (op.lastNamePaternal ? op.lastNamePaternal[0] : '') }}
+              </div>
+
+              <!-- Info -->
+              <div class="carrier-item__body">
+                <div class="carrier-item__name">{{ op.fullName }}</div>
+                <div class="carrier-item__business" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 2px 0;">
+                  @if (op.hasAccess || op.userId) {
+                    <span class="carrier-status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3); font-size: 0.62rem; padding: 1px 6px;">
+                      <span class="material-symbols-outlined" style="font-size: 11px; margin-right: 2px;">tablet_mac</span>
+                      &#64;{{ op.username || op.code }}
+                    </span>
+                  }
+                </div>
+                <div class="carrier-item__meta">
+                  <span class="carrier-item__rfc">{{ op.code }}</span>
+                  @if (op.licenseNumberDc3) {
+                    <span class="carrier-item__type">DC-3: {{ op.licenseNumberDc3 }}</span>
+                  }
+                </div>
+              </div>
+
+              <!-- Estado Licencia -->
+              <div class="carrier-item__status-col">
+                <span
+                  class="carrier-status-badge"
+                  [ngClass]="{
+                    'carrier-status-badge--active': op.licenseStatus === 'VIGENTE',
+                    'carrier-status-badge--suspended': op.licenseStatus === 'POR_VENCER',
+                    'carrier-status-badge--inactive': op.licenseStatus === 'VENCIDA'
+                  }">
+                  {{ op.licenseStatus === 'VIGENTE' ? 'Vigente' : op.licenseStatus === 'POR_VENCER' ? 'Por vencer' : 'Vencida' }}
+                </span>
+                <time class="carrier-item__date">{{ op.licenseExpirationDate }}</time>
+              </div>
+
+            </li>
+          }
+        </ul>
+
+        <!-- Contador -->
+        <div class="carriers-directory__footer">
+          <span class="carriers-count">
+            {{ filteredOperators().length }} montacarguista{{ filteredOperators().length !== 1 ? 's' : '' }}
+          </span>
+        </div>
+      }
+
+    </aside>
+
+    <!-- ─────────────────────────────────────────────────────────────
+         COLUMNA DERECHA — Detalle / Formulario (65%)
+         ───────────────────────────────────────────────────────────── -->
+    <main class="carriers-detail" aria-label="Detalle del montacarguista">
+
+      <div #formSection class="carriers-form-container">
+
+          <!-- ── Barra de Título del Formulario ── -->
+          <div class="carriers-form-header">
+            <div class="carriers-form-header__left">
+              <div class="carriers-form-header__breadcrumb">
+                <span class="material-symbols-outlined">engineering</span>
+                <span>Montacarguistas</span>
+                <span class="material-symbols-outlined carriers-form-header__chevron">chevron_right</span>
+                <strong>
+                  @if (formMode() === 'create') {
+                    Nuevo montacarguista
+                  } @else {
+                    {{ selectedOperator()?.fullName }} ({{ selectedOperator()?.code }})
+                  }
+                </strong>
+              </div>
+
+              @if (selectedOperator() && formMode() !== 'create') {
+                <span class="carrier-status-badge" style="background: var(--gold-bg); color: var(--text-gold); border: 1px solid var(--gold-border);">
+                  <span class="material-symbols-outlined" style="font-size: 12px; margin-right: 2px;">badge</span>
+                  {{ selectedOperator()?.jobTitle || 'Almacenista Montacargista' }}
+                </span>
+
+                <span
+                  class="carrier-status-badge"
+                  [ngClass]="{
+                    'carrier-status-badge--active': selectedOperator()?.status === 'ACTIVO',
+                    'carrier-status-badge--inactive': selectedOperator()?.status === 'INACTIVO'
+                  }">
+                  {{ selectedOperator()?.status }}
+                </span>
+
+                <span
+                  class="carrier-status-badge"
+                  [ngClass]="{
+                    'carrier-status-badge--active': selectedOperator()?.licenseStatus === 'VIGENTE',
+                    'carrier-status-badge--suspended': selectedOperator()?.licenseStatus === 'POR_VENCER',
+                    'carrier-status-badge--inactive': selectedOperator()?.licenseStatus === 'VENCIDA'
+                  }">
+                  DC-3: {{ selectedOperator()?.licenseStatus }}
+                </span>
+              }
+            </div>
+
+            @if (selectedOperator() && formMode() !== 'create') {
+              <div class="flex items-center gap-2">
+                <button
+                  class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                  style="color: var(--accent-gold); border-color: rgba(197, 168, 107, 0.4);"
+                  type="button"
+                  (click)="openResetPinModal(selectedOperator()!)"
+                  title="Restablecer PIN de acceso a la terminal RF">
+                  <span class="material-symbols-outlined text-sm">lock_reset</span>
+                  Restablecer PIN
+                </button>
+                <button
+                  class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                  style="color: var(--c-danger);"
+                  type="button"
+                  (click)="openDeleteModal(selectedOperator()!)">
+                  <span class="material-symbols-outlined text-sm">delete_forever</span>
+                  Eliminar
+                </button>
+              </div>
+            }
+          </div>
+
+          <!-- ════════════════════════════════════════════════════════
+               FORMULARIO REACTIVO (CAMPOS DEL CLIENTE HOMOLOGADOS)
+               ════════════════════════════════════════════════════ -->
+          <form
+            [formGroup]="operatorForm"
+            (ngSubmit)="onSubmitOperator()"
+            novalidate
+            autocomplete="off"
+            class="carriers-form">
+
+            <!-- SECCIÓN 1 — Información Personal -->
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">badge</span>
+                Información Personal
+              </legend>
+
+              <div class="carriers-form-grid carriers-form-grid--3">
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="firstName">Nombre(s)</label>
+                  <input
+                    id="firstName"
+                    class="fg-input"
+                    [class.fg-input--error]="operatorForm.get('firstName')?.invalid && operatorForm.get('firstName')?.touched"
+                    type="text"
+                    formControlName="firstName"
+                    placeholder="Ej. Juan Manuel"
+                    maxlength="100"
+                  />
+                  @if (operatorForm.get('firstName')?.invalid && operatorForm.get('firstName')?.touched) {
+                    <span class="fg-error" role="alert">El nombre es obligatorio.</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="lastNamePaternal">Apellido Paterno</label>
+                  <input
+                    id="lastNamePaternal"
+                    class="fg-input"
+                    [class.fg-input--error]="operatorForm.get('lastNamePaternal')?.invalid && operatorForm.get('lastNamePaternal')?.touched"
+                    type="text"
+                    formControlName="lastNamePaternal"
+                    placeholder="Ej. Pérez"
+                    maxlength="100"
+                  />
+                  @if (operatorForm.get('lastNamePaternal')?.invalid && operatorForm.get('lastNamePaternal')?.touched) {
+                    <span class="fg-error" role="alert">El apellido paterno es obligatorio.</span>
+                  }
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label fg-label--required" for="lastNameMaternal">Apellido Materno</label>
+                  <input
+                    id="lastNameMaternal"
+                    class="fg-input"
+                    [class.fg-input--error]="operatorForm.get('lastNameMaternal')?.invalid && operatorForm.get('lastNameMaternal')?.touched"
+                    type="text"
+                    formControlName="lastNameMaternal"
+                    placeholder="Ej. Hernández"
+                    maxlength="100"
+                  />
+                  @if (operatorForm.get('lastNameMaternal')?.invalid && operatorForm.get('lastNameMaternal')?.touched) {
+                    <span class="fg-error" role="alert">El apellido materno es obligatorio.</span>
+                  }
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 2 — Acceso a Terminal RF / Tableta -->
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">tablet_mac</span>
+                Acceso a Terminal RF / Tableta Operativa
+              </legend>
+
+              @if (formMode() === 'create') {
+                <div style="background: rgba(197, 168, 107, 0.06); border: 1px solid rgba(197, 168, 107, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                  <label class="flex items-center gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      formControlName="createAccess"
+                      style="width: 18px; height: 18px; accent-color: var(--accent-gold); cursor: pointer;"
+                    />
+                    <div>
+                      <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary); display: block;">
+                        Habilitar cuenta de acceso para Terminal RF / Tableta
+                      </span>
+                      <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">
+                        Crea automáticamente las credenciales con rol operativo. El montacarguista podrá definir su contraseña confidencial en su primer ingreso.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                @if (operatorForm.get('createAccess')?.value) {
+                  <div class="carriers-form-grid carriers-form-grid--2">
+                    <div class="fg-field">
+                      <label class="fg-label" for="username">Usuario para Tableta (Opcional)</label>
+                      <input
+                        id="username"
+                        class="fg-input fg-input--mono"
+                        type="text"
+                        formControlName="username"
+                        placeholder="Ej. MC-001 (Automático si se omite)"
+                        maxlength="50"
+                      />
+                      <span class="fg-hint">Por defecto usará el código asignado (MC-XXX).</span>
+                    </div>
+
+                    <div class="fg-field">
+                      <label class="fg-label fg-label--required" for="pin">PIN / Contraseña Temporal</label>
+                      <input
+                        id="pin"
+                        class="fg-input fg-input--mono"
+                        type="text"
+                        formControlName="pin"
+                        placeholder="Ej. 1234"
+                        maxlength="10"
+                      />
+                      <span class="fg-hint">PIN inicial configurado por el supervisor (mínimo 4 caracteres).</span>
+                    </div>
+                  </div>
+                }
+              } @else {
+                <!-- Modo Edición: Resumen de Acceso RF -->
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px;">
+                  <div class="flex items-center gap-4">
+                    <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(197, 168, 107, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-gold);">
+                      <span class="material-symbols-outlined" style="font-size: 24px;">phonelink_lock</span>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">
+                          Usuario RF: &#64;{{ selectedOperator()?.username || selectedOperator()?.code }}
+                        </span>
+                        @if (selectedOperator()?.hasAccess || selectedOperator()?.userId) {
+                          <span class="carrier-status-badge carrier-status-badge--active" style="font-size: 0.65rem;">
+                            Cuenta Activa
+                          </span>
+                        } @else {
+                          <span class="carrier-status-badge carrier-status-badge--inactive" style="font-size: 0.65rem;">
+                            Sin Acceso RF
+                          </span>
+                        }
+                      </div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                        @if (selectedOperator()?.changePasswordRequired) {
+                          <span style="color: #f59e0b; display: inline-flex; align-items: center; gap: 4px;">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">pending</span>
+                            Pendiente: El montacarguista debe cambiar su PIN temporal en su primer ingreso.
+                          </span>
+                        } @else {
+                          <span style="color: #10b981; display: inline-flex; align-items: center; gap: 4px;">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">verified_user</span>
+                            PIN personalizado y activo.
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                    style="color: var(--accent-gold); border: 1px solid rgba(197, 168, 107, 0.35); padding: 8px 14px;"
+                    (click)="openResetPinModal(selectedOperator()!)">
+                    <span class="material-symbols-outlined text-sm">key</span>
+                    <span>Restablecer PIN</span>
+                  </button>
+                </div>
+              }
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Certificación STPS / DC-3 (Opcional) -->
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">verified_user</span>
+                Certificación STPS / DC-3 (Opcional)
+              </legend>
+
+              <div class="carriers-form-grid carriers-form-grid--2">
+
+                <div class="fg-field">
+                  <label class="fg-label" for="licenseNumberDc3">Número de Licencia DC-3</label>
+                  <input
+                    id="licenseNumberDc3"
+                    class="fg-input fg-input--mono"
+                    type="text"
+                    formControlName="licenseNumberDc3"
+                    placeholder="Ej. LIC-MC-9921 (Opcional)"
+                    maxlength="50"
+                  />
+                  <span class="fg-hint">Número oficial registrado ante la STPS si aplica.</span>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="licenseExpirationDate">Vencimiento de Certificación</label>
+                  <input
+                    id="licenseExpirationDate"
+                    class="fg-input"
+                    type="date"
+                    formControlName="licenseExpirationDate"
+                  />
+                  <span class="fg-hint">Fecha de vencimiento si cuenta con certificación.</span>
+                </div>
+
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Control & Auditoría en Tiempo Real (WMS SSOT) -->
+            @if (selectedOperator() && formMode() !== 'create') {
+              <fieldset class="carriers-form-section carriers-form-section--readonly">
+                <legend class="carriers-form-section__legend">
+                  <span class="material-symbols-outlined">history</span>
+                  Información de Control & Auditoría
+                </legend>
+
+                <div class="carriers-readonly-grid">
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Código Operativo</span>
+                    <span class="carriers-readonly-field__value font-mono font-bold text-amber-600">{{ selectedOperator()?.code }}</span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Organización</span>
+                    <span class="carriers-readonly-field__value">{{ selectedOperator()?.organizationName || '4GUARD LOGISTICS CORP' }}</span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Registrado Por</span>
+                    <span class="carriers-readonly-field__value font-mono">&#64;{{ selectedOperator()?.createdBy || 'system' }}</span>
+                  </div>
+                  <div class="carriers-readonly-field">
+                    <span class="carriers-readonly-field__label">Fecha de Registro</span>
+                    <span class="carriers-readonly-field__value">{{ selectedOperator()?.createdAt ? (selectedOperator()?.createdAt | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
+                  </div>
+                </div>
+
+                <!-- ── Bitácora Transaccional en Tiempo Real (GET /api/v1/forklift-operators/{id}/audit) ── -->
+                <div class="carriers-timeline-preview">
+                  <div class="carriers-timeline-preview__header">
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined">timeline</span>
+                      <span>Historial de Auditoría Transaccional (WMS Backend)</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="carriers-btn-icon"
+                      (click)="loadAuditLogs(selectedOperator()!.id)"
+                      title="Actualizar bitácora">
+                      <span class="material-symbols-outlined" [class.spin]="isLoadingAudit()">refresh</span>
+                    </button>
+                  </div>
+
+                  @if (isLoadingAudit()) {
+                    <div class="carriers-timeline-preview__loading">
+                      <span class="material-symbols-outlined spin">sync</span>
+                      <span>Consultando bitácora de auditoría desde el servidor…</span>
+                    </div>
+                  } @else if (auditEntries().length === 0) {
+                    <p class="carriers-timeline-preview__empty">
+                      No se encontraron registros de auditoría para este operador.
+                    </p>
+                  } @else {
+                    <div class="carriers-timeline-preview__nodes">
+                      @for (entry of auditEntries(); track entry.logId; let last = $last) {
+                        <div class="carriers-tl-node {{ getAuditColorClass(entry.action) }}">
+                          <div class="carriers-tl-node__dot">
+                            <span class="material-symbols-outlined">{{ getAuditIcon(entry.action) }}</span>
+                          </div>
+                          <div class="carriers-tl-node__line" [class.carriers-tl-node__line--last]="last"></div>
+                          <div class="carriers-tl-node__content">
+                            <div class="carriers-tl-node__header">
+                              <span class="carriers-tl-node__action">{{ getAuditSummary(entry.action) }}</span>
+                              <span class="carriers-tl-node__tag">{{ entry.action }}</span>
+                            </div>
+
+                            @if (entry.details && entry.details.length > 0) {
+                              <div class="carriers-tl-node__diffs">
+                                @for (det of entry.details; track det.fieldName) {
+                                  <div class="carriers-tl-diff">
+                                    <span class="carriers-tl-diff__field">{{ det.fieldName }}:</span>
+                                    <span class="carriers-tl-diff__old">{{ det.oldValue !== null ? det.oldValue : 'null' }}</span>
+                                    <span class="material-symbols-outlined carriers-tl-diff__arrow">arrow_forward</span>
+                                    <span class="carriers-tl-diff__new">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
+                                  </div>
+                                }
+                              </div>
+                            }
+
+                            <div class="carriers-tl-node__meta">
+                              Ejecutado por <strong>&#64;{{ entry.username }}</strong> · {{ entry.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}
+                            </div>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </fieldset>
+            }
+
+            <!-- ── Acciones del Formulario ── -->
+            <div class="carriers-form-actions">
+              @if (selectedOperator() && formMode() !== 'create') {
+                <div class="carriers-form-actions__status-group">
+                  <button
+                    type="button"
+                    (click)="toggleOperatorStatus(selectedOperator()!)"
+                    class="carriers-btn carriers-btn--ghost carriers-btn--sm"
+                  >
+                    <span class="material-symbols-outlined">swap_horiz</span>
+                    <span>Marcar como {{ selectedOperator()?.status === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO' }}</span>
+                  </button>
+                </div>
+              }
+
+              <div class="carriers-form-actions__main">
+                <button
+                  type="button"
+                  (click)="cancelForm()"
+                  class="carriers-btn carriers-btn--ghost"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  [disabled]="operatorForm.invalid || forkliftService.saving()"
+                  class="carriers-btn carriers-btn--primary"
+                >
+                  <span class="material-symbols-outlined">save</span>
+                  <span>{{ formMode() === 'edit' ? 'Actualizar Montacarguista' : 'Guardar Montacarguista' }}</span>
+                </button>
+              </div>
+            </div>
+
+          </form>
+
+        </div>
+
+    </main>
+
+  </div>
+
+  <!-- Modal Confirmación Baja Definitiva -->
+  @if (selectedOperatorForDelete()) {
+    <div class="modal-overlay">
+      <div class="modal-card max-w-md w-full p-6 space-y-4 shadow-2xl border-rose-500/40">
+        <div class="flex items-center justify-between border-b border-subtle pb-3">
+          <div class="flex items-center gap-2 text-rose-600">
+            <span class="material-symbols-outlined text-2xl">warning</span>
+            <h3 class="font-bold text-sm uppercase">Confirmar Baja</h3>
+          </div>
+          <button type="button" (click)="closeDeleteModal()" class="text-secondary hover:text-primary">
+            <span class="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+
+        <div class="text-xs space-y-2 text-secondary">
+          <p>
+            ¿Está seguro de eliminar al montacarguista <strong class="text-primary">{{ selectedOperatorForDelete()?.fullName }}</strong> ({{ selectedOperatorForDelete()?.code }})?
+          </p>
+          <p class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 font-medium">
+            ⚠️ El registro se marcará como inactivo y no aparecerá en las listas de selección en andenes de carga/descarga.
+          </p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-subtle">
+          <button type="button" (click)="closeDeleteModal()" class="carriers-btn carriers-btn--ghost text-xs">Cancelar</button>
+          <button type="button" (click)="confirmHardDelete()" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1 cursor-pointer">
+            <span class="material-symbols-outlined text-sm">delete_forever</span>
+            <span>Sí, Confirmar Baja</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal Restablecer PIN / Contraseña Temporal -->
+  @if (isResetPinModalOpen()) {
+    <div class="modal-overlay">
+      <div class="modal-card max-w-md w-full p-6 space-y-4 shadow-2xl" style="background: var(--bg-card); border: 1px solid rgba(197, 168, 107, 0.4); border-radius: 16px;">
+        <div class="flex items-center justify-between border-b border-subtle pb-3">
+          <div class="flex items-center gap-2" style="color: var(--accent-gold);">
+            <span class="material-symbols-outlined text-2xl">key</span>
+            <h3 class="font-bold text-sm uppercase">Restablecer PIN de Tableta</h3>
+          </div>
+          <button type="button" (click)="closeResetPinModal()" class="text-secondary hover:text-primary">
+            <span class="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+
+        <div class="text-xs space-y-3 text-secondary">
+          <p>
+            Asigne un nuevo PIN o contraseña temporal para el montacarguista
+            <strong class="text-primary font-bold">{{ resetPinOperator()?.fullName }}</strong>
+            (<span class="font-mono text-amber-500">&#64;{{ resetPinOperator()?.username || resetPinOperator()?.code }}</span>).
+          </p>
+
+          <div class="fg-field" style="margin-top: 12px;">
+            <label class="fg-label fg-label--required" for="modalNewPin">Nuevo PIN Temporal</label>
+            <input
+              id="modalNewPin"
+              class="fg-input fg-input--mono"
+              type="text"
+              [value]="newPinValue()"
+              (input)="onPinInputChange($event)"
+              placeholder="Ej. 1234"
+              maxlength="10"
+              style="font-size: 1.1rem; letter-spacing: 2px; text-align: center; font-weight: bold; color: var(--accent-gold);"
+            />
+            <span class="fg-hint">Mínimo 4 caracteres numéricos o alfanuméricos.</span>
+          </div>
+
+          <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs flex items-start gap-2">
+            <span class="material-symbols-outlined text-base">info</span>
+            <span>
+              Al confirmar, se activará la bandera de <strong>cambio de contraseña obligatorio</strong> para que el montacarguista deba personalizar su propio PIN confidencial al iniciar sesión en su terminal RF.
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-subtle">
+          <button type="button" (click)="closeResetPinModal()" class="carriers-btn carriers-btn--ghost text-xs">Cancelar</button>
+          <button
+            type="button"
+            (click)="submitResetPin()"
+            [disabled]="isSubmittingPin() || newPinValue().trim().length < 4"
+            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1 cursor-pointer disabled:opacity-50">
+            <span class="material-symbols-outlined text-sm">check</span>
+            <span>{{ isSubmittingPin() ? 'Guardando...' : 'Confirmar y Asignar PIN' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

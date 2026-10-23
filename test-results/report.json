@@ -1,0 +1,302 @@
+{
+  "config": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "C:\\Users\\kike2\\OneDrive\\Escritorio\\Syborx\\4ward\\workspace\\4Guard_FE_UI\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "e2e/quality/quality-oracle.spec.ts"
+    ],
+    "configFile": "C:\\Users\\kike2\\OneDrive\\Escritorio\\Syborx\\4ward\\workspace\\4Guard_FE_UI\\playwright.config.ts",
+    "rootDir": "C:/Users/kike2/OneDrive/Escritorio/Syborx/4ward/workspace/4Guard_FE_UI/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/kike2/OneDrive/Escritorio/Syborx/4ward/workspace/4Guard_FE_UI/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/kike2/OneDrive/Escritorio/Syborx/4ward/workspace/4Guard_FE_UI/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/report.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "quality\\quality-oracle.spec.ts",
+      "file": "quality/quality-oracle.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Oráculo de Pruebas E2E — Control de Calidad (QM) 4GUARD WMS",
+          "file": "quality/quality-oracle.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "[ORACLE-QM-01] Autenticación y Navegación a Módulo de Calidad (/quality/blocks)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5568,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T18:45:00.830Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\kike2\\OneDrive\\Escritorio\\Syborx\\4ward\\workspace\\4Guard_FE_UI\\test-results\\quality-quality-oracle-Orá-427af--de-Calidad-quality-blocks--chromium\\test-finished-1.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ffacab0bfaed4581ec7d-c955e215752f4d18d31c",
+              "file": "quality/quality-oracle.spec.ts",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "[ORACLE-QM-02] Submódulo de Liberaciones y 3 Destinos Finales (/quality/releases)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4913,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T18:45:06.564Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\kike2\\OneDrive\\Escritorio\\Syborx\\4ward\\workspace\\4Guard_FE_UI\\test-results\\quality-quality-oracle-Orá-e4ff9-s-Finales-quality-releases--chromium\\test-finished-1.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ffacab0bfaed4581ec7d-e48100d4f40ab5790e64",
+              "file": "quality/quality-oracle.spec.ts",
+              "line": 87,
+              "column": 7
+            },
+            {
+              "title": "[ORACLE-QM-03] Submódulo de Verificación de Carga F01-PO-GC-8.6-03 (/quality/load-verifications)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4853,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T18:45:11.496Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\kike2\\OneDrive\\Escritorio\\Syborx\\4ward\\workspace\\4Guard_FE_UI\\test-results\\quality-quality-oracle-Orá-1167e-quality-load-verifications--chromium\\test-finished-1.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ffacab0bfaed4581ec7d-9985d3b7226035e79724",
+              "file": "quality/quality-oracle.spec.ts",
+              "line": 114,
+              "column": 7
+            },
+            {
+              "title": "[ORACLE-QM-04] Submódulo de KPIs y Reclamos F01 con Impacto Financiero (/quality/claims)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4921,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T18:45:16.370Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\kike2\\OneDrive\\Escritorio\\Syborx\\4ward\\workspace\\4Guard_FE_UI\\test-results\\quality-quality-oracle-Orá-928d4--Financiero-quality-claims--chromium\\test-finished-1.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ffacab0bfaed4581ec7d-3a16e11fe7d9af2712cb",
+              "file": "quality/quality-oracle.spec.ts",
+              "line": 135,
+              "column": 7
+            },
+            {
+              "title": "[ORACLE-QM-05] Validación Integral de Endpoints REST en Spring Boot + PostgreSQL",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 805,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-29T18:45:21.315Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\kike2\\OneDrive\\Escritorio\\Syborx\\4ward\\workspace\\4Guard_FE_UI\\test-results\\quality-quality-oracle-Orá-b04ea-T-en-Spring-Boot-PostgreSQL-chromium\\test-finished-1.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ffacab0bfaed4581ec7d-3e71edf433c8b8b44487",
+              "file": "quality/quality-oracle.spec.ts",
+              "line": 153,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-29T18:45:00.273Z",
+    "duration": 22013.584,
+    "expected": 5,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

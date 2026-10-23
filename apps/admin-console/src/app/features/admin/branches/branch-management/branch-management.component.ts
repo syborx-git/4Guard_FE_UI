@@ -64,7 +64,7 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
 
   protected readonly selectedBranch = signal<Branch | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
@@ -105,6 +105,13 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
     ];
   });
 
+  /** Retorna los primeros 8 dígitos (#00000001) para visualización compacta y limpia en todo el sistema. */
+  protected getShortId(id?: string | null): string {
+    if (!id) return '--------';
+    const clean = id.replace(/[^a-zA-Z0-9]/g, '');
+    return clean.length >= 8 ? clean.slice(0, 8).toUpperCase() : clean.padEnd(8, '0').toUpperCase();
+  }
+
   // ─── Computed Lista Filtrada ────────────────────────────────────────────────
 
   protected readonly filteredBranches = computed(() => {
@@ -130,6 +137,13 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
     return list;
   });
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── Computed KPIs ──────────────────────────────────────────────────────────
 
   protected readonly totalBranches = computed(() => this.branchService.totalCount());
@@ -152,6 +166,7 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
   // ─── Ciclo de Vida ───────────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    this.startNewBranch();
     this.loadOrganizations();
     this.loadBranches();
   }
@@ -226,16 +241,7 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
   }
 
   protected cancelForm(): void {
-    const branch = this.selectedBranch();
-    if (branch) {
-      this.formMode.set('edit');
-      this.populateForm(branch);
-    } else {
-      this.formMode.set('idle');
-    }
-    this.submitAttempted.set(false);
-    this.backendError.set(null);
-    this.saveSuccess.set(false);
+    this.startNewBranch();
   }
 
   private populateForm(branch: Branch): void {
@@ -291,7 +297,7 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
         code: raw.code.trim().toUpperCase(),
         timezone: raw.timezone,
         addressLine1: raw.addressLine1.trim(),
-        status: raw.status,
+        status: 'ACTIVE',
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: (res) => {
           this.saveSuccess.set(true);
@@ -315,7 +321,7 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
         code: raw.code.trim().toUpperCase(),
         timezone: raw.timezone,
         addressLine1: raw.addressLine1.trim(),
-        status: raw.status,
+        status: this.selectedBranch()?.status || 'ACTIVE',
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: (res) => {
           this.saveSuccess.set(true);
@@ -431,7 +437,10 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
     } else if (status === 400) {
       this.backendError.set(serverMsg || 'Datos inválidos. Revisa los campos del formulario.');
     } else {
-      this.backendError.set('Error interno del servidor. Intenta de nuevo más tarde.');
+      this.backendError.set(serverMsg || 'Error al procesar la solicitud en el servidor. Intenta de nuevo más tarde.');
+    }
+    if (this.backendError()) {
+      this.toastService.error(this.backendError()!);
     }
   }
 
@@ -465,5 +474,53 @@ export class BranchManagementComponent implements OnInit, OnDestroy {
 
   protected get hasActiveFilters(): boolean {
     return !!this.filterText() || !!this.filterStatus();
+  }
+
+  // ─── Helpers de Formato para Línea de Tiempo Homologada ─────────────────────────
+
+  protected getAuditIcon(action?: string, fallbackIcon?: string): string {
+    if (fallbackIcon && fallbackIcon !== 'info') return fallbackIcon;
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'add_circle';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'delete_forever';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('ACTIVE') || a.includes('LOCK')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action?: string, fallbackColor?: string): string {
+    if (fallbackColor && (fallbackColor === 'amber' || fallbackColor === 'blue' || fallbackColor === 'purple' || fallbackColor === 'emerald' || fallbackColor === 'red' || fallbackColor === 'indigo' || fallbackColor === 'update' || fallbackColor === 'create' || fallbackColor === 'status' || fallbackColor === 'delete')) {
+      return `carriers-tl-node--${fallbackColor}`;
+    }
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'carriers-tl-node--red';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('LOCK')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      name: 'Nombre de Sucursal',
+      code: 'Código de Sucursal',
+      timezone: 'Zona Horaria',
+      addressLine1: 'Dirección Principal',
+      status: 'Estado Operativo',
+      organizationId: 'ID Organización',
+      organizationName: 'Organización Perteneciente'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activa';
+      if (s === 'INACTIVE') return 'Inactiva';
+      if (s === 'SUSPENDED') return 'Suspendida';
+    }
+    return String(value);
   }
 }

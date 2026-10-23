@@ -23,7 +23,7 @@ import { RolePermissionService, Role, Permission } from '../services/role-permis
 import { InventoryService, InventoryItem, InventoryState } from '../services/inventory.service';
 import { MovementService, InventoryMovement } from '../services/movement.service';
 import { IncidenceService, Incidence, IncidenceStatus, IncidenceType, IncidenceSeverity } from '../services/incidence.service';
-import { AuditLogService, AuditLog } from '../services/audit.service';
+import { AuditLogService } from '../services/audit.service';
 import { NotificationAdminService, NotificationAdminItem, NotificationSeverity } from '../services/notification-admin.service';
 import { RestrictSpecialCharsDirective } from '../../../shared/directives/restrict-special-chars.directive';
 
@@ -167,7 +167,7 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       },
       sections: {
         categoryLabel: 'ESTRUCTURA DE ALMACÉN · MAESTROS',
-        title: 'Secciones de Almacén',
+        title: 'Almacén',
         description: 'Zonificación lógica y térmica de la red de almacenamiento. Defina pasillos, áreas de recibo, cámaras de congelado frío y zonas de cuarentena técnica.',
         icon: 'grid_view'
       },
@@ -185,13 +185,13 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       },
       skus: {
         categoryLabel: 'CATÁLOGOS DE MERCANCÍA · CONTROL',
-        title: 'Catálogo de Productos / SKUs',
+        title: 'Productos',
         description: 'Catálogo maestro de unidades de mantenimiento de stock (SKUs). Defina pesos, dimensiones, unidades de medida y clasificaciones.',
         icon: 'inventory'
       },
       users: {
         categoryLabel: 'SEGURIDAD Y CONTROL DE ACCESO',
-        title: 'Control de Usuarios y Seguridad',
+        title: 'Usuarios',
         description: 'Administración de cuentas de usuario, operadores, credenciales y estados de conexión. Gestione bloqueos por intentos fallidos.',
         icon: 'manage_accounts'
       },
@@ -219,11 +219,11 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
         description: 'Bitácora de incidencias de calidad, mermas, daños y bloqueos preventivos registrados en la operación diaria.',
         icon: 'report_problem'
       },
-      audit: {
+      'user-activity': {
         categoryLabel: 'MONITOREO Y SOPORTE',
-        title: 'Consola de Auditoría Forense',
-        description: 'Historial detallado de auditoría forense del sistema. Registro de llamadas a API, modificaciones JSON y direcciones IP.',
-        icon: 'find_in_page'
+        title: 'Reporte de Actividad por Usuario',
+        description: 'Consulta, analiza y exporta las acciones realizadas por los usuarios dentro de la operación del WMS.',
+        icon: 'manage_search'
       },
       notifications: {
         categoryLabel: 'MONITOREO Y SOPORTE',
@@ -486,35 +486,6 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
           }
         ];
       }
-      case 'audit': {
-        const logs = this.auditService.auditLogs();
-        return [
-          {
-            label: 'Total Logs',
-            value: logs.length,
-            icon: 'find_in_page',
-            tone: 'neutral'
-          },
-          {
-            label: 'Creaciones',
-            value: logs.filter(l => l.action === 'CREATE').length,
-            icon: 'add_circle',
-            tone: 'success'
-          },
-          {
-            label: 'Modificaciones',
-            value: logs.filter(l => l.action === 'UPDATE').length,
-            icon: 'edit',
-            tone: 'info'
-          },
-          {
-            label: 'Eliminaciones',
-            value: logs.filter(l => l.action === 'DELETE').length,
-            icon: 'delete',
-            tone: 'danger'
-          }
-        ];
-      }
       case 'notifications': {
         const notifs = this.notifService.notifications();
         return [
@@ -575,17 +546,18 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     // Estructura
     { id: 'organizations', title: 'Organizaciones', icon: 'corporate_fare', description: 'Administra empresas y holdings raíz (Multi-Tenancy).', category: 'STRUCTURE' },
     { id: 'branches', title: 'Sucursales / Almacenes', icon: 'domain', description: 'Sedes físicas, zonas horarias e información de contacto.', category: 'STRUCTURE' },
-    { id: 'sections', title: 'Secciones de Almacén', icon: 'grid_view', description: 'Áreas lógicas del almacén (recibo, frío, pasillos).', category: 'STRUCTURE' },
+    { id: 'sections', title: 'ALMACÉN', icon: 'grid_view', description: 'Áreas lógicas del almacén (recibo, frío, pasillos).', category: 'STRUCTURE' },
     { id: 'locations', title: 'Ubicaciones físicas', icon: 'location_on', description: 'Coordenadas 3D, capacidades y bloqueos de posiciones.', category: 'STRUCTURE' },
     
     // Mercancía y Operatividad Logística
     { id: 'clients', title: 'Clientes / Owners', icon: 'partner_exchange', description: 'Dueños de mercancía y stock depositado (3PL).', category: 'MERCHANDISE' },
-    { id: 'skus', title: 'Catálogo de SKUs', icon: 'inventory', description: 'Unidades de medida, pesos y descripciones de stock.', category: 'MERCHANDISE' },
+    { id: 'skus', title: 'PRODUCTOS', icon: 'inventory', description: 'Unidades de medida, pesos y descripciones de stock.', category: 'MERCHANDISE' },
     { id: 'carriers', title: 'Transportistas', icon: 'local_shipping', description: 'Empresas transportistas, capacidades de vehículos y licencias.', category: 'MERCHANDISE' },
     { id: 'suppliers', title: 'Proveedores', icon: 'storefront', description: 'Catálogo maestro de proveedores, condiciones operativas y alcance WMS.', category: 'MERCHANDISE' },
+    { id: 'forklift-operators', title: 'Montacarguistas', icon: 'engineering', description: 'Alta, licenciamiento DC-3, asignación de turnos y disponibilidad en andén.', category: 'MERCHANDISE' },
     
     // Seguridad
-    { id: 'users', title: 'Control de Usuarios', icon: 'manage_accounts', description: 'Cuentas de operadores, intentos de acceso y bloqueos.', category: 'SECURITY' },
+    { id: 'users', title: 'USUARIOS', icon: 'manage_accounts', description: 'Cuentas de operadores, intentos de acceso y bloqueos.', category: 'SECURITY' },
     { id: 'roles', title: 'Roles y Matriz de Permisos', icon: 'shield_person', description: 'Nivel de jerarquía y matriz de accesos y llamadas a API.', category: 'SECURITY' },
     { id: 'shifts', title: 'Turnos y Horarios', icon: 'schedule', description: 'Configuración de jornadas operativas, horarios y disponibilidad de almacén.', category: 'SECURITY' },
     { id: 'sessions', title: 'Sesiones Activas', icon: 'group', description: 'Monitoreo en tiempo real de conexiones de usuario activas.', category: 'SECURITY' },
@@ -595,7 +567,10 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     { id: 'movements', title: 'Movimientos de Stock', icon: 'history', description: 'Historial inmutable de traslados, recibos y despachos.', category: 'SUPPORT' },
     { id: 'incidences', title: 'Incidencias de Calidad', icon: 'report_problem', description: 'Seguimiento a anomalías, mermas y bloqueos de calidad.', category: 'SUPPORT', badgeCount: () => this.incidenceService.incidences().filter(i => i.status !== 'CLOSED').length },
     { id: 'audit', title: 'Consola de Auditoría', icon: 'find_in_page', description: 'Bitácora forense de red y comparador de cambios JSON.', category: 'SUPPORT' },
-    { id: 'notifications', title: 'Alertas del Sistema', icon: 'notifications_active', description: 'Bandeja técnica de notificaciones y alertas críticas.', category: 'SUPPORT', badgeCount: () => this.notifService.notifications().filter(n => !n.read).length }
+    { id: 'user-activity', title: 'Actividad por Usuario', icon: 'manage_search', description: 'Consulta, análisis y trazabilidad de acciones realizadas por los usuarios.', category: 'SUPPORT' },
+    { id: 'remission-history', title: 'Historial de Remisiones', icon: 'receipt_long', description: 'Consulta ejecutiva de recepciones, traspasos y salidas con filtros de fecha, cliente y turno.', category: 'SUPPORT' },
+    { id: 'alerts-config', title: 'Alertas y Notificaciones', icon: 'notifications_active', description: 'Configuración de reglas, umbrales y notificaciones operativas.', category: 'SUPPORT' },
+    { id: 'business-rules', title: 'Reglas de Negocio', icon: 'gavel', description: 'Motor de reglas de negocio enterprise, políticas operativas y disparadores.', category: 'SUPPORT' }
   ];
 
   // Cálculo unificado de filtrado, búsqueda y paginación reactiva
@@ -676,12 +651,6 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
           list = list.filter(i => i.folio.toLowerCase().includes(search) || i.sscc.toLowerCase().includes(search) || i.description.toLowerCase().includes(search) || i.reporterUsername.toLowerCase().includes(search) || i.resolutionNotes.toLowerCase().includes(search));
         }
         break;
-      case 'audit':
-        list = this.auditService.auditLogs();
-        if (search) {
-          list = list.filter(a => a.username.toLowerCase().includes(search) || a.entityType.toLowerCase().includes(search) || a.action.toLowerCase().includes(search) || a.ipAddress.toLowerCase().includes(search));
-        }
-        break;
       case 'notifications':
         list = this.notifService.notifications();
         if (search) {
@@ -744,12 +713,36 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       this.router.navigate(['/suppliers']);
       return;
     }
+    if (moduleId === 'forklift-operators') {
+      this.router.navigate(['/admin/forklift-operators']);
+      return;
+    }
     if (moduleId === 'locations') {
       this.router.navigate(['/layout']);
       return;
     }
     if (moduleId === 'shifts') {
-      this.router.navigate(['/admin/shifts']);
+      this.router.navigate(['/shifts']);
+      return;
+    }
+    if (moduleId === 'user-activity') {
+      this.router.navigate(['/admin/user-activity']);
+      return;
+    }
+    if (moduleId === 'remission-history') {
+      this.router.navigate(['/admin/remissions-history']);
+      return;
+    }
+    if (moduleId === 'audit') {
+      this.router.navigate(['/admin/audit']);
+      return;
+    }
+    if (moduleId === 'alerts-config') {
+      this.router.navigate(['/alerts-config']);
+      return;
+    }
+    if (moduleId === 'business-rules') {
+      this.router.navigate(['/business-rules']);
       return;
     }
     this.selectedModule.set(moduleId);
@@ -1550,12 +1543,7 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     alert('Acción correctiva registrada con éxito.');
   }
 
-  // Visualizador de auditoría y notificaciones
-  protected openAuditDetail(log: AuditLog): void {
-    this.detailModel = log;
-    this.isDetailModalOpen.set(true);
-  }
-
+  // Visualizador de notificaciones
   protected openNotificationDetail(n: NotificationAdminItem): void {
     this.notifService.markAsRead(n.id);
     this.detailModel = n;

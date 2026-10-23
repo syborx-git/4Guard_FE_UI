@@ -5,8 +5,10 @@
  */
 
 import { Routes } from '@angular/router';
+import { UserRole } from '@4guard/shared-core';
 import { authGuard }    from './core/guards/auth.guard';
 import { offlineGuard } from './core/guards/offline.guard';
+import { rfRoleGuard }  from './core/guards/role.guard';
 
 export const rfRoutes: Routes = [
   // Login
@@ -32,10 +34,41 @@ export const rfRoutes: Routes = [
         title: '4GUARD Terminal — Menú',
       },
 
+      // Cockpit Unificado del Montacarguista (Descarga, Reubicación, Carga)
+      {
+        path: 'cockpit',
+        canActivate: [rfRoleGuard],
+        data: {
+          roles: [
+            UserRole.WAREHOUSE_OPERATOR,
+            UserRole.SHIFT_LEADER,
+            UserRole.CONTROL_DESK,
+            UserRole.OPERATIONS_SUPERVISOR,
+            UserRole.OPERATIONS_COORDINATOR,
+            UserRole.OPERATIONS_MANAGER,
+            UserRole.ADMIN,
+          ],
+        },
+        loadComponent: () =>
+          import('./features/cockpit/forklift-cockpit.component').then((m) => m.ForkliftCockpitComponent),
+        title: '4GUARD Terminal — Cockpit Montacarguista',
+      },
+
       // Recepción de mercancía (andén)
       {
         path: 'receiving',
-        canActivate: [offlineGuard],
+        canActivate: [offlineGuard, rfRoleGuard],
+        data: {
+          roles: [
+            UserRole.WAREHOUSE_OPERATOR,
+            UserRole.SHIFT_LEADER,
+            UserRole.CONTROL_DESK,
+            UserRole.OPERATIONS_SUPERVISOR,
+            UserRole.OPERATIONS_COORDINATOR,
+            UserRole.OPERATIONS_MANAGER,
+            UserRole.ADMIN,
+          ],
+        },
         loadChildren: () =>
           import('./features/receiving/receiving.routes').then((m) => m.receivingRoutes),
         title: '4GUARD Terminal — Recepción',
@@ -44,7 +77,18 @@ export const rfRoutes: Routes = [
       // Ubicación en rack (putaway)
       {
         path: 'putaway',
-        canActivate: [offlineGuard],
+        canActivate: [offlineGuard, rfRoleGuard],
+        data: {
+          roles: [
+            UserRole.WAREHOUSE_OPERATOR,
+            UserRole.SHIFT_LEADER,
+            UserRole.CONTROL_DESK,
+            UserRole.OPERATIONS_SUPERVISOR,
+            UserRole.OPERATIONS_COORDINATOR,
+            UserRole.OPERATIONS_MANAGER,
+            UserRole.ADMIN,
+          ],
+        },
         loadChildren: () =>
           import('./features/putaway/putaway.routes').then((m) => m.putawayRoutes),
         title: '4GUARD Terminal — Putaway',
@@ -53,7 +97,18 @@ export const rfRoutes: Routes = [
       // Picking de órdenes
       {
         path: 'picking',
-        canActivate: [offlineGuard],
+        canActivate: [offlineGuard, rfRoleGuard],
+        data: {
+          roles: [
+            UserRole.WAREHOUSE_OPERATOR,
+            UserRole.SHIFT_LEADER,
+            UserRole.CONTROL_DESK,
+            UserRole.OPERATIONS_SUPERVISOR,
+            UserRole.OPERATIONS_COORDINATOR,
+            UserRole.OPERATIONS_MANAGER,
+            UserRole.ADMIN,
+          ],
+        },
         loadChildren: () =>
           import('./features/picking/picking.routes').then((m) => m.pickingRoutes),
         title: '4GUARD Terminal — Picking',
@@ -62,7 +117,19 @@ export const rfRoutes: Routes = [
       // Conteo físico
       {
         path: 'counting',
-        canActivate: [offlineGuard],
+        canActivate: [offlineGuard, rfRoleGuard],
+        data: {
+          roles: [
+            UserRole.WAREHOUSE_OPERATOR,
+            UserRole.QM_INSPECTOR,
+            UserRole.SHIFT_LEADER,
+            UserRole.CONTROL_DESK,
+            UserRole.OPERATIONS_SUPERVISOR,
+            UserRole.OPERATIONS_COORDINATOR,
+            UserRole.OPERATIONS_MANAGER,
+            UserRole.ADMIN,
+          ],
+        },
         loadChildren: () =>
           import('./features/counting/counting.routes').then((m) => m.countingRoutes),
         title: '4GUARD Terminal — Conteo',
@@ -71,6 +138,18 @@ export const rfRoutes: Routes = [
       // Inspección QM
       {
         path: 'quality',
+        canActivate: [rfRoleGuard],
+        data: {
+          roles: [
+            UserRole.QM_INSPECTOR,
+            UserRole.SHIFT_LEADER,
+            UserRole.CONTROL_DESK,
+            UserRole.OPERATIONS_SUPERVISOR,
+            UserRole.OPERATIONS_COORDINATOR,
+            UserRole.OPERATIONS_MANAGER,
+            UserRole.ADMIN,
+          ],
+        },
         loadChildren: () =>
           import('./features/quality/quality.routes').then((m) => m.qualityRoutes),
         title: '4GUARD Terminal — Calidad',
@@ -82,6 +161,24 @@ export const rfRoutes: Routes = [
         loadChildren: () =>
           import('./features/sync/sync.routes').then((m) => m.syncRoutes),
         title: '4GUARD Terminal — Sincronización',
+      },
+
+      // Seguridad y Caseta de Vigilancia
+      {
+        path: 'security',
+        canActivate: [rfRoleGuard],
+        data: {
+          roles: [
+            UserRole.SECURITY_GUARD,
+            UserRole.OPERATIONS_SUPERVISOR,
+            UserRole.OPERATIONS_COORDINATOR,
+            UserRole.OPERATIONS_MANAGER,
+            UserRole.ADMIN,
+          ],
+        },
+        loadChildren: () =>
+          import('./features/security/security.routes').then((m) => m.securityRoutes),
+        title: '4GUARD Terminal — Seguridad & Caseta',
       },
 
       // Reporte de anomalía

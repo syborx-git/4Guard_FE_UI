@@ -61,7 +61,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
 
   protected readonly selectedSku = signal<ProductSku | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
@@ -97,9 +97,18 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
     const list = this.clientService.clients();
     if (list && list.length > 0) return list;
     return [
-      { id: '55c89bd2-24e5-42da-b1af-c39434c251dc', name: 'Nestlé México' }
+      { id: 'f8d2d5f1-8b4e-4640-bf01-f6c088ad3a69', name: 'MARCAS NESTLE S.A. DE C.V.' },
+      { id: '99a0aac1-03cc-4ddf-89df-5f5925c57026', name: 'NESTLE MEXICO S.A. DE C.V.' },
+      { id: '26115b4f-b330-4440-8934-949434c46d93', name: 'QUALAMEX S.A. DE C.V.' }
     ];
   });
+
+  /** Retorna los primeros 8 dígitos (#00001001) para visualización compacta y limpia en todo el sistema. */
+  protected getShortId(id?: string | null): string {
+    if (!id) return '--------';
+    const clean = id.replace(/[^a-zA-Z0-9]/g, '');
+    return clean.length >= 8 ? clean.slice(0, 8).toUpperCase() : clean.padEnd(8, '0').toUpperCase();
+  }
 
   // ─── Computed Lista Filtrada ────────────────────────────────────────────────
 
@@ -115,7 +124,9 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
         const nameMatch = (s.name || '').toLowerCase().includes(search);
         const descMatch = (s.description || '').toLowerCase().includes(search);
         const clientMatch = (s.clientName || '').toLowerCase().includes(search);
-        return codeMatch || nameMatch || descMatch || clientMatch;
+        const shortId = this.getShortId(s.id).toLowerCase();
+        const idMatch = (s.id || '').toLowerCase().includes(search) || shortId.includes(search);
+        return codeMatch || nameMatch || descMatch || clientMatch || idMatch;
       });
     }
 
@@ -150,6 +161,13 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
     return Math.min(this.currentPage() * this.pageSize(), this.filteredSkus().length);
   });
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── Computed KPIs ──────────────────────────────────────────────────────────
 
   protected readonly totalSkus    = computed(() => this.skuService.totalCount());
@@ -171,6 +189,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
   // ─── Ciclo de Vida ───────────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    this.startNewSku();
     this.loadClients();
     this.loadSkus();
   }
@@ -276,16 +295,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
   }
 
   protected cancelForm(): void {
-    const sku = this.selectedSku();
-    if (sku) {
-      this.formMode.set('edit');
-      this.populateForm(sku);
-    } else {
-      this.formMode.set('idle');
-    }
-    this.submitAttempted.set(false);
-    this.backendError.set(null);
-    this.saveSuccess.set(false);
+    this.startNewSku();
   }
 
   private populateForm(sku: ProductSku): void {
@@ -343,7 +353,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
         description: raw.description ? raw.description.trim() : '',
         weight: Number(raw.weight),
         unit: raw.unit,
-        status: raw.status || 'ACTIVE'
+        status: 'ACTIVE'
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.saveSuccess.set(true);
@@ -368,7 +378,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
         description: raw.description ? raw.description.trim() : '',
         weight: Number(raw.weight),
         unit: raw.unit,
-        status: raw.status || 'ACTIVE'
+        status: this.selectedSku()?.status || 'ACTIVE'
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
           this.saveSuccess.set(true);
@@ -526,5 +536,53 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
 
   protected get hasActiveFilters(): boolean {
     return !!this.filterText() || !!this.filterClientId() || !!this.filterStatus();
+  }
+
+  // ─── Helpers de Formato para Línea de Tiempo Homologada ─────────────────────────
+
+  protected getAuditIcon(action?: string, fallbackIcon?: string): string {
+    if (fallbackIcon && fallbackIcon !== 'info') return fallbackIcon;
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'add_circle';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'delete_forever';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('ACTIVE') || a.includes('LOCK')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action?: string, fallbackColor?: string): string {
+    if (fallbackColor && (fallbackColor === 'amber' || fallbackColor === 'blue' || fallbackColor === 'purple' || fallbackColor === 'emerald' || fallbackColor === 'red' || fallbackColor === 'indigo' || fallbackColor === 'update' || fallbackColor === 'create' || fallbackColor === 'status' || fallbackColor === 'delete')) {
+      return `carriers-tl-node--${fallbackColor}`;
+    }
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA')) return 'carriers-tl-node--red';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('LOCK')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      code: 'Código SKU',
+      description: 'Descripción del Producto',
+      unit: 'Unidad de Medida',
+      weight: 'Peso Unitario (kg)',
+      status: 'Estado Operativo',
+      clientId: 'ID Cliente Depositante',
+      clientName: 'Cliente Depositante'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activo';
+      if (s === 'INACTIVE') return 'Inactivo';
+      if (s === 'SUSPENDED') return 'Suspendido';
+    }
+    return String(value);
   }
 }

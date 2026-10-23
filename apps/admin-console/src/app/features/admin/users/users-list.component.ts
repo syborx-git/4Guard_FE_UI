@@ -13,6 +13,7 @@ import { BranchService } from '../services/branch.service';
 import { UserAuditLogDto } from '../../../core/models/user.models';
 import { TempPasswordModalComponent } from './temp-password-modal/temp-password-modal.component';
 import { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';
+import { SetPasswordModalComponent } from './set-password-modal/set-password-modal.component';
 
 import { RolePermissionService } from '../services/role-permission.service';
 
@@ -33,6 +34,7 @@ function noWhitespaceValidator(control: AbstractControl): ValidationErrors | nul
     RouterLink,
     TempPasswordModalComponent,
     ConfirmDialogComponent,
+    SetPasswordModalComponent,
   ],
   templateUrl: './users-list.component.html',
   styleUrl: './users-list.component.css'
@@ -49,8 +51,9 @@ export class UsersListComponent implements OnInit, OnDestroy {
 
   // ── Estado de la vista ───────────────────────────────────
   protected readonly selectedUser = signal<UserAdminItem | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
+  protected readonly isSaving = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
   protected readonly isLoadingUsers = signal<boolean>(true);
@@ -59,6 +62,18 @@ export class UsersListComponent implements OnInit, OnDestroy {
   // ── Audit Logs ───────────────────────────────────────────
   protected readonly auditEntries = signal<UserAuditLogDto[]>([]);
   protected readonly isLoadingAudit = signal<boolean>(false);
+  protected readonly showAuditTimeline = signal<boolean>(true);
+
+  protected toggleShowAuditTimeline(): void {
+    this.showAuditTimeline.update((v) => !v);
+  }
+
+  // ── Estado: KPIs Comprimidos (Estilo Recepción) ───────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
 
   // ── Filtros del directorio (Señales Reactivas) ─────────────
   protected readonly filterText = signal('');
@@ -70,6 +85,38 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected readonly isGenerating = signal(false);
   protected readonly tempPassword = signal<string | null>(null);
   protected readonly tempPasswordUser = signal<UserAdminItem | null>(null);
+
+  // ── Estado: Establecer Contraseña Definitiva ───────────────
+  protected readonly showSetPasswordModal = signal(false);
+
+  protected openSetPasswordModal(): void {
+    this.showSetPasswordModal.set(true);
+  }
+
+  protected closeSetPasswordModal(): void {
+    this.showSetPasswordModal.set(false);
+  }
+
+  protected onPasswordConfirmed(newPassword: string): void {
+    this.showSetPasswordModal.set(false);
+    const user = this.selectedUser();
+    if (user) {
+      this.userAdminService.update(user.id, {
+        password: newPassword
+      }).pipe(takeUntil(this.destroy$)).subscribe({
+        next: () => {
+          this.toastService.success(`⚡ Contraseña de "${user.firstName} ${user.lastName}" establecida con éxito en la base de datos.`, 4000);
+          this.saveSuccess.set(true);
+          this.loadAuditLogs(user.id);
+          setTimeout(() => this.saveSuccess.set(false), 4000);
+        },
+        error: (err: HttpErrorResponse) => {
+          const msg = err?.error?.message || err?.message || 'Error al actualizar la contraseña del usuario.';
+          this.toastService.error(msg, 4500);
+        }
+      });
+    }
+  }
 
   // ── Estado: Eliminación de Usuario ───────────────────────
   protected readonly deletingUser = signal<UserAdminItem | null>(null);
@@ -93,21 +140,25 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected readonly availableRoles = computed(() => {
     const dbRoles = this.roleService.roles();
     if (dbRoles && dbRoles.length > 0) {
-      return dbRoles.map(r => ({
-        id: r.id,
-        name: r.name,
-        label: this.getRoleLabel(r.name)
-      }));
+      return dbRoles
+        .filter(r => r.name !== 'VIGILANCIA')
+        .map(r => ({
+          id: r.id,
+          name: r.name,
+          label: this.getRoleLabel(r.name)
+        }));
     }
-    // Fallback con roles del sistema
+    // Fallback con catálogo oficial de roles del sistema WMS (Organigrama Oficial)
     return [
-      { id: 'ADMIN', name: 'ADMIN', label: 'Administrador General (ADMIN)' },
-      { id: 'WAREHOUSE_MANAGER', name: 'WAREHOUSE_MANAGER', label: 'Gerente de Almacén (WAREHOUSE_MANAGER)' },
-      { id: 'DOCK_SUPERVISOR', name: 'DOCK_SUPERVISOR', label: 'Supervisor de Embarques (DOCK_SUPERVISOR)' },
-      { id: 'QM_INSPECTOR', name: 'QM_INSPECTOR', label: 'Inspector de Calidad (QM_INSPECTOR)' },
-      { id: 'WAREHOUSE_OPERATOR', name: 'WAREHOUSE_OPERATOR', label: 'Operario de Almacén (WAREHOUSE_OPERATOR)' },
-      { id: 'AUDITOR', name: 'AUDITOR', label: 'Auditor (AUDITOR)' },
-      { id: 'CLIENT', name: 'CLIENT', label: 'Cliente 3PL (CLIENT)' },
+      { id: 'ADMIN', name: 'ADMIN', label: 'Director General (Admin)' },
+      { id: 'OPERATIONS_MANAGER', name: 'OPERATIONS_MANAGER', label: 'Gerente de Operaciones' },
+      { id: 'OPERATIONS_COORDINATOR', name: 'OPERATIONS_COORDINATOR', label: 'Coordinador de Operaciones' },
+      { id: 'OPERATIONS_SUPERVISOR', name: 'OPERATIONS_SUPERVISOR', label: 'Supervisor de Operaciones' },
+      { id: 'CONTROL_DESK', name: 'CONTROL_DESK', label: 'Mesa de Control' },
+      { id: 'SHIFT_LEADER', name: 'SHIFT_LEADER', label: 'Líder de Turno' },
+      { id: 'WAREHOUSE_OPERATOR', name: 'WAREHOUSE_OPERATOR', label: 'Montacarguista' },
+      { id: 'QM_INSPECTOR', name: 'QM_INSPECTOR', label: 'Inspector de Calidad' },
+      { id: 'SECURITY_GUARD', name: 'SECURITY_GUARD', label: 'Guardia de Seguridad (Caseta)' },
     ];
   });
 
@@ -148,20 +199,35 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected readonly totalUsers = computed(() => this.userAdminService.users().length);
   protected readonly kpiActive = computed(() => this.userAdminService.users().filter(u => u.status === 'ACTIVE').length);
   protected readonly kpiInactive = computed(() => this.userAdminService.users().filter(u => u.status !== 'ACTIVE').length);
-  protected readonly kpiAdminSupervisors = computed(() => 
-    this.userAdminService.users().filter(u => 
-      u.role === UserRole.ADMIN || 
-      u.role === UserRole.WAREHOUSE_MANAGER || 
-      u.role === UserRole.DOCK_SUPERVISOR
-    ).length
-  );
+  protected readonly kpiAdminSupervisors = computed(() => {
+    const adminSupervisorSet = new Set([
+      'ADMIN', 'ROLE_ADMIN',
+      'OPERATIONS_MANAGER', 'ROLE_OPERATIONS_MANAGER',
+      'WAREHOUSE_MANAGER', 'ROLE_WAREHOUSE_MANAGER',
+      'CEO', 'ROLE_CEO',
+      'OPERATIONS_SUPERVISOR', 'ROLE_OPERATIONS_SUPERVISOR',
+      'DOCK_SUPERVISOR', 'ROLE_DOCK_SUPERVISOR',
+      'SHIFT_LEADER', 'ROLE_SHIFT_LEADER',
+      'CONTROL_DESK', 'ROLE_CONTROL_DESK',
+      'SUPERVISOR', 'ROLE_SUPERVISOR'
+    ]);
+    return this.userAdminService.users().filter(u => {
+      const role = (u.role || '').toUpperCase().trim();
+      const cleanRole = role.replace('ROLE_', '');
+      return adminSupervisorSet.has(role) || adminSupervisorSet.has(cleanRole);
+    }).length;
+  });
 
   // ── Ciclo de vida ────────────────────────────────────────
   ngOnInit(): void {
+    this.branchService.loadBranches().pipe(takeUntil(this.destroy$)).subscribe({
+      error: (err) => console.error('Error al precargar sucursales de la BD:', err)
+    });
     this.roleService.loadRolesAndPermissions().pipe(takeUntil(this.destroy$)).subscribe({
       error: (err) => console.error('Error al precargar roles de la BD:', err)
     });
     this.loadUsers();
+    this.startNewUser();
   }
 
   ngOnDestroy(): void {
@@ -181,7 +247,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
         this.isLoadingUsers.set(false);
         const msg = err?.error?.message || 'Error al cargar los usuarios del backend.';
         this.loadUsersError.set(msg);
-        this.toastService.error(msg);
+        this.toastService.error(msg, 4000);
       }
     });
   }
@@ -210,13 +276,15 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected startNewUser(): void {
     this.selectedUser.set(null);
     this.formMode.set('new');
+    const firstRole = this.availableRoles()[0]?.name || 'OPERATIONS_MANAGER';
+    const firstBranch = this.availableBranches()[0]?.id || null;
     this.form.reset({
       firstName: '',
       lastName: '',
       username: '',
       email: '',
-      role: UserRole.WAREHOUSE_OPERATOR,
-      branchId: null,
+      role: firstRole,
+      branchId: firstBranch,
       status: 'ACTIVE'
     });
     this.submitAttempted.set(false);
@@ -233,7 +301,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
       this.formMode.set('edit');
       this.populateForm(user);
     } else {
-      this.formMode.set('idle');
+      this.startNewUser();
     }
     this.submitAttempted.set(false);
     this.backendError.set(null);
@@ -278,9 +346,22 @@ export class UsersListComponent implements OnInit, OnDestroy {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      
+      const missingFields: string[] = [];
+      if (this.fieldHasError('firstName')) missingFields.push('Nombre(s)');
+      if (this.fieldHasError('lastName')) missingFields.push('Apellidos');
+      if (this.fieldHasError('username')) missingFields.push('Nombre de Usuario');
+      if (this.fieldHasError('email')) missingFields.push('Correo Electrónico');
+      if (this.fieldHasError('role')) missingFields.push('Rol del Sistema');
+
+      const detail = missingFields.length > 0 
+        ? `Faltan campos obligatorios: ${missingFields.join(', ')}.`
+        : 'Por favor completa todos los campos requeridos (*).';
+      this.toastService.warning(`⚠️ ${detail}`, 4500);
       return;
     }
 
+    this.isSaving.set(true);
     const raw = this.form.getRawValue();
     const branch = this.availableBranches().find(b => b.id === raw.branchId);
     const branchName = branch ? branch.name : (raw.branchId ? 'Sucursal Seleccionada' : 'Acceso Corporativo');
@@ -298,31 +379,42 @@ export class UsersListComponent implements OnInit, OnDestroy {
         branchId: raw.branchId,
         branchName: branchName,
         role: raw.role,
-        status: raw.status,
-        isEnabled: raw.status === 'ACTIVE',
+        status: 'ACTIVE',
+        isEnabled: true,
         changePasswordRequired: false,
         failedAttempts: 0,
         lockedUntil: null,
         permanentlyLocked: false
       }).pipe(takeUntil(this.destroy$)).subscribe({
-        next: (res) => {
+        next: (response) => {
+          this.isSaving.set(false);
           this.saveSuccess.set(true);
-          const createdItem = this.userAdminService.users().find(u => u.email === raw.email.trim().toLowerCase());
-          if (createdItem) {
-            this.selectedUser.set(createdItem);
-            this.loadAuditLogs(createdItem.id);
+          const fullName = `${raw.firstName.trim()} ${raw.lastName.trim()}`;
+          this.toastService.success(`⚡ Usuario "${fullName}" creado y registrado con éxito en el sistema.`, 4000);
+          
+          this.loadUsers();
+          const createdUser = response?.data;
+          if (createdUser) {
+            const mappedItem = this.userAdminService.users().find(u => u.id === createdUser.id);
+            if (mappedItem) {
+              this.selectedUser.set(mappedItem);
+              this.loadAuditLogs(mappedItem.id);
+            }
           }
           this.formMode.set('edit');
           this.submitAttempted.set(false);
-          this.toastService.success('Usuario registrado con éxito.');
-          setTimeout(() => this.saveSuccess.set(false), 3500);
+          setTimeout(() => this.saveSuccess.set(false), 4000);
         },
         error: (err: HttpErrorResponse) => {
-          this.backendError.set(err?.error?.message || err?.message || 'Error al crear el usuario.');
+          this.isSaving.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al crear el usuario en la base de datos.';
+          this.backendError.set(msg);
+          this.toastService.error(`❌ ${msg}`, 5000);
         }
       });
     } else if (mode === 'edit' && this.selectedUser()) {
       const userId = this.selectedUser()!.id;
+      const currentStatus = this.selectedUser()?.status || 'ACTIVE';
       this.userAdminService.update(userId, {
         firstName: raw.firstName.trim(),
         lastName: raw.lastName.trim(),
@@ -331,11 +423,15 @@ export class UsersListComponent implements OnInit, OnDestroy {
         role: raw.role,
         branchId: raw.branchId,
         branchName: branchName,
-        status: raw.status,
-        isEnabled: raw.status === 'ACTIVE'
+        status: currentStatus,
+        isEnabled: currentStatus === 'ACTIVE'
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
+          this.isSaving.set(false);
           this.saveSuccess.set(true);
+          const fullName = `${raw.firstName.trim()} ${raw.lastName.trim()}`;
+          this.toastService.success(`⚡ Usuario "${fullName}" actualizado con éxito.`, 4000);
+          this.loadUsers();
           const updated = this.userAdminService.users().find(u => u.id === userId);
           if (updated) {
             this.selectedUser.set(updated);
@@ -343,13 +439,17 @@ export class UsersListComponent implements OnInit, OnDestroy {
           this.submitAttempted.set(false);
           this.form.markAsPristine();
           this.loadAuditLogs(userId);
-          this.toastService.success('Usuario actualizado con éxito.');
-          setTimeout(() => this.saveSuccess.set(false), 3500);
+          setTimeout(() => this.saveSuccess.set(false), 4000);
         },
         error: (err: HttpErrorResponse) => {
-          this.backendError.set(err?.error?.message || err?.message || 'Error al actualizar el usuario.');
+          this.isSaving.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al actualizar el usuario en la base de datos.';
+          this.backendError.set(msg);
+          this.toastService.error(`❌ ${msg}`, 5000);
         }
       });
+    } else {
+      this.isSaving.set(false);
     }
   }
 
@@ -370,10 +470,11 @@ export class UsersListComponent implements OnInit, OnDestroy {
           this.populateForm(updated);
         }
         this.loadAuditLogs(target.id);
-        this.toastService.success(`Usuario ${newStatus === 'ACTIVE' ? 'activado' : 'desactivado'} con éxito.`);
+        this.toastService.success(`Usuario "${target.firstName} ${target.lastName}" ${newStatus === 'ACTIVE' ? 'activado' : 'desactivado'} con éxito.`, 3500);
       },
-      error: (err) => {
-        this.toastService.error(err?.error?.message || 'Error al cambiar el estado del usuario.');
+      error: (err: HttpErrorResponse) => {
+        const msg = err?.error?.message || 'Error al cambiar el estado del usuario.';
+        this.toastService.error(msg, 4000);
       }
     });
   }
@@ -404,6 +505,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
         if (response.success && response.data) {
           this.tempPassword.set(response.data);
           this.tempPasswordUser.set(user);
+          this.toastService.success(`Contraseña temporal generada para "${user.firstName} ${user.lastName}".`, 4000);
           this.loadAuditLogs(user.id);
         } else {
           this.toastService.error(response.message || 'No se pudo generar la contraseña temporal.');
@@ -446,12 +548,13 @@ export class UsersListComponent implements OnInit, OnDestroy {
         this.deletingUser.set(null);
         this.selectedUser.set(null);
         this.formMode.set('idle');
-        this.toastService.success('Usuario eliminado correctamente.');
+        this.toastService.success(`Usuario "${user.firstName} ${user.lastName}" eliminado correctamente.`, 4000);
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         this.isDeleting.set(false);
         this.deletingUser.set(null);
-        this.toastService.error(err.message || 'Error al eliminar el usuario.');
+        const msg = err?.error?.message || err?.message || 'Error al eliminar el usuario.';
+        this.toastService.error(msg, 4000);
       }
     });
   }
@@ -473,7 +576,50 @@ export class UsersListComponent implements OnInit, OnDestroy {
   }
 
   protected getRoleLabel(role: UserRole | string): string {
-    return ROLE_LABELS[role as UserRole] || role;
+    if (!role) return '';
+    const clean = role.replace('ROLE_', '').toUpperCase();
+    const extendedLabels: Record<string, string> = {
+      'ADMIN': 'Administrador General',
+      'OPERATIONS_MANAGER': 'Gerente de Operaciones',
+      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'CEO': 'Director General',
+      'OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
+      'DOCK_SUPERVISOR': 'Supervisor de Andén',
+      'SHIFT_LEADER': 'Líder de Turno',
+      'CONTROL_DESK': 'Mesa de Control',
+      'QM_INSPECTOR': 'Inspector de Calidad',
+      'WAREHOUSE_OPERATOR': 'Operario de Almacén',
+      'MANEUVER_OPERATOR': 'Operador de Maniobras',
+      'SECURITY_GUARD': 'Guardia de Seguridad',
+      'AUDITOR': 'Auditor',
+      'CLIENT': 'Cliente 3PL',
+    };
+    if (extendedLabels[clean]) return extendedLabels[clean];
+    if (ROLE_LABELS[role as UserRole]) return ROLE_LABELS[role as UserRole];
+    return role;
+  }
+
+  protected getRoleShortLabel(role: UserRole | string): string {
+    if (!role) return '';
+    const clean = role.replace('ROLE_', '').toUpperCase();
+    const shortLabels: Record<string, string> = {
+      'ADMIN': 'Administrador General',
+      'OPERATIONS_MANAGER': 'Gerente Operaciones',
+      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'CEO': 'Director General',
+      'OPERATIONS_SUPERVISOR': 'Supervisor Operativo',
+      'DOCK_SUPERVISOR': 'Supervisor Andén',
+      'SHIFT_LEADER': 'Líder de Turno',
+      'CONTROL_DESK': 'Mesa de Control',
+      'QM_INSPECTOR': 'Inspector Calidad',
+      'WAREHOUSE_OPERATOR': 'Operario Almacén',
+      'MANEUVER_OPERATOR': 'Operador Maniobras',
+      'SECURITY_GUARD': 'Guardia de Seguridad',
+      'AUDITOR': 'Auditor WMS',
+      'CLIENT': 'Cliente 3PL',
+    };
+    if (shortLabels[clean]) return shortLabels[clean];
+    return this.getRoleLabel(role);
   }
 
   protected getInitials(user: UserAdminItem): string {
@@ -484,15 +630,42 @@ export class UsersListComponent implements OnInit, OnDestroy {
     return 'US';
   }
 
+  protected getPreviewInitials(): string {
+    const first = (this.form.get('firstName')?.value || '').trim()[0] || '';
+    const last = (this.form.get('lastName')?.value || '').trim()[0] || '';
+    if (first && last) return (first + last).toUpperCase();
+    if (first) return first.toUpperCase();
+    return 'NU';
+  }
+
+  protected getPreviewBranchName(): string {
+    const branchId = this.form.get('branchId')?.value;
+    if (!branchId) return 'Acceso Corporativo';
+    const branch = this.availableBranches().find(b => b.id === branchId);
+    return branch ? branch.name : 'Sucursal Asignada';
+  }
+
   protected getAvatarClass(role: UserRole | string): string {
-    switch (role) {
-      case UserRole.ADMIN: return 'avatar--admin';
-      case UserRole.WAREHOUSE_MANAGER: return 'avatar--manager';
-      case UserRole.DOCK_SUPERVISOR: return 'avatar--supervisor';
-      case UserRole.QM_INSPECTOR: return 'avatar--inspector';
-      case UserRole.AUDITOR: return 'avatar--supervisor';
-      case UserRole.CLIENT: return 'avatar--manager';
-      default: return 'avatar--operator';
+    const r = (role || '').toUpperCase().replace('ROLE_', '');
+    switch (r) {
+      case 'ADMIN':
+      case 'CEO':
+        return 'avatar--admin';
+      case 'OPERATIONS_MANAGER':
+      case 'WAREHOUSE_MANAGER':
+        return 'avatar--manager';
+      case 'OPERATIONS_SUPERVISOR':
+      case 'DOCK_SUPERVISOR':
+      case 'SHIFT_LEADER':
+      case 'CONTROL_DESK':
+      case 'AUDITOR':
+        return 'avatar--supervisor';
+      case 'QM_INSPECTOR':
+        return 'avatar--inspector';
+      case 'SECURITY_GUARD':
+        return 'avatar--security';
+      default:
+        return 'avatar--operator';
     }
   }
 
@@ -510,13 +683,13 @@ export class UsersListComponent implements OnInit, OnDestroy {
 
   protected getAuditColorClass(action: string): string {
     switch (action) {
-      case 'USER_CREATED': return 'users-tl-node--emerald';
-      case 'USER_UPDATED': return 'users-tl-node--blue';
-      case 'LOGIN': return 'users-tl-node--purple';
-      case 'PASSWORD_RESET': return 'users-tl-node--amber';
-      case 'STATUS_CHANGE': return 'users-tl-node--indigo';
-      case 'USER_DELETED': return 'users-tl-node--red';
-      default: return 'users-tl-node--blue';
+      case 'USER_CREATED': return 'carriers-tl-node--emerald';
+      case 'USER_UPDATED': return 'carriers-tl-node--blue';
+      case 'LOGIN': return 'carriers-tl-node--purple';
+      case 'PASSWORD_RESET': return 'carriers-tl-node--amber';
+      case 'STATUS_CHANGE': return 'carriers-tl-node--indigo';
+      case 'USER_DELETED': return 'carriers-tl-node--red';
+      default: return 'carriers-tl-node--blue';
     }
   }
 
@@ -530,6 +703,36 @@ export class UsersListComponent implements OnInit, OnDestroy {
       case 'USER_DELETED': return 'Eliminación de cuenta de usuario';
       default: return action;
     }
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      username: 'Usuario',
+      email: 'Correo Electrónico',
+      firstName: 'Nombre',
+      lastName: 'Apellido',
+      role: 'Rol de Sistema',
+      branchId: 'Sucursal / Sede',
+      status: 'Estado',
+      active: 'Activo'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activo';
+      if (s === 'INACTIVE') return 'Inactivo';
+      if (s === 'BLOCKED') return 'Bloqueado';
+    }
+    if (fieldName === 'role') {
+      return this.getRoleLabel(value);
+    }
+    return String(value);
   }
 
   protected isSelectedUser(user: UserAdminItem): boolean {

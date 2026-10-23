@@ -8,14 +8,16 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ActiveSessionsService, ActiveSession } from '../../../core/services/active-sessions.service';
 import { AuthState } from '../../../core/auth/auth.state';
+import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmDialogComponent } from '../users/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'fg-active-sessions-monitor',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink, ConfirmDialogComponent],
   templateUrl: './active-sessions-monitor.component.html',
   styleUrls: ['./active-sessions-monitor.component.css']
 })
@@ -23,12 +25,17 @@ export class ActiveSessionsMonitorComponent implements OnInit {
   private readonly sessionsService = inject(ActiveSessionsService);
   protected readonly authState = inject(AuthState);
   private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
 
   // Estado reactivo
   sessions = signal<ActiveSession[]>([]);
   isLoading = signal(true);
   errorState = signal<'forbidden' | 'error' | null>(null);
   errorMessage = signal<string>('');
+
+  // Modal de confirmación homologado (ConfirmDialogComponent)
+  sessionToRevoke = signal<ActiveSession | null>(null);
+  isRevoking = signal<boolean>(false);
 
   ngOnInit(): void {
     // Log de auditoría local (HU-011)
@@ -123,11 +130,40 @@ export class ActiveSessionsMonitorComponent implements OnInit {
     }
   }
 
-  /** Simula la revocación de sesión */
+  /** Abre el modal de confirmación de revocación */
   revokeSession(session: ActiveSession): void {
-    console.log(JSON.stringify({ event: 'session_revoke', userId: session.userId }));
-    // Remover visualmente
-    this.sessions.update(list => list.filter(s => s.userId !== session.userId));
+    this.sessionToRevoke.set(session);
+  }
+
+  /** Ejecuta la revocación real al confirmar en el modal */
+  confirmRevoke(): void {
+    const session = this.sessionToRevoke();
+    if (!session) return;
+
+    this.isRevoking.set(true);
+    this.sessionsService.revokeSession(session.userId).subscribe({
+      next: (res) => {
+        this.isRevoking.set(false);
+        this.sessionToRevoke.set(null);
+        this.toast.success(res.message || `Sesión de ${session.fullName} revocada correctamente.`);
+        this.sessions.update(list => list.filter(s => s.userId !== session.userId));
+      },
+      error: (err) => {
+        this.isRevoking.set(false);
+        this.sessionToRevoke.set(null);
+        if (err.status !== 401 && err.status !== 403) {
+          this.toast.info(`Demostración: Sesión de ${session.fullName} revocada localmente.`);
+          this.sessions.update(list => list.filter(s => s.userId !== session.userId));
+        }
+      }
+    });
+  }
+
+  /** Cancela la revocación y cierra el modal */
+  cancelRevoke(): void {
+    if (!this.isRevoking()) {
+      this.sessionToRevoke.set(null);
+    }
   }
 
   /** Datos de demostración cuando el backend no está disponible */

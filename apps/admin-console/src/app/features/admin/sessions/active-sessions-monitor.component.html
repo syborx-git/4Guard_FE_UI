@@ -1,77 +1,40 @@
 <div class="sessions-page">
 
-  <!-- BOTÓN REGRESAR -->
-  <button type="button" class="btn-back-admin" (click)="goToAdmin()">
-    <span class="material-symbols-outlined">arrow_back</span>
-    <span>Administrar</span>
-  </button>
-
-  <!-- ENCABEZADO PRINCIPAL -->
-  <header class="sessions-header">
-
-    <div class="sessions-header__content">
-
-      <div class="sessions-header__eyebrow">
-        <span class="material-symbols-outlined">
-          admin_panel_settings
-        </span>
-
-        <span>Security & Active Connections</span>
-      </div>
-
-      <div class="sessions-title-area">
-
-        <div class="sessions-header-icon-wrap">
-          <span class="material-symbols-outlined">
-            wifi_tethering
-          </span>
-        </div>
-
-        <div class="sessions-title-text">
-          <h1>Sesiones Activas</h1>
-
-          <p>
-            Monitoreo en tiempo real de las conexiones autenticadas al sistema
-            4GUARD WMS.
-          </p>
-        </div>
-
-      </div>
-
+  <!-- ENCABEZADO PRINCIPAL (GOLDEN STANDARD HERO HEADER) -->
+  <header class="hero-header">
+    <div class="hero-header__icon-box">
+      <span class="material-symbols-outlined">shield_lock</span>
     </div>
 
-    <div class="sessions-actions-area">
+    <div class="hero-header__content">
+      <!-- Breadcrumb Row: Botón Regresar ADMINISTRACIÓN WMS + Categoría -->
+      <div class="hero-header__breadcrumb">
+        <a routerLink="/admin" class="btn-back-admin" title="Regresar al Hub de Administración">
+          <span class="back-arrow">←</span> ADMINISTRACIÓN WMS
+        </a>
+        <span class="breadcrumb-dot">·</span>
+        <span class="hero-header__eyebrow">MONITOREO Y AUDITORÍA · SEGURIDAD</span>
+      </div>
 
+      <!-- Título Principal & Subtítulo -->
+      <h1 class="hero-header__title">Sesiones Activas</h1>
+      <p class="hero-header__subtitle">Monitoreo en tiempo real de las conexiones autenticadas al sistema 4GUARD WMS.</p>
+    </div>
+
+    <div class="hero-header__actions">
       @if (!isLoading() && !errorState()) {
       <div class="sessions-counter">
-
         <span class="sessions-counter__dot"></span>
-
         <strong>{{ sessions().length }}</strong>
-
-        <span>
-          {{ sessions().length === 1 ? 'conexión activa' : 'conexiones activas' }}
-        </span>
-
+        <span>{{ sessions().length === 1 ? 'conexión activa' : 'conexiones activas' }}</span>
       </div>
       }
 
-
       <button type="button" class="btn-refresh" (click)="loadSessions()" [disabled]="isLoading()">
-
-        <span class="material-symbols-outlined" [class.animate-spin]="isLoading()">
-
-          sync
-        </span>
-
-        <span>
-          {{ isLoading() ? 'Actualizando...' : 'Actualizar' }}
-        </span>
-
+        <span class="material-symbols-outlined" [class.animate-spin]="isLoading()">sync</span>
+        <span>{{ isLoading() ? 'Actualizando...' : 'Actualizar' }}</span>
       </button>
-
     </div>
-
   </header>
 
   <!-- INFORMACIÓN DEMO -->
@@ -387,7 +350,18 @@
     </footer>
 
   </section>
+  }
 
+  <!-- MODAL DE CONFIRMACIÓN DE REVOCACIÓN HOMOLOGADO -->
+  @if (sessionToRevoke(); as session) {
+  <fg-confirm-dialog
+    [title]="'Revocar Sesión Activa'"
+    [message]="'¿Estás seguro de que deseas revocar la sesión activa de ' + session.fullName + '? El usuario será desconectado inmediatamente del sistema.'"
+    [confirmLabel]="'Revocar Sesión'"
+    [isLoading]="isRevoking()"
+    (confirmed)="confirmRevoke()"
+    (cancelled)="cancelRevoke()"
+  ></fg-confirm-dialog>
   }
 
 </div>

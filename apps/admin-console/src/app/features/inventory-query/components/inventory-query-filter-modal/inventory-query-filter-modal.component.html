@@ -1,0 +1,376 @@
+<!-- Modal Backdrop & Container -->
+@if (isOpen) {
+  <div class="modal-overlay">
+    <div
+      class="modal-card"
+      role="dialog"
+      aria-labelledby="filter-modal-title"
+    >
+      
+      <!-- Header del Modal -->
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-header-icon">
+            <span class="material-symbols-outlined">filter_list</span>
+          </div>
+          <div>
+            <h2 id="filter-modal-title" class="modal-title">
+              Filtros Multicriterio de Consulta de Inventario
+            </h2>
+            <p class="modal-subtitle">Define los parámetros de búsqueda y reglas de caducidad para 4GUARD WMS</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          (click)="onClose()"
+          class="modal-close-btn"
+          aria-label="Cerrar modal"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Cuerpo del Modal (Formulario) -->
+      <form [formGroup]="filterForm" (ngSubmit)="onApplyFilters()" class="modal-body">
+        
+        <!-- ══ SECCIÓN 1: REGLA CRÍTICA DE CADUCIDAD DE PABLO ══════════════════════════ -->
+        <div class="expiration-rule-box">
+          <div class="expiration-rule-header">
+            <span class="material-symbols-outlined" style="font-size: 16px;">verified</span>
+            <span>Regla Crítica de Estado de Caducidad ( Pablo )</span>
+          </div>
+
+          <div class="expiration-options-grid">
+            <!-- Radio 1: Caducidad General -->
+            <label
+              class="radio-card"
+              [class.radio-card--active-general]="filterForm.get('expirationMode')?.value === 'GENERAL'"
+            >
+              <input
+                type="radio"
+                formControlName="expirationMode"
+                value="GENERAL"
+                class="accent-amber-500"
+              />
+              <div>
+                <span class="radio-card-title">⚪ Caducidad General</span>
+                <span class="radio-card-desc">Muestra la totalidad del stock activo</span>
+              </div>
+            </label>
+
+            <!-- Radio 2: Producto Caduco -->
+            <label
+              class="radio-card"
+              [class.radio-card--active-caduco]="filterForm.get('expirationMode')?.value === 'CADUCO'"
+            >
+              <input
+                type="radio"
+                formControlName="expirationMode"
+                value="CADUCO"
+                class="accent-rose-500"
+              />
+              <div>
+                <span class="radio-card-title" style="color: var(--c-danger);">🔴 Producto Caduco</span>
+                <span class="radio-card-desc">Filtrar fechas menores a hoy (&lt; hoy)</span>
+              </div>
+            </label>
+
+            <!-- Radio 3: Caducidad en Tiempo 30 Días -->
+            <label
+              class="radio-card"
+              [class.radio-card--active-30]="filterForm.get('expirationMode')?.value === 'TIEMPO_30_DIAS'"
+            >
+              <input
+                type="radio"
+                formControlName="expirationMode"
+                value="TIEMPO_30_DIAS"
+                class="accent-amber-500"
+              />
+              <div>
+                <span class="radio-card-title" style="color: var(--c-warning);">🟡 Próximo 30 Días</span>
+                <span class="radio-card-desc">Alertas de caducidad en próximos 30 días</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- ══ SECCIÓN 2: RANGOS DE FECHAS (DESDE - HASTA) ════════════════════════════ -->
+        <div class="filter-section">
+          <div class="filter-section-title">
+            <span class="material-symbols-outlined">calendar_month</span>
+            <span>Rangos de Fechas (Desde / Hasta)</span>
+          </div>
+
+          <div class="date-cards-grid">
+            <!-- Fecha Ingreso -->
+            <div class="date-card">
+              <span class="date-card-title">Fecha de Ingreso</span>
+              <div class="date-inputs-row">
+                <div>
+                  <label class="form-label-sub">Desde</label>
+                  <input type="date" formControlName="entryDateFrom" class="form-input" />
+                </div>
+                <div>
+                  <label class="form-label-sub">Hasta</label>
+                  <input type="date" formControlName="entryDateTo" class="form-input" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Fecha Elaboración -->
+            <div class="date-card">
+              <span class="date-card-title">Fecha de Elaboración</span>
+              <div class="date-inputs-row">
+                <div>
+                  <label class="form-label-sub">Desde</label>
+                  <input type="date" formControlName="elaborationDateFrom" class="form-input" />
+                </div>
+                <div>
+                  <label class="form-label-sub">Hasta</label>
+                  <input type="date" formControlName="elaborationDateTo" class="form-input" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Fecha Caducidad -->
+            <div class="date-card">
+              <span class="date-card-title">Fecha de Caducidad</span>
+              <div class="date-inputs-row">
+                <div>
+                  <label class="form-label-sub">Desde</label>
+                  <input type="date" formControlName="expirationDateFrom" class="form-input" />
+                </div>
+                <div>
+                  <label class="form-label-sub">Hasta</label>
+                  <input type="date" formControlName="expirationDateTo" class="form-input" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ SECCIÓN 3: SELECCIÓN MÚLTIPLE (SKUS Y BODEGAS) ═══════════════════════ -->
+        <div class="filter-section">
+          <div class="filter-section-title">
+            <span class="material-symbols-outlined">checklist</span>
+            <span>Selección Múltiple Avanzada (Múltiples SKUs y Bodegas)</span>
+          </div>
+
+          <!-- Selector Multi-SKU -->
+          <div class="multi-chips-wrapper">
+            <div class="multi-chips-header">
+              <span class="form-label">Filtrar por Uno o Más SKUs ({{ selectedSkus.length }} seleccionados)</span>
+              <input
+                type="text"
+                [value]="skuSearchTerm"
+                (input)="onSkuSearchChange($event)"
+                placeholder="Buscar SKU..."
+                class="multi-chips-search-input"
+              />
+            </div>
+            <div class="multi-chips-list">
+              @for (skuItem of filteredAvailableSkus(); track skuItem.sku) {
+                <button
+                  type="button"
+                  (click)="toggleSku(skuItem.sku)"
+                  class="multi-chip"
+                  [class.multi-chip--selected]="isSkuSelected(skuItem.sku)"
+                  [title]="skuItem.description"
+                >
+                  <span class="material-symbols-outlined" style="font-size: 14px;">
+                    {{ isSkuSelected(skuItem.sku) ? 'check_box' : 'check_box_outline_blank' }}
+                  </span>
+                  <span>{{ skuItem.sku }} ({{ skuItem.count }})</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Selector Multi-Bodega -->
+          <div class="multi-chips-wrapper">
+            <div class="multi-chips-header">
+              <span class="form-label">Filtrar por Una o Más Bodegas / Almacenes ({{ selectedWarehouses.length }} seleccionadas)</span>
+            </div>
+            <div class="multi-chips-list">
+              @for (wh of inventoryService.distinctWarehouses(); track wh.warehouse) {
+                <button
+                  type="button"
+                  (click)="toggleWarehouse(wh.warehouse)"
+                  class="multi-chip"
+                  [class.multi-chip--selected]="isWarehouseSelected(wh.warehouse)"
+                >
+                  <span class="material-symbols-outlined" style="font-size: 14px;">
+                    {{ isWarehouseSelected(wh.warehouse) ? 'check_box' : 'check_box_outline_blank' }}
+                  </span>
+                  <span>{{ wh.warehouse }} ({{ wh.count }})</span>
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ SECCIÓN 4: CAMPOS DE TEXTO Y BUSCADORES ═════════════════════════════════ -->
+        <div class="filter-section">
+          <div class="filter-section-title">
+            <span class="material-symbols-outlined">search</span>
+            <span>Textos y Buscadores Operativos</span>
+          </div>
+
+          <div class="text-inputs-grid">
+            <!-- Factura / Remisión -->
+            <div class="form-group">
+              <label class="form-label">Factura / Remisión</label>
+              <input
+                type="text"
+                formControlName="remision"
+                placeholder="ej. REM-89201"
+                class="form-input form-input--mono"
+              />
+            </div>
+
+            <!-- SKU Específico -->
+            <div class="form-group">
+              <label class="form-label">SKU Específico</label>
+              <input
+                type="text"
+                formControlName="sku"
+                placeholder="ej. SKU-NEST-001"
+                class="form-input form-input--mono"
+              />
+            </div>
+
+            <!-- Producto Autocomplete -->
+            <div class="form-group">
+              <label class="form-label">Producto / Descripción</label>
+              <input
+                type="text"
+                formControlName="productDescription"
+                (focus)="showSuggestions = true"
+                placeholder="Buscar por nombre..."
+                class="form-input"
+              />
+              @if (showSuggestions && productSuggestions.length > 0) {
+                <div class="suggestions-dropdown">
+                  @for (prod of productSuggestions; track prod) {
+                    <button
+                      type="button"
+                      (click)="selectProductSuggestion(prod)"
+                      class="suggestion-item"
+                    >
+                      {{ prod }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Ubicación (Letra / Número) -->
+            <div class="form-group">
+              <label class="form-label">Ubicación (Letra / Número)</label>
+              <input
+                type="text"
+                formControlName="location"
+                placeholder="ej. A-02-14"
+                class="form-input form-input--mono"
+                style="text-transform: uppercase;"
+              />
+            </div>
+
+            <!-- Proveedor -->
+            <div class="form-group">
+              <label class="form-label">Proveedor</label>
+              <input
+                type="text"
+                formControlName="supplier"
+                placeholder="ej. Nestlé México"
+                class="form-input"
+              />
+            </div>
+
+            <!-- Cliente -->
+            <div class="form-group">
+              <label class="form-label">Cliente</label>
+              <input
+                type="text"
+                formControlName="client"
+                placeholder="ej. Comercializadora Alpura"
+                class="form-input"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ SECCIÓN 5: DROPDOWNS OFICIALES DE 4GUARD ═════════════════════════════════ -->
+        <div class="filter-section">
+          <div class="filter-section-title">
+            <span class="material-symbols-outlined">category</span>
+            <span>Clasificación de Tarimas y Etiquetado</span>
+          </div>
+
+          <div class="dropdowns-grid">
+            <!-- Tipo Tarima (7 Tipos Oficiales) -->
+            <div class="form-group">
+              <label class="form-label">Tipo Tarima (7 Oficiales 4Guard)</label>
+              <select
+                formControlName="palletType"
+                class="form-select"
+              >
+                <option value="">-- Todos los Tipos de Tarima --</option>
+                @for (type of palletTypes; track type) {
+                  <option [value]="type">{{ type }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Estado de Etiquetado -->
+            <div class="form-group">
+              <label class="form-label">Estado de Etiquetado</label>
+              <select
+                formControlName="labeledStatus"
+                class="form-select"
+              >
+                <option value="">-- Todos los Estados --</option>
+                @for (st of labeledStatuses; track st) {
+                  <option [value]="st">{{ st }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Footer con Botones de Acción -->
+      <div class="modal-footer">
+        <button
+          type="button"
+          (click)="onClearFilters()"
+          class="modal-btn modal-btn-clear"
+        >
+          <span class="material-symbols-outlined">filter_alt_off</span>
+          <span>LIMPIAR FILTROS</span>
+        </button>
+
+        <div class="modal-footer-right">
+          <button
+            type="button"
+            (click)="onClose()"
+            class="modal-btn modal-btn-cancel"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            (click)="onApplyFilters()"
+            class="modal-btn modal-btn-primary"
+          >
+            <span class="material-symbols-outlined">search</span>
+            <span>GENERAR CONSULTA</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}

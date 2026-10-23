@@ -16,8 +16,7 @@
     (ngModelChange)="currentInput.set($event)"
     (keydown)="onKeydown($event)"
     autocomplete="off"
-    aria-hidden="true"
-    tabindex="-1">
+    aria-label="Escáner láser de picking">
 
   <!-- ══ VIOLACIÓN FEFO — Pantalla Roja ══════════════════════ -->
   @if (fefoViolation()) {

@@ -1,144 +1,778 @@
-/* ================================================================
-   P6 — Login RF — rf-login.component.css
-   Diseño oscuro de alto contraste. Touch targets >= 56px.
-   ================================================================ */
+/* ============================================================
+   4GUARD RF TERMINAL · rf-login.component.css
+   Design System: Cyber Obsidian / Slate-Gold / Industrial Glassmorphism
+   Ergonomía táctil para terminales RF (Honeywell, Zebra, iPads)
+   ============================================================ */
 
-.rf-login {
+:host {
+  /* ── TOKENS DE COLOR PRINCIPALES ──────────────────────── */
+  --rf-bg-obsidian:    #060B14;
+  --rf-bg-deep:        #0B1322;
+  --rf-bg-elev:        #101B2E;
+
+  --rf-gold-300:       #F5DB8B;
+  --rf-gold-400:       #E8C547;
+  --rf-gold-500:       #C9A228;
+  --rf-gold-glow:      rgba(232, 197, 71, 0.35);
+
+  --rf-cyan-400:       #22D3EE;
+  --rf-cyan-glow:      rgba(34, 211, 238, 0.28);
+  --rf-emerald-400:    #34D399;
+
+  --rf-text-primary:   #F8FAFC;
+  --rf-text-secondary: #94A3B8;
+  --rf-text-muted:     #64748B;
+
+  --rf-border-subtle:  rgba(255, 255, 255, 0.08);
+  --rf-border-strong:  rgba(255, 255, 255, 0.16);
+
+  --rf-surface-glass:  rgba(255, 255, 255, 0.04);
+  --rf-surface-input:  rgba(6, 11, 20, 0.65);
+
+  /* ── SOMBRAS Y RESPLANDOR ────────────────────────────── */
+  --rf-shadow-card:    0 32px 84px -20px rgba(0, 0, 0, 0.85),
+                       0 0 0 1px var(--rf-border-subtle),
+                       inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --rf-focus-ring:     0 0 0 3px rgba(34, 211, 238, 0.35),
+                       0 0 24px rgba(34, 211, 238, 0.22);
+
+  /* ── GEOMETRÍA ERGONÓMICA ────────────────────────────── */
+  --rf-radius-sm:      8px;
+  --rf-radius-md:      12px;
+  --rf-radius-lg:      18px;
+  --rf-radius-xl:      24px;
+  --rf-touch:          54px;   /* Target primario industrial */
+  --rf-touch-sm:       46px;   /* Target secundario */
+
+  --rf-ease:           cubic-bezier(0.22, 1, 0.36, 1);
+
+  font-family: "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+  color: var(--rf-text-primary);
+  display: block;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ============================================================
+   SHELL · FONDO OBSIDIANA + BLUEPRINT GRID INDUSTRIAL
+   ============================================================ */
+.rf-login-shell {
+  position: relative;
   min-height: 100dvh;
-  background: linear-gradient(180deg, #0D1A2E 0%, #1B2B4B 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  padding: 2rem 1.5rem;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+  background:
+    radial-gradient(1100px 550px at 10% -10%, rgba(34, 211, 238, 0.12), transparent 55%),
+    radial-gradient(850px 480px at 110% 10%, rgba(232, 197, 71, 0.12), transparent 55%),
+    radial-gradient(950px 600px at 50% 115%, rgba(52, 211, 153, 0.08), transparent 55%),
+    linear-gradient(180deg, var(--rf-bg-obsidian) 0%, var(--rf-bg-deep) 100%);
 }
 
-/* ── Logo ────────────────────────────────────────────────── */
-.rf-login__logo {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  margin-bottom: 0.5rem;
+/* Retícula Blueprint con Máscara Radial */
+.rf-grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+    radial-gradient(circle at 1px 1px, rgba(232, 197, 71, 0.16) 1px, transparent 0);
+  background-size: 40px 40px, 40px 40px, 160px 160px;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 35%, transparent 80%);
+  mask-image: radial-gradient(ellipse at center, #000 35%, transparent 80%);
+  opacity: 0.8;
 }
 
-.rf-logo-mark {
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, #F9A825, #FFD54F);
-  border-radius: 14px;
+/* Halos luminosos de marca */
+.rf-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(85px);
+  pointer-events: none;
+  opacity: 0.45;
+  animation: rf-drift 16s var(--rf-ease) infinite alternate;
+}
+
+.rf-glow--gold {
+  width: 500px;
+  height: 500px;
+  top: -160px;
+  left: -100px;
+  background: var(--rf-gold-glow);
+}
+
+.rf-glow--cyan {
+  width: 450px;
+  height: 450px;
+  bottom: -160px;
+  right: -100px;
+  background: var(--rf-cyan-glow);
+  animation-delay: -5s;
+}
+
+@keyframes rf-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(35px, 25px, 0) scale(1.06); }
+}
+
+/* Scanline SCADA suave */
+.rf-scanline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, rgba(34, 211, 238, 0.035) 50%, transparent 100%);
+  animation: rf-scan 7s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes rf-scan {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+/* ============================================================
+   TOPBAR
+   ============================================================ */
+.rf-topbar {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 28px;
+}
+
+.rf-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rf-brand__mark {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #F5DB8B 0%, #C9A228 100%);
+  color: #060B14;
   font-weight: 900;
-  font-size: 1.25rem;
-  color: #0D1A2E;
-  box-shadow: 0 6px 20px rgba(249,168,37,0.4);
-  flex-shrink: 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  box-shadow:
+    0 6px 18px -4px rgba(232, 197, 71, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
-.rf-logo-text { display: flex; flex-direction: column; }
-
-.rf-logo-name {
-  font-size: 1.75rem;
-  font-weight: 900;
-  color: #FFFFFF;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-.rf-logo-sub {
-  font-size: 0.75rem;
-  color: rgba(255,255,255,0.45);
-  text-transform: uppercase;
+.rf-brand__text h1 {
+  margin: 0;
+  font-size: 1.15rem;
   letter-spacing: 0.1em;
-  margin-top: 2px;
+  font-weight: 850;
+  color: #FFFFFF;
 }
 
-/* ── Offline banner ──────────────────────────────────────── */
+.rf-brand__text p {
+  margin: 1px 0 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  color: var(--rf-gold-400);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.rf-topbar__status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rf-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--rf-border-subtle);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  color: var(--rf-text-secondary);
+  text-transform: uppercase;
+}
+
+.rf-status-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rf-emerald-400);
+  box-shadow: 0 0 10px var(--rf-emerald-400);
+  animation: rf-pulse 2s ease-in-out infinite;
+}
+
+.rf-status-chip__dot--red {
+  background: #EF4444;
+  box-shadow: 0 0 10px #EF4444;
+}
+
+@keyframes rf-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.85); }
+}
+
+.rf-clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  color: var(--rf-text-secondary);
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================
+   MAIN · CARD GLASS INDUSTRIAL
+   ============================================================ */
+.rf-main {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.rf-card {
+  position: relative;
+  width: 100%;
+  max-width: 470px;
+  padding: 34px 32px 28px;
+  border-radius: var(--rf-radius-xl);
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid var(--rf-border-subtle);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  box-shadow: var(--rf-shadow-card);
+  overflow: hidden;
+}
+
+/* Borde superior satinado (acento de cristal) */
+.rf-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: linear-gradient(90deg,
+    var(--rf-gold-400) 0%,
+    var(--rf-cyan-400) 50%,
+    var(--rf-emerald-400) 100%);
+  box-shadow: 0 0 12px rgba(232, 197, 71, 0.5);
+}
+
+.rf-card__header {
+  margin-bottom: 22px;
+  text-align: center;
+}
+
+.rf-card__eyebrow {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--rf-gold-400);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.rf-card__header h2 {
+  margin: 0;
+  font-size: 1.65rem;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+}
+
+.rf-card__subtitle {
+  margin: 6px auto 0;
+  font-size: 0.825rem;
+  line-height: 1.45;
+  color: var(--rf-text-secondary);
+  max-width: 380px;
+}
+
+/* Offline banner */
 .offline-banner {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  background: rgba(249,168,37,0.12);
-  border: 1.5px solid rgba(249,168,37,0.35);
-  border-radius: 0.75rem;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #FFD54F;
-  width: 100%;
-  max-width: 400px;
+  gap: 0.55rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: #FCA5A5;
+  margin-bottom: 18px;
 }
 
-/* ── Mode tabs ───────────────────────────────────────────── */
-.rf-login__tabs {
-  display: flex;
-  gap: 0.5rem;
-  background: rgba(255,255,255,0.06);
-  border-radius: 1rem;
-  padding: 0.375rem;
+/* ============================================================
+   TABS SEGMENTADAS (ESTILO FINTECH INDUSTRIAL)
+   ============================================================ */
+.rf-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 5px;
+  margin-bottom: 22px;
+  border-radius: var(--rf-radius-md);
+  background: rgba(6, 11, 20, 0.65);
+  border: 1px solid var(--rf-border-subtle);
+  overflow: hidden;
 }
 
-.rf-tab {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  border: none;
+.rf-tabs__indicator {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: calc((100% - 10px - 8px) / 3);
+  height: calc(100% - 10px);
+  border-radius: calc(var(--rf-radius-md) - 4px);
+  background: linear-gradient(180deg,
+    rgba(232, 197, 71, 0.22) 0%,
+    rgba(232, 197, 71, 0.10) 100%);
+  border: 1px solid rgba(232, 197, 71, 0.4);
+  box-shadow: 0 4px 14px -3px rgba(232, 197, 71, 0.35);
+  transition: transform 0.35s var(--rf-ease);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.rf-tabs[data-active="0"] .rf-tabs__indicator { transform: translateX(0); }
+.rf-tabs[data-active="1"] .rf-tabs__indicator { transform: translateX(calc(100% + 4px)); }
+.rf-tabs[data-active="2"] .rf-tabs__indicator { transform: translateX(calc(200% + 8px)); }
+
+.rf-tabs__btn {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: var(--rf-touch-sm);
+  padding: 0 10px;
+  border: 0;
   background: transparent;
-  color: rgba(255,255,255,0.5);
-  font-size: 0.875rem;
-  font-weight: 600;
+  color: var(--rf-text-secondary);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all 200ms;
-  min-height: 44px;
-  white-space: nowrap;
+  border-radius: calc(var(--rf-radius-md) - 4px);
+  transition: all 0.2s var(--rf-ease);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.rf-tab--active {
-  background: rgba(255,255,255,0.12);
+.rf-tabs__btn:hover {
   color: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-/* ── Scan Panel ──────────────────────────────────────────── */
-.rf-scan-panel {
+.rf-tabs__btn.is-active {
+  color: var(--rf-gold-400);
+}
+
+.rf-tabs__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--rf-focus-ring);
+}
+
+/* ============================================================
+   PANEL Y CAMPOS DE FORMULARIO
+   ============================================================ */
+.rf-panel {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
+  gap: 16px;
+}
+
+.rf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   width: 100%;
-  max-width: 360px;
 }
 
-.rf-scan-hint {
-  font-size: 0.875rem;
-  color: rgba(255,255,255,0.6);
-  text-align: center;
-  line-height: 1.5;
+.rf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.rf-scan-btn {
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  border: 3px solid rgba(249,168,37,0.4);
-  background: radial-gradient(circle at center, rgba(249,168,37,0.15) 0%, rgba(249,168,37,0.05) 70%);
+.rf-field__label {
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  color: var(--rf-text-secondary);
+  text-transform: uppercase;
+}
+
+.rf-field__control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: var(--rf-touch);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface-input);
+  border: 1px solid var(--rf-border-subtle);
+  transition: all 0.22s var(--rf-ease);
+}
+
+.rf-field__control:hover {
+  border-color: var(--rf-border-strong);
+}
+
+.rf-field__control:focus-within {
+  border-color: rgba(34, 211, 238, 0.75);
+  background: rgba(6, 11, 20, 0.85);
+  box-shadow: var(--rf-focus-ring);
+}
+
+.rf-field__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  color: var(--rf-text-muted);
+  transition: color 0.22s var(--rf-ease);
+  pointer-events: none;
+}
+
+.rf-field__control:focus-within .rf-field__icon {
+  color: var(--rf-cyan-400);
+}
+
+.rf-field__input {
+  flex: 1;
+  min-width: 0;
+  height: var(--rf-touch);
+  padding: 0 14px 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--rf-text-primary);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  outline: none;
+}
+
+.rf-field__input::placeholder {
+  color: rgba(148, 163, 184, 0.45);
+  font-weight: 450;
+}
+
+.rf-field__toggle {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-right: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--rf-text-muted);
+  border-radius: var(--rf-radius-sm);
+  cursor: pointer;
+  transition: all 0.2s var(--rf-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rf-field__toggle:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.rf-field__toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--rf-focus-ring);
+}
+
+/* Fila de opciones: Checkbox + SLA Badge */
+.rf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 2px 0 4px;
+}
+
+.rf-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--rf-text-secondary);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rf-checkbox input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rf-checkbox__box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--rf-border-strong);
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  place-items: center;
+  transition: all 0.18s var(--rf-ease);
+  flex-shrink: 0;
+}
+
+.rf-checkbox input:checked + .rf-checkbox__box {
+  background: linear-gradient(145deg, var(--rf-gold-300), var(--rf-gold-500));
+  border-color: var(--rf-gold-400);
+  box-shadow: 0 0 10px rgba(232, 197, 71, 0.45);
+}
+
+.rf-checkbox input:checked + .rf-checkbox__box::after {
+  content: "";
+  width: 6px;
+  height: 10px;
+  border: solid #060B14;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.rf-checkbox__text {
+  user-select: none;
+}
+
+.rf-checkbox:hover .rf-checkbox__text {
+  color: var(--rf-text-primary);
+}
+
+.rf-tech-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 750;
+  color: var(--rf-cyan-400);
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   BOTÓN PRIMARIO DE ACCIÓN (PRESENCIA VIBRANTE INDUSTRIAL)
+   ============================================================ */
+.rf-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: var(--rf-touch);
+  padding: 0 24px;
+  border-radius: var(--rf-radius-md);
+  border: 0;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.22s var(--rf-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rf-btn--primary {
+  color: #060B14;
+  background: linear-gradient(145deg, #F5DB8B 0%, #E8C547 45%, #C9A228 100%);
+  box-shadow:
+    0 14px 30px -8px rgba(232, 197, 71, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.rf-btn--primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 80%);
+  transform: translateX(-100%);
+  transition: transform 0.75s var(--rf-ease);
+}
+
+.rf-btn--primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+  box-shadow:
+    0 18px 36px -8px rgba(232, 197, 71, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.rf-btn--primary:hover:not(:disabled)::before {
+  transform: translateX(100%);
+}
+
+.rf-btn--primary:active:not(:disabled) {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+
+.rf-btn--primary:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.35);
+  box-shadow: none;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+/* ============================================================
+   PIN DISPLAY & NUMPAD INDUSTRIAL
+   ============================================================ */
+.pin-display {
+  background: rgba(6, 11, 20, 0.75);
+  border: 1.5px solid rgba(232, 197, 71, 0.4);
+  border-radius: var(--rf-radius-md);
+  padding: 0.9rem 1.5rem;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.25rem;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.pin-dots {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--rf-gold-400);
+  letter-spacing: 0.55rem;
+  font-family: var(--font-mono, monospace);
+  text-shadow: 0 0 16px rgba(232, 197, 71, 0.45);
+}
+
+.pin-error {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 9px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #FCA5A5;
+  width: 100%;
+  animation: rf-shake 0.35s ease;
+}
+
+@keyframes rf-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.numpad-key {
+  min-height: 58px;
+  border-radius: 11px;
+  border: 1.5px solid var(--rf-border-subtle);
+  background: rgba(255, 255, 255, 0.05);
+  color: #FFFFFF;
+  font-size: 1.35rem;
+  font-weight: 750;
   cursor: pointer;
-  transition: all 250ms ease;
-  box-shadow: 0 0 40px rgba(249,168,37,0.15), inset 0 0 20px rgba(249,168,37,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
+.numpad-key:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--rf-border-strong);
+}
+
+.numpad-key:active {
+  background: rgba(232, 197, 71, 0.25);
+  border-color: var(--rf-gold-400);
+  transform: scale(0.96);
+}
+
+.numpad-key--clear {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #F87171;
+  font-size: 1rem;
+}
+
+.numpad-key--del {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--rf-text-secondary);
+}
+
+/* ============================================================
+   PANEL DE ESCANEO QR / RFID
+   ============================================================ */
+.rf-scan-hint {
+  font-size: 0.825rem;
+  color: var(--rf-text-secondary);
+  text-align: center;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.rf-scan-btn {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  margin: 0.5rem auto;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 197, 71, 0.45);
+  background: radial-gradient(circle at center, rgba(232, 197, 71, 0.18) 0%, rgba(6, 11, 20, 0.7) 70%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 35px rgba(232, 197, 71, 0.2), inset 0 0 20px rgba(232, 197, 71, 0.1);
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+
 .rf-scan-btn:hover:not(:disabled) {
-  border-color: rgba(249,168,37,0.8);
-  box-shadow: 0 0 60px rgba(249,168,37,0.25), inset 0 0 30px rgba(249,168,37,0.1);
-  transform: scale(1.04);
+  border-color: var(--rf-gold-400);
+  box-shadow: 0 0 50px rgba(232, 197, 71, 0.35), inset 0 0 30px rgba(232, 197, 71, 0.2);
+  transform: scale(1.03);
 }
 
 .rf-scan-btn:active:not(:disabled) {
@@ -146,191 +780,150 @@
 }
 
 .rf-scan-btn--scanning {
-  border-color: rgba(0,137,123,0.6);
-  box-shadow: 0 0 40px rgba(0,137,123,0.2);
-  animation: scan-ring 1.5s ease-in-out infinite;
+  border-color: var(--rf-cyan-400);
+  box-shadow: 0 0 40px rgba(34, 211, 238, 0.35);
+  animation: scan-radar 1.6s ease-in-out infinite;
 }
 
-@keyframes scan-ring {
-  0%, 100% { box-shadow: 0 0 20px rgba(0,137,123,0.1), 0 0 0 0 rgba(0,137,123,0.4); }
-  50%       { box-shadow: 0 0 40px rgba(0,137,123,0.2), 0 0 0 20px rgba(0,137,123,0); }
+@keyframes scan-radar {
+  0%, 100% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.2), 0 0 0 0 rgba(34, 211, 238, 0.4); }
+  50%      { box-shadow: 0 0 45px rgba(34, 211, 238, 0.4), 0 0 0 16px rgba(34, 211, 238, 0); }
 }
-
-.rf-scan-btn__icon {
-  font-size: 3rem;
-  line-height: 1;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
-}
-
-.rf-scan-btn__icon--spin {
-  display: inline-block;
-  animation: spin 1s linear infinite;
-  color: #4DB6AC;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
 
 .rf-scan-btn__label {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 900;
   color: #FFFFFF;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .rf-scan-btn__sub {
+  font-size: 0.68rem;
+  color: var(--rf-text-secondary);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rf-card__legal {
+  margin: 20px 0 0;
   font-size: 0.7rem;
-  color: rgba(255,255,255,0.5);
+  line-height: 1.5;
+  color: var(--rf-text-muted);
   text-align: center;
+}
+
+/* ============================================================
+   FOOTER TÉCNICO · GRADO INDUSTRIAL
+   ============================================================ */
+.rf-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 14px 28px;
+  border-top: 1px solid var(--rf-border-subtle);
+  background: rgba(6, 11, 20, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-size: 0.72rem;
+  color: var(--rf-text-secondary);
   letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.rf-scan-btn:disabled {
-  cursor: not-allowed;
-}
-
-.rf-scan-demo {
-  font-size: 0.75rem;
-  color: rgba(255,255,255,0.35);
+.rf-footer__group {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-/* ── PIN Panel ───────────────────────────────────────────── */
-.rf-pin-panel {
-  display: flex;
-  flex-direction: column;
+.rf-footer__item {
+  display: inline-flex;
   align-items: center;
-  gap: 1.25rem;
-  width: 100%;
-  max-width: 320px;
-}
-
-.pin-display {
-  background: rgba(255,255,255,0.06);
-  border: 2px solid rgba(249,168,37,0.3);
-  border-radius: 1rem;
-  padding: 1rem 2rem;
-  width: 100%;
-  text-align: center;
-}
-
-.pin-dots {
-  font-size: 2rem;
-  font-weight: 900;
-  color: #F9A825;
-  letter-spacing: 0.5rem;
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.pin-error {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: rgba(229,57,53,0.12);
-  border: 1.5px solid rgba(229,57,53,0.35);
-  border-radius: 0.75rem;
-  font-size: 0.875rem;
+  gap: 5px;
   font-weight: 600;
-  color: #FF6B6B;
-  width: 100%;
-  animation: shake 0.35s ease;
 }
 
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-6px); }
-  75% { transform: translateX(6px); }
+.rf-footer__separator {
+  opacity: 0.35;
 }
 
-/* ── Numpad ──────────────────────────────────────────────── */
-.numpad {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.625rem;
-  width: 100%;
+.rf-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rf-text-muted);
 }
 
-.numpad-key {
-  min-height: 64px;
-  border-radius: 0.75rem;
-  border: 1.5px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.06);
-  color: #FFFFFF;
-  font-size: 1.5rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
+.rf-dot--emerald {
+  background: var(--rf-emerald-400);
+  box-shadow: 0 0 10px var(--rf-emerald-400);
+}
+
+/* ============================================================
+   BOTÓN PWA EN LOGIN TOPBAR
+   ============================================================ */
+.rf-pwa-install-btn {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  transition: all 150ms;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.numpad-key:active {
-  background: rgba(249,168,37,0.2);
-  border-color: rgba(249,168,37,0.5);
-  transform: scale(0.95);
-}
-
-.numpad-key--clear {
-  background: rgba(229,57,53,0.1);
-  border-color: rgba(229,57,53,0.25);
-  color: #FF6B6B;
-  font-size: 1rem;
-}
-
-.numpad-key--del {
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.6);
-  font-size: 1.25rem;
-}
-
-/* ── Confirm button ──────────────────────────────────────── */
-.rf-confirm-btn {
-  width: 100%;
-  min-height: 64px;
-  background: linear-gradient(135deg, #00897B, #26A69A);
-  color: #FFFFFF;
-  border: none;
-  border-radius: 1rem;
-  font-size: 1.25rem;
-  font-weight: 900;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  border-radius: 20px;
+  color: #34D399;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.625rem;
-  transition: all 200ms;
-  box-shadow: 0 6px 20px rgba(0,137,123,0.35);
-  letter-spacing: 0.04em;
+  transition: all 0.2s var(--rf-ease);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
-.rf-confirm-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #00695C, #00897B);
+.rf-pwa-install-btn:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: #10B981;
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(0,137,123,0.4);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
 }
 
-.rf-confirm-btn:active:not(:disabled) {
-  transform: scale(0.98);
+/* ============================================================
+   RESPONSIVE DESIGN (TABLETS RF / MÓVIL)
+   ============================================================ */
+@media (max-width: 540px) {
+  .rf-topbar { padding: 14px 18px; }
+  .rf-brand__mark { width: 40px; height: 40px; font-size: 1rem; }
+  .rf-brand__text h1 { font-size: 1rem; }
+  .rf-clock { display: none; }
+
+  .rf-main { padding: 12px; }
+  .rf-card { padding: 26px 20px 22px; border-radius: 18px; }
+  .rf-card__header h2 { font-size: 1.4rem; }
+
+  .rf-tabs__btn { font-size: 0.72rem; padding: 0 6px; gap: 5px; }
+  .rf-footer { padding: 12px 18px; font-size: 0.68rem; }
 }
 
-.rf-confirm-btn:disabled {
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.3);
-  box-shadow: none;
-  cursor: not-allowed;
+@media (max-width: 380px) {
+  .rf-tabs__btn span:last-child { display: none; }
 }
 
-.btn-spin {
-  display: inline-block;
-  animation: spin 0.8s linear infinite;
+/* Reducción de movimiento */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .rf-glow, .rf-scanline { animation: none; }
 }
 
-.rf-pin-hint {
-  font-size: 0.7rem;
-  color: rgba(255,255,255,0.3);
-  text-align: center;
-}
+
+

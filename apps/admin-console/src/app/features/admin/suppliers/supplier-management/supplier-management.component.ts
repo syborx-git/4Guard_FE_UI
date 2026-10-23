@@ -86,10 +86,12 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
   return null;
 }
 
+import { RouterLink } from '@angular/router';
+
 @Component({
   selector: 'fg-supplier-management',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './supplier-management.component.html',
   styleUrl: './supplier-management.component.css',
 })
@@ -105,7 +107,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
   // ─── Estado del Componente (Signals) ────────────────────────────────────────
 
   protected readonly selectedSupplier = signal<Supplier | null>(null);
-  protected readonly formMode = signal<FormMode>('idle');
+  protected readonly formMode = signal<FormMode>('new');
   protected readonly statusDialogMode = signal<StatusDialogMode>('none');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
@@ -189,6 +191,13 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
     this.filterPreferredCtrl.setValue(false);
   }
 
+  // ─── Estado: KPIs Comprimidos / Colapsables ─────────────────────────────────
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── Tarjetas KPI de Cabecera (Computed) ───────────────────────────────────
 
   protected readonly totalCount       = computed(() => this.supplierService.totalActiveCount());
@@ -214,7 +223,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
     contactFullName: ['', [Validators.required, Validators.maxLength(150), noWhitespaceValidator]],
     contactJobTitle: ['', [Validators.maxLength(100)]],
     contactEmail:    ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
-    contactPhone:    ['', [Validators.required, phoneValidator]],
+    contactPhone:    ['', [phoneValidator]],
     contactAltPhone: ['', [phoneValidator]],
 
     // Sección 4 — Dirección
@@ -295,6 +304,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
     this.branchService.loadBranches().pipe(takeUntil(this.destroy$)).subscribe();
 
     this.setupScopeReactivity();
+    this.startNewSupplier();
   }
 
   ngOnDestroy(): void {
@@ -444,7 +454,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
       this.formMode.set('edit');
       this.populateForm(current);
     } else {
-      this.formMode.set('idle');
+      this.startNewSupplier();
     }
     this.submitAttempted.set(false);
     this.backendError.set(null);
@@ -588,8 +598,8 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
       commercialName: raw.commercialName?.trim() || undefined,
       taxId:          normalizedTaxId,
       type:           raw.type,
-      status:         raw.status,
-      statusReason:   raw.statusReason?.trim() || undefined,
+      status:         this.formMode() === 'new' ? 'ACTIVE' : (this.selectedSupplier()?.status || 'ACTIVE'),
+      statusReason:   this.formMode() === 'new' ? undefined : (this.selectedSupplier()?.statusReason || undefined),
       preferred:      !!raw.preferred,
       notes:          raw.notes?.trim() || undefined,
 
@@ -788,4 +798,56 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
       this.filteredSuppliers().length === 0
     );
   }
+
+  // ─── Helpers de Formato para Línea de Tiempo Homologada ─────────────────────────
+
+  protected getAuditIcon(action?: string, fallbackIcon?: string): string {
+    if (fallbackIcon && fallbackIcon !== 'info') return fallbackIcon;
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'add_circle';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA') || a.includes('ARCHIVE')) return 'delete_forever';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('ACTIVE') || a.includes('BLOCK')) return 'swap_horiz';
+    return 'edit';
+  }
+
+  protected getAuditColorClass(action?: string, fallbackColor?: string): string {
+    if (fallbackColor && (fallbackColor === 'amber' || fallbackColor === 'blue' || fallbackColor === 'purple' || fallbackColor === 'emerald' || fallbackColor === 'red' || fallbackColor === 'indigo' || fallbackColor === 'update' || fallbackColor === 'create' || fallbackColor === 'status' || fallbackColor === 'delete')) {
+      return `carriers-tl-node--${fallbackColor}`;
+    }
+    const a = (action || '').toUpperCase();
+    if (a.includes('CREATE') || a.includes('REGISTER') || a.includes('ALTA')) return 'carriers-tl-node--emerald';
+    if (a.includes('DELETE') || a.includes('REMOVE') || a.includes('BAJA') || a.includes('ARCHIVE')) return 'carriers-tl-node--red';
+    if (a.includes('STATUS') || a.includes('SUSPEND') || a.includes('BLOCK')) return 'carriers-tl-node--purple';
+    return 'carriers-tl-node--amber';
+  }
+
+  protected formatFieldLabel(fieldName: string): string {
+    if (!fieldName) return '';
+    const map: Record<string, string> = {
+      legalName: 'Razón Social',
+      commercialName: 'Nombre Comercial',
+      taxId: 'RFC / Tax ID',
+      code: 'Código Proveedor',
+      type: 'Tipo de Proveedor',
+      status: 'Estado',
+      leadTimeDays: 'Tiempo de Entrega (Días)',
+      minimumOrderAmount: 'Pedido Mínimo',
+      paymentTermsDays: 'Días de Crédito',
+      scopeType: 'Alcance 3PL'
+    };
+    return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+  }
+
+  protected formatFieldValue(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '' || value === 'null') return 'Sin especificar';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (fieldName === 'status') {
+      const s = String(value).toUpperCase();
+      if (s === 'ACTIVE') return 'Activo';
+      if (s === 'INACTIVE') return 'Inactivo';
+      if (s === 'BLOCKED') return 'Bloqueado';
+    }
+    return String(value);
+  }
 }
+

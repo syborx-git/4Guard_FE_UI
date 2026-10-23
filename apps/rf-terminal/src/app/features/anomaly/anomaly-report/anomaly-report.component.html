@@ -1,107 +1,271 @@
-<!-- anomaly-report.component.html — P10 -->
-<div class="anomaly" role="main" aria-label="Reporte de Anomalía">
+<!-- apps/rf-terminal/src/app/features/anomaly/anomaly-report/anomaly-report.component.html -->
+<div class="anomaly" role="main" aria-label="Reporte de Siniestros y Disposición Final">
 
-  @if (!isSubmitted) {
-    <!-- Header -->
+  <!-- Input oculto para carga de fotos / cámara física -->
+  <input
+    #fileInput
+    type="file"
+    accept="image/*"
+    capture="environment"
+    style="display: none"
+    (change)="onPhotoCaptured($event)">
+
+  @if (status() === 'form' || status() === 'submitting') {
+    <!-- ── Header ──────────────────────────────────────────── -->
     <div class="anomaly__header">
-      <h1 class="anomaly__title">🚨 Reporte de Anomalía</h1>
-      <p class="anomaly__sub">Documenta el siniestro o incidente detectado</p>
+      <div class="anomaly__header-left">
+        <button type="button" class="btn-back" (click)="goBack()" aria-label="Volver al Menú">
+          <span class="material-symbols-outlined">arrow_back</span>
+        </button>
+        <div>
+          <div class="header-tag">HU-164 • Piso de Almacén</div>
+          <h1 class="anomaly__title">🚨 Reporte de Siniestro</h1>
+        </div>
+      </div>
+      <div class="state-badge">
+        <span class="badge-dot"></span>
+        <span>Destino: 80 Baja</span>
+      </div>
     </div>
 
-    <form id="anomaly-form" [formGroup]="form" (ngSubmit)="onSubmit()" class="anomaly__form" novalidate>
+    <!-- ── Banner de Inmutabilidad [Regla de Pablo] ────────── -->
+    <div class="rule-banner" role="note">
+      <span class="material-symbols-outlined rule-icon">lock</span>
+      <div class="rule-content">
+        <span class="rule-title">Regla de Inmutabilidad de Ubicación</span>
+        <span class="rule-desc">La tarima permanecerá registrada en su posición física del rack para trazabilidad histórica y conciliación de Calidad.</span>
+      </div>
+    </div>
 
-      <!-- SSCC del pallet -->
+    <form id="anomaly-form" [formGroup]="form" class="anomaly__form" novalidate>
+
+      <!-- ── 1. Escaneo de SSCC con Autocompletado ───────────── -->
       <div class="afield" [class.afield--error]="form.controls.sscc.touched && form.controls.sscc.invalid">
-        <label class="afield__label" for="ano-sscc">SSCC del Pallet afectado *</label>
-        <input id="ano-sscc" type="text" class="afield__input" formControlName="sscc"
-          placeholder="SSCC-XXXX-XXXX" autocomplete="off">
+        <label class="afield__label" for="ano-sscc">
+          <span class="material-symbols-outlined">barcode_scanner</span>
+          <span>1. Escanear SSCC del Pallet Afectado *</span>
+        </label>
+        
+        <div class="input-scan-group">
+          <input
+            #ssccInput
+            id="ano-sscc"
+            type="text"
+            class="afield__input afield__input--scan"
+            formControlName="sscc"
+            (input)="onSsccScan($event)"
+            placeholder="Escanear SSCC (ej: SSCC-175012345000000018)"
+            autocomplete="off">
+          
+          <button
+            type="button"
+            class="btn-quick-fill"
+            (click)="lookupPallet('SSCC-175012345000000018')"
+            title="Probar con tarima demo en Rack A-04">
+            Demo SSCC
+          </button>
+        </div>
+
         @if (form.controls.sscc.touched && form.controls.sscc.hasError('required')) {
-          <span class="afield__error">El SSCC es requerido</span>
+          <span class="afield__error">El código SSCC es obligatorio.</span>
         }
       </div>
 
-      <!-- Ubicación -->
+      <!-- ── Tarjeta de Información de Pallet Identificado ──── -->
+      @if (palletFound(); as pallet) {
+        <div class="pallet-card" role="region" aria-label="Información de la tarima identificada">
+          <div class="pallet-card__header">
+            <span class="material-symbols-outlined">inventory_2</span>
+            <span class="pallet-card__sku">{{ pallet.sku }}</span>
+            <span class="pallet-card__qty">{{ pallet.pieces }} Pzas</span>
+          </div>
+          <div class="pallet-card__desc">{{ pallet.description }}</div>
+          <div class="pallet-card__location">
+            <span class="material-symbols-outlined loc-icon">shelves</span>
+            <span>Ubicación Actual: <strong>{{ pallet.location }}</strong></span>
+          </div>
+        </div>
+      }
+
+      <!-- ── 2. Ubicación Física Confirmada ─────────────────── -->
       <div class="afield" [class.afield--error]="form.controls.location.touched && form.controls.location.invalid">
-        <label class="afield__label" for="ano-location">Ubicación del incidente *</label>
-        <input id="ano-location" type="text" class="afield__input" formControlName="location"
-          placeholder="Ej: A-1-03, AND-01">
+        <label class="afield__label" for="ano-location">
+          <span class="material-symbols-outlined">location_on</span>
+          <span>2. Posición en Rack / Pasillo del Incidente *</span>
+        </label>
+        <input
+          id="ano-location"
+          type="text"
+          class="afield__input"
+          formControlName="location"
+          placeholder="Ej: RACK A-04-02 (Nivel 2, Pos 1)">
         @if (form.controls.location.touched && form.controls.location.hasError('required')) {
-          <span class="afield__error">La ubicación es requerida</span>
+          <span class="afield__error">La ubicación física es requerida.</span>
         }
       </div>
 
-      <!-- Causa -->
+      <!-- ── 3. Causa del Siniestro ─────────────────────────── -->
       <div class="afield" [class.afield--error]="form.controls.cause.touched && form.controls.cause.invalid">
-        <label class="afield__label" for="ano-cause">Causa del incidente *</label>
+        <label class="afield__label" for="ano-cause">
+          <span class="material-symbols-outlined">report_problem</span>
+          <span>3. Causa del Siniestro Físico *</span>
+        </label>
         <select id="ano-cause" class="afield__input afield__select" formControlName="cause">
-          <option value="">Selecciona la causa…</option>
           @for (cause of CAUSES; track cause) {
             <option [value]="cause">{{ cause }}</option>
           }
         </select>
-        @if (form.controls.cause.touched && form.controls.cause.hasError('required')) {
-          <span class="afield__error">Selecciona una causa</span>
-        }
       </div>
 
-      <!-- Descripción -->
+      <!-- ── 4. Descripción del Incidente ───────────────────── -->
       <div class="afield" [class.afield--error]="form.controls.description.touched && form.controls.description.invalid">
-        <label class="afield__label" for="ano-desc">Descripción detallada *</label>
-        <textarea id="ano-desc" class="afield__input afield__textarea" formControlName="description"
-          placeholder="Describe el incidente con el mayor detalle posible…" rows="3"></textarea>
-        @if (form.controls.description.touched && form.controls.description.hasError('required')) {
-          <span class="afield__error">La descripción es requerida</span>
-        } @else if (form.controls.description.touched && form.controls.description.hasError('minlength')) {
-          <span class="afield__error">Mínimo 10 caracteres</span>
+        <label class="afield__label" for="ano-desc">
+          <span class="material-symbols-outlined">notes</span>
+          <span>4. Detalle y Observaciones de Maniobra *</span>
+        </label>
+        <textarea
+          id="ano-desc"
+          class="afield__input afield__textarea"
+          formControlName="description"
+          rows="2"
+          placeholder="Describe cómo ocurrió el siniestro o el estado del empaque…"></textarea>
+        @if (form.controls.description.touched && form.controls.description.hasError('minlength')) {
+          <span class="afield__error">Mínimo 10 caracteres explicativos.</span>
         }
       </div>
 
-      <!-- Captura de foto simulada -->
+      <!-- ── 5. Evidencia Fotográfica Obligatoria (Canvas ~150KB) -->
       <div class="photo-section">
-        @if (!photoTaken()) {
-          <button type="button" id="ano-photo-btn" class="photo-btn" (click)="simulatePhoto()">
-            <span aria-hidden="true">📷</span>
-            <span>Capturar foto del siniestro</span>
-          </button>
+        <label class="afield__label">
+          <span class="material-symbols-outlined">photo_camera</span>
+          <span>5. Fotografía de Evidencia Obligatoria *</span>
+        </label>
+
+        @if (!photoPreview()) {
+          <div class="photo-picker-box">
+            <button
+              type="button"
+              id="ano-camera-btn"
+              class="btn-photo btn-photo--primary"
+              (click)="triggerCamera()">
+              <span class="material-symbols-outlined">photo_camera</span>
+              <span>Abrir Cámara / Adjuntar Foto</span>
+            </button>
+            <button
+              type="button"
+              id="ano-sim-photo-btn"
+              class="btn-photo btn-photo--secondary"
+              (click)="simulatePhoto()">
+              <span class="material-symbols-outlined">auto_fix_high</span>
+              <span>Simular Captura</span>
+            </button>
+          </div>
+          <p class="photo-hint">Compresión automática en dispositivo a ~150 KB para operación offline/baja latencia.</p>
         } @else {
-          <div class="photo-preview" role="img" aria-label="Foto capturada simulada">
-            <span class="photo-preview__icon" aria-hidden="true">🖼️</span>
-            <div>
-              <span class="photo-preview__name">IMG_ANOMALY_{{ 'DEMO' }}.jpg</span>
-              <span class="photo-preview__size">Simulado · 1.2 MB</span>
+          <div class="photo-card">
+            <img [src]="photoPreview()" alt="Evidencia de Siniestro" class="photo-img">
+            <div class="photo-meta">
+              <div class="photo-status">
+                <span class="material-symbols-outlined check-icon">check_circle</span>
+                <span>Evidencia Comprimida Lista</span>
+              </div>
+              <span class="photo-size">{{ photoSizeKb() }} KB (Canvas JPEG)</span>
+              <button type="button" class="btn-retake" (click)="triggerCamera()">
+                <span class="material-symbols-outlined">replay</span>
+                <span>Cambiar Foto</span>
+              </button>
             </div>
-            <span class="photo-preview__check" aria-hidden="true">✓</span>
           </div>
         }
       </div>
 
-      <!-- Submit -->
-      <button
-        id="ano-submit-btn"
-        type="submit"
-        class="anomaly__submit"
-        [disabled]="!isValid || isSubmitting">
-        @if (isSubmitting) {
-          <span class="submit-spin" aria-hidden="true">⟳</span> Registrando…
-        } @else {
-          🚨 Registrar Anomalía
-        }
-      </button>
+      <!-- ── 6. Botones de Acción Dual (Pablo Rules) ────────── -->
+      <div class="actions-group">
+        <!-- Acción Estándar: Transición a Estado 80 -->
+        <button
+          id="ano-submit-standard-btn"
+          type="button"
+          class="btn-action btn-action--danger"
+          [disabled]="status() === 'submitting'"
+          (click)="submitReport(false)">
+          @if (status() === 'submitting' && !isDestruction()) {
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Registrando Siniestro…</span>
+          } @else {
+            <span class="material-symbols-outlined">emergency_home</span>
+            <span>🚨 Registrar Siniestro (Estado 80)</span>
+          }
+        </button>
+
+        <!-- Acción Acelerada: Liberado para Destrucción -->
+        <button
+          id="ano-submit-destruction-btn"
+          type="button"
+          class="btn-action btn-action--destruction"
+          [disabled]="status() === 'submitting'"
+          (click)="submitReport(true)"
+          title="Autoriza la destrucción física inmediata y salida del WMS sin checklist de calidad">
+          @if (status() === 'submitting' && isDestruction()) {
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Autorizando Destrucción…</span>
+          } @else {
+            <span class="material-symbols-outlined">delete_forever</span>
+            <span>⚡ Liberado para Destrucción</span>
+          }
+        </button>
+      </div>
+
     </form>
   }
 
-  @if (isSubmitted) {
+  <!-- ── 7. Vista de Éxito / Estado 80 Confirmado ─────────────── -->
+  @if (status() === 'submitted') {
     <div class="anomaly__success" role="status" aria-live="polite">
-      <span class="success-icon" aria-hidden="true">✓</span>
-      <h2 class="success-title">Anomalía Registrada</h2>
-      <p class="success-desc">El incidente ha sido documentado exitosamente.</p>
-      <div class="success-ticket">
-        <span class="success-ticket__label">Ticket de seguimiento:</span>
-        <span class="success-ticket__val">{{ ticketId() }}</span>
+      <div class="success-icon-wrap">
+        <span class="material-symbols-outlined success-icon">verified</span>
       </div>
-      <button id="ano-reset-btn" class="anomaly__reset" (click)="reset()">
-        + Nuevo Reporte
-      </button>
+
+      <div class="success-state-pill">
+        <span>ESTADO 80: DADO DE BAJA</span>
+      </div>
+
+      <h2 class="success-title">Siniestro Registrado con Éxito</h2>
+      <p class="success-desc">
+        La mercancía ha sido transferida al estado de baja de forma inmutable. La posición física en rack se conserva para conciliación.
+      </p>
+
+      <div class="ticket-card">
+        <div class="ticket-row">
+          <span class="ticket-label">Folio de Incidente:</span>
+          <span class="ticket-value">{{ ticketId() }}</span>
+        </div>
+        <div class="ticket-row">
+          <span class="ticket-label">SSCC Afectado:</span>
+          <span class="ticket-value font-mono">{{ form.value.sscc }}</span>
+        </div>
+        <div class="ticket-row">
+          <span class="ticket-label">Ubicación Rack:</span>
+          <span class="ticket-value">{{ form.value.location }}</span>
+        </div>
+        <div class="ticket-row">
+          <span class="ticket-label">Dictamen:</span>
+          <span class="ticket-value disposition-chip" [class.disposition-chip--destruction]="isDestruction()">
+            {{ isDestruction() ? '⚡ Liberado para Destrucción Inmediata' : '⚖️ Pendiente de Conciliación de Calidad' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="success-actions">
+        <button id="ano-new-btn" type="button" class="btn-success-action btn-success-action--primary" (click)="reset()">
+          <span class="material-symbols-outlined">add_circle</span>
+          <span>Reportar Otro Siniestro</span>
+        </button>
+
+        <button type="button" class="btn-success-action btn-success-action--secondary" (click)="goBack()">
+          <span class="material-symbols-outlined">home</span>
+          <span>Volver al Menú Principal</span>
+        </button>
+      </div>
     </div>
   }
 

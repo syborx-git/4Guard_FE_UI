@@ -1,0 +1,407 @@
+<div class="catalog-sub-page font-sans">
+
+  <!-- Toast Alert -->
+  @if (toastMessage()) {
+    <div
+      class="toast-banner transition-all border"
+      [ngClass]="{
+        'toast-success': toastMessage()?.type === 'success',
+        'toast-error': toastMessage()?.type === 'error'
+      }"
+    >
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined">
+          {{ toastMessage()?.type === 'success' ? 'check_circle' : 'error' }}
+        </span>
+        <span>{{ toastMessage()?.text }}</span>
+      </div>
+      <button (click)="toastMessage.set(null)" class="hover:opacity-75">
+        <span class="material-symbols-outlined text-sm">close</span>
+      </button>
+    </div>
+  }
+
+  <!-- Header y Sub-Pestañas Internas de Usuarios -->
+  <div class="catalog-card-container shadow-xl">
+    <div class="catalog-header-row">
+      <div class="flex items-center gap-3">
+        <div class="catalog-icon-wrap">
+          <span class="material-symbols-outlined text-2xl">manage_accounts</span>
+        </div>
+        <div>
+          <h2 class="catalog-title">Catálogo de Usuarios y Autenticación</h2>
+          <p class="catalog-subtitle">
+            Registro de personal, asignación de roles RBAC, consulta de accesos y bitácora de auditoría
+          </p>
+        </div>
+      </div>
+
+      <!-- Sub-tabs Buttons -->
+      <div class="subtabs-bar">
+        <button
+          type="button"
+          (click)="activeTab.set('create')"
+          [ngClass]="activeTab() === 'create' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">person_add</span>
+          1. Alta de Usuarios
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('inactivate')"
+          [ngClass]="activeTab() === 'inactivate' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">person_off</span>
+          2. Baja de Usuarios
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('consult')"
+          [ngClass]="activeTab() === 'consult' ? 'subtab-btn-active' : 'subtab-btn-inactive'"
+          class="subtab-btn"
+        >
+          <span class="material-symbols-outlined text-base">search</span>
+          3. Consulta / Modificar
+        </button>
+      </div>
+    </div>
+
+    <!-- 1. ALTA DE USUARIOS -->
+    @if (activeTab() === 'create') {
+      <form [formGroup]="userForm" (ngSubmit)="onSubmitCreateUser()" class="mt-6 space-y-5">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="form-field-label">Nombre(s) *</label>
+            <input
+              type="text"
+              formControlName="firstName"
+              placeholder="Ej. Christian"
+              class="form-field-input"
+            />
+          </div>
+          <div>
+            <label class="form-field-label">Apellido Paterno *</label>
+            <input
+              type="text"
+              formControlName="lastNamePaterno"
+              placeholder="Ej. Duran"
+              class="form-field-input"
+            />
+          </div>
+          <div>
+            <label class="form-field-label">Apellido Materno *</label>
+            <input
+              type="text"
+              formControlName="lastNameMaterno"
+              placeholder="Ej. Mora"
+              class="form-field-input"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="form-field-label">Usuario (Login ID) *</label>
+            <input
+              type="text"
+              formControlName="username"
+              placeholder="Ej. cduran"
+              class="form-field-input font-mono text-amber-500"
+            />
+          </div>
+
+          <div>
+            <label class="form-field-label">Rol Operativo *</label>
+            <select
+              formControlName="role"
+              class="form-field-select"
+            >
+              @for (r of availableRoles; track r.code) {
+                <option [value]="r.code">{{ r.label }} — {{ r.description }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="form-field-label">Contraseña *</label>
+            <input
+              type="password"
+              formControlName="password"
+              placeholder="Mínimo 6 caracteres"
+              class="form-field-input"
+            />
+          </div>
+
+          <div>
+            <label class="form-field-label">Repita Contraseña *</label>
+            <input
+              type="password"
+              formControlName="confirmPassword"
+              placeholder="Confirmar contraseña"
+              class="form-field-input"
+            />
+            @if (userForm.errors?.['passwordMismatch'] && userForm.touched) {
+              <span class="text-[11px] text-rose-500 mt-1 block">Las contraseñas no coinciden.</span>
+            }
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-200/40 dark:border-slate-800">
+          <button
+            type="button"
+            (click)="activeTab.set('consult')"
+            class="btn-secondary"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="userForm.invalid"
+            class="btn-primary"
+          >
+            <span class="material-symbols-outlined text-base">person_add</span>
+            Guardar Usuario
+          </button>
+        </div>
+      </form>
+    }
+
+    <!-- 2. BAJA DE USUARIOS O 3. CONSULTA Y FILTROS -->
+    @if (activeTab() === 'consult' || activeTab() === 'inactivate') {
+      <div class="mt-6 space-y-4">
+        <!-- Barra de Filtros -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="form-field-label">Buscar por Nombre o Usuario</label>
+            <div class="relative">
+              <input
+                type="text"
+                [value]="searchTerm()"
+                (input)="searchTerm.set($any($event.target).value)"
+                placeholder="Ej. Christian, admin..."
+                class="form-field-input pl-9"
+              />
+              <span class="material-symbols-outlined absolute left-2.5 top-2.5 text-slate-400 text-sm">search</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-field-label">Filtrar por Rol</label>
+            <select
+              [value]="roleFilter()"
+              (change)="roleFilter.set($any($event.target).value)"
+              class="form-field-select"
+            >
+              <option value="ALL">Todos los Roles</option>
+              @for (r of availableRoles; track r.code) {
+                <option [value]="r.code">{{ r.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="form-field-label">Estado</label>
+            <select
+              [value]="statusFilter()"
+              (change)="statusFilter.set($any($event.target).value)"
+              class="form-field-select"
+            >
+              <option value="ALL">Todos los Estados</option>
+              <option value="ACTIVO">ACTIVO</option>
+              <option value="INACTIVO">INACTIVO</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tabla de Usuarios -->
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Usuario / Nombre</th>
+                <th>Rol Asignado</th>
+                <th>Último Acceso</th>
+                <th class="text-center">Estado</th>
+                <th class="text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (u of filteredUsers(); track u.id) {
+                <tr>
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <img [src]="u.avatarUrl" alt="Avatar" class="w-8 h-8 rounded-full border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800" />
+                      <div>
+                        <span class="font-semibold block text-slate-900 dark:text-white">{{ u.fullName }}</span>
+                        <span class="text-[11px] text-amber-600 dark:text-amber-400 font-mono">&#64;{{ u.username }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="role-badge">
+                      {{ u.roleLabel }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+                      <span class="material-symbols-outlined text-sm text-slate-400">schedule</span>
+                      <span>{{ u.lastAccess }}</span>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span
+                      class="status-pill"
+                      [ngClass]="{
+                        'status-pill-active': u.status === 'ACTIVO',
+                        'status-pill-inactive': u.status === 'INACTIVO'
+                      }"
+                    >
+                      {{ u.status }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button
+                        (click)="openAuditModal(u)"
+                        title="Ver Bitácora de Auditoría"
+                        class="action-icon-btn"
+                      >
+                        <span class="material-symbols-outlined text-base">history</span>
+                      </button>
+
+                      <button
+                        (click)="openPasswordModal(u)"
+                        title="Cambiar Contraseña"
+                        class="action-icon-btn"
+                      >
+                        <span class="material-symbols-outlined text-base">key</span>
+                      </button>
+
+                      <button
+                        (click)="onToggleStatus(u)"
+                        [title]="u.status === 'ACTIVO' ? 'Dar de Baja' : 'Reactivar'"
+                        [class]="u.status === 'ACTIVO' ? 'action-icon-btn-danger' : 'action-icon-btn-success'"
+                        class="action-icon-btn"
+                      >
+                        <span class="material-symbols-outlined text-base">
+                          {{ u.status === 'ACTIVO' ? 'block' : 'check_circle' }}
+                        </span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="empty-table-row">
+                    No se encontraron usuarios con los filtros seleccionados.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+  </div>
+
+  <!-- Modal Bitácora de Auditoría -->
+  @if (selectedUserForAudit()) {
+    <div class="modal-overlay">
+      <div class="modal-card max-w-lg">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <span class="material-symbols-outlined text-amber-500">history</span>
+            Bitácora de Auditoría — {{ selectedUserForAudit()?.fullName }}
+          </h3>
+          <button (click)="closeAuditModal()" class="modal-close-btn">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body space-y-3 max-h-72 overflow-y-auto">
+          @for (log of selectedUserForAudit()?.auditLogs; track log.id) {
+            <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-1">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="font-semibold text-amber-600 dark:text-amber-400">{{ log.action }}</span>
+                <span class="text-slate-500">{{ log.timestamp }}</span>
+              </div>
+              <p class="text-xs text-slate-700 dark:text-slate-300">{{ log.details }}</p>
+              <span class="text-[10px] text-slate-400 block">Ejecutado por: {{ log.performedBy }}</span>
+            </div>
+          } @empty {
+            <p class="text-xs text-slate-500 text-center py-4">No hay registros de auditoría aún para este usuario.</p>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button (click)="closeAuditModal()" class="btn-secondary">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal Cambiar Contraseña -->
+  @if (selectedUserForPassword()) {
+    <div class="modal-overlay">
+      <form
+        [formGroup]="passwordResetForm"
+        (ngSubmit)="onSubmitPasswordReset()"
+        class="modal-card max-w-md"
+      >
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <span class="material-symbols-outlined text-cyan-500">key</span>
+            Restablecer Contraseña — &#64;{{ selectedUserForPassword()?.username }}
+          </h3>
+          <button type="button" (click)="closePasswordModal()" class="modal-close-btn">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body space-y-3">
+          <div>
+            <label class="form-field-label">Nueva Contraseña</label>
+            <input
+              type="password"
+              formControlName="newPassword"
+              placeholder="Mínimo 6 caracteres"
+              class="form-field-input"
+            />
+          </div>
+
+          <div>
+            <label class="form-field-label">Confirmar Nueva Contraseña</label>
+            <input
+              type="password"
+              formControlName="confirmNewPassword"
+              placeholder="Repetir contraseña"
+              class="form-field-input"
+            />
+            @if (passwordResetForm.errors?.['passwordMismatch'] && passwordResetForm.touched) {
+              <span class="text-[11px] text-rose-500 mt-1 block">Las contraseñas no coinciden.</span>
+            }
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="closePasswordModal()" class="btn-secondary">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="passwordResetForm.invalid" class="btn-primary">
+            Actualizar Contraseña
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+</div>
