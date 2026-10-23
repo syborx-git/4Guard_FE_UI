@@ -1057,3 +1057,137 @@ h2.page-title,
 [data-theme='dark'] .carriers-tl-node__meta {
   color: #94a3b8 !important;
 }
+
+/* ── Escritura y Renderizado en Mayúsculas Global (Formularios y Observaciones) ── */
+input[type="text"]:not(.preserve-case):not([type="email"]):not([type="password"]),
+input:not([type]):not(.preserve-case),
+textarea:not(.preserve-case),
+.form-input:not([type="email"]):not([type="password"]):not([type="date"]):not([type="time"]):not(.preserve-case),
+.form-textarea:not(.preserve-case),
+.form-control:not([type="email"]):not([type="password"]):not([type="date"]):not([type="time"]):not(.preserve-case) {
+  text-transform: uppercase;
+}
+
+input::placeholder,
+textarea::placeholder,
+.form-input::placeholder,
+.form-textarea::placeholder,
+.form-control::placeholder {
+  text-transform: none;
+}
+
+/* ── Formatos de Impresión Oficiales en Mayúsculas ── */
+.print-container,
+.f01-print-sheet,
+.print-layout-root {
+  text-transform: uppercase;
+}
+
+@media print {
+  .print-container,
+  .f01-print-sheet,
+  .print-layout-root {
+    text-transform: uppercase !important;
+  }
+}
+
+/* ── Auditoría y Normalización de Modo Oscuro Global (Sin Fragmentos Blancos ni Bajo Contraste) ── */
+.dark,
+.theme-dark,
+[data-theme='dark'] {
+  /* Entradas de búsqueda y filtros en módulos de Administración, Operadores y Usuarios */
+  .carriers-search__input,
+  .users-search__input,
+  .carriers-filter-select,
+  .users-filter-select {
+    background-color: #111a26 !important;
+    border-color: #334155 !important;
+    color: #edf1f5 !important;
+    color-scheme: dark !important;
+  }
+
+  .carriers-search__input:focus,
+  .users-search__input:focus,
+  .carriers-filter-select:focus,
+  .users-filter-select:focus {
+    background-color: #16212f !important;
+    border-color: #d0af67 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(208, 175, 103, 0.2) !important;
+  }
+
+  .carriers-filter-select option,
+  .users-filter-select option,
+  select option {
+    background-color: #111a26 !important;
+    color: #edf1f5 !important;
+  }
+
+  .users-btn--secondary,
+  .carriers-btn--secondary {
+    background-color: #16212f !important;
+    border-color: rgba(208, 175, 103, 0.3) !important;
+    color: #edf1f5 !important;
+  }
+
+  .users-btn--secondary:hover,
+  .carriers-btn--secondary:hover {
+    background-color: #1c2b3d !important;
+    border-color: #d0af67 !important;
+    color: #ffffff !important;
+  }
+
+  /* Dropdowns Predictivos Flotantes (Montacarguistas, SKUs, Bahías, Clientes) */
+  .sku-autocomplete-dropdown {
+    background-color: #0f172a !important;
+    border-color: #f59e0b !important;
+    box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.7) !important;
+  }
+
+  .sku-autocomplete-header {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #fcd34d !important;
+  }
+
+  .sku-autocomplete-header__hint {
+    color: #cbd5e1 !important;
+  }
+
+  .sku-autocomplete-item {
+    background-color: #0f172a !important;
+    border-bottom-color: #1e293b !important;
+    color: #f8fafc !important;
+  }
+
+  .sku-autocomplete-item:hover {
+    background-color: #1e293b !important;
+  }
+
+  .sku-autocomplete-item--selected {
+    background-color: #334155 !important;
+  }
+
+  .sku-autocomplete-name {
+    color: #f8fafc !important;
+    font-weight: 800 !important;
+  }
+
+  .sku-autocomplete-item span {
+    color: #f8fafc !important;
+  }
+
+  .sku-autocomplete-item .text-slate-500,
+  .sku-autocomplete-item .text-slate-400,
+  .sku-autocomplete-item .dark\:text-slate-400 {
+    color: #cbd5e1 !important;
+    font-weight: 600 !important;
+  }
+
+  .sku-autocomplete-empty {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: #f59e0b !important;
+  }
+}
+

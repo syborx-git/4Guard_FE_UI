@@ -146,7 +146,7 @@ export class TransferSubmoduleComponent implements OnInit {
         status: 'INACTIVO',
         label: 'Inactivo en Sistema',
         dotClass: 'bg-rose-500',
-        badgeClass: 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300',
+        badgeClass: 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/60',
       };
     }
 
@@ -163,7 +163,7 @@ export class TransferSubmoduleComponent implements OnInit {
         status: 'EN_RECEPCION',
         label: `En Recepción (#${activeReception.folio})`,
         dotClass: 'bg-amber-500',
-        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300',
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700/60',
       };
     }
 
@@ -180,7 +180,7 @@ export class TransferSubmoduleComponent implements OnInit {
         status: 'EN_DESPACHO',
         label: `En Despacho (#${activeOutbound.folio})`,
         dotClass: 'bg-amber-500',
-        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300',
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700/60',
       };
     }
 
@@ -188,7 +188,7 @@ export class TransferSubmoduleComponent implements OnInit {
       status: 'DISPONIBLE',
       label: 'Disponible para maniobra',
       dotClass: 'bg-emerald-500',
-      badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300',
+      badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700/60',
     };
   }
 

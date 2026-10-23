@@ -137,3 +137,17 @@ input, textarea {
 
 .w-full { width: 100% !important; }
 
+/* ── Escritura y Renderizado en Mayúsculas Global (Terminal RF) ── */
+input[type="text"]:not(.preserve-case):not([type="email"]):not([type="password"]),
+input:not([type]):not(.preserve-case),
+textarea:not(.preserve-case),
+.rf-input:not([type="password"]):not(.preserve-case) {
+  text-transform: uppercase;
+}
+
+input::placeholder,
+textarea::placeholder,
+.rf-input::placeholder {
+  text-transform: none;
+}
+

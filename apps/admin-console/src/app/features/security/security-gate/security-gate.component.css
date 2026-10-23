@@ -1077,10 +1077,18 @@ h1, h2, h3, h4, h5, h6 {
   box-sizing: border-box;
 }
 
+.form-input:not([type="date"]):not([type="time"]),
+.form-textarea,
+.fg-input {
+  text-transform: uppercase;
+}
+
 .form-input::placeholder,
-.form-textarea::placeholder {
+.form-textarea::placeholder,
+.fg-input::placeholder {
   color: #64748b;
   font-weight: normal;
+  text-transform: none;
 }
 
 .form-input:focus,
