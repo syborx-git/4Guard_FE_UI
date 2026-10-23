@@ -9,6 +9,7 @@
     "start:rf": "ng serve rf-terminal --configuration development --host 0.0.0.0 --disable-host-check --allowed-hosts all --proxy-config proxy.conf.js",
     "start:rf:dev": "ng serve rf-terminal --configuration develop --host 0.0.0.0 --disable-host-check --allowed-hosts all --proxy-config proxy.conf.js",
     "start:rf:ssl": "ng serve rf-terminal --configuration development --host 0.0.0.0 --disable-host-check --ssl --proxy-config proxy.conf.js",
+    "build": "ng build admin-console --configuration develop",
     "build:admin": "ng build admin-console --configuration production",
     "build:admin:dev": "ng build admin-console --configuration develop",
     "build:rf": "ng build rf-terminal --configuration production",

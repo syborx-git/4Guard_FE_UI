@@ -1,12 +1,7 @@
 # netlify.toml
-# Configuración de despliegue automático para 4GUARD WMS — Admin Console
-# Rama: main  →  https://fourguard-be.onrender.com (entorno develop)
+# Configuración global para 4GUARD WMS (Admin Console y Terminal RF)
+# Los comandos de build y publish se configuran en el panel de Netlify por cada sitio.
 
-[build]
-  # Comando de instalación explícito: hereda legacy-peer-deps del .npmrc
-  command = "npm run build:admin:dev"
-  # Directorio de salida del build de Angular
-  publish = "dist/admin-console/browser"
 
 [build.environment]
   # Fijar versión de Node.js compatible con Angular 17
