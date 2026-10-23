@@ -3,11 +3,10 @@
 # Rama: main  →  https://fourguard-be.onrender.com (entorno develop)
 
 [build]
-  # Si APP_TARGET=rf compila la Terminal RF (Tablet); de lo contrario compila Admin Console (Web)
-  command = "if [ \"$APP_TARGET\" = \"rf\" ]; then npm run build:rf:dev && mkdir -p dist/publish && cp -r dist/rf-terminal/browser/. dist/publish/; else npm run build:admin:dev && mkdir -p dist/publish && cp -r dist/admin-console/browser/. dist/publish/; fi"
-  # Directorio unificado de publicación
-  publish = "dist/publish"
-
+  # Comando de instalación explícito: hereda legacy-peer-deps del .npmrc
+  command = "npm run build:admin:dev"
+  # Directorio de salida del build de Angular
+  publish = "dist/admin-console/browser"
 
 [build.environment]
   # Fijar versión de Node.js compatible con Angular 17
