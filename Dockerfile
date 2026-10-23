@@ -17,8 +17,8 @@ RUN npm ci --prefer-offline --no-audit
 # Copiar el código fuente completo
 COPY . .
 
-# Compilar ambas aplicaciones con configuración develop (apuntando a Render)
-RUN npm run build:admin:dev && npm run build:rf:dev
+# Compilar ambas aplicaciones (rutas relativas apiBaseUrl="" para que Nginx las dirija al backend)
+RUN npm run build:admin && npm run build:rf
 
 # ===============================================================
 # Etapa 2: Servidor Web Ultra-Ligero (Nginx Alpine < 25 MB)
