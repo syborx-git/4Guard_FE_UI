@@ -5,7 +5,7 @@ import { WarehouseMovementsApiService } from '../../../features/warehouse-moveme
 import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
 import { BayRemisionSummary } from '../../../features/warehouse-movements/models/warehouse-movements.models';
 import { WarehouseLayoutService } from '../../../features/catalogs/services/warehouse-layout.service';
-import { PositionDetail } from '../../../features/catalogs/models/warehouse-catalog.models';
+import { PositionDetail, WarehouseSection } from '../../../features/catalogs/models/warehouse-catalog.models';
 
 export type BayCategory = 'FIXED_STORAGE' | 'TEMPORARY_BUFFER' | 'PRELOAD_STAGING';
 
@@ -31,30 +31,215 @@ export interface BayOccupancyItem {
   storedRemisiones?: BayRemisionSummary[];
 }
 
-export interface WarehouseMapSectionDef {
-  code: string;
-  name: string;
-  category: string;
-  polygonPoints: string;
-  labelX: number;
-  labelY: number;
-  sublabelX: number;
-  sublabelY: number;
-}
-
-export const WAREHOUSE_MAP_SECTIONS: WarehouseMapSectionDef[] = [
-  { code: 'A', name: 'Almacén A — Materia Prima & Secos', category: 'Materia Prima / PT', polygonPoints: '265,125 588,125 588,365 265,365', labelX: 426, labelY: 235, sublabelX: 426, sublabelY: 260 },
-  { code: 'B', name: 'Almacén B — Almacenamiento General', category: 'Almacenamiento General', polygonPoints: '265,670 420,670 420,840 265,840', labelX: 342, labelY: 745, sublabelX: 342, sublabelY: 765 },
-  { code: 'C', name: 'Almacén C — Alta Rotación', category: 'Alta Rotación', polygonPoints: '430,670 588,670 588,840 430,840', labelX: 509, labelY: 745, sublabelX: 509, sublabelY: 765 },
-  { code: 'D', name: 'Almacén D — Insumos & Empaque', category: 'Insumos / Packaging', polygonPoints: '602,125 783,125 783,245 602,245', labelX: 692, labelY: 180, sublabelX: 692, sublabelY: 200 },
-  { code: 'E', name: 'Almacén E — Material No Conforme', category: 'Material No Conforme', polygonPoints: '602,255 783,255 783,365 602,365', labelX: 692, labelY: 305, sublabelX: 692, sublabelY: 325 },
-  { code: 'F', name: 'Almacén F — Tránsito & Reempaque', category: 'Tránsito / Reempaque', polygonPoints: '797,125 890,125 890,365 797,365', labelX: 843, labelY: 235, sublabelX: 843, sublabelY: 260 },
-  { code: 'G', name: 'Almacén G — Picking & Despacho', category: 'Picking / Despacho', polygonPoints: '897,125 973,125 973,365 897,365', labelX: 935, labelY: 235, sublabelX: 935, sublabelY: 260 },
-  { code: 'H', name: 'Almacén H — Devoluciones & Scrap', category: 'Devoluciones / Scrap', polygonPoints: '797,670 973,670 973,840 797,840', labelX: 885, labelY: 745, sublabelX: 885, sublabelY: 765 },
-  { code: 'I', name: 'Almacén I — Cross-Docking Rápido', category: 'Cross-Docking', polygonPoints: '265,375 588,375 588,660 265,660', labelX: 426, labelY: 505, sublabelX: 426, sublabelY: 530 },
-  { code: 'J', name: 'Almacén J — Cuarentena Calidad', category: 'Cuarentena / Calidad', polygonPoints: '897,375 973,375 973,660 897,660', labelX: 935, labelY: 505, sublabelX: 935, sublabelY: 530 },
-  { code: 'K', name: 'Almacén K — Carga Pesada & Tarimas', category: 'Carga Pesada', polygonPoints: '797,375 890,375 890,660 797,660', labelX: 843, labelY: 505, sublabelX: 843, sublabelY: 530 },
-  { code: 'L', name: 'Almacén L — Carga Masiva & Salidas', category: 'Carga Masiva', polygonPoints: '602,375 783,375 783,660 602,660', labelX: 692, labelY: 505, sublabelX: 692, sublabelY: 530 },
+/**
+ * Topología Oficial de 13 Almacenes CAD (H, G, C, I, L, E, K, B, F, M, D, J, A)
+ * Distribución geométrica fiel al plano arquitectónico de planta (DXF #Layout Almacen principal.dxf).
+ */
+export const OFFICIAL_CAD_SECTIONS: WarehouseSection[] = [
+  {
+    id: 'sec-h',
+    code: 'H',
+    name: 'Almacén H — Conservación & Químicos',
+    category: 'Materia Prima Especial',
+    posFijas: 25,
+    posTemp: 10,
+    posPreload: 2,
+    capacidadTarimas: 550,
+    factorEstiba: '22 tarimas/pos',
+    materials: ['ADHESIVO BASE AGUA V3869 HB FULLER'],
+    notes: '25 Fijas · 10 Temporales · 2 Precarga',
+    status: 'LOADED',
+    polygonPoints: '190,8 264,8 264,84 242,84 232,92 232,133 190,133',
+    labelPosition: { x: 227, y: 46 },
+    sublabelPosition: { x: 227, y: 68 }
+  },
+  {
+    id: 'sec-g',
+    code: 'G',
+    name: 'Almacén G — Zona Oeste',
+    category: 'Almacenamiento General',
+    posFijas: 117,
+    posTemp: 30,
+    posPreload: 4,
+    capacidadTarimas: 2574,
+    factorEstiba: '22 tarimas/pos',
+    materials: ['SGM-JUICE-1L · Jugo del Valle', 'BOTELLA VIDRIO SALSA INGLESA C&B 1090 G'],
+    notes: '117 Fijas · 30 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '9,134 246,134 246,392 206,392 170,360 134,380 118,388 119,299 74,300 62,300',
+    labelPosition: { x: 141, y: 216 },
+    sublabelPosition: { x: 141, y: 238 }
+  },
+  {
+    id: 'sec-c',
+    code: 'C',
+    name: 'Almacén C — Alta Rotación',
+    category: 'Alta Rotación',
+    posFijas: 56,
+    posTemp: 20,
+    posPreload: 4,
+    capacidadTarimas: 2240,
+    factorEstiba: '40 tarimas/pos',
+    materials: ['ENVASE DE VIDRIO SIGNATURE 250G MX'],
+    notes: '56 Fijas · 20 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '702,378 802,378 802,782 718,782 718,542 720,542 720,459 702,459',
+    labelPosition: { x: 760, y: 662 },
+    sublabelPosition: { x: 760, y: 684 }
+  },
+  {
+    id: 'sec-i',
+    code: 'I',
+    name: 'Almacén I — Pasillo Central Racks',
+    category: 'Rack Alta Densidad',
+    posFijas: 91,
+    posTemp: 25,
+    posPreload: 4,
+    capacidadTarimas: 2002,
+    factorEstiba: '22 tarimas/pos',
+    materials: ['ALP-YOG-250G · Yogurt Alpura'],
+    notes: '91 Fijas · 25 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '389,276 489,216 489,690 389,690',
+    labelPosition: { x: 439, y: 483 },
+    sublabelPosition: { x: 439, y: 505 }
+  },
+  {
+    id: 'sec-l',
+    code: 'L',
+    name: 'Almacén L — Producto Terminado Nestlé',
+    category: 'Producto Terminado',
+    posFijas: 112,
+    posTemp: 30,
+    posPreload: 4,
+    capacidadTarimas: 2464,
+    factorEstiba: '22 tarimas/pos',
+    materials: ['LA LECHERA LCA LATA 48X375G MX', 'ABUELITA TABLETA 24X540G MX'],
+    notes: '112 Fijas · 30 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '489,216 588,166 588,607 568,607 568,632 560,632 560,695 568,695 568,765 592,765 592,782 544,782 544,760 489,760',
+    labelPosition: { x: 539, y: 407 },
+    sublabelPosition: { x: 539, y: 429 }
+  },
+  {
+    id: 'sec-e',
+    code: 'E',
+    name: 'Almacén E — Racks Densos Sur',
+    category: 'Racks Convencionales',
+    posFijas: 38,
+    posTemp: 15,
+    posPreload: 4,
+    capacidadTarimas: 760,
+    factorEstiba: '20 tarimas/pos',
+    materials: ['LATA HOJALATA CORTA PEELOFF D 153 MM'],
+    notes: '38 Fijas · 15 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '280,690 489,690 489,760 451,760 451,812 280,812',
+    labelPosition: { x: 384, y: 725 },
+    sublabelPosition: { x: 384, y: 747 }
+  },
+  {
+    id: 'sec-k',
+    code: 'K',
+    name: 'Almacén K — Nave Superior Central',
+    category: 'Reserva General',
+    posFijas: 181,
+    posTemp: 40,
+    posPreload: 4,
+    capacidadTarimas: 3982,
+    factorEstiba: '22 tarimas/pos',
+    materials: ['DAN-MILK-1L · Danone Entera'],
+    notes: '181 Fijas · 40 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '588,166 692,145 694,328 694,378 588,378',
+    labelPosition: { x: 641, y: 245 },
+    sublabelPosition: { x: 641, y: 267 }
+  },
+  {
+    id: 'sec-b',
+    code: 'B',
+    name: 'Almacén B — Almacenamiento General Noreste',
+    category: 'Almacenamiento General',
+    posFijas: 36,
+    posTemp: 15,
+    posPreload: 4,
+    capacidadTarimas: 792,
+    factorEstiba: '22 tarimas/pos',
+    materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
+    notes: '36 Fijas · 15 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '692,145 856,52 861,52 861,188 732,188 732,328 694,328',
+    labelPosition: { x: 713, y: 258 },
+    sublabelPosition: { x: 713, y: 280 }
+  },
+  {
+    id: 'sec-f',
+    code: 'F',
+    name: 'Almacén F — Cuarentena QM & Auditoría',
+    category: 'Inspección QA / QM',
+    posFijas: 91,
+    posTemp: 25,
+    posPreload: 4,
+    capacidadTarimas: 2002,
+    factorEstiba: '22 tarimas/pos',
+    materials: ['NESP-CAPS-10P · Cápsulas Nespresso'],
+    notes: '91 Fijas · 25 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '588,378 702,378 702,459 720,459 720,782 592,782 592,598 588,598',
+    labelPosition: { x: 654, y: 529 },
+    sublabelPosition: { x: 654, y: 551 }
+  },
+  {
+    id: 'sec-d',
+    code: 'D',
+    name: 'Almacén D — Insumos & Empaque',
+    category: 'Insumos / Packaging',
+    posFijas: 120,
+    posTemp: 30,
+    posPreload: 4,
+    capacidadTarimas: 2640,
+    factorEstiba: '22 tarimas/pos',
+    materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
+    notes: '120 Fijas · 30 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '588,378 650,378 650,782 588,782',
+    labelPosition: { x: 619, y: 550 },
+    sublabelPosition: { x: 619, y: 572 }
+  },
+  {
+    id: 'sec-j',
+    code: 'J',
+    name: 'Almacén J — Materia Prima & Secos Auxiliar',
+    category: 'Materia Prima / PT',
+    posFijas: 56,
+    posTemp: 20,
+    posPreload: 4,
+    capacidadTarimas: 1680,
+    factorEstiba: '30 tarimas/pos',
+    materials: ['LALA-MILK-1L · Leche Entera 1L'],
+    notes: '56 Fijas · 20 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '246,360 272,360 281,322 389,276 389,690 280,690 280,660 272,640 272,506 246,506',
+    labelPosition: { x: 318, y: 433 },
+    sublabelPosition: { x: 318, y: 455 }
+  },
+  {
+    id: 'sec-a',
+    code: 'A',
+    name: 'Almacén A — Materia Prima & PT Principal',
+    category: 'Materia Prima / PT',
+    posFijas: 170,
+    posTemp: 50,
+    posPreload: 4,
+    capacidadTarimas: 3740,
+    factorEstiba: '22 tarimas/pos',
+    materials: ['LALA-MILK-1L · Leche Entera 1L', 'ENVASE VIDRIO NESCAFE DOLCA 180G'],
+    notes: '170 Fijas · 50 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '802,378 886,335 886,738 802,738',
+    labelPosition: { x: 844, y: 625 },
+    sublabelPosition: { x: 844, y: 647 }
+  }
 ];
 
 export interface WarehouseZoneGroup {
@@ -147,8 +332,28 @@ export class BayOccupancySelectorComponent implements OnInit {
 
   // ── ESTADOS DE NAVEGACIÓN Y VISTA (MAPA 2D vs TARJETAS vs CUADRÍCULA) ──
   activeViewMode = signal<'map' | 'cards' | 'grid'>('map');
-  readonly mapSections = WAREHOUSE_MAP_SECTIONS;
-  hoveredMapZone = signal<WarehouseMapSectionDef | null>(null);
+  hoveredMapZone = signal<WarehouseSection | null>(null);
+  hoveredRamp = signal<string | null>(null);
+
+  readonly rampStagingCoords = [
+    { code: 'STAGING-R01', x: 810, y: 785, ramp: 1, label: 'R-01' },
+    { code: 'STAGING-R02', x: 792, y: 785, ramp: 2, label: 'R-02' },
+    { code: 'STAGING-R03', x: 775, y: 785, ramp: 3, label: 'R-03' },
+    { code: 'STAGING-R04', x: 759, y: 785, ramp: 4, label: 'R-04' },
+    { code: 'STAGING-R05', x: 743, y: 785, ramp: 5, label: 'R-05' },
+    { code: 'STAGING-R06', x: 727, y: 785, ramp: 6, label: 'R-06' },
+    { code: 'STAGING-R07', x: 710, y: 785, ramp: 7, label: 'R-07' },
+    { code: 'STAGING-R08', x: 332, y: 825, ramp: 8, label: 'R-08' },
+    { code: 'STAGING-R09', x: 304, y: 825, ramp: 9, label: 'R-09' },
+    { code: 'STAGING-R10', x: 288, y: 825, ramp: 10, label: 'R-10' },
+    { code: 'STAGING-R11', x: 260, y: 825, ramp: 11, label: 'R-11' },
+    { code: 'STAGING-R12', x: 235, y: 825, ramp: 12, label: 'R-12' },
+  ];
+
+  readonly displaySections = computed<WarehouseSection[]>(() => {
+    const fromService = this.layoutService.sections();
+    return fromService && fromService.length > 0 ? fromService : OFFICIAL_CAD_SECTIONS;
+  });
 
   selectedZoneId = signal<string | null>(null);
   statusFilter = signal<'ALL' | 'AVAILABLE' | 'OCCUPIED' | 'BLOCKED'>('ALL');
@@ -253,9 +458,9 @@ export class BayOccupancySelectorComponent implements OnInit {
       const reallocationCandidateCount = Math.min(tempOccupiedCount, fixedAvailableCount);
 
       let zoneLetter = 'A';
-      const m = g.code.match(/([A-L])/i);
+      const m = g.code.match(/([A-M])/i);
       if (m && m[1]) zoneLetter = m[1].toUpperCase();
-      const secDef = WAREHOUSE_MAP_SECTIONS.find(s => s.code === zoneLetter);
+      const secDef = this.displaySections().find(s => s.code.toUpperCase() === zoneLetter);
 
       return {
         id: g.id,
@@ -265,10 +470,10 @@ export class BayOccupancySelectorComponent implements OnInit {
         sectionName: g.sectionName,
         categoryLabel: secDef?.category || 'Almacenamiento',
         polygonPoints: secDef?.polygonPoints,
-        labelX: secDef?.labelX,
-        labelY: secDef?.labelY,
-        sublabelX: secDef?.sublabelX,
-        sublabelY: secDef?.sublabelY,
+        labelX: secDef?.labelPosition?.x,
+        labelY: secDef?.labelPosition?.y,
+        sublabelX: secDef?.sublabelPosition?.x,
+        sublabelY: secDef?.sublabelPosition?.y,
         
         fixedPositionsCount,
         fixedAvailableCount,
@@ -350,7 +555,7 @@ export class BayOccupancySelectorComponent implements OnInit {
   isSectionMatchingSearch(code: string): boolean {
     const q = this.searchQuery().toLowerCase().trim();
     if (!q) return true;
-    const sec = this.mapSections.find((s) => s.code.toLowerCase() === code.toLowerCase());
+    const sec = this.displaySections().find((s) => s.code.toLowerCase() === code.toLowerCase());
     const grp = this.getZoneGroupForCode(code);
     if (!sec && !grp) return false;
     const matchCode = code.toLowerCase().includes(q) || `almacén ${code.toLowerCase()}`.includes(q) || `almacen ${code.toLowerCase()}`.includes(q);
@@ -360,13 +565,41 @@ export class BayOccupancySelectorComponent implements OnInit {
     return !!(matchCode || matchName || matchCat || matchPos);
   }
 
-  openZoneFromMap(sec: WarehouseMapSectionDef): void {
+  openZoneFromMap(sec: WarehouseSection): void {
     const grp = this.getZoneGroupForCode(sec.code);
     if (grp) {
       this.openZone(grp);
     } else {
       this.selectedZoneId.set(`almacen-${sec.code.toLowerCase()}`);
+      this.currentPage.set(1);
     }
+  }
+
+  selectRampStagingBay(rampCode: string): void {
+    let found = this.bays().find(b => b.code.toUpperCase() === rampCode.toUpperCase());
+    if (!found) {
+      const live = this.movementsService.getBayLiveOccupancy(rampCode);
+      const current = live ? live.totalPallets : 0;
+      found = {
+        id: `bay-${rampCode.toLowerCase()}`,
+        code: rampCode,
+        name: `Rampa ${rampCode.replace('STAGING-R', 'R-')} · Buffer Temporal`,
+        zone: 'Buffer Temporal Andenes',
+        sectionName: 'Rampas de Recepción',
+        capacityPallets: 22,
+        currentStoredPallets: current,
+        availableUnits: Math.max(0, 22 - current),
+        occupancyPercentage: current > 0 ? Math.min(100, Math.round((current / 22) * 100)) : 0,
+        status: current >= 22 ? 'OCCUPIED' : (current > 0 ? 'ACTIVE' : 'ACTIVE'),
+        isBlocked: false,
+        category: 'TEMPORARY_BUFFER',
+        trafficLight: current >= 22 ? 'RED' : (current > 0 ? 'AMBER' : 'GREEN'),
+        isRecommended: true,
+        storedRemisiones: live ? live.remisiones : [],
+      };
+      this.bays.update(l => [found!, ...l]);
+    }
+    this.selectBay(found);
   }
 
   quickSelectBay(bay: BayOccupancyItem): void {
@@ -465,6 +698,9 @@ export class BayOccupancySelectorComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    if (this.layoutService.sections().length === 0) {
+      this.layoutService.loadTopology();
+    }
     this.loadBays();
   }
 
@@ -476,10 +712,12 @@ export class BayOccupancySelectorComponent implements OnInit {
           const mapped: BayOccupancyItem[] = positions
             .filter((p) => !p.code.startsWith('LOC-') && !p.code.startsWith('LOC_') && !p.code.startsWith('LOCALM-'))
             .map((p) => this.mapPositionDetailToBayItem(p));
+          this.injectRampStagingBays(mapped);
           this.bays.set(mapped);
           this.applyPreselection(mapped);
         } else {
           const fallback = this.generateEnterpriseTopology();
+          this.injectRampStagingBays(fallback);
           this.bays.set(fallback);
           this.applyPreselection(fallback);
         }
@@ -488,11 +726,39 @@ export class BayOccupancySelectorComponent implements OnInit {
       error: (err) => {
         console.warn('Error al consultar posiciones vía LayoutService, usando topología determinista:', err);
         const fallback = this.generateEnterpriseTopology();
+        this.injectRampStagingBays(fallback);
         this.bays.set(fallback);
         this.applyPreselection(fallback);
         this.loading.set(false);
       },
     });
+  }
+
+  private injectRampStagingBays(targetList: BayOccupancyItem[]): void {
+    const existing = new Set(targetList.map((b) => b.code.toUpperCase()));
+    for (const rmp of this.rampStagingCoords) {
+      if (!existing.has(rmp.code.toUpperCase())) {
+        const live = this.movementsService.getBayLiveOccupancy(rmp.code);
+        const current = live ? live.totalPallets : 0;
+        targetList.unshift({
+          id: `bay-${rmp.code.toLowerCase()}`,
+          code: rmp.code,
+          name: `Rampa ${rmp.label} · Buffer Temporal`,
+          zone: 'Buffer Temporal Andenes',
+          sectionName: 'Rampas de Recepción',
+          capacityPallets: 22,
+          currentStoredPallets: current,
+          availableUnits: Math.max(0, 22 - current),
+          occupancyPercentage: current > 0 ? Math.min(100, Math.round((current / 22) * 100)) : 0,
+          status: current >= 22 ? 'OCCUPIED' : (current > 0 ? 'ACTIVE' : 'ACTIVE'),
+          isBlocked: false,
+          category: 'TEMPORARY_BUFFER',
+          trafficLight: current >= 22 ? 'RED' : (current > 0 ? 'AMBER' : 'GREEN'),
+          isRecommended: true,
+          storedRemisiones: live ? live.remisiones : [],
+        });
+      }
+    }
   }
 
   private mapPositionDetailToBayItem(p: PositionDetail): BayOccupancyItem {

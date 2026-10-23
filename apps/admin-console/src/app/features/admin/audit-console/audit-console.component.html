@@ -1,0 +1,291 @@
+<div class="audit-page">
+  <header class="audit-header">
+    <div class="audit-header__left">
+      <a routerLink="/admin" class="audit-back">
+        <span class="material-symbols-outlined">arrow_back</span>
+        Volver a Administrar
+      </a>
+      <span class="audit-eyebrow">
+        <span class="material-symbols-outlined">verified_user</span>
+        MONITOREO Y SOPORTE · AUDITORÍA
+      </span>
+      <h1 class="audit-title">Consola de Auditoría</h1>
+      <p class="audit-subtitle">
+        Bitácora inmutable de llamadas a API, modificaciones y accesos del sistema,
+        con trazabilidad de operador, entidad, dirección IP y comparador de cambios.
+      </p>
+    </div>
+
+    <button type="button" class="audit-refresh" (click)="load()" [disabled]="isLoading()">
+      <span class="material-symbols-outlined" [class.spin]="isLoading()">refresh</span>
+      Actualizar
+    </button>
+  </header>
+
+  <section class="audit-kpis" aria-label="Resumen de auditoría">
+    <article class="audit-kpi">
+      <span class="material-symbols-outlined">receipt_long</span>
+      <div>
+        <span class="audit-kpi__label">EVENTOS</span>
+        <strong class="audit-kpi__value">{{ summary().total }}</strong>
+      </div>
+    </article>
+
+    <article class="audit-kpi audit-kpi--info">
+      <span class="material-symbols-outlined">group</span>
+      <div>
+        <span class="audit-kpi__label">USUARIOS ÚNICOS</span>
+        <strong class="audit-kpi__value">{{ summary().uniqueUsers }}</strong>
+      </div>
+    </article>
+
+    <article class="audit-kpi audit-kpi--success">
+      <span class="material-symbols-outlined">add_circle</span>
+      <div>
+        <span class="audit-kpi__label">CREACIONES</span>
+        <strong class="audit-kpi__value">{{ summary().creates }}</strong>
+      </div>
+    </article>
+
+    <article class="audit-kpi audit-kpi--warning">
+      <span class="material-symbols-outlined">edit</span>
+      <div>
+        <span class="audit-kpi__label">MODIFICACIONES</span>
+        <strong class="audit-kpi__value">{{ summary().updates }}</strong>
+      </div>
+    </article>
+
+    <article class="audit-kpi audit-kpi--danger">
+      <span class="material-symbols-outlined">delete</span>
+      <div>
+        <span class="audit-kpi__label">ELIMINACIONES</span>
+        <strong class="audit-kpi__value">{{ summary().deletes }}</strong>
+      </div>
+    </article>
+
+    <article class="audit-kpi audit-kpi--danger">
+      <span class="material-symbols-outlined">error</span>
+      <div>
+        <span class="audit-kpi__label">ERRORES / RECHAZOS</span>
+        <strong class="audit-kpi__value">{{ summary().errors }}</strong>
+      </div>
+    </article>
+  </section>
+
+  <section class="audit-filters">
+    <div class="audit-filters__row">
+      <div class="audit-preset-group" role="group" aria-label="Rango de fechas">
+        <button type="button" [class.active]="datePreset() === 'TODAY'" (click)="applyPreset('TODAY')">Hoy</button>
+        <button type="button" [class.active]="datePreset() === 'MONTH'" (click)="applyPreset('MONTH')">Este mes</button>
+        <button type="button" [class.active]="datePreset() === 'YEAR'" (click)="applyPreset('YEAR')">Este año</button>
+        <button type="button" [class.active]="datePreset() === 'CUSTOM'" (click)="applyPreset('CUSTOM')">Personalizado</button>
+      </div>
+
+      @if (datePreset() === 'CUSTOM') {
+        <div class="audit-custom-range">
+          <label>
+            <span>Desde</span>
+            <input type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
+          </label>
+          <label>
+            <span>Hasta</span>
+            <input type="date" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" />
+          </label>
+        </div>
+      }
+    </div>
+
+    <div class="audit-filters__row audit-filters__row--wrap">
+      <label class="audit-field">
+        <span class="material-symbols-outlined">bolt</span>
+        <select [ngModel]="actionFilter()" (ngModelChange)="actionFilter.set($event)">
+          <option value="">Todas las acciones</option>
+          @for (action of actionOptions(); track action) {
+            <option [value]="action">{{ actionLabel(action) }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="audit-field">
+        <span class="material-symbols-outlined">category</span>
+        <select [ngModel]="entityTypeFilter()" (ngModelChange)="entityTypeFilter.set($event)">
+          <option value="">Todas las entidades</option>
+          @for (entity of entityTypeOptions(); track entity) {
+            <option [value]="entity">{{ entityLabel(entity) }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="audit-search">
+        <span class="material-symbols-outlined">search</span>
+        <input
+          type="text"
+          placeholder="Operador, acción, entidad, ID o IP..."
+          [ngModel]="searchTerm()"
+          (ngModelChange)="searchTerm.set($event)"
+          (keydown.enter)="applyFilters()"
+        />
+      </label>
+
+      <button type="button" class="audit-apply" (click)="applyFilters()">
+        <span class="material-symbols-outlined">filter_alt</span>
+        Filtrar
+      </button>
+
+      <button type="button" class="audit-clear" (click)="resetFilters()">
+        <span class="material-symbols-outlined">restart_alt</span>
+        Limpiar
+      </button>
+    </div>
+  </section>
+
+  <section class="audit-table-card">
+    @if (isLoading()) {
+      <div class="audit-state">
+        <span class="material-symbols-outlined spin">progress_activity</span>
+        <p>Cargando bitácora…</p>
+      </div>
+    } @else if (error()) {
+      <div class="audit-state audit-state--error">
+        <span class="material-symbols-outlined">error</span>
+        <p>{{ error() }}</p>
+        <button type="button" (click)="load()">Reintentar</button>
+      </div>
+    } @else if (pagedItems().length === 0) {
+      <div class="audit-state">
+        <span class="material-symbols-outlined">search_off</span>
+        <p>No hay eventos de auditoría que coincidan con los filtros.</p>
+      </div>
+    } @else {
+      <div class="audit-table-scroll">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>Fecha / Hora</th>
+              <th>Operador</th>
+              <th>Entidad</th>
+              <th>ID Entidad</th>
+              <th>Acción</th>
+              <th>Dirección IP</th>
+              <th class="text-right">Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of pagedItems(); track item.logId) {
+              <tr (click)="openDetail(item)">
+                <td class="mono">{{ formatDateTime(item.createdAt) }}</td>
+                <td class="strong">{{ item.username }}</td>
+                <td><span class="audit-entity-chip">{{ entityLabel(item.entityType) }}</span></td>
+                <td class="mono">{{ item.entityId || '—' }}</td>
+                <td>
+                  <span class="audit-action-chip" [attr.data-tone]="actionTone(item.action)">
+                    {{ actionLabel(item.action) }}
+                  </span>
+                </td>
+                <td class="mono">{{ item.ipAddress || '—' }}</td>
+                <td class="text-right">
+                  <button
+                    type="button"
+                    class="audit-icon-btn"
+                    title="Ver comparador de cambios"
+                    (click)="openDetail(item); $event.stopPropagation()"
+                  >
+                    <span class="material-symbols-outlined">difference</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="audit-footer">
+        <div class="audit-footer__info">
+          Mostrando <b>{{ pagedItems().length }}</b> de <b>{{ filteredItems().length }}</b> eventos
+        </div>
+
+        <div class="audit-footer__controls">
+          <label class="audit-page-size">
+            MOSTRAR
+            <select [value]="pageSize()" (change)="onPageSizeChange($event)">
+              <option value="20">20</option>
+              <option value="30">30</option>
+              <option value="50">50</option>
+            </select>
+          </label>
+
+          <div class="audit-pagination">
+            <button type="button" [disabled]="page() === 1" (click)="changePage(-1)">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <span>PÁGINA <b>{{ page() }}</b> DE <b>{{ totalPages() }}</b></span>
+            <button type="button" [disabled]="page() >= totalPages()" (click)="changePage(1)">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      </footer>
+    }
+  </section>
+
+  @if (selectedItem(); as item) {
+    <div class="audit-overlay" (click)="closeDetail()">
+      <aside class="audit-drawer" (click)="$event.stopPropagation()">
+        <header class="audit-drawer__header">
+          <div>
+            <span class="audit-eyebrow">Detalle de evento</span>
+            <h2>{{ actionLabel(item.action) }}</h2>
+          </div>
+          <button type="button" class="audit-icon-btn" (click)="closeDetail()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="audit-drawer__body">
+          <div class="audit-drawer__meta">
+            <span class="audit-action-chip" [attr.data-tone]="actionTone(item.action)">
+              {{ actionLabel(item.action) }}
+            </span>
+            @if (isError(item)) {
+              <span class="audit-error-tag">REVISAR</span>
+            }
+          </div>
+
+          <dl class="audit-detail-grid">
+            <div><dt>Operador</dt><dd>{{ item.username }}</dd></div>
+            <div><dt>Entidad</dt><dd>{{ entityLabel(item.entityType) }}</dd></div>
+            <div><dt>ID Entidad</dt><dd class="mono">{{ item.entityId || '—' }}</dd></div>
+            <div><dt>Fecha</dt><dd>{{ formatDateTime(item.createdAt) }}</dd></div>
+            <div><dt>Dirección IP</dt><dd class="mono">{{ item.ipAddress || '—' }}</dd></div>
+            <div><dt>User Agent</dt><dd class="audit-ua">{{ item.userAgent || '—' }}</dd></div>
+          </dl>
+
+          @if (item.details.length > 0) {
+            <div class="audit-diff">
+              <div class="audit-diff__title">
+                <span class="material-symbols-outlined">difference</span>
+                Comparador de cambios ({{ item.details.length }})
+              </div>
+              <div class="audit-diff__table">
+                <div class="audit-diff__head">
+                  <span>Campo</span>
+                  <span>Antes</span>
+                  <span>Después</span>
+                </div>
+                @for (detail of item.details; track $index) {
+                  <div class="audit-diff__row">
+                    <span class="mono">{{ detail.fieldName }}</span>
+                    <span class="audit-diff__del">{{ detail.oldValue ?? '—' }}</span>
+                    <span class="audit-diff__add">{{ detail.newValue ?? '—' }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="audit-no-changes">Sin cambios campo a campo registrados.</div>
+          }
+        </div>
+      </aside>
+    </div>
+  }
+</div>

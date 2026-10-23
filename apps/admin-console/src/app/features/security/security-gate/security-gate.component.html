@@ -148,6 +148,60 @@
     </div>
   </header>
 
+  <!-- ── 2.5 BANNER EN VIVO: RAMPAS ASIGNADAS POR ALMACÉN (RECEPCIÓN / SALIDA) ── -->
+  @if (pendingRampAssignments().length > 0) {
+    <section class="security-ramp-alerts-container mb-4 space-y-2 animate-fade-in" aria-label="Avisos de Rampas Asignadas por Almacén">
+      @for (ramp of pendingRampAssignments(); track ramp.folio) {
+        <div class="security-ramp-alert-card flex items-center justify-between gap-3 p-3.5 rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 shadow-lg">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shrink-0 animate-bounce">
+              <span class="material-symbols-outlined text-2xl">dock</span>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 uppercase tracking-wide">
+                  🎯 Rampa Asignada por Almacén
+                </span>
+                <span class="font-mono font-bold text-xs text-amber-400">Folio #{{ ramp.folio }}</span>
+                <span class="text-[11px] text-slate-400 font-mono">{{ ramp.time }}</span>
+              </div>
+              <h3 class="text-xs sm:text-sm font-bold text-slate-100 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                <span>Rampa <strong>R-{{ ramp.rampNumber }}</strong> asignada a</span>
+                <span class="text-emerald-300">{{ ramp.carrierLine || 'Transportista' }}</span>
+                <span class="text-slate-400">· Chofer:</span>
+                <span class="text-slate-200">{{ ramp.driverName }}</span>
+                <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono text-[10px] border border-slate-700">Placas: {{ ramp.tractorPlates }}</span>
+              </h3>
+              <p class="text-[11px] text-emerald-400/90 font-medium">
+                Indique verbalmente al operador transportista avanzar de inmediato a la <strong>Rampa {{ ramp.rampNumber }}</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              (click)="attendRampAssignment(ramp)"
+              class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all cursor-pointer"
+              title="Localizar unidad en el listado de patio"
+            >
+              <span class="material-symbols-outlined text-sm">local_shipping</span>
+              <span>Ver en Patio</span>
+            </button>
+            <button
+              type="button"
+              (click)="dismissRampNotice(ramp.folio, $event)"
+              class="w-7 h-7 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-all cursor-pointer"
+              title="Descartar aviso de rampa"
+            >
+              <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
   <!-- ── 3. TARJETAS DE MÉTRICAS KPI (CON VISTA COMPACTA COLAPSABLE) ── -->
   <section aria-label="Métricas de Caseta">
     <div class="flex items-center justify-between mb-2">

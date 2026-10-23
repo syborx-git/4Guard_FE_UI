@@ -4,12 +4,10 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } 
 import { ActivatedRoute } from '@angular/router';
 import { WarehouseMovementsApiService } from '../../warehouse-movements/services/warehouse-movements-api.service';
 
-import { RouterLink } from '@angular/router';
-
 @Component({
   selector: 'fg-carrier-checkin',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './carrier-checkin.component.html',
   styleUrl: './carrier-checkin.component.css'
 })
@@ -150,6 +148,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     }
 
     this.loadCatalogs();
+    this.setupUppercaseTransform();
 
     this.route.queryParams.subscribe((params) => {
       const orgParam = params['org'] || params['organizationId'];
@@ -223,6 +222,35 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         this.transportTypesList.set(this.defaultTransports);
       }
     });
+  }
+
+  private setupUppercaseTransform(): void {
+    const textFields = [
+      'remision',
+      'noCartaPorte',
+      'clientName',
+      'carrierLine',
+      'nombreOperador',
+      'driverLicense',
+      'placasTracto',
+      'noEcoTractor',
+      'placasCaja',
+      'noEcoCaja',
+      'medidasCaja',
+      'tipoTransporte',
+      'observaciones'
+    ];
+
+    for (const field of textFields) {
+      const ctrl = this.checkInForm.get(field);
+      if (ctrl) {
+        ctrl.valueChanges.subscribe((val) => {
+          if (typeof val === 'string' && val !== val.toUpperCase()) {
+            ctrl.setValue(val.toUpperCase(), { emitEvent: false });
+          }
+        });
+      }
+    }
   }
 
   protected onClientSelectChange(event: Event): void {
@@ -693,24 +721,24 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       organizationId: this.organizationId(),
       branchId: this.branchId(),
       operationType: f.operacion,
-      docNumber: f.operacion === 'CARGA' ? f.noCartaPorte : f.remision,
-      noCartaPorte: f.noCartaPorte,
-      remision: f.remision,
+      docNumber: ((f.operacion === 'CARGA' ? f.noCartaPorte : f.remision) || '').trim().toUpperCase(),
+      noCartaPorte: (f.noCartaPorte || '').trim().toUpperCase(),
+      remision: (f.remision || '').trim().toUpperCase(),
       clientCode: f.clientCode,
-      clientName: f.clientName,
+      clientName: (f.clientName || '').trim().toUpperCase(),
       carrierLineCode: f.carrierLineCode,
-      carrierLine: f.carrierLine,
-      driverName: f.nombreOperador,
-      driverLicense: f.driverLicense,
+      carrierLine: (f.carrierLine || '').trim().toUpperCase(),
+      driverName: (f.nombreOperador || '').trim().toUpperCase(),
+      driverLicense: (f.driverLicense || '').trim().toUpperCase(),
       driverPhone: f.driverPhone,
-      tractorPlates: (f.placasTracto || '').toUpperCase(),
-      noEcoTractor: f.noEcoTractor,
-      boxPlates: (f.placasCaja || '').toUpperCase(),
-      noEcoCaja: f.noEcoCaja,
-      boxDimensions: f.medidasCaja,
-      transportType: f.tipoTransporte,
-      sealNumbers: seals,
-      observations: f.observaciones || 'Registro completado por chofer vía smartphone',
+      tractorPlates: (f.placasTracto || '').trim().toUpperCase(),
+      noEcoTractor: (f.noEcoTractor || '').trim().toUpperCase(),
+      boxPlates: (f.placasCaja || '').trim().toUpperCase(),
+      noEcoCaja: (f.noEcoCaja || '').trim().toUpperCase(),
+      boxDimensions: (f.medidasCaja || '').trim().toUpperCase(),
+      transportType: (f.tipoTransporte || '').trim().toUpperCase(),
+      sealNumbers: seals.map(s => String(s).toUpperCase()),
+      observations: (f.observaciones || 'REGISTRO COMPLETADO POR CHOFER VÍA SMARTPHONE').trim().toUpperCase(),
       driverSignature: sigData || 'FIRMA_DIGITAL_AUTORIZADA_CHOFER',
       checklistData: null,
       status: 'SUBMITTED'

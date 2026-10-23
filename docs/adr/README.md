@@ -14,7 +14,7 @@
 ## 📋 Catálogo Maestro de Decisiones Arquitectónicas
 
 | ID | Título | Estado | Fecha | Ámbito | Archivo |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | **ADR-001** | Arquitectura Nx Monorepo (`apps/` + `shared-core`) | ✅ Aceptado | 2026-07 | Arquitectura Monorepo | [`ADR-001-nx-monorepo.md`](./ADR-001-nx-monorepo.md) |
 | **ADR-002** | Componentes Standalone (Eliminación de NgModules) | ✅ Aceptado | 2026-07 | Angular Core | [`ADR-002-standalone-components.md`](./ADR-002-standalone-components.md) |
 | **ADR-003** | Synexia Theme Engine (`.theme-dark` / `.theme-light`) | ✅ Aceptado | 2026-07 | Design System / CSS | [`ADR-003-synexia-theme-engine.md`](./ADR-003-synexia-theme-engine.md) |
@@ -35,3 +35,4 @@
 | **ADR-018** | Homologación del Ciclo de Salida (Check-Out) en Caseta y Formato Oficial F01-PO-CP-7.1.3-03 | ✅ Aceptado | 2026-09 | Security Gate / Compliance | [`ADR-018-security-gate-checkout-and-f01-transport-checklist-homologation.md`](./ADR-018-security-gate-checkout-and-f01-transport-checklist-homologation.md) |
 | **ADR-019** | Flujo Operativo Integral Unificado de Salidas de Almacén (Carga / Despacho Outbound), Mesa de Control WMS y Check-Out en Caseta | ✅ Aceptado | 2026-09 | Outbound / Security Gate | [`ADR-019-flujo-integral-salidas-almacen-caseta-y-despacho.md`](./ADR-019-flujo-integral-salidas-almacen-caseta-y-despacho.md) |
 | **ADR-020** | Flujo Operativo Integral Unificado de Recepción de Almacén (Descarga / Inbound), Mesa de Control WMS y Check-Out en Caseta | ✅ Aceptado | 2026-09 | Inbound / Security Gate | [`ADR-020-flujo-integral-recepcion-almacen-caseta-y-descarga.md`](./ADR-020-flujo-integral-recepcion-almacen-caseta-y-descarga.md) |
+| **ADR-022** | Consolidación Operativa por Turno y Historial Multi-Entidad de Remisiones (canónico en el workspace) | ✅ Aceptado / Completo | 2026-10 | Turnos / Operaciones / Auditoría | [`../../../docs/adr/ADR-022-consolidacion-operativa-por-turno-e-historial.md`](../../../docs/adr/ADR-022-consolidacion-operativa-por-turno-e-historial.md) |

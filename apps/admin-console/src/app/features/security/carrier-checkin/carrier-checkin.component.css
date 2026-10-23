@@ -560,9 +560,15 @@
   display: block;
 }
 
+.form-input:not([type="date"]):not([type="time"]),
+.form-textarea {
+  text-transform: uppercase;
+}
+
 .form-input::placeholder,
 .form-textarea::placeholder {
   color: var(--text-subtle);
+  text-transform: none;
 }
 
 .form-input:focus,
