@@ -1219,10 +1219,15 @@
 .bay-map-svg {
   width: 100%;
   height: auto;
-  max-height: min(44vh, 335px);
+  max-height: min(52vh, 440px);
   display: block;
   margin: 0 auto;
   user-select: none;
+}
+
+.cad__base-plan {
+  pointer-events: none;
+  opacity: 0.90;
 }
 
 .cad__building-wall {

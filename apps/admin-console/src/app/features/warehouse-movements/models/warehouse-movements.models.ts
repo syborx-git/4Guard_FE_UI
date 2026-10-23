@@ -265,6 +265,7 @@ export interface ReceptionHeader {
   cancelledAt?: string;
   cancellationReason?: string;
   cancelledBy?: string;
+  shiftSessionId?: string | null;
   reopenedAt?: string;
   reopenedBy?: string;
   reopenReason?: string;
@@ -316,6 +317,7 @@ export interface WarehouseTransfer {
   cancellationReason?: string;
   cancelledAt?: string;
   cancelledBy?: string;
+  shiftSessionId?: string | null;
 }
 
 export interface LocationStockInfo {
@@ -459,6 +461,7 @@ export interface WarehouseOutbound {
   cancellationReason?: string;
   cancelledAt?: string;
   cancelledBy?: string;
+  shiftSessionId?: string | null;
 }
 
 export interface ClientDestination {

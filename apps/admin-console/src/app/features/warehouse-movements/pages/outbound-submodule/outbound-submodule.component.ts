@@ -5,6 +5,7 @@ import { Router, ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/r
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { AuthState } from '../../../../core/auth/auth.state';
+import { ShiftContextService } from '../../../../core/services/shift-context.service';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
 import { ForkliftOperatorAdminService } from '../../../admin/services/forklift-operator.service';
@@ -105,12 +106,17 @@ export class OutboundSubmoduleComponent implements OnInit {
   private readonly smartNotification = inject(SmartNotificationService);
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
-  protected readonly authState = inject(AuthState);
+  readonly authState = inject(AuthState);
+  readonly shiftContext = inject(ShiftContextService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
   goToManageCarriers(): void {
     this.router.navigate(['/admin/carriers']);
+  }
+
+  protected formatShiftTime(value: string | null): string {
+    return value ? value.slice(0, 5) : '';
   }
 
   // ── MODO DEL WORKBENCH ─────────────────────────────────────────────────────
@@ -120,15 +126,34 @@ export class OutboundSubmoduleComponent implements OnInit {
   statusFilter = signal<string>('ALL');
   auditEntries = signal<MovementAuditEntry[]>([]);
 
-  // KPIs Homologados
-  readonly kpiTotalOutbounds = this.svc.kpiTotalOutbounds;
+  // KPIs Homologados (acotados al turno vigente de la sucursal)
+  private isActiveStatus(status: string): boolean {
+    return status !== 'COMPLETED' && status !== 'CANCELLED';
+  }
+
+  protected readonly boardOutbounds = computed(() => {
+    const sessionId = this.shiftContext.activeShift()?.sessionId;
+    const list = this.svc.outbounds();
+    if (!sessionId) return list;
+    return list.filter(
+      (o) => o.shiftSessionId === sessionId || this.isActiveStatus(o.status)
+    );
+  });
+
+  protected isCarryOver(outbound: WarehouseOutbound): boolean {
+    const sessionId = this.shiftContext.activeShift()?.sessionId;
+    return !!sessionId && !!outbound.shiftSessionId && outbound.shiftSessionId !== sessionId
+      && this.isActiveStatus(outbound.status);
+  }
+
+  readonly kpiTotalOutbounds = computed(() => this.boardOutbounds().length);
   readonly kpiTotalPallets = this.svc.kpiTotalPalletsDispatched;
   readonly kpiTotalPieces = this.svc.kpiTotalPiecesDispatched;
   readonly kpiClients = this.svc.kpiDistinctClientsServed;
-  readonly kpiCaseta = computed(() => this.svc.outbounds().filter((o) => o.status === 'REGISTERED').length);
-  readonly kpiInAnden = computed(() => this.svc.outbounds().filter((o) => ['ASSIGNED', 'IN_PROGRESS', 'LOADED'].includes(o.status)).length);
-  readonly kpiCompleted = computed(() => this.svc.outbounds().filter((o) => o.status === 'COMPLETED').length);
-  readonly kpiCancelled = computed(() => this.svc.outbounds().filter((o) => o.status === 'CANCELLED').length);
+  readonly kpiCaseta = computed(() => this.boardOutbounds().filter((o) => o.status === 'REGISTERED').length);
+  readonly kpiInAnden = computed(() => this.boardOutbounds().filter((o) => ['ASSIGNED', 'IN_PROGRESS', 'LOADED'].includes(o.status)).length);
+  readonly kpiCompleted = computed(() => this.boardOutbounds().filter((o) => o.status === 'COMPLETED').length);
+  readonly kpiCancelled = computed(() => this.boardOutbounds().filter((o) => o.status === 'CANCELLED').length);
 
   // Estado de Compactación de Métricas / KPIs
   isKpiCollapsed = signal<boolean>(localStorage.getItem('4g_outbound_kpis_collapsed') === 'true');
@@ -2699,7 +2724,7 @@ export class OutboundSubmoduleComponent implements OnInit {
 
   // ── DIRECTORIO GENERAL DE SALIDAS ──────────────────────────────────────────
   filteredOutbounds = computed(() => {
-    const list = this.svc.outbounds();
+    const list = this.boardOutbounds();
     const q = this.searchQuery().trim().toLowerCase();
     const multi = this.activeStatusFilters();
     const st = this.statusFilter();
@@ -2742,6 +2767,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   // ── LIFECYCLE ──────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.svc.loadInitialBackendData();
+    this.shiftContext.loadActiveShift();
     this._loadForkliftOperators();
     this._loadCatalogSkus();
     this.formMode.set('idle');

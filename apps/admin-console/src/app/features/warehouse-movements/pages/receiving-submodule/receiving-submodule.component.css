@@ -77,6 +77,68 @@ h6 {
   flex-wrap: wrap;
 }
 
+.receiving-header__right {
+  display: flex;
+  align-items: center;
+  align-self: center;
+}
+
+.shift-context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--gold-border, rgba(197, 168, 107, 0.35));
+  background: var(--gold-bg, rgba(197, 168, 107, 0.12));
+  color: var(--text-primary);
+  min-width: 210px;
+}
+
+.shift-context-chip .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--gold, #c5a86b);
+}
+
+.shift-context-chip__copy {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.shift-context-chip__label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  color: var(--text-secondary);
+}
+
+.shift-context-chip__value {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.shift-context-chip--fallback {
+  border-color: var(--c-warning-bdr, rgba(245, 158, 11, 0.35));
+  background: var(--c-warning-bg, rgba(245, 158, 11, 0.12));
+}
+
+.shift-context-chip--fallback .material-symbols-outlined {
+  color: var(--c-warning, #d97706);
+}
+
+.shift-context-chip--loading .material-symbols-outlined {
+  animation: shift-spin 1.1s linear infinite;
+}
+
+@keyframes shift-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .receiving-header__left {
   display: flex;
   align-items: flex-start;
@@ -1406,6 +1468,12 @@ h6 {
   border: 1px solid rgba(88, 98, 116, 0.14);
 }
 
+:host-context(.dark) .reopen-action-grid,
+:host-context(.theme-dark) .reopen-action-grid {
+  background: #0b111e;
+  border-color: rgba(51, 65, 85, 0.6);
+}
+
 @media (max-width: 840px) {
   .reopen-action-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1433,6 +1501,13 @@ h6 {
   transition: all 0.18s ease;
 }
 
+:host-context(.dark) .reopen-action-btn,
+:host-context(.theme-dark) .reopen-action-btn {
+  background: #111a2e;
+  border-color: rgba(51, 65, 85, 0.6);
+  color: #94a3b8;
+}
+
 .reopen-action-btn:hover {
   background: #ffffff;
   color: #172033;
@@ -1440,22 +1515,52 @@ h6 {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
+:host-context(.dark) .reopen-action-btn:hover,
+:host-context(.theme-dark) .reopen-action-btn:hover {
+  background: #18233a;
+  color: #f1f5f9;
+  border-color: rgba(197, 168, 107, 0.4);
+}
+
 .reopen-action-btn.active {
+  background: linear-gradient(135deg, rgba(197, 168, 107, 0.18) 0%, rgba(212, 175, 55, 0.12) 100%) !important;
+  color: #855d14 !important;
+  border-color: rgba(197, 168, 107, 0.5) !important;
+  box-shadow: 0 2px 8px rgba(197, 168, 107, 0.18) !important;
+}
+
+.reopen-action-btn.active .material-symbols-outlined {
+  color: #b8860b !important;
+}
+
+.reopen-action-btn.active .reopen-action-title {
+  color: #784e0e !important;
+}
+
+.reopen-action-btn.active .reopen-action-sub {
+  color: #9b7126 !important;
+}
+
+:host-context(.dark) .reopen-action-btn.active,
+:host-context(.theme-dark) .reopen-action-btn.active {
   background: linear-gradient(145deg, #172033, #25324a) !important;
   color: #ffffff !important;
   border-color: #172033 !important;
   box-shadow: 0 4px 14px rgba(23, 32, 51, 0.22) !important;
 }
 
-.reopen-action-btn.active .material-symbols-outlined {
+:host-context(.dark) .reopen-action-btn.active .material-symbols-outlined,
+:host-context(.theme-dark) .reopen-action-btn.active .material-symbols-outlined {
   color: #e0c87a !important;
 }
 
-.reopen-action-btn.active .reopen-action-title {
+:host-context(.dark) .reopen-action-btn.active .reopen-action-title,
+:host-context(.theme-dark) .reopen-action-btn.active .reopen-action-title {
   color: #ffffff !important;
 }
 
-.reopen-action-btn.active .reopen-action-sub {
+:host-context(.dark) .reopen-action-btn.active .reopen-action-sub,
+:host-context(.theme-dark) .reopen-action-btn.active .reopen-action-sub {
   color: #cbd5e1 !important;
 }
 
@@ -1466,6 +1571,11 @@ h6 {
   color: #1e293b;
 }
 
+:host-context(.dark) .reopen-action-title,
+:host-context(.theme-dark) .reopen-action-title {
+  color: #f1f5f9;
+}
+
 .reopen-action-sub {
   font-size: 0.65rem;
   font-weight: 500;
@@ -1473,7 +1583,12 @@ h6 {
   margin-top: 0.15rem;
 }
 
-/* ── PANELES OPERATIVOS LIGHT MODE ── */
+:host-context(.dark) .reopen-action-sub,
+:host-context(.theme-dark) .reopen-action-sub {
+  color: #94a3b8;
+}
+
+/* ── PANELES OPERATIVOS LIGHT MODE & DARK MODE ── */
 .reopen-panel-gold {
   background: #fdfbf7;
   border: 1px solid rgba(197, 168, 107, 0.32);
@@ -1481,11 +1596,23 @@ h6 {
   padding: 0.85rem 1rem;
 }
 
+:host-context(.dark) .reopen-panel-gold,
+:host-context(.theme-dark) .reopen-panel-gold {
+  background: rgba(197, 168, 107, 0.08);
+  border-color: rgba(197, 168, 107, 0.3);
+}
+
 .reopen-panel-blue {
   background: #f8fafc;
   border: 1px solid rgba(45, 125, 210, 0.25);
   border-radius: 12px;
   padding: 0.85rem 1rem;
+}
+
+:host-context(.dark) .reopen-panel-blue,
+:host-context(.theme-dark) .reopen-panel-blue {
+  background: rgba(45, 125, 210, 0.08);
+  border-color: rgba(45, 125, 210, 0.3);
 }
 
 /* ── ESTACIÓN DE ESCANEO RÁPIDO DE UAS CON PISTOLA RF ── */

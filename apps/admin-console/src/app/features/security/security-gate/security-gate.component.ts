@@ -58,7 +58,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly authState = inject(AuthState);
   private readonly fb = inject(FormBuilder);
   private readonly movementsService = inject(WarehouseMovementsService);
-  private readonly smartNotification = inject(SmartNotificationService);
+  protected readonly smartNotification = inject(SmartNotificationService);
+  protected readonly pendingRampAssignments = this.smartNotification.pendingRampAssignments;
+  protected readonly pendingRampAssignmentsCount = this.smartNotification.pendingRampAssignmentsCount;
   private readonly printService = inject(PrintService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
@@ -150,6 +152,21 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         }
       }
     }, { allowSignalWrites: true });
+  }
+
+  protected dismissRampNotice(folio: string, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.smartNotification.dismissRampAssignment(folio);
+  }
+
+  protected attendRampAssignment(ramp: any): void {
+    this.setTab('IN_YARD');
+    if (ramp.tractorPlates) {
+      this.inYardSearch.set(ramp.tractorPlates);
+    } else if (ramp.folio) {
+      this.inYardSearch.set(ramp.folio);
+    }
+    this.toast.info(`🔔 Mostrando unidad en patio: Folio #${ramp.folio} (Rampa ${ramp.rampNumber}) — Avise al transportista avanzar a rampa.`);
   }
 
   protected getLoggedGuardName(): string {

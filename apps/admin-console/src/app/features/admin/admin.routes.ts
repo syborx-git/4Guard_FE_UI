@@ -14,6 +14,22 @@ export const adminRoutes: Routes = [
     title: '4GUARD WMS — Gestión de Usuarios',
   },
   {
+    path: 'remissions-history',
+    loadComponent: () =>
+      import('./remission-history/remission-history.component').then(
+        (m) => m.RemissionHistoryComponent
+      ),
+    title: '4GUARD WMS — Historial de Remisiones',
+  },
+  {
+    path: 'audit',
+    loadComponent: () =>
+      import('./audit-console/audit-console.component').then(
+        (m) => m.AuditConsoleComponent
+      ),
+    title: '4GUARD WMS — Consola de Auditoría',
+  },
+  {
     path: 'carriers',
     loadChildren: () =>
       import('./carriers/carriers.routes').then((m) => m.carriersRoutes),
