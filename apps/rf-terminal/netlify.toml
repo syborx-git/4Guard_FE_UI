@@ -1,0 +1,23 @@
+# apps/rf-terminal/netlify.toml
+# Configuración de despliegue exclusivo para 4GUARD WMS — Terminal RF (Tablet)
+# Base directory en Netlify: apps/rf-terminal
+
+[build]
+  command = "npm run build:rf:dev"
+  publish = "../../dist/rf-terminal/browser"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Proxy inverso para peticiones de API al Backend en Render
+[[redirects]]
+  from   = "/api/v1/*"
+  to     = "https://fourguard-be-huzh.onrender.com/api/v1/:splat"
+  status = 200
+  force  = true
+
+# Redirigir todas las rutas al index.html para que funcione el routing de Angular (PWA)
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
