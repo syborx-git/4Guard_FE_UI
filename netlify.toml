@@ -3,11 +3,10 @@
 # Rama: main  →  https://fourguard-be.onrender.com (entorno develop)
 
 [build]
-  # Script dinámico que compila Admin o Terminal RF según APP_TARGET
-  command = "node scripts/build-netlify.js"
-  # Directorio unificado de publicación
-  publish = "dist/publish"
-
+  # Comando de instalación explícito: hereda legacy-peer-deps del .npmrc
+  command = "npm run build:admin:dev"
+  # Directorio de salida del build de Angular
+  publish = "dist/admin-console/browser"
 
 [build.environment]
   # Fijar versión de Node.js compatible con Angular 17
