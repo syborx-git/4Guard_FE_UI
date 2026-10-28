@@ -290,12 +290,23 @@ export class ForbotEngineService {
       return 'BLOQUEOS_CALIDAD_NOM251';
     }
 
+    if (
+      q.startsWith('ir a') ||
+      q.startsWith('abrir') ||
+      q.startsWith('navegar a') ||
+      q.startsWith('mostrar') ||
+      q.startsWith('ver ')
+    ) {
+      return 'NAVEGACION_SISTEMA';
+    }
+
     if (q.includes('ayuda') || q.includes('help') || q.includes('qué puedes hacer') || q.includes('comandos')) {
       return 'GENERAL_HELP';
     }
 
     return 'UNKNOWN';
   }
+
 
   private generateResponseForIntent(intent: ForbotIntentType, userText: string): ForbotChatMessage {
     const time = this.getCurrentTimestamp();
@@ -822,15 +833,127 @@ Por favor verifica que el SSCC contenga los 18 dígitos correctos o consulta en 
         };
       }
 
+      case 'NAVEGACION_SISTEMA': {
+        const q = userText.toLowerCase();
+        let targetRoute = '/dashboard';
+        let targetTitle = 'Dashboard';
+
+        if (q.includes('recepc') || q.includes('anden') || q.includes('andén')) {
+          targetRoute = '/warehouse-movements/receiving';
+          targetTitle = 'Recepción de Mercancía';
+        } else if (q.includes('traspas') || q.includes('cambio')) {
+          targetRoute = '/warehouse-movements/transfers';
+          targetTitle = 'Cambio de Almacén (Traspasos)';
+        } else if (q.includes('salida') || q.includes('despacho') || q.includes('outbound')) {
+          targetRoute = '/warehouse-movements/outbound';
+          targetTitle = 'Salidas de Almacén (Despacho)';
+        } else if (q.includes('caseta') || q.includes('seguridad')) {
+          targetRoute = '/security';
+          targetTitle = 'Caseta de Seguridad';
+        } else if (q.includes('calidad') || q.includes('qm')) {
+          targetRoute = '/quality';
+          targetTitle = 'Control de Calidad';
+        } else if (q.includes('transport')) {
+          targetRoute = '/carriers';
+          targetTitle = 'Gestión de Transportistas';
+        } else if (q.includes('usuario')) {
+          targetRoute = '/users';
+          targetTitle = 'Control de Usuarios y Seguridad';
+        } else if (q.includes('cliente')) {
+          targetRoute = '/clients';
+          targetTitle = 'Gestión de Clientes Depositantes';
+        } else if (q.includes('turno')) {
+          targetRoute = '/shifts';
+          targetTitle = 'Turnos y Horarios';
+        } else if (q.includes('layout') || q.includes('mapa') || q.includes('ubicac')) {
+          targetRoute = '/layout';
+          targetTitle = 'Gestión de Layout y Ubicaciones';
+        } else if (q.includes('inventario') || q.includes('stock')) {
+          targetRoute = '/inventory-query';
+          targetTitle = 'Consulta de Inventario';
+        } else if (q.includes('rendimiento') || q.includes('kpi')) {
+          targetRoute = '/performance';
+          targetTitle = 'Monitoreo de Rendimiento';
+        } else if (q.includes('regla')) {
+          targetRoute = '/business-rules';
+          targetTitle = 'Motor de Reglas de Negocio';
+        } else if (q.includes('alerta')) {
+          targetRoute = '/alerts-config';
+          targetTitle = 'Configuración de Alertas';
+        } else if (q.includes('proveedor')) {
+          targetRoute = '/suppliers';
+          targetTitle = 'Catálogo de Proveedores';
+        }
+
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `🧭 **Navegación Asistida ForBot**\nTe preparé el acceso directo a **${targetTitle}**. Puedes dar clic en el botón inferior para abrir la pantalla de inmediato.`,
+          widgetData: {
+            type: 'action-card',
+            title: `Acceso Rápido: ${targetTitle}`,
+            items: [
+              { label: 'Destino', value: targetTitle, badgeColor: 'emerald' },
+              { label: 'Ruta WMS', value: targetRoute, badgeColor: 'blue' }
+            ],
+            actionRoute: targetRoute,
+            actionLabel: `Abrir ${targetTitle}`
+          }
+        };
+      }
+
       default: {
+        const q = userText.toLowerCase();
+
+        // Conocimiento logístico experto 4GUARD
+        if (q.includes('fifo') || q.includes('fefo')) {
+          return {
+            id,
+            sender: 'bot',
+            intent: 'GENERAL_HELP',
+            timestamp: time,
+            text: `📦 **Lógica de Despacho 4GUARD:**\n- **FEFO (First Expired, First Out):** Aplica para producto perecedero o con fecha de caducidad (Nestlé, Alimentos). Las tarimas con menor fecha de expiración son sugeridas en primer orden.\n- **FIFO (First In, First Out):** Aplica para mercancía seca sin fecha crítica de caducidad.`,
+            widgetData: {
+              type: 'action-card',
+              title: 'Módulo de Despacho',
+              items: [
+                { label: 'Criterio Primario', value: 'FEFO / Caducidad', badgeColor: 'emerald' },
+                { label: 'Criterio Secundario', value: 'FIFO / Antigüedad', badgeColor: 'blue' }
+              ],
+              actionRoute: '/warehouse-movements/outbound',
+              actionLabel: 'Ver Salidas de Almacén'
+            }
+          };
+        }
+
+        if (q.includes('tarima') || q.includes('chep') || q.includes('pallet')) {
+          return {
+            id,
+            sender: 'bot',
+            intent: 'GENERAL_HELP',
+            timestamp: time,
+            text: `🪵 **Tipos de Tarima Homologados en 4GUARD:**\n- **Tarima CHEP (Azul):** Estándar industrial retornable.\n- **Plástico / Plástico Azul:** Uso sanitario grado alimenticio.\n- **Madera Estándar (1.0 x 1.2 m):** Carga general.\n- **Madera Exportación (Tratamiento térmico HT NIMF-15).**`
+          };
+        }
+
         return {
           id,
           sender: 'bot',
           intent: 'UNKNOWN',
           timestamp: time,
-          text: `Entendí tu consulta sobre **"${userText}"**. Puedes seleccionar una de las píldoras de sugerencia o preguntarme sobre **caducidades (<30d), rampas, bodegas, estados FSM o tour de pantalla**.`
+          text: `Entendí tu consulta sobre **"${userText}"**.\nPuedes consultarme sobre **caducidades (<30d), rampas, bodegas, estados FSM, criterios de calidad NOM-251** o pedirme que te lleve a cualquier pantalla diciendo *"Ir a Recepción"*, *"Ir a Transportistas"*, etc.`
         };
       }
+    }
+  }
+
+  /** Ejecuta la acción de navegación y cierra el drawer */
+  public executeAction(route?: string): void {
+    if (route) {
+      this.isDrawerOpen.set(false);
+      this.router.navigateByUrl(route);
     }
   }
 
@@ -842,3 +965,4 @@ Por favor verifica que el SSCC contenga los 18 dígitos correctos o consulta en 
     return `${hrs}:${mins}:${secs}`;
   }
 }
+

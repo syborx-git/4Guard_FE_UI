@@ -538,9 +538,11 @@
   <!-- MODAL CONFIRMACIÓN ELIMINACIÓN -->
   @if (deletingOrg()) {
     <fg-confirm-dialog
-      title="Eliminar Organización"
+      [title]="'Eliminar Organización'"
       [message]="'¿Estás seguro de que deseas eliminar permanentemente la organización ' + deletingOrg()?.name + '?'"
-      confirmLabel="Sí, eliminar organización"
+      [confirmLabel]="'Sí, eliminar organización'"
+      [icon]="'delete'"
+      [variant]="'danger'"
       [isLoading]="isDeleting()"
       (confirmed)="confirmDelete()"
       (cancelled)="cancelDelete()"

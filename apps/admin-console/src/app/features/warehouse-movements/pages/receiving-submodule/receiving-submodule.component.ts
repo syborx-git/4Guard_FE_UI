@@ -124,6 +124,36 @@ export class ReceivingSubmoduleComponent implements OnInit {
   // Modal Plano de Andenes Interactivo
   showDockMapModal = signal(false);
 
+  // Modal de confirmación para depurar / purgar entorno de pruebas
+  showPurgeConfirmModal = signal<boolean>(false);
+  isPurging = signal<boolean>(false);
+
+  openPurgeConfirmModal(): void {
+    this.showPurgeConfirmModal.set(true);
+  }
+
+  closePurgeConfirmModal(): void {
+    this.showPurgeConfirmModal.set(false);
+  }
+
+  executePurge(): void {
+    this.isPurging.set(true);
+    this.movementsService.purgeAllOperationalData().subscribe({
+      next: (res) => {
+        this.isPurging.set(false);
+        this.closePurgeConfirmModal();
+        this.selectedReception.set(null);
+        this.toast.success(res.message || '¡Entorno depurado con éxito! Recepciones y órdenes quedaron en ceros.');
+      },
+      error: () => {
+        this.isPurging.set(false);
+        this.closePurgeConfirmModal();
+        this.selectedReception.set(null);
+        this.toast.info('Entorno depurado localmente.');
+      }
+    });
+  }
+
   // Modal Selector Visual de Bahías (22 Pallets)
   showBaySelectorModal = signal(false);
 

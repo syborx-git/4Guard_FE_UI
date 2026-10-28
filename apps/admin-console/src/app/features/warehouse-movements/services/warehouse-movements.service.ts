@@ -612,7 +612,9 @@ export class WarehouseMovementsService {
           const bc = new BroadcastChannel('4guard_wms_events');
           bc.onmessage = (event) => {
             const { type, data } = event.data || {};
-            if (type === 'NEW_RECEPTION' && data) {
+            if (type === 'PURGE_ALL') {
+              this.applyLocalStatePurge();
+            } else if (type === 'NEW_RECEPTION' && data) {
               const header = this.mapReceptionResponseToHeader(data);
               this.receptionsSignal.update((list) => [
                 header,
@@ -631,7 +633,14 @@ export class WarehouseMovementsService {
       }
 
       window.addEventListener('storage', (e) => {
-        if (e.key === '4g_warehouse_receptions_cache' && e.newValue) {
+        if (e.key === '4g_env_purged_at' || e.key === '4g_cross_tab_event') {
+          try {
+            const parsed = e.newValue ? JSON.parse(e.newValue) : null;
+            if (e.key === '4g_env_purged_at' || parsed?.type === 'PURGE_ALL') {
+              this.applyLocalStatePurge();
+            }
+          } catch (_) {}
+        } else if (e.key === '4g_warehouse_receptions_cache' && e.newValue) {
           try {
             const parsed = JSON.parse(e.newValue);
             const headers = parsed.map((r: any) => this.mapReceptionResponseToHeader(r));
@@ -987,7 +996,21 @@ export class WarehouseMovementsService {
         }
 
         this.knownReceptionFolios = newKnown;
-        this.receptionsSignal.set(unique);
+
+        const purgedAtStr = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_env_purged_at') : null;
+        const purgedAt = purgedAtStr ? Number(purgedAtStr) : 0;
+
+        let finalReceptions = unique;
+        if (purgedAt > 0) {
+          finalReceptions = unique.filter((r) => {
+            const raw = (r as any).rawCreatedAt || r.createdAt || (r.checkIn as any)?.receptionTime;
+            if (!raw) return false;
+            const t = new Date(raw).getTime();
+            return !isNaN(t) && t > purgedAt;
+          });
+        }
+
+        this.receptionsSignal.set(finalReceptions);
 
         if (this.isInitialReceptionsLoaded && newlyArrived) {
           this.latestArrivedReception.set(newlyArrived);
@@ -1022,6 +1045,37 @@ export class WarehouseMovementsService {
     this.receptionsSignal.update((list) =>
       list.filter((r) => r.folio !== key && r.id !== key)
     );
+    this.movementsApi.removeLocalReception(key);
+  }
+
+  public purgeAllOperationalData(): Observable<{ success: boolean; message: string }> {
+    const purgeTime = Date.now();
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('4g_env_purged_at', String(purgeTime));
+      }
+    } catch (_) {}
+
+    this.applyLocalStatePurge();
+
+    return this.movementsApi.purgeAllTestData().pipe(
+      map(() => {
+        this.applyLocalStatePurge();
+        return {
+          success: true,
+          message: 'Entorno de operaciones depurado. Todas las órdenes y unidades quedaron en ceros.'
+        };
+      })
+    );
+  }
+
+  public applyLocalStatePurge(): void {
+    this.receptionsSignal.set([]);
+    this.outboundsSignal.set([]);
+    this.transfersSignal.set([]);
+    this.inventoryBatchesSignal.set([]);
+    this.latestArrivedReception.set(null);
+    this.knownReceptionFolios.clear();
   }
 
   public deduplicateReceptions(): void {
@@ -1041,9 +1095,18 @@ export class WarehouseMovementsService {
   public reloadTransfers(): void {
     this.movementsApi.getTransfers().subscribe({
       next: (transfers: any) => {
-        this.transfersSignal.set(
-          (transfers || []).map((t: any) => this.mapTransferResponseToHeader(t))
-        );
+        const purgedAtStr = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_env_purged_at') : null;
+        const purgedAt = purgedAtStr ? Number(purgedAtStr) : 0;
+        let list = (transfers || []).map((t: any) => this.mapTransferResponseToHeader(t));
+        if (purgedAt > 0) {
+          list = list.filter((t: any) => {
+            const raw = (t as any).rawCreatedAt || t.createdAt || t.date;
+            if (!raw) return false;
+            const time = new Date(raw).getTime();
+            return !isNaN(time) && time > purgedAt;
+          });
+        }
+        this.transfersSignal.set(list);
       },
       error: () => {},
     });
@@ -1069,7 +1132,18 @@ export class WarehouseMovementsService {
             unique.push(o);
           }
         }
-        this.outboundsSignal.set(unique);
+        const purgedAtStr = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_env_purged_at') : null;
+        const purgedAt = purgedAtStr ? Number(purgedAtStr) : 0;
+        let finalOutbounds = unique;
+        if (purgedAt > 0) {
+          finalOutbounds = unique.filter((o) => {
+            const raw = (o as any).rawCreatedAt || (o as any).createdAt || (o as any).timestamp || (o as any).dispatchedAt;
+            if (!raw) return false;
+            const t = new Date(raw).getTime();
+            return !isNaN(t) && t > purgedAt;
+          });
+        }
+        this.outboundsSignal.set(finalOutbounds);
       },
       error: () => {},
     });
@@ -2270,8 +2344,8 @@ export class WarehouseMovementsService {
       storageLocationCode: r.storageLocationCode || '',
       observations: (r.observations || '').replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim(),
       pallets: pallets,
-      lots: r.lots || [],
       createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('es-MX') : (r.checkIn?.receptionTime || ''),
+      rawCreatedAt: (r as any).rawCreatedAt || r.createdAt || (r.checkIn?.receptionTime ? new Date().toISOString() : ''),
       completedAt: r.completedAt ? new Date(r.completedAt).toLocaleString('es-MX') : undefined,
       cancelledAt: r.cancelledAt ? new Date(r.cancelledAt).toLocaleString('es-MX') : undefined,
       capturedBy: r.capturedBy || r.createdBy || 'Caseta de Seguridad',
@@ -2343,7 +2417,8 @@ export class WarehouseMovementsService {
       dispatchedAt: o.createdAt ? new Date(o.createdAt).toLocaleString('es-MX') : '',
       dispatchedBy: o.createdBy || 'Admin',
       timestamp: o.createdAt ? String(o.createdAt).substring(11, 16) : '',
-    };
+      rawCreatedAt: (o as any).rawCreatedAt || o.createdAt || (o as any).timestamp || new Date().toISOString(),
+    } as unknown as WarehouseOutbound;
   }
 
   // Busca una salida por Folio o ID

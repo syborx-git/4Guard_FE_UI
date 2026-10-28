@@ -10,8 +10,13 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ForbotEngineService } from '../../../../core/forbot/services/forbot-engine.service';
-import { ForbotAvatarComponent } from '../forbot-avatar/forbot-avatar.component';
 import { AuthState } from '../../../../core/auth/auth.state';
+import { ForbotVoiceService } from '@4guard/shared-core';
+import { ForbotAvatarComponent } from '../forbot-avatar/forbot-avatar.component';
+
+
+
+
 
 @Component({
   selector: 'fg-forbot-chat-drawer',
@@ -23,8 +28,10 @@ import { AuthState } from '../../../../core/auth/auth.state';
 export class ForbotChatDrawerComponent {
   protected readonly forbotEngine = inject(ForbotEngineService);
   protected readonly authState = inject(AuthState);
+  protected readonly voiceService = inject(ForbotVoiceService);
   private readonly router = inject(Router);
   private readonly sanitizer = inject(DomSanitizer);
+
 
   @ViewChild('chatFeedContainer') private chatFeedContainer!: ElementRef;
 
@@ -122,7 +129,15 @@ export class ForbotChatDrawerComponent {
     this.forbotEngine.sendUserMessage(pill.query);
   }
 
+  protected toggleVoice(): void {
+    this.voiceService.toggleListening((finalText: string) => {
+      this.userQueryText.set(finalText);
+      this.onSendMessage();
+    });
+  }
+
   protected startTour(): void {
+
     this.forbotEngine.startDriverTour();
   }
 

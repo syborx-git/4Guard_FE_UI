@@ -53,10 +53,10 @@ import {
   DEFAULT_OPERATIONAL_TARGETS,
 } from '../models/performance-kpi.model';
 
-// ─── Datos Mock ───────────────────────────────────────────────────────────────
-// TODO: Eliminar este bloque cuando el backend de /api/performance-kpis esté disponible.
+// ─── Datos de Respaldo Local (Fallback) ─────────────────────────────────────────
 
-const MOCK_KPIS: PerformanceKpi[] = [
+const FALLBACK_KPIS: PerformanceKpi[] = [
+
   {
     id: 'kpi-001',
     name: 'Tiempo de descarga',
@@ -225,7 +225,8 @@ export class PerformanceKpiService {
   /**
    * En modo false intenta conectar al backend primero, con fallback transparente.
    */
-  private readonly USE_MOCK = false;
+  private readonly USE_FALLBACK = false;
+
 
   // ─── Estado reactivo (Signals) ──────────────────────────────────────────────
 
@@ -342,8 +343,8 @@ export class PerformanceKpiService {
       }));
     };
 
-    if (this.USE_MOCK) {
-      const formatted = applyFiltersAndFormat(MOCK_KPIS);
+    if (this.USE_FALLBACK) {
+      const formatted = applyFiltersAndFormat(FALLBACK_KPIS);
       const mockResponse: KpiApiResponse<PerformanceKpi[]> = {
         success: true,
         message: 'KPIs cargados correctamente.',
@@ -363,7 +364,7 @@ export class PerformanceKpiService {
     return this.http.get<KpiApiResponse<PerformanceKpi[]>>(this.API_URL).pipe(
       map(res => {
         const rawList = Array.isArray(res?.data) ? res.data : [];
-        const formatted = applyFiltersAndFormat(rawList.length > 0 ? rawList : MOCK_KPIS);
+        const formatted = applyFiltersAndFormat(rawList.length > 0 ? rawList : FALLBACK_KPIS);
         return {
           ...res,
           data: formatted,
@@ -377,12 +378,13 @@ export class PerformanceKpiService {
       }),
       catchError(err => {
         console.warn('Backend /api/v1/performance-kpis no disponible, utilizando catálogo local:', err);
-        const formatted = applyFiltersAndFormat(MOCK_KPIS);
+        const formatted = applyFiltersAndFormat(FALLBACK_KPIS);
         this.kpis.set(formatted);
         this.totalCount.set(formatted.length);
         this.loading.set(false);
         this.loadError.set(null);
         return of({
+
           success: true,
           message: 'KPIs cargados desde catálogo integrado.',
           data: formatted,
@@ -420,14 +422,14 @@ export class PerformanceKpiService {
       }),
       tap(res => {
         const created = res.data;
-        MOCK_KPIS.unshift(created);
+        FALLBACK_KPIS.unshift(created);
         this.kpis.update(list => [created, ...list]);
         this.totalCount.update(n => n + 1);
         this.saving.set(false);
       }),
       catchError(err => {
         console.warn('Backend POST error, guardando en memoria:', err);
-        MOCK_KPIS.unshift(fallbackKpi);
+        FALLBACK_KPIS.unshift(fallbackKpi);
         this.kpis.update(list => [fallbackKpi, ...list]);
         this.totalCount.update(n => n + 1);
         this.saving.set(false);
@@ -449,7 +451,7 @@ export class PerformanceKpiService {
 
     const applyLocalUpdate = () => {
       const currentList = this.kpis();
-      const current = currentList.find(k => k.id === id) || MOCK_KPIS.find(k => k.id === id);
+      const current = currentList.find(k => k.id === id) || FALLBACK_KPIS.find(k => k.id === id);
       const updated: PerformanceKpi = {
         ...(current || ({} as PerformanceKpi)),
         ...dto,
@@ -458,9 +460,9 @@ export class PerformanceKpiService {
         updatedAt: new Date().toISOString(),
         updatedBy: 'admin',
       };
-      const idx = MOCK_KPIS.findIndex(k => k.id === id);
+      const idx = FALLBACK_KPIS.findIndex(k => k.id === id);
       if (idx !== -1) {
-        MOCK_KPIS[idx] = updated;
+        FALLBACK_KPIS[idx] = updated;
       }
       this.kpis.update(list => list.map(k => k.id === id ? updated : k));
       this.saving.set(false);
@@ -474,9 +476,9 @@ export class PerformanceKpiService {
       }),
       tap(res => {
         this.kpis.update(list => list.map(k => k.id === id ? res.data : k));
-        const idx = MOCK_KPIS.findIndex(k => k.id === id);
+        const idx = FALLBACK_KPIS.findIndex(k => k.id === id);
         if (idx !== -1) {
-          MOCK_KPIS[idx] = res.data;
+          FALLBACK_KPIS[idx] = res.data;
         }
         this.saving.set(false);
       }),
@@ -501,13 +503,14 @@ export class PerformanceKpiService {
 
     const applyLocalDelete = () => {
       this.kpis.update(list => list.filter(k => k.id !== id));
-      const idx = MOCK_KPIS.findIndex(k => k.id === id);
+      const idx = FALLBACK_KPIS.findIndex(k => k.id === id);
       if (idx !== -1) {
-        MOCK_KPIS[idx].isEnabled = false;
+        FALLBACK_KPIS[idx].isEnabled = false;
       }
       this.totalCount.update(n => Math.max(0, n - 1));
       this.saving.set(false);
     };
+
 
     return this.http.delete<KpiApiResponse<PerformanceKpi>>(`${this.API_URL}/${id}`).pipe(
       tap(() => {

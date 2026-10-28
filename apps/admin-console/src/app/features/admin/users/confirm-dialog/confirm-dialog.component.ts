@@ -35,6 +35,8 @@ export class ConfirmDialogComponent {
   readonly title        = input.required<string>();
   readonly message      = input.required<string>();
   readonly confirmLabel = input('Confirmar');
+  readonly icon         = input('warning');
+  readonly variant      = input<'primary' | 'danger'>('primary');
   readonly isLoading    = input(false);
 
   readonly confirmed = output<void>();

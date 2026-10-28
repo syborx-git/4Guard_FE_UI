@@ -82,6 +82,17 @@
             <span class="dock-summary-badge dock-summary-badge--all-free">Todos Libres (12)</span>
           }
         </button>
+
+        <!-- Botón Depurar Entorno / Reset a Ceros -->
+        <button
+          type="button"
+          (click)="openPurgeConfirmModal()"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-300 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-all shadow-sm cursor-pointer"
+          title="Depurar todos los datos de prueba y dejar entorno en ceros"
+        >
+          <span class="material-symbols-outlined text-sm text-rose-600 dark:text-rose-400">mop</span>
+          <span>Depurar Entorno</span>
+        </button>
       </div>
     </div>
   </header>
@@ -3982,6 +3993,50 @@
           <span class="text-slate-400 text-xs">{{ remissionTreeLogs().length }} evento(s) inmutable(s)</span>
           <button (click)="closeRemissionTreeModal()" class="btn-primary-gold text-xs px-4 py-2 rounded-xl font-bold">
             Entendido
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── MODAL CONFIRMACIÓN: DEPURAR ENTORNO DE PRUEBAS A CEROS ── -->
+  @if (showPurgeConfirmModal()) {
+    <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" role="dialog" aria-modal="true">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-2xl">mop</span>
+          </div>
+          <div>
+            <h3 class="font-black text-base text-slate-900 dark:text-slate-100">¿Depurar todo el entorno de pruebas?</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Esta acción dejará el sistema completamente en ceros.</p>
+          </div>
+        </div>
+        <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+          Se limpiarán las <strong>recepciones de mercancía</strong>, <strong>salidas</strong>, <strong>traspasos</strong> y <strong>unidades en patio</strong> activas de prueba, vaciando la memoria caché y dejando todas las pestañas y métricas en <strong>0</strong>.
+        </p>
+        <div class="flex items-center justify-end gap-2.5 pt-2">
+          <button
+            type="button"
+            (click)="closePurgeConfirmModal()"
+            class="btn-secondary-outline text-xs px-4 py-2 rounded-xl font-bold cursor-pointer"
+            [disabled]="isPurging()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="executePurge()"
+            class="btn-primary-gold text-xs px-4 py-2 rounded-xl font-black flex items-center gap-1.5 cursor-pointer !bg-rose-600 hover:!bg-rose-700 text-white shadow-md"
+            [disabled]="isPurging()"
+          >
+            @if (isPurging()) {
+              <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+              <span>Depurando...</span>
+            } @else {
+              <span class="material-symbols-outlined text-sm">delete_forever</span>
+              <span>Sí, Depurar y Dejar en Ceros</span>
+            }
           </button>
         </div>
       </div>

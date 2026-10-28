@@ -7,6 +7,8 @@
 
 /* Design tokens del sistema Antigravity */
 @import './assets/design-tokens.css';
+@import 'driver.js/dist/driver.css';
+
 
 /* ── Reset y base ──────────────────────────────────────────── */
 *,
@@ -1057,3 +1059,104 @@ h2.page-title,
 [data-theme='dark'] .carriers-tl-node__meta {
   color: #94a3b8 !important;
 }
+
+/* ══════════════════════════════════════════════════════════
+   DRIVER.JS 4GUARD THEMED POPOVER & OVERLAY STYLING
+   ══════════════════════════════════════════════════════════ */
+.driver-popover {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(234, 195, 73, 0.4) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 20px rgba(234, 195, 73, 0.15) !important;
+  padding: 18px 20px !important;
+  font-family: var(--font-primary, 'DM Sans', sans-serif) !important;
+  max-width: 380px !important;
+  z-index: 1000000000 !important;
+}
+
+.driver-popover-title {
+  color: #eac349 !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  margin-bottom: 8px !important;
+  letter-spacing: -0.01em !important;
+}
+
+.driver-popover-description {
+  color: #cbd5e1 !important;
+  font-size: 12.5px !important;
+  line-height: 1.55 !important;
+  margin-bottom: 12px !important;
+}
+
+.driver-popover-progress-text {
+  color: #94a3b8 !important;
+  font-size: 11px !important;
+  font-family: var(--font-mono, monospace) !important;
+  font-weight: 700 !important;
+}
+
+.driver-popover-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-top: 14px !important;
+  gap: 8px !important;
+}
+
+.driver-popover-next-btn,
+.driver-popover-done-btn {
+  background: linear-gradient(135deg, #1b2b4b 0%, #2a3e66 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(234, 195, 73, 0.5) !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  padding: 7px 16px !important;
+  text-shadow: none !important;
+  cursor: pointer !important;
+  transition: all 180ms ease !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.driver-popover-next-btn:hover,
+.driver-popover-done-btn:hover {
+  background: linear-gradient(135deg, #253960 0%, #364e7c 100%) !important;
+  border-color: #eac349 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(234, 195, 73, 0.25) !important;
+}
+
+.driver-popover-prev-btn {
+  background-color: #1e293b !important;
+  color: #94a3b8 !important;
+  border: 1px solid #475569 !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  padding: 7px 14px !important;
+  cursor: pointer !important;
+  transition: all 180ms ease !important;
+}
+
+.driver-popover-prev-btn:hover {
+  color: #ffffff !important;
+  background-color: #334155 !important;
+}
+
+.driver-popover-close-btn {
+  color: #94a3b8 !important;
+  font-size: 18px !important;
+  cursor: pointer !important;
+  transition: color 150ms ease !important;
+}
+
+.driver-popover-close-btn:hover {
+  color: #ffffff !important;
+}
+
+.driver-popover-arrow {
+  border-color: #0f172a !important;
+}
+

@@ -14,3 +14,8 @@
 .animate-spin-slow {
   animation: spinSlow 12s linear infinite;
 }
+
+:host-context(.theme-dark) .forbot-trigger-btn {
+  border-color: rgba(229, 193, 88, 0.6);
+}
+

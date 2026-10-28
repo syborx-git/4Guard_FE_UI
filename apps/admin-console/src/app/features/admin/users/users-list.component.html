@@ -419,6 +419,16 @@
             </div>
           }
 
+          @if (formMode() === 'edit' && selectedUser() && selectedUser()!.status !== 'ACTIVE') {
+            <div class="users-alert users-alert--inactive" role="status">
+              <span class="material-symbols-outlined">person_off</span>
+              <div class="users-alert__text">
+                <strong>Cuenta Inactiva — Acceso Deshabilitado</strong>
+                <span>Este usuario se encuentra inhabilitado en el WMS. No tiene permitido iniciar sesión en caseta ni operar en almacén.</span>
+              </div>
+            </div>
+          }
+
           <!-- Live Preview Card para Alta de Usuario -->
           @if (formMode() === 'new') {
             <div class="user-preview-card">
@@ -749,9 +759,9 @@
                     type="button"
                     (click)="toggleUserStatus()">
                     <span class="material-symbols-outlined">
-                      {{ selectedUser()!.status === 'ACTIVE' ? 'pause_circle' : 'check_circle' }}
+                      {{ selectedUser()!.status === 'ACTIVE' ? 'pause_circle' : 'play_circle' }}
                     </span>
-                    {{ selectedUser()!.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }}
+                    {{ selectedUser()!.status === 'ACTIVE' ? 'Desactivar Usuario' : 'Reactivar Usuario' }}
                   </button>
 
                   <button
@@ -804,9 +814,11 @@
      ══════════════════════════════════════════════════════════ -->
 @if (confirmingUser()) {
   <fg-confirm-dialog
-    title="Generar contraseña temporal"
-    [message]="'¿Deseas generar una contraseña temporal para ' + confirmingUser()!.firstName + ' ' + confirmingUser()!.lastName + '?'"
-    confirmLabel="Generar"
+    [title]="'Generar contraseña temporal'"
+    [message]="'¿Deseas generar una nueva clave de acceso provisional para ' + confirmingUser()!.firstName + ' ' + confirmingUser()!.lastName + ' (@' + confirmingUser()!.username + ')? La clave anterior quedará invalidada de inmediato.'"
+    [confirmLabel]="'Generar Clave'"
+    [icon]="'lock_reset'"
+    [variant]="'primary'"
     [isLoading]="isGenerating()"
     (confirmed)="onGenerateConfirmed()"
     (cancelled)="onGenerateCancelled()">
@@ -825,13 +837,15 @@
 }
 
 <!-- ══════════════════════════════════════════════════════════
-     Diálogo de Confirmación — Eliminar Usuario
+     Diálogo de Confirmación — Eliminar Usuario (Baja Lógica / Trazabilidad)
      ══════════════════════════════════════════════════════════ -->
 @if (deletingUser()) {
   <fg-confirm-dialog
-    title="Eliminar usuario"
-    [message]="'¿Deseas eliminar permanentemente al usuario ' + deletingUser()!.firstName + ' ' + deletingUser()!.lastName + '?'"
-    confirmLabel="Eliminar"
+    [title]="'Eliminar / Dar de Baja Usuario'"
+    [message]="'¿Deseas dar de baja al usuario ' + deletingUser()!.firstName + ' ' + deletingUser()!.lastName + ' (@' + deletingUser()!.username + ')? Si cuenta con historial de pases o movimientos, el sistema lo inactivará e inhabilitará permanentemente para salvaguardar la trazabilidad operativa y legal.'"
+    [confirmLabel]="'Eliminar / Inhabilitar'"
+    [icon]="'delete'"
+    [variant]="'danger'"
     [isLoading]="isDeleting()"
     (confirmed)="onDeleteConfirmed()"
     (cancelled)="onDeleteCancelled()">

@@ -17,6 +17,7 @@ import { AudioFeedbackService } from '../../../core/services/audio-feedback.serv
 import { OfflineBannerComponent } from '../offline-banner/offline-banner.component';
 import { ToastContainerComponent } from '../toast-container/toast-container.component';
 import { RfNotificationsComponent } from '../rf-notifications/rf-notifications.component';
+import { RfForbotModalComponent } from '../forbot/rf-forbot-modal.component';
 import { ToastService } from '@4guard/shared-core';
 import { PwaService } from '../../../core/services/pwa.service';
 import { HardwareMonitorService } from '../../../core/services/hardware-monitor.service';
@@ -39,11 +40,13 @@ interface NavItem {
     FormsModule,
     OfflineBannerComponent,
     ToastContainerComponent,
-    RfNotificationsComponent
+    RfNotificationsComponent,
+    RfForbotModalComponent
   ],
   templateUrl: './rf-shell.component.html',
   styleUrl: './rf-shell.component.css',
 })
+
 export class RfShellComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   protected readonly themeService = inject(RfThemeService);
@@ -386,4 +389,16 @@ export class RfShellComponent implements OnInit, OnDestroy {
       }
     }
   }
+
+  // ─── Modal Asistente ForBot AI ──────────────────────────────────────────────
+  protected readonly showForbotModal = signal(false);
+
+  openForbotModal(): void {
+    this.showForbotModal.set(true);
+  }
+
+  closeForbotModal(): void {
+    this.showForbotModal.set(false);
+  }
 }
+

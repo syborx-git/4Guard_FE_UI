@@ -576,6 +576,77 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly isCheckingOut           = signal<boolean>(false);
   protected readonly checkOutSuccessNotice   = signal<string | null>(null);
 
+  // ── Modal Depuración de Entorno de Pruebas ──
+  protected readonly showPurgeConfirmModal = signal<boolean>(false);
+  protected readonly isPurging = signal<boolean>(false);
+
+  protected openPurgeConfirmModal(): void {
+    this.showPurgeConfirmModal.set(true);
+  }
+
+  protected closePurgeConfirmModal(): void {
+    this.showPurgeConfirmModal.set(false);
+  }
+
+  protected executePurge(): void {
+    this.isPurging.set(true);
+
+    // 1. Descartar en el backend todos los pases que estén actualmente en patio
+    const currentYard = this.inYardPasses();
+    for (const p of currentYard) {
+      const token = p.token || p.generatedFolio || p.id;
+      if (token) {
+        this.movementsService.movementsApi.deletePass(token, p.token).subscribe();
+      }
+    }
+
+    // 2. Limpieza centralizada de todos los almacenes, recepciones, salidas y cachés
+    this.movementsService.purgeAllOperationalData().subscribe({
+      next: (res) => {
+        this.isPurging.set(false);
+        this.closePurgeConfirmModal();
+        this.backendInYardPasses.set([]);
+        this.activePasses.set([]);
+        this.historyPasses.set([]);
+        this.resetForm();
+        this.toast.success(res.message || '¡Entorno depurado con éxito! Caseta, patio y recepciones quedaron en ceros.');
+        this.reloadAllData();
+      },
+      error: () => {
+        this.isPurging.set(false);
+        this.closePurgeConfirmModal();
+        this.backendInYardPasses.set([]);
+        this.activePasses.set([]);
+        this.historyPasses.set([]);
+        this.resetForm();
+        this.toast.info('Entorno depurado localmente.');
+        this.reloadAllData();
+      }
+    });
+  }
+
+  protected discardInYardPass(pass: any, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (!pass) return;
+    const folioOrToken = pass.token || pass.generatedFolio || pass.id;
+    if (!confirm(`¿Eliminar la unidad con folio/token #${folioOrToken} del patio de planta?`)) return;
+
+    this.movementsService.movementsApi.deletePass(folioOrToken, pass.token).subscribe({
+      next: () => {
+        this.backendInYardPasses.update(list => list.filter(p => p.token !== folioOrToken && p.generatedFolio !== folioOrToken && p.id !== folioOrToken));
+        this.movementsService.removeReception(folioOrToken);
+        this.toast.info(`Unidad #${folioOrToken} eliminada del patio.`);
+        this.reloadInYardPasses(true);
+      },
+      error: () => {
+        this.backendInYardPasses.update(list => list.filter(p => p.token !== folioOrToken && p.generatedFolio !== folioOrToken && p.id !== folioOrToken));
+        this.movementsService.removeReception(folioOrToken);
+        this.toast.info(`Unidad #${folioOrToken} eliminada localmente.`);
+        this.reloadInYardPasses(true);
+      }
+    });
+  }
+
   // ── Modos de Visualización UX/UI (Colapsable y Navegación Rápida) ──────────
   protected readonly isQueueCollapsed = signal<boolean>(this.loadStorageBool('4g_security_queue_collapsed', false));
   protected readonly isKpiCollapsed   = signal<boolean>(this.loadStorageBool('4g_security_kpis_collapsed', false));
@@ -1008,6 +1079,30 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.loadPublicCatalogs();
     this.reloadAllData();
 
+    if (typeof window !== 'undefined') {
+      if ('BroadcastChannel' in window) {
+        try {
+          const bc = new BroadcastChannel('4guard_wms_events');
+          bc.onmessage = (event) => {
+            if (event.data?.type === 'PURGE_ALL') {
+              this.backendInYardPasses.set([]);
+              this.activePasses.set([]);
+              this.historyPasses.set([]);
+              this.resetForm();
+            }
+          };
+        } catch (_) {}
+      }
+      window.addEventListener('storage', (e) => {
+        if (e.key === '4g_env_purged_at') {
+          this.backendInYardPasses.set([]);
+          this.activePasses.set([]);
+          this.historyPasses.set([]);
+          this.resetForm();
+        }
+      });
+    }
+
     // Escuchar parámetros de consulta (token o tab) desde notificaciones o links directos
     this.route.queryParams.subscribe(params => {
       const tab = params['tab'];
@@ -1308,7 +1403,19 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   private updateActivePasses(backendPasses: any[]): void {
-    const cleanList = backendPasses || [];
+    const purgedAtStr = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_env_purged_at') : null;
+    const purgedAt = purgedAtStr ? Number(purgedAtStr) : 0;
+
+    let cleanList = backendPasses || [];
+    if (purgedAt > 0) {
+      cleanList = cleanList.filter(p => {
+        const raw = p.createdAt || p.submittedAt;
+        if (!raw) return false;
+        const t = new Date(raw).getTime();
+        return !isNaN(t) && t > purgedAt;
+      });
+    }
+
     this.activePasses.set(cleanList);
     this.smartNotification.updateSubmittedDriverPasses(cleanList);
 
@@ -1338,7 +1445,18 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: branchToQuery }).subscribe({
       next: (passes) => {
         this.isLoadingInYard.set(false);
-        this.backendInYardPasses.set(passes || []);
+        const purgedAtStr = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_env_purged_at') : null;
+        const purgedAt = purgedAtStr ? Number(purgedAtStr) : 0;
+        let list = passes || [];
+        if (purgedAt > 0) {
+          list = list.filter(p => {
+            const raw = p.rawCreatedAt || p.createdAt || p.horaEntrada || p.receptionTime;
+            if (!raw) return false;
+            const t = new Date(raw).getTime();
+            return !isNaN(t) && t > purgedAt;
+          });
+        }
+        this.backendInYardPasses.set(list);
       },
       error: () => {
         this.isLoadingInYard.set(false);
@@ -1363,7 +1481,17 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: (passes) => {
         this.isLoadingHistory.set(false);
-        const exitOnly = (passes || []).filter(p => p.status === 'COMPLETED_EXIT');
+        const purgedAtStr = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_env_purged_at') : null;
+        const purgedAt = purgedAtStr ? Number(purgedAtStr) : 0;
+        let exitOnly = (passes || []).filter(p => p.status === 'COMPLETED_EXIT');
+        if (purgedAt > 0) {
+          exitOnly = exitOnly.filter(p => {
+            const raw = p.completedAt || p.departureTime || p.rawCreatedAt || p.createdAt;
+            if (!raw) return false;
+            const t = new Date(raw).getTime();
+            return !isNaN(t) && t > purgedAt;
+          });
+        }
         this.historyPasses.set(exitOnly);
       },
       error: () => {
