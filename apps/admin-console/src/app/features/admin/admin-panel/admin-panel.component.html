@@ -497,6 +497,9 @@
           <li [class.active]="selectedModule() === 'user-activity'" (click)="selectModule('user-activity')">
             <span class="material-symbols-outlined">manage_search</span> Actividad por Usuario
           </li>
+          <li (click)="selectModule('remission-history')">
+            <span class="material-symbols-outlined">receipt_long</span> Historial de Remisiones
+          </li>
           <li [class.active]="selectedModule() === 'notifications'" (click)="selectModule('notifications')">
             <span class="material-symbols-outlined">notifications_active</span> Alertas Técnicas
             @if (unreadNotificationsCount() > 0) {
@@ -732,17 +735,6 @@
               <th>Estatus</th>
               <th>Fecha Reporte</th>
               <th class="text-right">Acciones</th>
-            </tr>
-            }
-            @case ('audit') {
-            <tr>
-              <th>Fecha / Hora</th>
-              <th>Operador</th>
-              <th>Entidad</th>
-              <th>ID Entidad</th>
-              <th>Acción</th>
-              <th>Dirección IP</th>
-              <th class="text-right">Detalle</th>
             </tr>
             }
             @case ('notifications') {
@@ -1057,25 +1049,6 @@
                 </button>
                 <button class="icon-btn text-danger" title="Eliminar" (click)="deleteItem(item.id)">
                   <span class="material-symbols-outlined">delete</span>
-                </button>
-              </td>
-            </tr>
-            }
-            @case ('audit') {
-            <tr>
-              <td class="font-mono text-xs text-muted">{{ item.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</td>
-              <td class="font-bold text-white">{{ item.username }}</td>
-              <td class="text-xs"><span class="tech-badge">{{ item.entityType }}</span></td>
-              <td class="font-mono text-xs">{{ item.entityId }}</td>
-              <td>
-                <span class="status-badge" [class]="getActionBadgeClass(item.action)">
-                  {{ item.action }}
-                </span>
-              </td>
-              <td class="font-mono text-xs text-muted">{{ item.ipAddress }}</td>
-              <td class="actions-cell">
-                <button class="icon-btn text-gold" title="Ver comparador JSON" (click)="openAuditDetail(item)">
-                  <span class="material-symbols-outlined">difference</span>
                 </button>
               </td>
             </tr>
@@ -1531,8 +1504,7 @@
     <div class="modal-card modal-card--large" (click)="$event.stopPropagation()">
       <header class="modal-card__header">
         <h3 class="modal-card__title">
-          @if (selectedModule() === 'audit') { Visualizador de Auditoría Forense y Comparador JSON }
-          @else if (selectedModule() === 'incidences') { Registro de Acciones Correctivas — Incidencias }
+          @if (selectedModule() === 'incidences') { Registro de Acciones Correctivas — Incidencias }
           @else if (selectedModule() === 'notifications') { Metadatos Técnicos de Alerta }
         </h3>
         <button class="modal-card__close-btn" (click)="closeModal()">
@@ -1541,38 +1513,6 @@
       </header>
 
       <div class="modal-card__body">
-        <!-- COMPARADOR AUDIT LOGS -->
-        @if (selectedModule() === 'audit') {
-        <div class="audit-details-grid">
-          <div class="audit-metadata-card">
-            <h4 class="metadata-title">INFORMACIÓN DEL LOG</h4>
-            <div class="metadata-row"><span>Fecha:</span><b>{{ detailModel.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</b>
-            </div>
-            <div class="metadata-row"><span>Operador:</span><b>{{ detailModel.username }}</b></div>
-            <div class="metadata-row"><span>Acción:</span><b [class]="getStatusBadgeClass(detailModel.action)">{{
-                detailModel.action }}</b></div>
-            <div class="metadata-row"><span>Entidad:</span><b>{{ detailModel.entityType }}</b></div>
-            <div class="metadata-row"><span>ID Registro:</span><b class="font-mono">{{ detailModel.entityId }}</b></div>
-            <div class="metadata-row"><span>Dirección IP:</span><b class="font-mono">{{ detailModel.ipAddress }}</b>
-            </div>
-            <div class="metadata-row"><span>User Agent:</span><span class="ua-text">{{ detailModel.userAgent }}</span>
-            </div>
-          </div>
-
-          <!-- DIFF VIEWER -->
-          <div class="diff-viewer">
-            <div class="diff-pane">
-              <span class="diff-pane-title diff-pane-title--del">ESTADO ANTERIOR (before_state)</span>
-              <pre class="json-code json-code--del">{{ detailModel.beforeState }}</pre>
-            </div>
-            <div class="diff-pane">
-              <span class="diff-pane-title diff-pane-title--add">ESTADO NUEVO (after_state)</span>
-              <pre class="json-code json-code--add">{{ detailModel.afterState }}</pre>
-            </div>
-          </div>
-        </div>
-        }
-
         <!-- RESOLUCIÓN INCIDENCIAS -->
         @if (selectedModule() === 'incidences') {
         <div class="incidence-resolution-panel">

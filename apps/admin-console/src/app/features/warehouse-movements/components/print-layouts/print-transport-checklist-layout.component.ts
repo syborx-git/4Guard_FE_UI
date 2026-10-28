@@ -85,7 +85,7 @@ export interface TransportChecklistPrintData {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="data" class="f01-print-sheet bg-white text-black p-5 sm:p-6 max-w-[700px] w-full mx-auto font-sans text-[10px] leading-tight border border-slate-300 rounded-sm shadow-2xl ring-1 ring-black/10 print:border-0 print:p-0 print:shadow-none print:max-w-none print:ring-0">
+    <div *ngIf="data" class="f01-print-sheet bg-white text-black p-5 sm:p-6 max-w-[700px] w-full mx-auto font-sans text-[10px] leading-tight border border-slate-300 rounded-sm shadow-2xl ring-1 ring-black/10 print:border-0 print:p-0 print:shadow-none print:max-w-none print:ring-0 uppercase">
       
       <!-- ════════════════════════════════════════════════════════════════════════════════
            1. ENCABEZADO INSTITUCIONAL OFICIAL (F01-PO-CP-7.1.3-03)
@@ -384,6 +384,9 @@ export interface TransportChecklistPrintData {
       size: letter portrait;
       margin: 8mm;
     }
+    .f01-print-sheet {
+      text-transform: uppercase;
+    }
     @media print {
       body, html {
         margin: 0 !important;
@@ -393,6 +396,7 @@ export interface TransportChecklistPrintData {
         print-color-adjust: exact !important;
       }
       .f01-print-sheet {
+        text-transform: uppercase !important;
         width: 100% !important;
         max-width: 100% !important;
         padding: 0 !important;

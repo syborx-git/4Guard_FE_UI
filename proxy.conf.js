@@ -2,18 +2,42 @@
  * @file proxy.conf.js
  * @description Proxy dinámico para Angular Dev Server.
  * Enruta llamadas de /api hacia el backend en Render (https://fourguard-be-huzh.onrender.com).
- * Incluye puente en memoria (Shared Bridge) para el registro de choferes vía Cartel QR público
- * sincronizando instantáneamente el móvil con la pantalla de Caseta de Seguridad.
+ * Incluye puente compartido basado en archivo local (.proxy-shared-state.json) para conectar
+ * instantáneamente la Caseta de Seguridad (puerto 4200) con la Terminal RF de Operaciones (puerto 4201),
+ * manteniendo sincronizados pases QR, unidades en planta, recepciones y misiones de montacargas.
  */
 
+const path = require('path');
+const fs = require('fs');
+
 const target = process.env.BACKEND_URL || 'http://localhost:8080';
+const SHARED_STATE_FILE = path.join(__dirname, '.proxy-shared-state.json');
 
-const inMemoryPasses = new Map();
-const inMemoryReceptions = new Map();
-const inMemoryOutbounds = new Map();
+function loadState() {
+  try {
+    if (fs.existsSync(SHARED_STATE_FILE)) {
+      const content = fs.readFileSync(SHARED_STATE_FILE, 'utf8');
+      return JSON.parse(content);
+    }
+  } catch (e) {
+    console.error('[Proxy] Error loading state from disk:', e.message);
+  }
+  return {
+    receptions: {},
+    outbounds: {},
+    passes: {},
+    nextReceptionFolioSeq: 26515,
+    nextOutboundFolioSeq: 5
+  };
+}
 
-let nextReceptionFolioSeq = 26510;
-let nextOutboundFolioSeq = 1;
+function saveState(state) {
+  try {
+    fs.writeFileSync(SHARED_STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
+  } catch (e) {
+    console.error('[Proxy] Error saving state to disk:', e.message);
+  }
+}
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -28,11 +52,12 @@ const PROXY_CONFIG = {
     "target": target,
     "secure": false,
     "changeOrigin": true,
-    "logLevel": "silent",
+    "logLevel": "info",
     "bypass": function(req, res, proxyOptions) {
-      const url = req.url || '';
+      // 100% DIRECTO AL BACKEND LOCAL (SPRING BOOT + POSTGRESQL)
+      // No interceptar: pasar todo sin mocks al backend real
+      return undefined;
 
-      // ─── 1. INTERCEPTAR RECEPTIONS (RECEPCIONES DE ALMACÉN) ───────────────────
       // 1.1 POST /api/v1/warehouse-receptions/check-in
       if (req.method === 'POST' && url.includes('/warehouse-receptions/check-in')) {
         let body = '';
@@ -40,34 +65,69 @@ const PROXY_CONFIG = {
         req.on('end', () => {
           try {
             const data = JSON.parse(body || '{}');
-            const folio = data.docNumber ? String(data.docNumber).trim() : String(nextReceptionFolioSeq++);
+            const state = loadState();
+            const folio = data.docNumber ? String(data.docNumber).trim() : String(state.nextReceptionFolioSeq++);
             const recId = data.id || `rec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+            const clientName = data.clientName || data.client || 'Cliente General';
+            const carrierLine = data.carrierLine || data.carrierName || 'Transportista';
+            const rampNum = Number(data.rampNumber || 1);
+            const rampCode = data.rampCode || `LOC-RAMP-${String(rampNum).padStart(2, '0')}`;
+            const driverName = data.driverName || 'Chofer Transportista';
+            const tractorPlates = (data.tractorPlates || '').toUpperCase();
+            const boxPlates = (data.boxPlates || '').toUpperCase();
+            const sealNumbers = Array.isArray(data.sealNumbers) ? data.sealNumbers : (data.sealNumber ? [data.sealNumber] : []);
+
             const reception = {
               id: recId,
               folio: folio,
               status: 'REGISTERED',
+              clientName: clientName,
+              client: clientName,
+              carrierName: carrierLine,
+              carrierLine: carrierLine,
+              rampNumber: rampNum,
+              rampCode: rampCode,
+              driverName: driverName,
+              tractorPlates: tractorPlates,
+              boxPlates: boxPlates,
+              docNumber: folio,
+              remisionNo: folio,
+              remision: folio,
+              sealNumbers: sealNumbers,
+              sealNumber: sealNumbers.join(', '),
+              sku: data.sku || 'SKU-INBOUND',
+              productName: data.productName || `${clientName} - Carga Inbound`,
+              lotNumber: data.lotNumber || `LOT-${new Date().getFullYear()}-01`,
+              totalPieces: Number(data.totalPieces || data.pieces || 48),
+              palletsExpected: Number(data.palletsExpected || data.totalPallets || 24),
+              totalPallets: Number(data.totalPallets || data.palletsExpected || 24),
+              totalWeight: Number(data.totalWeight || (48 * 17.5)),
+              observations: data.observations || '',
+              pallets: data.pallets || [],
               checkIn: {
                 ...data,
-                client: data.clientName || data.client || 'Cliente General',
-                carrierLine: data.carrierLine || 'Transportista',
-                docNumber: data.docNumber || folio,
+                client: clientName,
+                clientName: clientName,
+                carrierLine: carrierLine,
+                carrierName: carrierLine,
+                docNumber: folio,
+                rampNumber: rampNum,
+                rampCode: rampCode,
+                driverName: driverName,
+                tractorPlates: tractorPlates,
+                boxPlates: boxPlates,
+                sealNumbers: sealNumbers,
                 receptionTime: data.receptionTime || new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-                sealNumbers: data.sealNumbers || [],
               },
-              clientName: data.clientName || data.client || 'Cliente General',
-              carrierName: data.carrierLine || 'Transportista',
-              rampNumber: data.rampNumber || 1,
-              rampCode: data.rampCode || `LOC-RAMP-${String(data.rampNumber || 1).padStart(2, '0')}`,
-              docNumber: data.docNumber || folio,
-              observations: data.observations || '',
-              pallets: [],
               createdAt: new Date().toISOString(),
-              capturedBy: 'Caseta de Seguridad',
+              capturedBy: data.capturedBy || 'Caseta de Seguridad',
               organizationId: data.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
               branchId: data.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936'
             };
-            inMemoryReceptions.set(folio, reception);
-            inMemoryReceptions.set(recId, reception);
+
+            state.receptions[folio] = reception;
+            state.receptions[recId] = reception;
+            saveState(state);
 
             sendJson(res, 201, { success: true, message: 'Check-in recibido en Almacén', data: reception });
           } catch (e) {
@@ -77,11 +137,12 @@ const PROXY_CONFIG = {
         return true;
       }
 
-      // 1.2 GET /api/v1/warehouse-receptions (Listado)
+      // 1.2 GET /api/v1/warehouse-receptions (Listado de recepciones para Operaciones y Terminal RF)
       if (req.method === 'GET' && (url === '/api/v1/warehouse-receptions' || url.startsWith('/api/v1/warehouse-receptions?'))) {
+        const state = loadState();
         const unique = [];
         const seen = new Set();
-        for (const item of inMemoryReceptions.values()) {
+        for (const item of Object.values(state.receptions || {})) {
           const key = item.folio || item.id;
           if (key && !seen.has(key)) {
             seen.add(key);
@@ -96,12 +157,22 @@ const PROXY_CONFIG = {
       if (req.method === 'POST' && url.includes('/warehouse-receptions/') && url.endsWith('/complete')) {
         const parts = url.split('/');
         const id = parts[parts.length - 2];
-        const rec = inMemoryReceptions.get(id);
-        if (rec) {
-          rec.status = 'COMPLETED';
-          rec.completedAt = new Date().toISOString();
+        const state = loadState();
+        let targetRec = state.receptions[id];
+        if (!targetRec) {
+          for (const item of Object.values(state.receptions || {})) {
+            if (item.id === id || item.folio === id) {
+              targetRec = item;
+              break;
+            }
+          }
         }
-        sendJson(res, 200, { success: true, message: 'Recepción completada', data: rec });
+        if (targetRec) {
+          targetRec.status = 'COMPLETED';
+          targetRec.completedAt = new Date().toISOString();
+          saveState(state);
+        }
+        sendJson(res, 200, { success: true, message: 'Recepción completada', data: targetRec });
         return true;
       }
 
@@ -109,11 +180,22 @@ const PROXY_CONFIG = {
       if (req.method === 'POST' && url.includes('/warehouse-receptions/') && url.endsWith('/cancel')) {
         const parts = url.split('/');
         const id = parts[parts.length - 2];
-        const rec = inMemoryReceptions.get(id);
-        if (rec) {
-          rec.status = 'CANCELLED';
+        const state = loadState();
+        let targetRec = state.receptions[id];
+        if (!targetRec) {
+          for (const item of Object.values(state.receptions || {})) {
+            if (item.id === id || item.folio === id) {
+              targetRec = item;
+              break;
+            }
+          }
         }
-        sendJson(res, 200, { success: true, message: 'Recepción cancelada', data: rec });
+        if (targetRec) {
+          targetRec.status = 'CANCELLED';
+          targetRec.cancelledAt = new Date().toISOString();
+          saveState(state);
+        }
+        sendJson(res, 200, { success: true, message: 'Recepción cancelada', data: targetRec });
         return true;
       }
 
@@ -126,11 +208,21 @@ const PROXY_CONFIG = {
         req.on('end', () => {
           try {
             const data = JSON.parse(body || '{}');
-            const rec = inMemoryReceptions.get(id);
-            if (rec) {
-              Object.assign(rec, data);
+            const state = loadState();
+            let targetRec = state.receptions[id];
+            if (!targetRec) {
+              for (const item of Object.values(state.receptions || {})) {
+                if (item.id === id || item.folio === id) {
+                  targetRec = item;
+                  break;
+                }
+              }
             }
-            sendJson(res, 200, { success: true, message: 'Parámetros actualizados', data: rec || data });
+            if (targetRec) {
+              Object.assign(targetRec, data);
+              saveState(state);
+            }
+            sendJson(res, 200, { success: true, message: 'Parámetros actualizados', data: targetRec || data });
           } catch (e) {
             sendJson(res, 400, { success: false, message: 'JSON malformado' });
           }
@@ -152,7 +244,16 @@ const PROXY_CONFIG = {
       if (req.method === 'GET' && url.includes('/warehouse-receptions/') && !url.includes('/detect-return') && !url.includes('/next-pallet-number')) {
         const parts = url.split('/');
         const id = parts[parts.length - 1].split('?')[0];
-        const rec = inMemoryReceptions.get(id) || null;
+        const state = loadState();
+        let rec = state.receptions[id];
+        if (!rec) {
+          for (const item of Object.values(state.receptions || {})) {
+            if (item.id === id || item.folio === id) {
+              rec = item;
+              break;
+            }
+          }
+        }
         if (rec) {
           sendJson(res, 200, { success: true, data: rec });
           return true;
@@ -167,7 +268,8 @@ const PROXY_CONFIG = {
         req.on('end', () => {
           try {
             const data = JSON.parse(body || '{}');
-            const seqStr = String(nextOutboundFolioSeq++).padStart(6, '0');
+            const state = loadState();
+            const seqStr = String(state.nextOutboundFolioSeq++).padStart(6, '0');
             const folio = data.remisionNo || data.docNumber ? `OUT-${data.remisionNo || data.docNumber}` : `SAL-2026-${seqStr}`;
             const outId = data.id || `out-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
             const outbound = {
@@ -191,8 +293,9 @@ const PROXY_CONFIG = {
               organizationId: data.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
               branchId: data.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936'
             };
-            inMemoryOutbounds.set(folio, outbound);
-            inMemoryOutbounds.set(outId, outbound);
+            state.outbounds[folio] = outbound;
+            state.outbounds[outId] = outbound;
+            saveState(state);
 
             sendJson(res, 201, { success: true, message: 'Pre-salida registrada en Caseta', data: outbound });
           } catch (e) {
@@ -204,9 +307,10 @@ const PROXY_CONFIG = {
 
       // 2.2 GET /api/v1/warehouse-outbounds (Listado)
       if (req.method === 'GET' && (url === '/api/v1/warehouse-outbounds' || url.startsWith('/api/v1/warehouse-outbounds?'))) {
+        const state = loadState();
         const unique = [];
         const seen = new Set();
-        for (const item of inMemoryOutbounds.values()) {
+        for (const item of Object.values(state.outbounds || {})) {
           const key = item.folio || item.id;
           if (key && !seen.has(key)) {
             seen.add(key);
@@ -217,8 +321,35 @@ const PROXY_CONFIG = {
         return true;
       }
 
-      // ─── 3. INTERCEPTAR PASES DE CASETA (CHOFERES QR) ──────────────────────────
-      // 3.1 Interceptar POST de auto-registro del chofer: /api/v1/security-gate/public/passes/:token/submit
+      // ─── 3. INTERCEPTAR PASES DE CASETA (CHOFERES QR Y CONTROL DE PATIO) ──────
+      // 3.0 POST /api/v1/security-gate/passes/generate
+      if (req.method === 'POST' && url.includes('/security-gate/passes/generate')) {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body || '{}');
+            const state = loadState();
+            const token = `PASS-4G-${Date.now().toString().slice(-6)}`;
+            const pass = {
+              id: token,
+              token: token,
+              generatedFolio: token,
+              status: 'PENDING_DRIVER',
+              createdAt: new Date().toISOString(),
+              ...data
+            };
+            state.passes[token] = pass;
+            saveState(state);
+            sendJson(res, 201, { success: true, message: 'Pase QR generado', data: pass });
+          } catch (e) {
+            sendJson(res, 400, { success: false, message: 'JSON malformado' });
+          }
+        });
+        return true;
+      }
+
+      // 3.1 POST auto-registro del chofer: /api/v1/security-gate/public/passes/:token/submit
       if (req.method === 'POST' && url.includes('/public/passes/') && url.endsWith('/submit')) {
         const parts = url.split('/');
         const token = parts[parts.length - 2];
@@ -227,6 +358,7 @@ const PROXY_CONFIG = {
         req.on('end', () => {
           try {
             const data = JSON.parse(body || '{}');
+            const state = loadState();
             const passObj = {
               id: token,
               token: token,
@@ -254,7 +386,8 @@ const PROXY_CONFIG = {
               transportType: data.transportType || 'Tráiler',
               ...data
             };
-            inMemoryPasses.set(token, passObj);
+            state.passes[token] = passObj;
+            saveState(state);
             sendJson(res, 200, { success: true, message: 'Check-in recibido en Caseta', data: passObj });
           } catch (e) {
             sendJson(res, 400, { success: false, message: 'JSON malformado' });
@@ -263,11 +396,12 @@ const PROXY_CONFIG = {
         return true;
       }
 
-      // 3.2 Interceptar GET de pase público: /api/v1/security-gate/public/passes/:token
+      // 3.2 GET de pase público: /api/v1/security-gate/public/passes/:token
       if (req.method === 'GET' && url.includes('/public/passes/')) {
         const parts = url.split('/');
         const token = parts[parts.length - 1].split('?')[0];
-        const pass = inMemoryPasses.get(token) || {
+        const state = loadState();
+        const pass = state.passes[token] || {
           id: token,
           token: token,
           status: 'PENDING_DRIVER',
@@ -277,9 +411,10 @@ const PROXY_CONFIG = {
         return true;
       }
 
-      // 3.3 Interceptar GET de pases activos para Caseta: /api/v1/security-gate/passes/active
+      // 3.3 GET de pases activos para Caseta: /api/v1/security-gate/passes/active
       if (req.method === 'GET' && url.includes('/security-gate/passes/active')) {
-        const localList = Array.from(inMemoryPasses.values());
+        const state = loadState();
+        const localList = Object.values(state.passes || {}).filter(p => p.status === 'SUBMITTED' || p.status === 'PENDING_DRIVER');
         sendJson(res, 200, {
           success: true,
           message: 'Pases activos de Caseta',
@@ -288,30 +423,162 @@ const PROXY_CONFIG = {
         return true;
       }
 
-      // 3.4 Interceptar POST complete de pases: /api/v1/security-gate/passes/:token/complete
+      // 3.4 GET Unidades en Planta (Patio): /api/v1/security-gate/passes/in-yard
+      if (req.method === 'GET' && url.includes('/security-gate/passes/in-yard')) {
+        const state = loadState();
+        const inYardList = [];
+        const seen = new Set();
+
+        // Recepciones activas en planta
+        for (const r of Object.values(state.receptions || {})) {
+          const key = (r.folio || r.id || '').trim().toUpperCase();
+          if (key && !seen.has(key) && r.status !== 'COMPLETED_EXIT' && r.status !== 'CANCELLED') {
+            seen.add(key);
+            inYardList.push({
+              id: r.id,
+              token: r.folio,
+              generatedFolio: r.folio,
+              status: r.status === 'COMPLETED' ? 'READY_FOR_EXIT' : 'IN_YARD',
+              warehouseStatus: r.status,
+              isReadyForExit: r.status === 'COMPLETED',
+              operationType: 'DESCARGA',
+              driverName: r.driverName || r.checkIn?.driverName || 'Operador Chofer',
+              carrierLine: r.carrierName || r.carrierLine || 'Transportista',
+              clientName: r.clientName || r.client || 'Cliente General',
+              tractorPlates: r.tractorPlates || r.checkIn?.tractorPlates || '',
+              boxPlates: r.boxPlates || r.checkIn?.boxPlates || '',
+              docNumber: r.docNumber || r.folio,
+              rampNumber: r.rampNumber,
+              rampCode: r.rampCode,
+              receptionTime: r.checkIn?.receptionTime || new Date(r.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+              createdAt: r.createdAt,
+              sealNumbers: r.sealNumbers || []
+            });
+          }
+        }
+
+        // Salidas activas en planta
+        for (const o of Object.values(state.outbounds || {})) {
+          const key = (o.folio || o.id || '').trim().toUpperCase();
+          if (key && !seen.has(key) && o.status !== 'COMPLETED_EXIT') {
+            seen.add(key);
+            inYardList.push({
+              id: o.id,
+              token: o.folio,
+              generatedFolio: o.folio,
+              status: o.status === 'COMPLETED' ? 'READY_FOR_EXIT' : 'IN_YARD',
+              warehouseStatus: o.status,
+              isReadyForExit: o.status === 'COMPLETED',
+              operationType: 'CARGA',
+              driverName: o.driverName || 'Operador Chofer',
+              carrierLine: o.carrierName || 'Transportista',
+              clientName: o.clientName || 'Cliente General',
+              tractorPlates: o.tractorPlates || '',
+              boxPlates: o.boxPlates || '',
+              docNumber: o.remisionNo || o.folio,
+              rampNumber: o.rampNumber,
+              rampCode: o.rampCode,
+              receptionTime: o.timestamp || new Date(o.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+              createdAt: o.createdAt
+            });
+          }
+        }
+
+        sendJson(res, 200, { success: true, message: 'Unidades activas en patio', data: inYardList });
+        return true;
+      }
+
+      // 3.5 GET Historial de Salidas: /api/v1/security-gate/passes/history
+      if (req.method === 'GET' && url.includes('/security-gate/passes/history')) {
+        const state = loadState();
+        const historyList = [];
+        const seen = new Set();
+        for (const r of Object.values(state.receptions || {})) {
+          const key = (r.folio || r.id || '').trim().toUpperCase();
+          if (key && !seen.has(key) && (r.status === 'COMPLETED_EXIT' || r.status === 'CANCELLED')) {
+            seen.add(key);
+            historyList.push({
+              id: r.id,
+              token: r.folio,
+              generatedFolio: r.folio,
+              status: r.status,
+              warehouseStatus: r.status,
+              operationType: 'DESCARGA',
+              driverName: r.driverName || r.checkIn?.driverName,
+              carrierLine: r.carrierName || r.carrierLine,
+              clientName: r.clientName || r.client,
+              tractorPlates: r.tractorPlates || r.checkIn?.tractorPlates,
+              boxPlates: r.boxPlates || r.checkIn?.boxPlates,
+              docNumber: r.docNumber || r.folio,
+              rampNumber: r.rampNumber,
+              rampCode: r.rampCode,
+              receptionTime: r.checkIn?.receptionTime,
+              exitTime: r.exitTime || r.completedAt,
+              createdAt: r.createdAt
+            });
+          }
+        }
+        sendJson(res, 200, { success: true, message: 'Historial de pases', data: historyList });
+        return true;
+      }
+
+      // 3.6 POST Salida de Planta (Check-Out): /api/v1/security-gate/passes/:token/exit o /checkout
+      if (req.method === 'POST' && url.includes('/security-gate/passes/') && (url.endsWith('/exit') || url.endsWith('/checkout'))) {
+        const parts = url.split('/');
+        const token = parts[parts.length - 2];
+        const state = loadState();
+        let targetItem = null;
+        for (const item of Object.values(state.receptions || {})) {
+          if (item.id === token || item.folio === token) {
+            item.status = 'COMPLETED_EXIT';
+            item.exitTime = new Date().toISOString();
+            targetItem = item;
+            break;
+          }
+        }
+        if (!targetItem) {
+          for (const item of Object.values(state.outbounds || {})) {
+            if (item.id === token || item.folio === token) {
+              item.status = 'COMPLETED_EXIT';
+              item.exitTime = new Date().toISOString();
+              targetItem = item;
+              break;
+            }
+          }
+        }
+        saveState(state);
+        sendJson(res, 200, { success: true, message: 'Salida de planta registrada', data: targetItem || { token, status: 'COMPLETED_EXIT' } });
+        return true;
+      }
+
+      // 3.7 POST complete de pases: /api/v1/security-gate/passes/:token/complete
       if (req.method === 'POST' && url.includes('/security-gate/passes/') && url.endsWith('/complete')) {
         const parts = url.split('/');
         const token = parts[parts.length - 2];
-        inMemoryPasses.delete(token);
-        for (const [k, v] of inMemoryPasses.entries()) {
+        const state = loadState();
+        delete state.passes[token];
+        for (const [k, v] of Object.entries(state.passes || {})) {
           if (v.id === token || v.token === token) {
-            inMemoryPasses.delete(k);
+            delete state.passes[k];
           }
         }
+        saveState(state);
         sendJson(res, 200, { success: true, message: 'Pase completado', data: { folio: token, token } });
         return true;
       }
 
-      // 3.5 Interceptar DELETE de pases: /api/v1/security-gate/passes/:token
+      // 3.8 DELETE de pases: /api/v1/security-gate/passes/:token
       if (req.method === 'DELETE' && url.includes('/security-gate/passes/')) {
         const parts = url.split('/');
         const idOrToken = parts[parts.length - 1].split('?')[0];
-        inMemoryPasses.delete(idOrToken);
-        for (const [k, v] of inMemoryPasses.entries()) {
+        const state = loadState();
+        delete state.passes[idOrToken];
+        for (const [k, v] of Object.entries(state.passes || {})) {
           if (v.id === idOrToken || v.token === idOrToken) {
-            inMemoryPasses.delete(k);
+            delete state.passes[k];
           }
         }
+        saveState(state);
         sendJson(res, 200, { success: true, message: 'Pase eliminado' });
         return true;
       }

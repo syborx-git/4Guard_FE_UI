@@ -30,6 +30,39 @@
         </div>
       </div>
 
+      <div class="receiving-header__right">
+        @if (shiftContext.isLoading()) {
+          <div class="shift-context-chip shift-context-chip--loading">
+            <span class="material-symbols-outlined">progress_activity</span>
+            <div class="shift-context-chip__copy">
+              <span class="shift-context-chip__label">TURNO</span>
+              <strong class="shift-context-chip__value">Resolviendo turno…</strong>
+            </div>
+          </div>
+        }
+        @if (!shiftContext.isLoading() && shiftContext.activeShift(); as shift) {
+          <div
+            class="shift-context-chip"
+            [class.shift-context-chip--fallback]="!shift.shiftId"
+            [title]="shift.branchName + ' · ' + shift.timezone"
+          >
+            <span class="material-symbols-outlined">schedule</span>
+            <div class="shift-context-chip__copy">
+              <span class="shift-context-chip__label">TURNO VIGENTE</span>
+              <strong class="shift-context-chip__value">
+                @if (shift.shiftName) {
+                  {{ shift.shiftName }} · {{ formatShiftTime(shift.startTime) }}–{{ formatShiftTime(shift.endTime) }}
+                } @else if (shift.configured) {
+                  Sin turno vigente
+                } @else {
+                  Turno no configurado
+                }
+              </strong>
+            </div>
+          </div>
+        }
+      </div>
+
     </div>
 
     <!-- ── BARRA DE PESTAÑAS FLOTANTE (SEGMENTED CONTROL) & ANDENES ── -->
@@ -500,6 +533,16 @@
                 @else if (rec.status === 'COMPLETED') { Completado }
                 @else if (rec.status === 'CANCELLED') { Cancelado }
               </span>
+
+              @if (isCarryOver(rec)) {
+                <span
+                  class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40"
+                  title="Pendiente de un turno anterior; permanece visible hasta que se verifique o cancele."
+                >
+                  <span class="material-symbols-outlined text-[13px]">history</span>
+                  <span>ARRASTRE TURNO ANTERIOR</span>
+                </span>
+              }
             </div>
 
             <!-- BOTONES DE ACCIÓN SUPERIOR -->
@@ -1399,18 +1442,28 @@
                       Andén Asignado · Notificación Enviada a Terminal de Montacargas
                     </h3>
                     <p class="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
-                      Rampa <strong>{{ rec.checkIn.rampNumber }}</strong> bloqueada. El operador <strong>{{ rec.checkIn.forkliftOperator }}</strong> validará el transporte y comenzará la descarga hacia bahía <strong>{{ rec.storageLocation }}</strong>.
+                      Rampa <strong>{{ rec.checkIn.rampNumber }}</strong> bloqueada. El operador <strong>{{ rec.checkIn.forkliftOperator }}</strong> validará el transporte y comenzará la descarga hacia bahía <strong>{{ selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'STAGING-R01' }}</strong>.
+                    </p>
+                    <p class="text-[10px] text-blue-600/80 dark:text-blue-400/80 font-normal mt-0.5 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[13px]">info</span>
+                      <span>Plan B / Contingencia: Si la terminal móvil presenta fallas, inicia la descarga aquí para pistolear las tarimas desde esta PC.</span>
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  (click)="simulateStartDischarge()"
-                  class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap cursor-pointer hover:scale-[1.02] transition-transform"
-                  title="Notificar al montacarguista y confirmar descarga para emitir formato F01"
+                  (click)="startDischarge()"
+                  [disabled]="isStartingDischarge()"
+                  class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap cursor-pointer hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Iniciar descarga física en andén y habilitar captura / escáner de tarimas (Plan B / Contingencia si falla la tablet)"
                 >
-                  <span class="material-symbols-outlined text-sm">send_and_archive</span>
-                  <span>Iniciar Descarga &amp; Confirmar (F01)</span>
+                  @if (isStartingDischarge()) {
+                    <span class="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                    <span>Iniciando Descarga...</span>
+                  } @else {
+                    <span class="material-symbols-outlined text-sm">play_circle</span>
+                    <span>Iniciar Descarga Física</span>
+                  }
                 </button>
               </div>
 
@@ -1452,7 +1505,7 @@
                 }
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
-                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || 'POS-A-001' }}</span>
+                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'STAGING-R01' }}</span>
                 </div>
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Montacarguista Asignado</span>
@@ -1498,15 +1551,46 @@
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  (click)="simulateFinishDischarge()"
-                  class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap cursor-pointer hover:scale-[1.02] transition-transform"
-                  title="Concluir descarga física y proceder directamente a formato F01"
-                >
-                  <span class="material-symbols-outlined text-sm">fact_check</span>
-                  <span>Finalizar Descarga &amp; Obtener Formato F01</span>
-                </button>
+                <div class="flex items-center flex-wrap gap-2.5 shrink-0">
+                  <!-- BOTÓN 1: Guardar Avance de Descarga (Secundario / Contingencia) -->
+                  <button
+                    type="button"
+                    (click)="saveDraftReception()"
+                    [disabled]="isSavingDraft() || isConcludingDischarge()"
+                    class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-cyan-500/40 bg-cyan-950/40 hover:bg-cyan-900/50 text-cyan-200 text-xs font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:border-cyan-400"
+                    title="Guardar tarimas y avance de la remisión en base de datos sin cerrar la descarga"
+                  >
+                    @if (isSavingDraft()) {
+                      <span class="w-3.5 h-3.5 border-2 border-cyan-300 border-t-transparent rounded-full animate-spin"></span>
+                      <span>Guardando...</span>
+                    } @else {
+                      <span class="material-symbols-outlined text-base text-cyan-400">save</span>
+                      <span>Guardar Avance</span>
+                      @if (palletStream().length > 0) {
+                        <span class="px-1.5 py-0.2 rounded-full bg-cyan-500/25 text-cyan-200 text-[10px] font-bold">
+                          {{ palletStream().length }}
+                        </span>
+                      }
+                    }
+                  </button>
+
+                  <!-- BOTÓN 2: Concluir Descarga Física (Primario Gold / F01) -->
+                  <button
+                    type="button"
+                    (click)="finishDischarge()"
+                    [disabled]="palletStream().length === 0 || isConcludingDischarge() || isSavingDraft()"
+                    class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-slate-900 shadow-sm whitespace-nowrap cursor-pointer hover:scale-[1.02] transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    title="Concluir descarga física de tarimas y emitir formato F01"
+                  >
+                    @if (isConcludingDischarge()) {
+                      <span class="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+                      <span>Concluyendo...</span>
+                    } @else {
+                      <span class="material-symbols-outlined text-sm">fact_check</span>
+                      <span>Concluir Descarga (F01)</span>
+                    }
+                  </button>
+                </div>
               </div>
 
               <!-- ── WIDGET INTELIGENTE: VALIDACIÓN FÍSICA EN ANDÉN PARA RETORNOS (ADR-021) ── -->
@@ -1677,6 +1761,17 @@
                     </p>
                   </div>
                 </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    (click)="openPrintPreview(rec)"
+                    class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl text-slate-900 shadow-sm whitespace-nowrap cursor-pointer hover:scale-[1.02] transition-transform"
+                    title="Previsualizar o descargar formato F01 con el detalle de las tarimas recibidas"
+                  >
+                    <span class="material-symbols-outlined text-sm">print</span>
+                    <span>Descargar / Ver Formato F01</span>
+                  </button>
+                </div>
               </div>
             </div>
           } @else if (rec.status === 'COMPLETED') {
@@ -1746,7 +1841,7 @@
                 }
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
-                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ rec.storageLocation || 'POS-A-001' }}</span>
+                  <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{ selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'STAGING-R01' }}</span>
                 </div>
                 <div class="reception-readonly-item">
                   <span class="reception-readonly-label">Montacarguista</span>
@@ -2619,27 +2714,27 @@
               </div>
 
               <!-- Comparativa Visual Origen vs Destino -->
-              <div class="grid grid-cols-1 sm:grid-cols-5 gap-2 items-center bg-white p-3 rounded-xl border border-slate-200/90 shadow-xs">
+              <div class="grid grid-cols-1 sm:grid-cols-5 gap-2 items-center bg-white p-3 rounded-xl border border-amber-200/80 shadow-xs">
                 <!-- Origen -->
                 <div class="sm:col-span-2">
                   <span class="text-[10px] text-slate-500 font-bold block mb-1">Tarima de Entrada (Origen):</span>
-                  <div class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-900 font-mono font-bold text-xs truncate border border-slate-200">
+                  <div class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-800 font-mono font-bold text-xs truncate border border-slate-200">
                     {{ getPalletTypeLabel(selectedReception()?.selectedPalletType) }}
                   </div>
                 </div>
 
                 <!-- Flecha -->
-                <div class="flex items-center justify-center text-amber-600 py-1 sm:py-0">
+                <div class="flex items-center justify-center text-amber-600 dark:text-amber-400 py-1 sm:py-0">
                   <span class="material-symbols-outlined text-xl">arrow_forward</span>
                 </div>
 
                 <!-- Destino -->
                 <div class="sm:col-span-2">
-                  <span class="text-[10px] text-amber-800 font-bold block mb-1">Nueva Tarima Física (Destino):</span>
+                  <span class="text-[10px] text-amber-900 font-bold block mb-1">Nueva Tarima Física (Destino):</span>
                   <select
                     [ngModel]="reopenTargetPalletType()"
                     (ngModelChange)="reopenTargetPalletType.set($event)"
-                    class="fg-input w-full font-bold text-xs border-amber-300 focus:ring-amber-500 py-1.5"
+                    class="fg-input w-full font-bold text-xs border-amber-300 bg-white text-slate-800 focus:ring-amber-500 py-1.5"
                   >
                     @for (pt of palletTypes; track pt[0]) {
                       <option [value]="pt[0]">{{ pt[1] }}</option>
@@ -2654,7 +2749,7 @@
                   Alcance del Cambio Físico:
                 </label>
                 <div class="flex items-center gap-4">
-                  <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                  <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
                     <input
                       type="radio"
                       name="reopenSwapScope"
@@ -2665,7 +2760,7 @@
                     />
                     <span>Todo el embarque (las {{ totalTarimas() }} tarimas descargadas)</span>
                   </label>
-                  <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                  <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
                     <input
                       type="radio"
                       name="reopenSwapScope"
@@ -2680,11 +2775,11 @@
 
                 <!-- Selector de Tarimas si es SELECTED -->
                 @if (reopenSwapScope() === 'SELECTED') {
-                  <div class="mt-2 p-2.5 rounded-xl bg-white border border-slate-200 max-h-36 overflow-y-auto space-y-1.5">
-                    <span class="text-[10px] text-slate-500 font-bold block mb-1">Selecciona las tarimas retarimadas físicamente:</span>
+                  <div class="mt-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 max-h-36 overflow-y-auto space-y-1.5">
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">Selecciona las tarimas retarimadas físicamente:</span>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                       @for (p of palletStream(); track p.id) {
-                        <label class="inline-flex items-center gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-amber-400 cursor-pointer text-[11px] text-slate-800 transition-colors">
+                        <label class="inline-flex items-center gap-2 p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-amber-400 cursor-pointer text-[11px] text-slate-800 dark:text-slate-200 transition-colors">
                           <input
                             type="checkbox"
                             [checked]="isPalletSelectedForSwap(p.id)"
@@ -2721,33 +2816,33 @@
           @if (reopenActionType() === 'MISSING_PALLETS') {
             <div class="reopen-panel-gold space-y-2.5">
               <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2 text-amber-900 font-bold text-xs">
-                  <span class="material-symbols-outlined text-base text-amber-700">restore_page</span>
+                <div class="flex items-center gap-2 text-amber-900 dark:text-amber-300 font-bold text-xs">
+                  <span class="material-symbols-outlined text-base text-amber-700 dark:text-amber-400">restore_page</span>
                   <span>Descarga Complementaria en Bahía Asignada</span>
                 </div>
-                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
                   {{ reopenBayCapacity().bayCode }}
                 </span>
               </div>
 
               <!-- Tarjeta de Cupo de Bahía en Tiempo Real -->
-              <div class="grid grid-cols-3 gap-2 bg-white/90 p-2.5 rounded-lg border border-amber-300/70 text-center">
-                <div class="border-r border-amber-200 pr-1">
-                  <span class="text-[9.5px] uppercase font-bold text-slate-500 block">Descargadas</span>
-                  <span class="text-sm font-black font-mono text-slate-900">{{ reopenBayCapacity().currentThisRec }} Tarimas</span>
+              <div class="grid grid-cols-3 gap-2 bg-white/90 dark:bg-slate-900/90 p-2.5 rounded-lg border border-amber-300/70 dark:border-amber-700/60 text-center">
+                <div class="border-r border-amber-200 dark:border-amber-800/50 pr-1">
+                  <span class="text-[9.5px] uppercase font-bold text-slate-500 dark:text-slate-400 block">Descargadas</span>
+                  <span class="text-sm font-black font-mono text-slate-900 dark:text-slate-100">{{ reopenBayCapacity().currentThisRec }} Tarimas</span>
                 </div>
-                <div class="border-r border-amber-200 px-1">
-                  <span class="text-[9.5px] uppercase font-bold text-slate-500 block">Capacidad Bahía</span>
-                  <span class="text-sm font-black font-mono text-slate-900">{{ reopenBayCapacity().totalCapacity }}T Nominal</span>
+                <div class="border-r border-amber-200 dark:border-amber-800/50 px-1">
+                  <span class="text-[9.5px] uppercase font-bold text-slate-500 dark:text-slate-400 block">Capacidad Bahía</span>
+                  <span class="text-sm font-black font-mono text-slate-900 dark:text-slate-100">{{ reopenBayCapacity().totalCapacity }}T Nominal</span>
                 </div>
                 <div class="pl-1">
-                  <span class="text-[9.5px] uppercase font-bold text-emerald-700 block">Cupo Disponible</span>
-                  <span class="text-sm font-black font-mono text-emerald-700">Hasta {{ reopenBayCapacity().availableCupo }}T</span>
+                  <span class="text-[9.5px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block">Cupo Disponible</span>
+                  <span class="text-sm font-black font-mono text-emerald-700 dark:text-emerald-400">Hasta {{ reopenBayCapacity().availableCupo }}T</span>
                 </div>
               </div>
 
-              <p class="text-[11px] text-slate-600 leading-relaxed">
-                Al autorizar, la recepción cambiará de <strong class="text-slate-900">COMPLETADO</strong> a <strong class="underline text-amber-800">EN PROCESO</strong> en el <strong class="text-slate-900">Andén {{ selectedReception()?.checkIn?.rampNumber || 1 }}</strong>. Se reactivará el escáner del andén para capturar hasta <strong>{{ reopenBayCapacity().availableCupo }} tarimas faltantes</strong> para alcanzar la meta del cupo. Al finalizar, podrás cerrar nuevamente la recepción.
+              <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                Al autorizar, la recepción cambiará de <strong class="text-slate-900 dark:text-slate-100">COMPLETADO</strong> a <strong class="underline text-amber-800 dark:text-amber-300">EN PROCESO</strong> en el <strong class="text-slate-900 dark:text-slate-100">Andén {{ selectedReception()?.checkIn?.rampNumber || 1 }}</strong>. Se reactivará el escáner del andén para capturar hasta <strong>{{ reopenBayCapacity().availableCupo }} tarimas faltantes</strong> para alcanzar la meta del cupo. Al finalizar, podrás cerrar nuevamente la recepción.
               </p>
             </div>
           }

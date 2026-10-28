@@ -7,6 +7,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { SmartNotificationService } from '../../../../core/services/smart-notification.service';
+import { ShiftContextService } from '../../../../core/services/shift-context.service';
 import { WarehouseMovementsService, isUuid } from '../../services/warehouse-movements.service';
 import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
 import {
@@ -28,7 +29,6 @@ import {
   ProductSkuItem,
   STANDARD_PRODUCTS,
 } from '../../models/warehouse-movements.models';
-import { LeaderAuthModalComponent } from '../../components/leader-auth-modal/leader-auth-modal.component';
 import { PrintReceptionLayoutComponent } from '../../components/print-layouts/print-reception-layout.component';
 import { PrintCancellationLayoutComponent } from '../../components/print-layouts/print-cancellation-layout.component';
 import { BayOccupancySelectorComponent, BaySelectionResult } from '../../../../shared/components/bay-occupancy-selector/bay-occupancy-selector.component';
@@ -63,7 +63,6 @@ export interface ShelfLifeEvaluation {
     ReactiveFormsModule,
     RouterLink,
     RouterLinkActive,
-    LeaderAuthModalComponent,
     PrintReceptionLayoutComponent,
     PrintCancellationLayoutComponent,
     BayOccupancySelectorComponent,
@@ -81,6 +80,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   private readonly qualityState = inject(QualityStateService);
   private readonly layoutService = inject(WarehouseLayoutService);
   private readonly smartNotification = inject(SmartNotificationService);
+  readonly shiftContext = inject(ShiftContextService);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
@@ -91,12 +91,16 @@ export class ReceivingSubmoduleComponent implements OnInit {
     this.router.navigate(['/admin/carriers']);
   }
 
+  protected formatShiftTime(value: string | null): string {
+    return value ? value.slice(0, 5) : '';
+  }
+
   // Auto-foco en escáner de UAs
   @ViewChild('uaInput') uaInput!: ElementRef<HTMLInputElement>;
   // ── ESTADO DEL WORKBENCH ──
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
   searchQuery = signal('');
-  statusFilter = signal<string>('ALL');
+  statusFilter = signal<string>('REGISTERED');
   selectedReception = signal<ReceptionHeader | null>(null);
   auditEntries = signal<MovementAuditEntry[]>([]);
   showAuditTimeline = signal(false);
@@ -811,14 +815,37 @@ export class ReceivingSubmoduleComponent implements OnInit {
   verifiedPalletCount = computed(() => this.verifiedPalletIds().size);
 
   // ── COMPUTADOS DEL WORKBENCH ──
-  kpiTotal = computed(() => this.movementsService.receptions().length);
-  kpiRegistered = computed(() => this.movementsService.receptions().filter((r) => r.status === 'REGISTERED').length);
-  kpiInProcess = computed(() => this.movementsService.receptions().filter((r) => r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED').length);
-  kpiCompleted = computed(() => this.movementsService.receptions().filter((r) => r.status === 'COMPLETED').length);
-  kpiCancelled = computed(() => this.movementsService.receptions().filter((r) => r.status === 'CANCELLED').length);
+  // El tablero operativo se acota al turno vigente: los pendientes de turnos
+  // anteriores permanecen visibles (arrastre); verificados/cancelados de turnos
+  // anteriores salen del tablero y quedan en el historial.
+  private isActiveStatus(status: string): boolean {
+    return status !== 'COMPLETED' && status !== 'CANCELLED';
+  }
+
+  protected readonly boardReceptions = computed(() => {
+    const sessionId = this.shiftContext.activeShift()?.sessionId;
+    const list = this.movementsService.receptions();
+    if (!sessionId) return list;
+    return list.filter(
+      (r) => r.shiftSessionId === sessionId || this.isActiveStatus(r.status)
+    );
+  });
+
+  protected isCarryOver(rec: ReceptionHeader): boolean {
+    const sessionId = this.shiftContext.activeShift()?.sessionId;
+    return !!sessionId && !!rec.shiftSessionId && rec.shiftSessionId !== sessionId
+      && this.isActiveStatus(rec.status);
+  }
+
+  kpiTotal = computed(() => this.boardReceptions().length);
+  kpiRegistered = computed(() => this.boardReceptions().filter((r) => r.status === 'REGISTERED').length);
+  kpiInProcess = computed(() => this.boardReceptions().filter((r) => r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED').length);
+  kpiCompleted = computed(() => this.boardReceptions().filter((r) => r.status === 'COMPLETED').length);
+  kpiCancelled = computed(() => this.boardReceptions().filter((r) => r.status === 'CANCELLED').length);
 
   // Filtros Multi-Estado Píldoras
-  activeStatusFilters = signal<string[]>([]);
+  // Por defecto el tablero operativo arranca en "En Caseta" (REGISTERED).
+  activeStatusFilters = signal<string[]>(['REGISTERED']);
 
   toggleStatusFilter(status: string): void {
     if (status === 'ALL') {
@@ -882,7 +909,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   }
 
   filteredReceptions = computed(() => {
-    const list = this.movementsService.receptions();
+    const list = this.boardReceptions();
     const q = this.searchQuery().toLowerCase().trim();
     const multi = this.activeStatusFilters();
     const st = this.statusFilter();
@@ -936,6 +963,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
   ngOnInit(): void {
     this.movementsService.loadInitialBackendData();
     this.movementsService.reloadSuppliers();
+    this.shiftContext.loadActiveShift();
 
     this.movementsService.movementsApi.getProductSkus().subscribe({
       next: (prods: any) => {
@@ -1299,6 +1327,10 @@ export class ReceivingSubmoduleComponent implements OnInit {
       bayLoc = rNum ? `STAGING-R${String(rNum).padStart(2, '0')}` : 'STAGING-R01';
     }
     this.selectedBayName.set(bayLoc);
+    if (rec.storageLocation !== bayLoc) {
+      rec.storageLocation = bayLoc;
+      rec.storageLocationCode = bayLoc;
+    }
 
     this.altaForm.patchValue({
       lotNumber: rec.lotNumber || rec.checkIn?.lotNumber || '',
@@ -2053,6 +2085,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   isSavingDraft = signal(false);
   isCompleting = signal(false);
+  isConcludingDischarge = signal(false);
+  isStartingDischarge = signal(false);
 
   validateAltaForm(): boolean {
     const pId = this.altaForm.get('productId')?.value;
@@ -2166,85 +2200,81 @@ export class ReceivingSubmoduleComponent implements OnInit {
       });
   }
 
-  // Fase 2 -> 4: Inicio y Finalización Directa de Descarga en Andén (Mesa Administrativa F01)
-  simulateStartDischarge(): void {
-    this.simulateFinishDischarge();
-  }
-
-  // Montacarguista Concluye Descarga Física (Envía a Mesa Administrativa / Formato F01)
-  simulateFinishDischarge(): void {
-    const current = this.selectedReception();
+  // Fase 2 -> 3: Inicio de Descarga Física en Andén (ASSIGNED -> IN_PROGRESS)
+  // Plan B / Contingencia: si la terminal móvil del montacarguista presenta fallas, la mesa inicia y escanea directamente
+  startDischarge(currentRec?: ReceptionHeader): void {
+    const current = currentRec || this.selectedReception();
     if (!current) return;
 
-    let stream = [...this.palletStream()];
-    if (stream.length === 0) {
-      const sku = this.altaForm.value.productId || current.productId || '8500297';
-      const desc = this.altaForm.value.productName || current.productName || 'NESCAFE CLASICO 5KG MX';
-      const sup = this.altaForm.value.supplierName || current.supplierName || 'OWENS AMERICA';
-      const pType = (this.altaForm.value.selectedPalletType as PalletType) || 'TARIMA_CHEP_EXPORTACION';
-      const pzas = Number(this.altaForm.value.piecesPerPallet) || 45;
-      const baseNum = this.getNextConsecutivePalletNumber();
+    const op = current.checkIn?.forkliftOperator || 'Montacarguista';
+    const recId = current.id || current.folio;
 
-      stream = [
-        {
-          id: `pal-${Date.now()}-1`,
-          palletNumber: baseNum,
-          palletCode: this.generateUniqueSscc(),
-          productId: sku,
-          description: desc,
-          supplierName: sup,
-          palletTypeId: pType,
-          palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Tarima CHEP Exportación',
-          pieces: pzas,
-          status: 'SCANNED',
-        },
-        {
-          id: `pal-${Date.now()}-2`,
-          palletNumber: baseNum + 1,
-          palletCode: this.generateUniqueSscc(),
-          productId: sku,
-          description: desc,
-          supplierName: sup,
-          palletTypeId: pType,
-          palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Tarima CHEP Exportación',
-          pieces: pzas,
-          status: 'SCANNED',
-        },
-        {
-          id: `pal-${Date.now()}-3`,
-          palletNumber: baseNum + 2,
-          palletCode: this.generateUniqueSscc(),
-          productId: sku,
-          description: desc,
-          supplierName: sup,
-          palletTypeId: pType,
-          palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Tarima CHEP Exportación',
-          pieces: pzas,
-          status: 'SCANNED',
-        },
-      ];
-      this.movementsService.updateGlobalMaxPalletNumber(baseNum + 2);
-      this.palletStream.set(stream);
+    this.isStartingDischarge.set(true);
+    this.movementsService.startDischarge(recId, op).subscribe({
+      next: (updated) => {
+        this.isStartingDischarge.set(false);
+        this.selectedReception.set(updated);
+        this.patchAltaFormWithReception(updated);
+        this.loadAuditLogs(updated.folio);
+        this.toast.success(
+          `Descarga física iniciada en Rampa ${updated.checkIn?.rampNumber || ''}. Escáner de tarimas habilitado.`
+        );
+        setTimeout(() => {
+          if (this.uaInput?.nativeElement) {
+            this.uaInput.nativeElement.focus();
+          }
+        }, 150);
+      },
+      error: (err) => {
+        this.isStartingDischarge.set(false);
+        const msg = err?.error?.message || err?.message || 'Error al iniciar la descarga física';
+        this.toast.error(msg);
+      },
+    });
+  }
+
+  // Compatibilidad legacy
+  simulateStartDischarge(): void {
+    this.startDischarge();
+  }
+
+  // Montacarguista o Mesa Administrativa Concluye Descarga Física (Envía a Formato F01)
+  finishDischarge(currentRec?: ReceptionHeader): void {
+    const current = currentRec || this.selectedReception();
+    if (!current) return;
+
+    const stream = [...this.palletStream()];
+    if (stream.length === 0) {
+      this.toast.error('Debe registrar o escanear al menos una tarima antes de concluir la descarga física.');
+      return;
     }
 
-    const op = current.checkIn.forkliftOperator || 'Montacarguista';
+    const op = current.checkIn?.forkliftOperator || 'Montacarguista';
     const recId = current.id || current.folio;
     const formVals = this.altaForm.value;
 
+    this.isConcludingDischarge.set(true);
     this.movementsService
       .finishDischarge(recId, stream, op, formVals, this.products(), this.suppliers())
       .subscribe({
         next: (updated) => {
+          this.isConcludingDischarge.set(false);
           this.selectedReception.set(updated);
           this.palletStream.set(updated.pallets ? [...updated.pallets] : stream);
           this.loadAuditLogs(updated.folio);
-          this.toast.success(`Solicitud enviada a ${op}. Descarga física concluida en Rampa ${updated.checkIn.rampNumber}. Formato F01 listo para emisión.`);
+          this.toast.success(`Descarga física concluida en Rampa ${updated.checkIn?.rampNumber || ''}. Formato F01 listo para emisión.`);
         },
         error: (err) => {
-          const msg = err?.error?.message || err?.message || 'Error al concluir la descarga';
+          this.isConcludingDischarge.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al concluir la descarga física';
           this.toast.error(msg);
         },
       });
+  }
+
+  // Compatibilidad legacy
+  simulateFinishDischarge(): void {
+    this.finishDischarge();
   }
 
   // Guardar Cambios Parciales / Avance de Descarga en el Backend (wms.warehouse_reception_pallets)

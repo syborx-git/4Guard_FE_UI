@@ -983,23 +983,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .sku-autocomplete-item span {
-  color: #000000 !important;
+  color: #0f172a;
 }
 
 .sku-autocomplete-item .text-slate-900,
-.sku-autocomplete-item .text-slate-950,
-.sku-autocomplete-item .text-slate-100,
-.sku-autocomplete-item .dark\:text-slate-100 {
-  color: #000000 !important;
+.sku-autocomplete-item .text-slate-950 {
+  color: #0f172a !important;
   font-weight: 800 !important;
 }
 
 .sku-autocomplete-item .text-slate-700,
 .sku-autocomplete-item .text-slate-500,
-.sku-autocomplete-item .text-slate-400,
-.sku-autocomplete-item .dark\:text-slate-400 {
-  color: #334155 !important;
-  font-weight: 700 !important;
+.sku-autocomplete-item .text-slate-400 {
+  color: #475569 !important;
+  font-weight: 600 !important;
 }
 
 .sku-autocomplete-badge {
@@ -1089,6 +1086,22 @@ h1, h2, h3, h4, h5, h6 {
 :host-context(.theme-dark) .sku-autocomplete-name,
 :host-context(.dark) .sku-autocomplete-name {
   color: #f8fafc !important;
+  font-weight: 800 !important;
+}
+
+:host-context(.theme-dark) .sku-autocomplete-item span,
+:host-context(.dark) .sku-autocomplete-item span {
+  color: #f8fafc !important;
+}
+
+:host-context(.theme-dark) .sku-autocomplete-item .text-slate-500,
+:host-context(.theme-dark) .sku-autocomplete-item .text-slate-400,
+:host-context(.theme-dark) .sku-autocomplete-item .dark\:text-slate-400,
+:host-context(.dark) .sku-autocomplete-item .text-slate-500,
+:host-context(.dark) .sku-autocomplete-item .text-slate-400,
+:host-context(.dark) .sku-autocomplete-item .dark\:text-slate-400 {
+  color: #cbd5e1 !important;
+  font-weight: 600 !important;
 }
 
 :host-context(.theme-dark) .sku-autocomplete-empty,
@@ -2361,6 +2374,22 @@ h1, h2, h3, h4, h5, h6 {
 :host-context(.theme-dark) .sku-autocomplete-name,
 :host-context(.dark) .sku-autocomplete-name {
   color: #f8fafc !important;
+  font-weight: 800 !important;
+}
+
+:host-context(.theme-dark) .sku-autocomplete-item span,
+:host-context(.dark) .sku-autocomplete-item span {
+  color: #f8fafc !important;
+}
+
+:host-context(.theme-dark) .sku-autocomplete-item .text-slate-500,
+:host-context(.theme-dark) .sku-autocomplete-item .text-slate-400,
+:host-context(.theme-dark) .sku-autocomplete-item .dark\:text-slate-400,
+:host-context(.dark) .sku-autocomplete-item .text-slate-500,
+:host-context(.dark) .sku-autocomplete-item .text-slate-400,
+:host-context(.dark) .sku-autocomplete-item .dark\:text-slate-400 {
+  color: #cbd5e1 !important;
+  font-weight: 600 !important;
 }
 
 :host-context(.theme-dark) .sku-autocomplete-empty,

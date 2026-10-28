@@ -13,8 +13,7 @@ import { Component, inject, signal, computed, OnInit, OnDestroy, effect, HostLis
 import { CommonModule } from '@angular/common';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute, RouterLink } from '@angular/router';
-import { QrSimulatorCardComponent } from './qr-simulator-card/qr-simulator-card.component';
+import { Router, ActivatedRoute } from '@angular/router';
 import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
 import {
   CheckInCasetaData,
@@ -49,8 +48,6 @@ export type SecurityGateTab = 'REGISTRATION' | 'IN_YARD' | 'HISTORY';
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
-    RouterLink,
-    QrSimulatorCardComponent,
     PrintTransportChecklistLayoutComponent,
     PrintGateQrPosterLayoutComponent
   ],
@@ -61,7 +58,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly authState = inject(AuthState);
   private readonly fb = inject(FormBuilder);
   private readonly movementsService = inject(WarehouseMovementsService);
-  private readonly smartNotification = inject(SmartNotificationService);
+  protected readonly smartNotification = inject(SmartNotificationService);
+  protected readonly pendingRampAssignments = this.smartNotification.pendingRampAssignments;
+  protected readonly pendingRampAssignmentsCount = this.smartNotification.pendingRampAssignmentsCount;
   private readonly printService = inject(PrintService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
@@ -153,6 +152,21 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         }
       }
     }, { allowSignalWrites: true });
+  }
+
+  protected dismissRampNotice(folio: string, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.smartNotification.dismissRampAssignment(folio);
+  }
+
+  protected attendRampAssignment(ramp: any): void {
+    this.setTab('IN_YARD');
+    if (ramp.tractorPlates) {
+      this.inYardSearch.set(ramp.tractorPlates);
+    } else if (ramp.folio) {
+      this.inYardSearch.set(ramp.folio);
+    }
+    this.toast.info(`🔔 Mostrando unidad en patio: Folio #${ramp.folio} (Rampa ${ramp.rampNumber}) — Avise al transportista avanzar a rampa.`);
   }
 
   protected getLoggedGuardName(): string {
@@ -1151,6 +1165,51 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         }
       });
     });
+
+    this.setupUppercaseTransform();
+  }
+
+  private setupUppercaseTransform(): void {
+    const textFields = [
+      'noCartaPorte',
+      'remision',
+      'client',
+      'clientNameCustom',
+      'carrierLine',
+      'carrierLineCustom',
+      'nombreOperador',
+      'placasTracto',
+      'noEcoTractor',
+      'placasCaja',
+      'noEcoCaja',
+      'noSello',
+      'tipoTransporte',
+      'medidasCaja',
+      'eppZapatosObs',
+      'eppCofiaObs',
+      'eppCubrebocasObs',
+      'eppChalecoObs',
+      'docCartaPorteObs',
+      'docRemisionObs',
+      'revInteriorCajaObs',
+      'revDanosCajaObs',
+      'revDanosPuertasObs',
+      'revOloresExtranosObs',
+      'revIndiciosPlagasObs',
+      'responsableVigilanciaNombre',
+      'transportistaNombre'
+    ];
+
+    for (const field of textFields) {
+      const ctrl = this.checkInForm.get(field);
+      if (ctrl) {
+        ctrl.valueChanges.subscribe((val) => {
+          if (typeof val === 'string' && val !== val.toUpperCase()) {
+            ctrl.setValue(val.toUpperCase(), { emitEvent: false });
+          }
+        });
+      }
+    }
   }
 
   protected applyDetectedReturn(ret: ReturnDetectionResponse): void {
@@ -2300,26 +2359,26 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     const checkInData: CheckInCasetaData = {
       carrierLineCode: formVal.carrierLineCode,
-      carrierLine: formVal.carrierLine,
+      carrierLine: (formVal.carrierLine || '').trim().toUpperCase(),
       receptionTime: formVal.horaEntrada,
-      docNumber: formVal.operacion === 'DESCARGA' ? formVal.remision : (formVal.noCartaPorte || formVal.remision),
+      docNumber: ((formVal.operacion === 'DESCARGA' ? formVal.remision : (formVal.noCartaPorte || formVal.remision)) || '').trim().toUpperCase(),
       docDate: formVal.fecha,
       clientCode: formVal.clientCode,
-      client: formVal.client,
+      client: (formVal.client || '').trim().toUpperCase(),
       rampCode: rCode || undefined,
       rampNumber: rNum || undefined,
-      driverName: formVal.nombreOperador,
+      driverName: (formVal.nombreOperador || '').trim().toUpperCase(),
       driverPhone: formVal.driverPhone || '',
-      tractorPlates: (formVal.placasTracto || '').toUpperCase(),
-      boxPlates: (formVal.placasCaja || '').toUpperCase(),
-      noEcoTractor: formVal.noEcoTractor || '',
-      noEcoCaja: formVal.noEcoCaja || '',
-      transportType: formVal.tipoTransporte || '',
-      medidasCaja: formVal.medidasCaja || '',
-      noCartaPorte: formVal.noCartaPorte || '',
-      sealNumbers: seals,
-      sealNumber: seals.join(', '),
-      observations: inspectionObservations,
+      tractorPlates: (formVal.placasTracto || '').trim().toUpperCase(),
+      boxPlates: (formVal.placasCaja || '').trim().toUpperCase(),
+      noEcoTractor: (formVal.noEcoTractor || '').trim().toUpperCase(),
+      noEcoCaja: (formVal.noEcoCaja || '').trim().toUpperCase(),
+      transportType: (formVal.tipoTransporte || '').trim().toUpperCase(),
+      medidasCaja: (formVal.medidasCaja || '').trim().toUpperCase(),
+      noCartaPorte: (formVal.noCartaPorte || '').trim().toUpperCase(),
+      sealNumbers: seals.map(s => String(s).toUpperCase()),
+      sealNumber: seals.map(s => String(s).toUpperCase()).join(', '),
+      observations: inspectionObservations.toUpperCase(),
     };
 
     const op = formVal.operacion || 'DESCARGA';

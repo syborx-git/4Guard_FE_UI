@@ -172,16 +172,18 @@ export class PrintService {
                   color: #000000 !important;
                   -webkit-print-color-adjust: exact !important;
                   print-color-adjust: exact !important;
+                  text-transform: uppercase !important;
                 }
                 .no-print, .modal-overlay, button {
                   display: none !important;
                 }
-                .print-container {
+                .print-container, .f01-print-sheet {
                   border: none !important;
                   box-shadow: none !important;
                   padding: 0 !important;
                   max-width: 100% !important;
                   width: 100% !important;
+                  text-transform: uppercase !important;
                 }
                 .origin-top-left, .poster-scalable-wrapper, #gate-qr-poster-target {
                   transform: none !important;
@@ -196,6 +198,7 @@ export class PrintService {
                 background-color: #ffffff !important;
                 color: #000000 !important;
                 font-family: inherit;
+                text-transform: uppercase !important;
               }
               * {
                 -webkit-print-color-adjust: exact !important;

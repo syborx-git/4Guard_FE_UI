@@ -30,6 +30,26 @@
         </div>
       </div>
 
+      <div class="flex items-center">
+        @if (shiftContext.activeShift(); as shift) {
+          <span
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-[11px] font-bold text-slate-700 dark:text-slate-200"
+            [title]="shift.branchName + ' · ' + shift.timezone"
+          >
+            <span class="material-symbols-outlined text-[16px]">schedule</span>
+            <span>
+              @if (shift.shiftName) {
+                {{ shift.shiftName }} · {{ formatShiftTime(shift.startTime) }}–{{ formatShiftTime(shift.endTime) }}
+              } @else if (shift.configured) {
+                Sin turno vigente
+              } @else {
+                Turno no configurado
+              }
+            </span>
+          </span>
+        }
+      </div>
+
     </div>
 
     <!-- ── BARRA CON TABS A LA IZQUIERDA Y BOTÓN A LA DERECHA ── -->
@@ -289,6 +309,16 @@
                 >
                   {{ transfer.status === 'COMPLETED' ? 'Completado' : 'Cancelado' }}
                 </span>
+
+                @if (isCarryOver(transfer)) {
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40"
+                    title="Pendiente de un turno anterior."
+                  >
+                    <span class="material-symbols-outlined text-[12px]">history</span>
+                    ARRASTRE
+                  </span>
+                }
               </div>
 
               <!-- Folio & Date/Time Row -->

@@ -2351,6 +2351,7 @@ export class WarehouseMovementsService {
       capturedBy: r.capturedBy || r.createdBy || 'Caseta de Seguridad',
       leaderAuthorizedBy: r.leaderAuthorizedBy || r.cancelledBy || '',
       cancelledBy: r.cancelledBy || r.leaderAuthorizedBy || '',
+      shiftSessionId: r.shiftSessionId || null,
       cancellationReason: r.cancellationReason || '',
       operationType: r.operationType || 'ENTRY',
       sourceOutboundId: r.sourceOutboundId || undefined,
@@ -2462,6 +2463,7 @@ export class WarehouseMovementsService {
       distinctSkus: t.distinctSkus || 0,
       transferredAt: t.createdAt ? new Date(t.createdAt).toLocaleString('es-MX') : (t.transferredAt || ''),
       transferredBy: t.createdBy || t.transferredBy || 'Usuario en Sesión',
+      shiftSessionId: t.shiftSessionId || null,
       cancellationReason: t.cancellationReason || '',
       cancelledAt: t.cancelledAt ? new Date(t.cancelledAt).toLocaleString('es-MX') : undefined,
       cancelledBy: t.cancelledBy || '',
@@ -2517,7 +2519,9 @@ export class WarehouseMovementsService {
       expirationDate: formVals.expirationDate || null,
       piecesPerPallet: formVals.piecesPerPallet != null ? Number(formVals.piecesPerPallet) : 0,
       palletType: formVals.selectedPalletType || null,
-      storageLocationId: formVals.storageLocationId || null,
+      storageLocationId: (formVals.storageLocationId && isUuid(formVals.storageLocationId)) ? formVals.storageLocationId : null,
+      storageLocationCode: formVals.storageLocation || formVals.storageLocationCode || null,
+      storageLocation: formVals.storageLocation || formVals.storageLocationCode || null,
       forkliftOperatorId: formVals.forkliftOperatorId || null,
       forkliftOperatorName: formVals.forkliftOperator || formVals.forkliftOperatorName || null,
       rampId: formVals.rampId || null,
@@ -2766,6 +2770,9 @@ export class WarehouseMovementsService {
             supplierName: formVals.supplierName || rec.supplierName,
             piecesPerPallet: formVals.piecesPerPallet || rec.piecesPerPallet,
             selectedPalletType: formVals.selectedPalletType || rec.selectedPalletType,
+            storageLocation: formVals.storageLocation || rec.storageLocation || 'STAGING-R01',
+            storageLocationCode: formVals.storageLocation || formVals.storageLocationCode || rec.storageLocationCode || 'STAGING-R01',
+            storageLocationId: formVals.storageLocationId || rec.storageLocationId,
             observations: formVals.observations || rec.observations,
             checkIn: {
               ...rec.checkIn,
@@ -2804,6 +2811,12 @@ export class WarehouseMovementsService {
     );
     const recId = current?.id || folioOrId;
 
+    const isUuid = (val: any) =>
+      typeof val === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+    const cleanLocationId = isUuid(current?.storageLocationId) ? current!.storageLocationId : null;
+    const locationCode = current?.storageLocationCode || current?.storageLocation || null;
+
     const payload = {
       status: 'IN_PROGRESS',
       forkliftOperatorName: operatorName || current?.checkIn?.forkliftOperator || null,
@@ -2813,7 +2826,9 @@ export class WarehouseMovementsService {
       lotNumber: current?.lotNumber || null,
       piecesPerPallet: current?.piecesPerPallet || 0,
       palletType: current?.selectedPalletType || null,
-      storageLocationId: current?.storageLocationId || null,
+      storageLocationId: cleanLocationId,
+      storageLocationCode: locationCode,
+      storageLocation: locationCode,
     };
 
     return this.movementsApi.updateReceptionParameters(recId, payload).pipe(
@@ -2821,6 +2836,10 @@ export class WarehouseMovementsService {
       map((freshRec: any) => {
         const mapped = this.mapReceptionResponseToHeader(freshRec);
         mapped.status = 'IN_PROGRESS';
+        if (locationCode) {
+          mapped.storageLocation = locationCode;
+          mapped.storageLocationCode = locationCode;
+        }
         this.updateReception(recId, mapped, true);
         this.addReceptionAudit(mapped.folio, {
           id: `aud-rec-inp-${Date.now()}`,
@@ -2840,6 +2859,8 @@ export class WarehouseMovementsService {
           folioOrId,
           {
             status: 'IN_PROGRESS',
+            storageLocation: locationCode || current?.storageLocation,
+            storageLocationCode: locationCode || current?.storageLocationCode,
           },
           true
         );

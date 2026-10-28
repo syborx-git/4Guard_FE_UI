@@ -23,7 +23,7 @@ import { RolePermissionService, Role, Permission } from '../services/role-permis
 import { InventoryService, InventoryItem, InventoryState } from '../services/inventory.service';
 import { MovementService, InventoryMovement } from '../services/movement.service';
 import { IncidenceService, Incidence, IncidenceStatus, IncidenceType, IncidenceSeverity } from '../services/incidence.service';
-import { AuditLogService, AuditLog } from '../services/audit.service';
+import { AuditLogService } from '../services/audit.service';
 import { NotificationAdminService, NotificationAdminItem, NotificationSeverity } from '../services/notification-admin.service';
 import { RestrictSpecialCharsDirective } from '../../../shared/directives/restrict-special-chars.directive';
 
@@ -218,12 +218,6 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
         title: 'Control de Incidencias de Calidad',
         description: 'Bitácora de incidencias de calidad, mermas, daños y bloqueos preventivos registrados en la operación diaria.',
         icon: 'report_problem'
-      },
-      audit: {
-        categoryLabel: 'MONITOREO Y SOPORTE',
-        title: 'Consola de Auditoría Forense',
-        description: 'Historial detallado de auditoría forense del sistema. Registro de llamadas a API, modificaciones JSON y direcciones IP.',
-        icon: 'find_in_page'
       },
       'user-activity': {
         categoryLabel: 'MONITOREO Y SOPORTE',
@@ -492,35 +486,6 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
           }
         ];
       }
-      case 'audit': {
-        const logs = this.auditService.auditLogs();
-        return [
-          {
-            label: 'Total Logs',
-            value: logs.length,
-            icon: 'find_in_page',
-            tone: 'neutral'
-          },
-          {
-            label: 'Creaciones',
-            value: logs.filter(l => l.action === 'CREATE').length,
-            icon: 'add_circle',
-            tone: 'success'
-          },
-          {
-            label: 'Modificaciones',
-            value: logs.filter(l => l.action === 'UPDATE').length,
-            icon: 'edit',
-            tone: 'info'
-          },
-          {
-            label: 'Eliminaciones',
-            value: logs.filter(l => l.action === 'DELETE').length,
-            icon: 'delete',
-            tone: 'danger'
-          }
-        ];
-      }
       case 'notifications': {
         const notifs = this.notifService.notifications();
         return [
@@ -603,6 +568,7 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     { id: 'incidences', title: 'Incidencias de Calidad', icon: 'report_problem', description: 'Seguimiento a anomalías, mermas y bloqueos de calidad.', category: 'SUPPORT', badgeCount: () => this.incidenceService.incidences().filter(i => i.status !== 'CLOSED').length },
     { id: 'audit', title: 'Consola de Auditoría', icon: 'find_in_page', description: 'Bitácora forense de red y comparador de cambios JSON.', category: 'SUPPORT' },
     { id: 'user-activity', title: 'Actividad por Usuario', icon: 'manage_search', description: 'Consulta, análisis y trazabilidad de acciones realizadas por los usuarios.', category: 'SUPPORT' },
+    { id: 'remission-history', title: 'Historial de Remisiones', icon: 'receipt_long', description: 'Consulta ejecutiva de recepciones, traspasos y salidas con filtros de fecha, cliente y turno.', category: 'SUPPORT' },
     { id: 'alerts-config', title: 'Alertas y Notificaciones', icon: 'notifications_active', description: 'Configuración de reglas, umbrales y notificaciones operativas.', category: 'SUPPORT' },
     { id: 'business-rules', title: 'Reglas de Negocio', icon: 'gavel', description: 'Motor de reglas de negocio enterprise, políticas operativas y disparadores.', category: 'SUPPORT' }
   ];
@@ -685,12 +651,6 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
           list = list.filter(i => i.folio.toLowerCase().includes(search) || i.sscc.toLowerCase().includes(search) || i.description.toLowerCase().includes(search) || i.reporterUsername.toLowerCase().includes(search) || i.resolutionNotes.toLowerCase().includes(search));
         }
         break;
-      case 'audit':
-        list = this.auditService.auditLogs();
-        if (search) {
-          list = list.filter(a => a.username.toLowerCase().includes(search) || a.entityType.toLowerCase().includes(search) || a.action.toLowerCase().includes(search) || a.ipAddress.toLowerCase().includes(search));
-        }
-        break;
       case 'notifications':
         list = this.notifService.notifications();
         if (search) {
@@ -767,6 +727,14 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     }
     if (moduleId === 'user-activity') {
       this.router.navigate(['/admin/user-activity']);
+      return;
+    }
+    if (moduleId === 'remission-history') {
+      this.router.navigate(['/admin/remissions-history']);
+      return;
+    }
+    if (moduleId === 'audit') {
+      this.router.navigate(['/admin/audit']);
       return;
     }
     if (moduleId === 'alerts-config') {
@@ -1575,12 +1543,7 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     alert('Acción correctiva registrada con éxito.');
   }
 
-  // Visualizador de auditoría y notificaciones
-  protected openAuditDetail(log: AuditLog): void {
-    this.detailModel = log;
-    this.isDetailModalOpen.set(true);
-  }
-
+  // Visualizador de notificaciones
   protected openNotificationDetail(n: NotificationAdminItem): void {
     this.notifService.markAsRead(n.id);
     this.detailModel = n;

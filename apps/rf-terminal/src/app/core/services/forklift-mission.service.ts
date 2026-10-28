@@ -574,7 +574,7 @@ export class ForkliftMissionService {
     this.syncPollIntervalId = setInterval(() => {
       this.loadMissionsFromBackend();
       this.syncPendingQueue();
-    }, 20000);
+    }, 5000);
   }
 
   private initConnectivityListeners(): void {

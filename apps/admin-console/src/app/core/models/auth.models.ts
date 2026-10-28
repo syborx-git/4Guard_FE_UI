@@ -13,6 +13,9 @@ export type ShiftType = 'TURNO 1' | 'TURNO 2';
 export interface AuthenticatedUser {
   id: string;
   organizationId?: string;
+  organizationName?: string;
+  branchId?: string;
+  branchName?: string;
   username: string;
   fullName: string;
   email: string;

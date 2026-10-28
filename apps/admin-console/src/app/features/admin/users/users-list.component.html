@@ -318,7 +318,7 @@
                     {{ user.firstName }} {{ user.lastName }}
                   </span>
                   <span
-                    class="user-status-pill user-status-pill--{{ user.status.toLowerCase() }}"
+                    class="user-status-pill user-status-pill--{{ (user.status || 'ACTIVE').toLowerCase() }}"
                     [attr.aria-label]="'Estado: ' + user.status">
                     <span class="user-status-pill__dot"></span>
                     {{ user.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
@@ -335,7 +335,7 @@
                 <!-- Fila 3: Chip de Rol Compacto + Sucursal con icono -->
                 <div class="user-item__row-bottom">
                   <span
-                    class="user-role-badge user-role-badge--{{ user.role.toLowerCase() }}"
+                    class="user-role-badge user-role-badge--{{ (user.role || '').toLowerCase() }}"
                     [title]="getRoleLabel(user.role)">
                     {{ getRoleShortLabel(user.role) }}
                   </span>
@@ -385,7 +385,7 @@
               </div>
               @if (formMode() === 'edit' && selectedUser()) {
                 <span
-                  class="user-status-pill user-status-pill--{{ selectedUser()!.status.toLowerCase() }}">
+                  class="user-status-pill user-status-pill--{{ (selectedUser()?.status || 'ACTIVE').toLowerCase() }}">
                   <span class="user-status-pill__dot"></span>
                   {{ selectedUser()!.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
                 </span>

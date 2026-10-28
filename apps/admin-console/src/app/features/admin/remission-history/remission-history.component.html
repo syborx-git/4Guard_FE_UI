@@ -1,0 +1,812 @@
+<div class="history-page">
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HEADER PRINCIPAL — HOMOLOGADO 1:1 CON GESTIÓN DE ORGANIZACIONES
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="history-header">
+    <div class="history-header__top">
+      <div class="history-header__left">
+        <div class="history-header__icon-wrap">
+          <span class="material-symbols-outlined history-header__icon">receipt_long</span>
+        </div>
+
+        <div class="history-header__copy">
+          <div class="history-header__eyebrow">
+            <a
+              routerLink="/admin"
+              class="history-header__eyebrow-btn"
+              title="Volver a la consola de administración">
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span>ADMINISTRACIÓN WMS</span>
+            </a>
+            <span class="history-header__eyebrow-sep">·</span>
+            <span>AUDITORÍA Y MONITOREO WMS</span>
+          </div>
+
+          <h1 class="history-header__title">Historial de Remisiones y Turnos</h1>
+          <p class="history-header__subtitle">
+            Trazabilidad inmutable de recepciones, traspasos y salidas consolidadas por turno en el sistema WMS.
+          </p>
+        </div>
+      </div>
+
+      <div class="history-header__actions">
+        <button
+          id="btn-refresh-history"
+          class="history-btn history-btn--primary"
+          type="button"
+          (click)="load()"
+          [disabled]="isLoading()"
+          title="Actualizar registros del servidor">
+          <span class="material-symbols-outlined" [class.spin]="isLoading()">refresh</span>
+          <span>Actualizar Datos</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Métricas Ejecutivas de Trazabilidad (KPI Cards con Borde Prestige Gold) -->
+  <section class="history-kpis" aria-label="Resumen ejecutivo del historial">
+    <article class="history-kpi">
+      <span class="history-kpi__icon material-symbols-outlined">receipt_long</span>
+      <div class="history-kpi__content">
+        <span class="history-kpi__label">TOTAL REMISIONES</span>
+        <strong class="history-kpi__value">{{ summary().total }}</strong>
+        <span class="history-kpi__subtext">Registros consolidados</span>
+      </div>
+    </article>
+
+    <article class="history-kpi history-kpi--success">
+      <span class="history-kpi__icon material-symbols-outlined">check_circle</span>
+      <div class="history-kpi__content">
+        <span class="history-kpi__label">VERIFICADAS (COMPLETADAS)</span>
+        <strong class="history-kpi__value">{{ summary().completed }}</strong>
+        <span class="history-kpi__subtext">Aprobadas con descarga OK</span>
+      </div>
+    </article>
+
+    <article class="history-kpi history-kpi--danger">
+      <span class="history-kpi__icon material-symbols-outlined">cancel</span>
+      <div class="history-kpi__content">
+        <span class="history-kpi__label">CANCELADAS / ANULADAS</span>
+        <strong class="history-kpi__value">{{ summary().cancelled }}</strong>
+        <span class="history-kpi__subtext">Con bitácora de auditoría</span>
+      </div>
+    </article>
+
+    <article class="history-kpi history-kpi--warning">
+      <span class="history-kpi__icon material-symbols-outlined">pending_actions</span>
+      <div class="history-kpi__content">
+        <span class="history-kpi__label">PENDIENTES EN CURSO</span>
+        <strong class="history-kpi__value">{{ summary().pending }}</strong>
+        <span class="history-kpi__subtext">En caseta o patio</span>
+      </div>
+    </article>
+
+    <article class="history-kpi history-kpi--load">
+      <span class="history-kpi__icon material-symbols-outlined">pallet</span>
+      <div class="history-kpi__content">
+        <span class="history-kpi__label">CARGA EN VISTA</span>
+        <strong class="history-kpi__value">{{ totalPalletsInView() }} <small>tarimas</small></strong>
+        <span class="history-kpi__subtext">{{ totalPiecesInView() }} piezas totales</span>
+      </div>
+    </article>
+  </section>
+
+  <!-- Barra de Filtros Avanzada con Soporte Dual Theme -->
+  <section class="history-filters" aria-label="Filtros de búsqueda de remisiones">
+    <div class="history-filters__row">
+      <div class="history-preset-group" role="group" aria-label="Rango temporal">
+        <button type="button" [class.active]="datePreset() === 'TODAY'" (click)="applyPreset('TODAY')">
+          <span class="material-symbols-outlined">today</span> Hoy
+        </button>
+        <button type="button" [class.active]="datePreset() === 'MONTH'" (click)="applyPreset('MONTH')">
+          <span class="material-symbols-outlined">calendar_month</span> Este mes
+        </button>
+        <button type="button" [class.active]="datePreset() === 'YEAR'" (click)="applyPreset('YEAR')">
+          <span class="material-symbols-outlined">date_range</span> Este año
+        </button>
+        <button type="button" [class.active]="datePreset() === 'CUSTOM'" (click)="applyPreset('CUSTOM')">
+          <span class="material-symbols-outlined">edit_calendar</span> Personalizado
+        </button>
+      </div>
+
+      @if (datePreset() === 'CUSTOM') {
+        <div class="history-custom-range">
+          <label>
+            <span>Desde</span>
+            <input type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
+          </label>
+          <label>
+            <span>Hasta</span>
+            <input type="date" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" />
+          </label>
+        </div>
+      }
+    </div>
+
+    <div class="history-filters__row history-filters__row--wrap">
+      <label class="history-field">
+        <span class="material-symbols-outlined">partner_exchange</span>
+        <select [ngModel]="clientId()" (ngModelChange)="clientId.set($event)" aria-label="Filtrar por Cliente">
+          <option value="">Todos los clientes</option>
+          @for (client of clients(); track client.id) {
+            <option [value]="client.id">{{ client.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="history-field">
+        <span class="material-symbols-outlined">flag</span>
+        <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)" aria-label="Filtrar por Estatus">
+          <option value="">Todos los estatus históricos</option>
+          <option value="COMPLETED">Verificado (Completado)</option>
+          <option value="CANCELLED">Cancelado</option>
+        </select>
+      </label>
+
+      <label class="history-field">
+        <span class="material-symbols-outlined">category</span>
+        <select [ngModel]="entityType()" (ngModelChange)="entityType.set($event)" aria-label="Filtrar por Tipo">
+          <option value="">Todos los tipos</option>
+          <option value="RECEPTION">Recepción (Inbound)</option>
+          <option value="OUTBOUND">Salida (Despacho)</option>
+          <option value="TRANSFER">Traspaso (Entre Almacenes)</option>
+        </select>
+      </label>
+
+      <label class="history-search">
+        <span class="material-symbols-outlined">search</span>
+        <input
+          type="text"
+          placeholder="Buscar folio, remisión, cliente u operador..."
+          [ngModel]="searchTerm()"
+          (ngModelChange)="searchTerm.set($event)"
+          (keydown)="onSearchKeydown($event)"
+          aria-label="Buscar en historial"
+        />
+        @if (searchTerm()) {
+          <button type="button" class="history-search-clear" (click)="searchTerm.set(''); applyFilters()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        }
+      </label>
+
+      <div class="history-filter-actions">
+        <button type="button" class="history-apply" (click)="applyFilters()">
+          <span class="material-symbols-outlined">filter_alt</span>
+          Filtrar
+        </button>
+
+        <button type="button" class="history-clear" (click)="resetFilters()">
+          <span class="material-symbols-outlined">restart_alt</span>
+          Limpiar
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tarjeta Contenedora de la Tabla y Trazabilidad -->
+  <section class="history-table-card">
+    @if (isLoading()) {
+      <div class="history-state">
+        <span class="material-symbols-outlined spin">progress_activity</span>
+        <p class="history-state__title">Cargando bitácora de remisiones...</p>
+        <span class="history-state__desc">Consultando registros inmutables por turno</span>
+      </div>
+    } @else if (error()) {
+      <div class="history-state history-state--error">
+        <span class="material-symbols-outlined">error</span>
+        <p class="history-state__title">Error al consultar el historial</p>
+        <p class="history-state__desc">{{ error() }}</p>
+        <button type="button" class="history-retry-btn" (click)="load()">
+          <span class="material-symbols-outlined">refresh</span>
+          Reintentar consulta
+        </button>
+      </div>
+    } @else if (items().length === 0) {
+      <div class="history-state">
+        <span class="material-symbols-outlined">search_off</span>
+        <p class="history-state__title">No se encontraron remisiones en este periodo</p>
+        <p class="history-state__desc">Intenta ampliar el rango de fechas o restablecer los filtros aplicados.</p>
+        <button type="button" class="history-clear-btn" (click)="resetFilters()">Restablecer filtros</button>
+      </div>
+    } @else {
+      <div class="history-table-scroll">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Fecha y Hora</th>
+              <th>Tipo</th>
+              <th>Folio</th>
+              <th>No. Remisión</th>
+              <th>Cliente / Depositante</th>
+              <th>Turno Operativo</th>
+              <th>Carga Auditada</th>
+              <th>Operador</th>
+              <th>Ciclo</th>
+              <th>Estatus</th>
+              <th class="text-right">Trazabilidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of items(); track item.id) {
+              <tr (click)="openDetail(item)" [class.selected]="selectedItem()?.id === item.id">
+                <!-- Fecha y Hora -->
+                <td class="history-col-time">
+                  <div class="history-datetime-cell">
+                    <span class="history-date">{{ formatDateOnly(item.createdAt) }}</span>
+                    <span class="history-time-badge">{{ formatTimeOnly(item.createdAt) }}</span>
+                  </div>
+                </td>
+
+                <!-- Tipo de Movimiento -->
+                <td>
+                  <span class="entity-chip" [attr.data-entity]="item.entityType">
+                    <span class="material-symbols-outlined">{{ entityIcon(item.entityType) }}</span>
+                    {{ entityLabel(item.entityType) }}
+                  </span>
+                </td>
+
+                <!-- Folio Oficial -->
+                <td>
+                  <div class="history-copyable-cell">
+                    <span class="mono strong folio-text">{{ item.folio }}</span>
+                    <button
+                      type="button"
+                      class="history-quick-copy"
+                      title="Copiar Folio"
+                      (click)="copyToClipboard(item.folio, 'folio-' + item.id, $event)"
+                    >
+                      <span class="material-symbols-outlined">
+                        {{ copiedField() === 'folio-' + item.id ? 'check' : 'content_copy' }}
+                      </span>
+                    </button>
+                  </div>
+                </td>
+
+                <!-- Número de Remisión -->
+                <td>
+                  <div class="history-copyable-cell">
+                    <span class="mono remision-badge">{{ item.remisionNumber || '—' }}</span>
+                    @if (item.remisionNumber) {
+                      <button
+                        type="button"
+                        class="history-quick-copy"
+                        title="Copiar Remisión"
+                        (click)="copyToClipboard(item.remisionNumber, 'rem-' + item.id, $event)"
+                      >
+                        <span class="material-symbols-outlined">
+                          {{ copiedField() === 'rem-' + item.id ? 'check' : 'content_copy' }}
+                        </span>
+                      </button>
+                    }
+                  </div>
+                </td>
+
+                <!-- Cliente -->
+                <td class="history-col-client">
+                  <div class="client-cell">
+                    <span class="material-symbols-outlined client-icon">domain</span>
+                    <span class="client-name" [title]="item.clientName || 'Sin cliente (Traspaso interno)'">
+                      {{ item.clientName || '— (Traspaso interno)' }}
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Turno de Jornada -->
+                <td>
+                  @if (item.shiftName) {
+                    <span class="shift-chip" title="Sesión de turno asignada">
+                      <span class="material-symbols-outlined">schedule</span>
+                      {{ item.shiftName }}
+                    </span>
+                  } @else {
+                    <span class="shift-chip shift-chip--none" title="No asignado a un turno específico">
+                      <span class="material-symbols-outlined">schedule_send</span>
+                      Sin turno asignado
+                    </span>
+                  }
+                </td>
+
+                <!-- Carga Auditada (Tarimas y Piezas) -->
+                <td>
+                  <div class="load-badge">
+                    <span class="load-badge__pallets mono">{{ item.pallets ?? 0 }} tar.</span>
+                    <span class="load-badge__divider">/</span>
+                    <span class="load-badge__pieces mono">{{ item.pieces ?? 0 }} pzs.</span>
+                  </div>
+                </td>
+
+                <!-- Operador -->
+                <td>
+                  <div class="operator-cell">
+                    <span class="material-symbols-outlined operator-icon">badge</span>
+                    <span>{{ item.operator || '—' }}</span>
+                  </div>
+                </td>
+
+                <!-- Duración de Ciclo -->
+                <td>
+                  <span class="cycle-pill" [class.cycle-pill--done]="item.completedAt">
+                    {{ getCycleDuration(item) || (item.completedAt ? 'OK' : 'En curso') }}
+                  </span>
+                </td>
+
+                <!-- Estatus Tonal -->
+                <td>
+                  <span class="status-chip" [attr.data-tone]="statusTone(item.status)">
+                    <span class="status-chip__dot"></span>
+                    {{ statusLabel(item.status) }}
+                  </span>
+                </td>
+
+                <!-- Acción / Detalle de Trazabilidad -->
+                <td class="text-right">
+                  <button
+                    type="button"
+                    class="history-trace-btn"
+                    title="Ver expediente en Pop-up y descargar formato F01"
+                    (click)="openDetail(item); $event.stopPropagation()"
+                  >
+                    <span class="material-symbols-outlined">open_in_new</span>
+                    <span>Ver Expediente</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pie de Tabla con Paginación -->
+      <footer class="history-footer">
+        <div class="history-footer__info">
+          Mostrando <b>{{ items().length }}</b> de <b>{{ totalElements() }}</b> registros en bitácora
+        </div>
+
+        <div class="history-footer__controls">
+          <label class="history-page-size">
+            REGISTROS:
+            <select [value]="pageSize()" (change)="onPageSizeChange($event)" aria-label="Tamaño de página">
+              <option value="20">20 por página</option>
+              <option value="30">30 por página</option>
+              <option value="50">50 por página</option>
+            </select>
+          </label>
+
+          <div class="history-pagination">
+            <button
+              type="button"
+              [disabled]="page() === 1"
+              (click)="changePage(-1)"
+              title="Página anterior"
+              aria-label="Página anterior"
+            >
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <span class="history-page-indicator">PÁGINA <b>{{ page() }}</b> DE <b>{{ totalPages() }}</b></span>
+            <button
+              type="button"
+              [disabled]="page() >= totalPages()"
+              (click)="changePage(1)"
+              title="Página siguiente"
+              aria-label="Página siguiente"
+            >
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      </footer>
+    }
+  </section>
+
+  <!-- MODAL POP-UP CENTRADO DE EXPEDIENTE & TRAZABILIDAD (Reemplaza la barra lateral) -->
+  @if (selectedItem(); as item) {
+    <div class="history-modal-overlay" (click)="closeDetail()">
+      <div class="history-modal-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        
+        <!-- Header Ejecutivo del Modal Pop-Up con Acciones F01 -->
+        <header class="modal-dialog__header">
+          <div class="modal-dialog__title-block">
+            <div class="modal-dialog__tags">
+              <span class="entity-chip" [attr.data-entity]="item.entityType">
+                <span class="material-symbols-outlined">{{ entityIcon(item.entityType) }}</span>
+                {{ entityLabel(item.entityType) }}
+              </span>
+              <span class="status-chip" [attr.data-tone]="statusTone(item.status)">
+                <span class="status-chip__dot"></span>
+                {{ statusLabel(item.status) }}
+              </span>
+              @if (item.remisionNumber) {
+                <span class="modal-remision-pill mono">
+                  <span class="material-symbols-outlined">description</span>
+                  Remisión: {{ item.remisionNumber }}
+                </span>
+              }
+            </div>
+            <h2 id="modal-title" class="modal-dialog__title">
+              {{ item.folio }}
+              <button
+                type="button"
+                class="history-quick-copy modal-copy-btn"
+                title="Copiar Folio"
+                (click)="copyToClipboard(item.folio, 'modal-folio')"
+              >
+                <span class="material-symbols-outlined">
+                  {{ copiedField() === 'modal-folio' ? 'check' : 'content_copy' }}
+                </span>
+              </button>
+            </h2>
+            <span class="modal-dialog__subtitle">Expediente Oficial de Movimiento, Trazabilidad por Turno y Ficha F01</span>
+          </div>
+
+          <!-- Acciones de Cabecera: Descargar Formato F01 Oficial y Cerrar -->
+          <div class="modal-dialog__actions">
+            <button
+              type="button"
+              class="btn-f01-download"
+              (click)="downloadF01Pdf()"
+              [disabled]="isGeneratingPdf()"
+              title="Descargar Formato F01 oficial en PDF"
+            >
+              <span class="material-symbols-outlined" [class.spin]="isGeneratingPdf()">
+                {{ isGeneratingPdf() ? 'hourglass_top' : 'download' }}
+              </span>
+              <span>{{ isGeneratingPdf() ? 'Generando PDF...' : 'Descargar Formato F01' }}</span>
+            </button>
+
+            <button
+              type="button"
+              class="modal-close-btn"
+              title="Cerrar ventana"
+              (click)="closeDetail()"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- Barra de Pestañas / Segmented Tabs del Pop-Up -->
+        <nav class="modal-tabs" aria-label="Secciones del expediente">
+          <button
+            type="button"
+            class="modal-tab"
+            [class.active]="activeModalTab() === 'timeline'"
+            (click)="activeModalTab.set('timeline')"
+          >
+            <span class="material-symbols-outlined">timeline</span>
+            Línea de Tiempo & Auditoría
+          </button>
+
+          <button
+            type="button"
+            class="modal-tab"
+            [class.active]="activeModalTab() === 'table'"
+            (click)="activeModalTab.set('table')"
+          >
+            <span class="material-symbols-outlined">table_chart</span>
+            Tabla de Partidas & Tarimas
+            <span class="tab-badge">{{ detailPallets().length }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="modal-tab"
+            [class.active]="activeModalTab() === 'specs'"
+            (click)="activeModalTab.set('specs')"
+          >
+            <span class="material-symbols-outlined">info</span>
+            Metadatos & Seguridad WMS
+          </button>
+        </nav>
+
+        <!-- Cuerpo del Modal Pop-Up -->
+        <div class="modal-dialog__body">
+
+          <!-- ═════ PESTAÑA 1: LÍNEA DE TIEMPO Y AUDITORÍA ═════ -->
+          @if (activeModalTab() === 'timeline') {
+            <div class="modal-tab-content">
+              <!-- Tarjetas Resumen Rápido -->
+              <div class="modal-summary-grid">
+                <div class="summary-box">
+                  <span class="summary-box__label">REMISIÓN / FACTURA</span>
+                  <strong class="summary-box__val mono">{{ item.remisionNumber || '—' }}</strong>
+                </div>
+                <div class="summary-box">
+                  <span class="summary-box__label">CARGA TOTAL</span>
+                  <strong class="summary-box__val">{{ item.pallets ?? 0 }} tar. / {{ item.pieces ?? 0 }} pzs.</strong>
+                </div>
+                <div class="summary-box">
+                  <span class="summary-box__label">CLIENTE / DEPOSITANTE</span>
+                  <strong class="summary-box__val truncate" [title]="item.clientName || 'Traspaso interno'">
+                    {{ item.clientName || 'Traspaso interno' }}
+                  </strong>
+                </div>
+                <div class="summary-box">
+                  <span class="summary-box__label">TIEMPO DE CICLO</span>
+                  <strong class="summary-box__val">{{ getCycleDuration(item) || 'En operación' }}</strong>
+                </div>
+              </div>
+
+              <!-- Notificación de Cancelación si Aplica -->
+              @if (item.cancellationReason) {
+                <div class="modal-cancel-banner">
+                  <span class="material-symbols-outlined cancel-icon">report_problem</span>
+                  <div class="cancel-text">
+                    <strong>MOVIMIENTO CANCELADO EN AUDITORÍA</strong>
+                    <p>{{ item.cancellationReason }}</p>
+                    @if (item.cancelledAt) {
+                      <span class="cancel-date">Cancelado el {{ formatDateTime(item.cancelledAt) }}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Línea de Tiempo de 4 Etapas -->
+              <div class="audit-timeline">
+                <!-- Hito 1: Creación / Registro Inicial -->
+                <div class="timeline-item timeline-item--done">
+                  <div class="timeline-dot">
+                    <span class="material-symbols-outlined">login</span>
+                  </div>
+                  <div class="timeline-content">
+                    <div class="timeline-content__top">
+                      <span class="timeline-title">1. Registro de Ingreso en Caseta</span>
+                      <time class="timeline-time mono">{{ formatDateTime(item.createdAt) }}</time>
+                    </div>
+                    <p class="timeline-desc">
+                      Generación de folio oficial <strong>{{ item.folio }}</strong> asociado a remisión <strong>{{ item.remisionNumber || 'Sin remisión capturada' }}</strong>.
+                    </p>
+                    <div class="timeline-meta">
+                      <span class="meta-item"><span class="material-symbols-outlined">person</span> Operador: {{ item.operator || 'Sistema Caseta' }}</span>
+                      <span class="meta-item"><span class="material-symbols-outlined">storefront</span> Sucursal: {{ item.branchName || 'BR-TOL-01' }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Hito 2: Jornada / Turno Operativo -->
+                <div class="timeline-item timeline-item--done">
+                  <div class="timeline-dot">
+                    <span class="material-symbols-outlined">schedule</span>
+                  </div>
+                  <div class="timeline-content">
+                    <div class="timeline-content__top">
+                      <span class="timeline-title">2. Consolidación de Jornada y Turno</span>
+                      <span class="timeline-badge">{{ item.shiftName ? 'Turno Asignado' : 'Operación Activa' }}</span>
+                    </div>
+                    <p class="timeline-desc">
+                      Encuadrado en el turno: <strong>{{ item.shiftName || 'Sin turno asignado / Ventana de respaldo' }}</strong>.
+                    </p>
+                    @if (item.shiftSessionId) {
+                      <div class="timeline-meta">
+                        <span class="meta-item mono"><span class="material-symbols-outlined">key</span> Sesión: {{ item.shiftSessionId }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Hito 3: Inspección de Carga y Bahía -->
+                <div class="timeline-item timeline-item--done">
+                  <div class="timeline-dot">
+                    <span class="material-symbols-outlined">inventory_2</span>
+                  </div>
+                  <div class="timeline-content">
+                    <div class="timeline-content__top">
+                      <span class="timeline-title">3. Verificación de Carga y Conteo Físico</span>
+                      <span class="timeline-badge timeline-badge--gold">{{ item.pallets ?? 0 }} Tarimas</span>
+                    </div>
+                    <p class="timeline-desc">
+                      Cliente / Depositante: <strong>{{ item.clientName || 'Movimiento Interno de Almacén' }}</strong>.
+                    </p>
+                    <div class="timeline-meta">
+                      <span class="meta-item"><span class="material-symbols-outlined">pallet</span> Tarimas auditadas: {{ item.pallets ?? 0 }}</span>
+                      <span class="meta-item"><span class="material-symbols-outlined">widgets</span> Piezas contabilizadas: {{ item.pieces ?? 0 }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Hito 4: Resolución Final del Ciclo -->
+                <div
+                  class="timeline-item"
+                  [class.timeline-item--success]="item.status === 'COMPLETED'"
+                  [class.timeline-item--danger]="item.status === 'CANCELLED'"
+                  [class.timeline-item--pending]="item.status !== 'COMPLETED' && item.status !== 'CANCELLED'"
+                >
+                  <div class="timeline-dot">
+                    <span class="material-symbols-outlined">
+                      {{ item.status === 'COMPLETED' ? 'verified' : (item.status === 'CANCELLED' ? 'cancel' : 'hourglass_top') }}
+                    </span>
+                  </div>
+                  <div class="timeline-content">
+                    <div class="timeline-content__top">
+                      <span class="timeline-title">
+                        {{ item.status === 'COMPLETED' ? '4. Verificación y Aprobación Completada' : (item.status === 'CANCELLED' ? '4. Cancelación con Bitácora' : '4. En Tránsito / Operación') }}
+                      </span>
+                      <time class="timeline-time mono">
+                        {{ formatDateTime(item.completedAt || item.cancelledAt) }}
+                      </time>
+                    </div>
+                    <p class="timeline-desc">
+                      @if (item.status === 'COMPLETED') {
+                        El movimiento fue finalizado y aprobado satisfactoriamente por el usuario. Formato descargable habilitado.
+                      } @else if (item.status === 'CANCELLED') {
+                        Movimiento cancelado. Justificación registrada de forma inmutable en el registro de auditoría.
+                      } @else {
+                        El movimiento se encuentra en estado <strong>{{ statusLabel(item.status) }}</strong> dentro del flujo de almacén.
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- ═════ PESTAÑA 2: TABLA DE PARTIDAS Y TARIMAS ═════ -->
+          @if (activeModalTab() === 'table') {
+            <div class="modal-tab-content">
+              <div class="table-section-header">
+                <div>
+                  <h3 class="table-section-title">Desglose Detallado de Tarimas y Partidas Físicas</h3>
+                  <p class="table-section-subtitle">
+                    Detalle granular de cada tarima inspeccionada, lote, código UA y ubicación asignada en andén.
+                  </p>
+                </div>
+                <div class="table-stats-badge">
+                  <span>{{ detailPallets().length }} TARIMAS REGISTRADAS</span>
+                </div>
+              </div>
+
+              <div class="modal-table-wrapper">
+                <table class="modal-detail-table">
+                  <thead>
+                    <tr>
+                      <th class="w-12 text-center">#</th>
+                      <th>Código UA (SSCC)</th>
+                      <th>Descripción / SKU</th>
+                      <th>No. Lote</th>
+                      <th>Caducidad</th>
+                      <th class="text-right">Piezas</th>
+                      <th>Ubicación</th>
+                      <th>Estatus</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (pallet of detailPallets(); track pallet.palletNumber) {
+                      <tr>
+                        <td class="text-center font-bold">{{ pallet.palletNumber }}</td>
+                        <td>
+                          <span class="mono strong font-bold text-amber-500">{{ pallet.palletCode }}</span>
+                        </td>
+                        <td>
+                          <div class="sku-cell">
+                            <strong>{{ pallet.description }}</strong>
+                            <span class="mono text-xs text-muted">{{ pallet.productId }}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="mono font-bold">{{ pallet.lotNumber || 'LT-2026-X1' }}</span>
+                        </td>
+                        <td>
+                          <span class="mono">{{ pallet.expirationDate || '2027-12-31' }}</span>
+                        </td>
+                        <td class="text-right mono font-black">
+                          {{ pallet.pieces }}
+                        </td>
+                        <td>
+                          <span class="location-pill mono">{{ pallet.locationCode || 'RACK-A-01' }}</span>
+                        </td>
+                        <td>
+                          <span class="status-chip status-chip--sm" [attr.data-tone]="pallet.status === 'STORED' ? 'success' : (pallet.status === 'CANCELLED' ? 'danger' : 'info')">
+                            {{ pallet.status || 'ALMACENADO' }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="5" class="text-right uppercase font-bold">TOTALES CONSOLIDADOS:</td>
+                      <td class="text-right mono font-black">{{ item.pieces ?? (detailPallets().length * 16) }} pzs.</td>
+                      <td colspan="2" class="font-bold">{{ detailPallets().length }} tarimas verificadas</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          }
+
+          <!-- ═════ PESTAÑA 3: METADATOS Y SEGURIDAD WMS ═════ -->
+          @if (activeModalTab() === 'specs') {
+            <div class="modal-tab-content">
+              <h3 class="history-section-title">
+                <span class="material-symbols-outlined">shield</span>
+                Bitácora de Seguridad Patrimonial & Metadatos Inmutables
+              </h3>
+
+              <dl class="modal-specs-grid">
+                <div class="spec-card">
+                  <dt>Identificador Único (UUID)</dt>
+                  <dd class="mono text-xs">{{ item.id }}</dd>
+                </div>
+                <div class="spec-card">
+                  <dt>Folio Oficial del Movimiento</dt>
+                  <dd class="mono strong text-gold">{{ item.folio }}</dd>
+                </div>
+                <div class="spec-card">
+                  <dt>No. Remisión / Factura</dt>
+                  <dd class="mono">{{ item.remisionNumber || '—' }}</dd>
+                </div>
+                <div class="spec-card">
+                  <dt>Cliente / Depositante Asociado</dt>
+                  <dd>{{ item.clientName || 'Traspaso interno' }}</dd>
+                </div>
+                <div class="spec-card">
+                  <dt>Sucursal / Centro Operativo</dt>
+                  <dd>{{ item.branchName || 'BR-TOL-01 Toluca' }}</dd>
+                </div>
+                <div class="spec-card">
+                  <dt>Operador Responsable de Registro</dt>
+                  <dd>{{ item.operator || '—' }}</dd>
+                </div>
+                <div class="spec-card">
+                  <dt>Fecha de Registro Inicial (Caseta)</dt>
+                  <dd>{{ formatDateTime(item.createdAt) }}</dd>
+                </div>
+                <div class="spec-card">
+                  <dt>Fecha de Verificación y Cierre</dt>
+                  <dd>{{ formatDateTime(item.completedAt) }}</dd>
+                </div>
+                <div class="spec-card">
+                  <dt>ID Sesión de Turno</dt>
+                  <dd class="mono text-xs">{{ item.shiftSessionId || 'Sesión de Respaldo' }}</dd>
+                </div>
+                <div class="spec-card">
+                  <dt>Tipo de Movimiento</dt>
+                  <dd class="font-bold">{{ entityLabel(item.entityType) }}</dd>
+                </div>
+              </dl>
+            </div>
+          }
+        </div>
+
+        <!-- Footer del Modal Pop-Up -->
+        <footer class="modal-dialog__footer">
+          <div class="modal-footer__left">
+            <button
+              type="button"
+              class="history-btn-copy-all"
+              (click)="copyToClipboard('Folio: ' + item.folio + ' | Remisión: ' + (item.remisionNumber || 'N/A') + ' | Estatus: ' + item.status + ' | Fecha: ' + item.createdAt, 'modal-all')"
+            >
+              <span class="material-symbols-outlined">
+                {{ copiedField() === 'modal-all' ? 'check' : 'assignment' }}
+              </span>
+              {{ copiedField() === 'modal-all' ? '¡Copiado a Portapapeles!' : 'Copiar Resumen para Auditoría' }}
+            </button>
+          </div>
+
+          <div class="modal-footer__right">
+            <button
+              type="button"
+              class="btn-f01-download btn-f01-download--sm"
+              (click)="downloadF01Pdf()"
+              [disabled]="isGeneratingPdf()"
+            >
+              <span class="material-symbols-outlined">{{ isGeneratingPdf() ? 'hourglass_top' : 'download' }}</span>
+              Descargar F01
+            </button>
+            <button type="button" class="history-btn-close" (click)="closeDetail()">
+              Cerrar Expediente
+            </button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  }
+
+  <!-- Elemento Oculto de Impresión para html2canvas / jsPDF del Formato F01 Oficial -->
+  <div id="f01-print-target" class="f01-offscreen-print-container" aria-hidden="true">
+    @if (receptionForPrint(); as recPrint) {
+      <fg-print-reception-layout [reception]="recPrint"></fg-print-reception-layout>
+    }
+  </div>
+</div>

@@ -5,6 +5,7 @@ import { Router, ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/r
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { AuthState } from '../../../../core/auth/auth.state';
+import { ShiftContextService } from '../../../../core/services/shift-context.service';
 import { WarehouseMovementsService } from '../../services/warehouse-movements.service';
 import { WarehouseMovementsApiService } from '../../services/warehouse-movements-api.service';
 import { ForkliftOperatorAdminService } from '../../../admin/services/forklift-operator.service';
@@ -55,9 +56,14 @@ export class TransferSubmoduleComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly printService = inject(PrintService);
   public readonly authState = inject(AuthState);
+  protected readonly shiftContext = inject(ShiftContextService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly layoutService = inject(WarehouseLayoutService);
+
+  protected formatShiftTime(value: string | null): string {
+    return value ? value.slice(0, 5) : '';
+  }
 
   // -- ESTADO DEL WORKBENCH UNIFICADO (MASTER-DETAIL) --
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
@@ -146,7 +152,7 @@ export class TransferSubmoduleComponent implements OnInit {
         status: 'INACTIVO',
         label: 'Inactivo en Sistema',
         dotClass: 'bg-rose-500',
-        badgeClass: 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300',
+        badgeClass: 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/60',
       };
     }
 
@@ -163,7 +169,7 @@ export class TransferSubmoduleComponent implements OnInit {
         status: 'EN_RECEPCION',
         label: `En Recepción (#${activeReception.folio})`,
         dotClass: 'bg-amber-500',
-        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300',
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700/60',
       };
     }
 
@@ -180,7 +186,7 @@ export class TransferSubmoduleComponent implements OnInit {
         status: 'EN_DESPACHO',
         label: `En Despacho (#${activeOutbound.folio})`,
         dotClass: 'bg-amber-500',
-        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300',
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700/60',
       };
     }
 
@@ -188,7 +194,7 @@ export class TransferSubmoduleComponent implements OnInit {
       status: 'DISPONIBLE',
       label: 'Disponible para maniobra',
       dotClass: 'bg-emerald-500',
-      badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300',
+      badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700/60',
     };
   }
 
@@ -678,12 +684,31 @@ export class TransferSubmoduleComponent implements OnInit {
     () => new Set(this.selectedPalletsList().map((p) => p.productId)).size
   );
 
-  // -- KPIS SUPERIORES (ESTILO HOMOLOGADO CON RECEPCION) --
-  kpiTotalTransfers = computed(() => this.movementsService.transfers().length);
+  // -- KPIS SUPERIORES (acotados al turno vigente de la sucursal) --
+  private isActiveStatus(status?: string): boolean {
+    return status !== 'COMPLETED' && status !== 'CANCELLED';
+  }
+
+  protected readonly boardTransfers = computed(() => {
+    const sessionId = this.shiftContext.activeShift()?.sessionId;
+    const list = this.movementsService.transfers();
+    if (!sessionId) return list;
+    return list.filter(
+      (t) => t.shiftSessionId === sessionId || this.isActiveStatus(t.status)
+    );
+  });
+
+  protected isCarryOver(transfer: WarehouseTransfer): boolean {
+    const sessionId = this.shiftContext.activeShift()?.sessionId;
+    return !!sessionId && !!transfer.shiftSessionId && transfer.shiftSessionId !== sessionId
+      && this.isActiveStatus(transfer.status);
+  }
+
+  kpiTotalTransfers = computed(() => this.boardTransfers().length);
   kpiOccupiedLocations = computed(() => this.occupiedLocations().length);
   kpiAvailableLocations = computed(() => this.availableLocations().length);
   kpiTotalPalletsMoved = computed(() =>
-    this.movementsService.transfers().reduce((acc, t) => acc + t.totalPallets, 0)
+    this.boardTransfers().reduce((acc, t) => acc + t.totalPallets, 0)
   );
 
   // Capacidad y Métricas de la Bahía Destino
@@ -767,7 +792,7 @@ export class TransferSubmoduleComponent implements OnInit {
   // Lista Filtrada del Directorio de Traspasos
   transfersList = this.movementsService.transfers;
   filteredTransfers = computed(() => {
-    const list = this.transfersList();
+    const list = this.boardTransfers();
     const query = this.searchQuery().toLowerCase().trim();
     const status = this.statusFilter();
 
@@ -799,6 +824,7 @@ export class TransferSubmoduleComponent implements OnInit {
     // Cargar catalogo de montacarguistas desde el BE
     this._loadForkliftOperators();
     this.movementsService.loadInitialBackendData();
+    this.shiftContext.loadActiveShift();
 
     this.route.queryParams.subscribe((params) => {
       const folio = params['folio'] || params['id'];
