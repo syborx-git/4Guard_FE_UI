@@ -369,7 +369,7 @@
          ───────────────────────────────────────────────────────────── -->
     <main class="users-detail" aria-label="Detalle del usuario">
 
-      <div class="users-form-container">
+      <div class="users-form-container" #formContainer>
 
           <!-- ── Barra de título del formulario ── -->
           <div class="users-form-header">
@@ -416,6 +416,26 @@
             <div class="users-alert users-alert--error" role="alert">
               <span class="material-symbols-outlined">error</span>
               <span>{{ backendError() }}</span>
+            </div>
+          }
+
+          <!-- Banner Operador de Montacargas (Unificación Opción 1) -->
+          @if (formMode() === 'edit' && selectedUser() && isForkliftOperator(selectedUser()!)) {
+            <div class="operator-profile-banner">
+              <div class="operator-profile-banner__icon">
+                <span class="material-symbols-outlined">precision_manufacturing</span>
+              </div>
+              <div class="operator-profile-banner__content">
+                <div class="operator-profile-banner__title">Operador de Montacargas Vinculado a Terminal RF</div>
+                <div class="operator-profile-banner__desc">
+                  Este colaborador opera en tableta/terminal RF con el código <strong>&#64;{{ selectedUser()?.username }}</strong>.
+                  Su perfil operativo integral (PIN numérico, certificación STPS / DC-3, turno y asignación en andenes) se gestiona desde el catálogo maestro.
+                </div>
+              </div>
+              <a routerLink="/admin/forklift-operators" class="operator-profile-banner__btn">
+                <span class="material-symbols-outlined text-sm">open_in_new</span>
+                <span>Gestionar en Montacarguistas</span>
+              </a>
             </div>
           }
 
@@ -567,6 +587,15 @@
                   </select>
                   @if (fieldHasError('role')) {
                     <span class="fg-error" role="alert">{{ getFieldError('role') }}</span>
+                  }
+                  @if (form.get('role')?.value === 'WAREHOUSE_OPERATOR' || form.get('role')?.value === 'ROLE_WAREHOUSE_OPERATOR') {
+                    <div class="role-hint-banner">
+                      <span class="material-symbols-outlined role-hint-banner__icon">lightbulb</span>
+                      <div class="role-hint-banner__text">
+                        <strong>Recomendación de Gestión Operativa:</strong>
+                        <p>Los montacarguistas cuentan con su módulo exclusivo en <a routerLink="/admin/forklift-operators" class="underline font-bold">Gestión de Montacarguistas</a>, donde se configuran de forma directa con su código &#64;MC-xxx, su PIN de terminal y su control de DC-3 sin requerir correos electrónicos ni contraseñas web.</p>
+                      </div>
+                    </div>
                   }
                 </div>
 

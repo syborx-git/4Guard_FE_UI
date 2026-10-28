@@ -63,6 +63,13 @@ export class WarehouseMovementsApiService {
 
   getSessionOrg(): { organizationId: string; branchId: string } {
     try {
+      const userStr = localStorage.getItem('4guard_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user?.organizationId) {
+          return { organizationId: user.organizationId, branchId: user.branchId || DEFAULT_BRANCH_ID };
+        }
+      }
       const sessionStr = localStorage.getItem('session');
       if (sessionStr) {
         const session = JSON.parse(sessionStr);

@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -49,6 +49,9 @@ export class UsersListComponent implements OnInit, OnDestroy {
   private readonly roleService = inject(RolePermissionService);
   private readonly destroy$ = new Subject<void>();
 
+  // ── Element References ───────────────────────────────────
+  @ViewChild('formContainer') private readonly formContainer?: ElementRef<HTMLElement>;
+
   // ── Estado de la vista ───────────────────────────────────
   protected readonly selectedUser = signal<UserAdminItem | null>(null);
   protected readonly formMode = signal<FormMode>('new');
@@ -73,6 +76,16 @@ export class UsersListComponent implements OnInit, OnDestroy {
 
   protected toggleKpiCollapse(): void {
     this.isKpiCollapsed.update((v) => !v);
+  }
+
+  // ── Segmentación: Personal del Sistema vs Operadores RF ─
+  protected readonly userTypeFilter = signal<'SYSTEM' | 'OPERATORS' | 'ALL'>('SYSTEM');
+
+  protected isForkliftOperator(u: UserAdminItem | null | undefined): boolean {
+    if (!u) return false;
+    const role = (u.role || '').toUpperCase();
+    const username = (u.username || '').toUpperCase();
+    return role.includes('WAREHOUSE_OPERATOR') || role.includes('FORKLIFT') || username.startsWith('MC-');
   }
 
   // ── Filtros del directorio (Señales Reactivas) ─────────────
@@ -150,21 +163,22 @@ export class UsersListComponent implements OnInit, OnDestroy {
     }
     // Fallback con catálogo oficial de roles del sistema WMS (Organigrama Oficial)
     return [
-      { id: 'ADMIN', name: 'ADMIN', label: 'Director General (Admin)' },
+      { id: 'ADMIN', name: 'ADMIN', label: 'Director General' },
       { id: 'OPERATIONS_MANAGER', name: 'OPERATIONS_MANAGER', label: 'Gerente de Operaciones' },
       { id: 'OPERATIONS_COORDINATOR', name: 'OPERATIONS_COORDINATOR', label: 'Coordinador de Operaciones' },
       { id: 'OPERATIONS_SUPERVISOR', name: 'OPERATIONS_SUPERVISOR', label: 'Supervisor de Operaciones' },
       { id: 'CONTROL_DESK', name: 'CONTROL_DESK', label: 'Mesa de Control' },
-      { id: 'SHIFT_LEADER', name: 'SHIFT_LEADER', label: 'Líder de Turno' },
-      { id: 'WAREHOUSE_OPERATOR', name: 'WAREHOUSE_OPERATOR', label: 'Montacarguista' },
       { id: 'QM_INSPECTOR', name: 'QM_INSPECTOR', label: 'Inspector de Calidad' },
-      { id: 'SECURITY_GUARD', name: 'SECURITY_GUARD', label: 'Guardia de Seguridad (Caseta)' },
+      { id: 'SHIFT_LEADER', name: 'SHIFT_LEADER', label: 'Líder de Turno' },
+      { id: 'WAREHOUSE_OPERATOR', name: 'WAREHOUSE_OPERATOR', label: 'Operario de Almacén' },
+      { id: 'SECURITY_GUARD', name: 'SECURITY_GUARD', label: 'Guardia de Seguridad' },
     ];
   });
 
   // ── Computed Lista Filtrada (Reactiva en tiempo real) ─────
   protected readonly filteredUsers = computed(() => {
     let list = this.userAdminService.users();
+
     const search = this.filterText().toLowerCase().trim();
     const statusVal = this.filterStatus();
     const roleVal = this.filterRole();
@@ -197,6 +211,8 @@ export class UsersListComponent implements OnInit, OnDestroy {
 
   // ── Computed KPIs ────────────────────────────────────────
   protected readonly totalUsers = computed(() => this.userAdminService.users().length);
+  protected readonly systemUsersCount = computed(() => this.userAdminService.users().filter(u => !this.isForkliftOperator(u)).length);
+  protected readonly operatorUsersCount = computed(() => this.userAdminService.users().filter(u => this.isForkliftOperator(u)).length);
   protected readonly kpiActive = computed(() => this.userAdminService.users().filter(u => u.status === 'ACTIVE').length);
   protected readonly kpiInactive = computed(() => this.userAdminService.users().filter(u => u.status !== 'ACTIVE').length);
   protected readonly kpiAdminSupervisors = computed(() => {
@@ -271,6 +287,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
     this.backendError.set(null);
     this.saveSuccess.set(false);
     this.loadAuditLogs(user.id);
+    this.resetFormScroll();
   }
 
   protected startNewUser(): void {
@@ -293,6 +310,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
     this.auditEntries.set([]);
     this.form.markAsPristine();
     this.form.markAsUntouched();
+    this.resetFormScroll();
   }
 
   protected cancelForm(): void {
@@ -306,6 +324,13 @@ export class UsersListComponent implements OnInit, OnDestroy {
     this.submitAttempted.set(false);
     this.backendError.set(null);
     this.saveSuccess.set(false);
+    this.resetFormScroll();
+  }
+
+  private resetFormScroll(): void {
+    if (this.formContainer?.nativeElement) {
+      this.formContainer.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   private populateForm(user: UserAdminItem): void {
@@ -579,22 +604,25 @@ export class UsersListComponent implements OnInit, OnDestroy {
     if (!role) return '';
     const clean = role.replace('ROLE_', '').toUpperCase();
     const extendedLabels: Record<string, string> = {
-      'ADMIN': 'Administrador General',
-      'OPERATIONS_MANAGER': 'Gerente de Operaciones',
-      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'ADMIN': 'Director General',
       'CEO': 'Director General',
+      'OPERATIONS_MANAGER': 'Gerente de Operaciones',
+      'OPERATIONS_COORDINATOR': 'Coordinador de Operaciones',
       'OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
-      'DOCK_SUPERVISOR': 'Supervisor de Andén',
-      'SHIFT_LEADER': 'Líder de Turno',
       'CONTROL_DESK': 'Mesa de Control',
       'QM_INSPECTOR': 'Inspector de Calidad',
+      'SHIFT_LEADER': 'Líder de Turno',
       'WAREHOUSE_OPERATOR': 'Operario de Almacén',
-      'MANEUVER_OPERATOR': 'Operador de Maniobras',
       'SECURITY_GUARD': 'Guardia de Seguridad',
+      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'DOCK_SUPERVISOR': 'Supervisor de Andén',
+      'MANEUVER_OPERATOR': 'Operador de Maniobras',
       'AUDITOR': 'Auditor',
       'CLIENT': 'Cliente 3PL',
     };
     if (extendedLabels[clean]) return extendedLabels[clean];
+    const roleWithPrefix = ('ROLE_' + clean) as UserRole;
+    if (ROLE_LABELS[roleWithPrefix]) return ROLE_LABELS[roleWithPrefix];
     if (ROLE_LABELS[role as UserRole]) return ROLE_LABELS[role as UserRole];
     return role;
   }
@@ -603,11 +631,12 @@ export class UsersListComponent implements OnInit, OnDestroy {
     if (!role) return '';
     const clean = role.replace('ROLE_', '').toUpperCase();
     const shortLabels: Record<string, string> = {
-      'ADMIN': 'Administrador General',
-      'OPERATIONS_MANAGER': 'Gerente Operaciones',
-      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'ADMIN': 'Director General',
       'CEO': 'Director General',
+      'OPERATIONS_MANAGER': 'Gerente Operaciones',
+      'OPERATIONS_COORDINATOR': 'Coordinador Operaciones',
       'OPERATIONS_SUPERVISOR': 'Supervisor Operativo',
+      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
       'DOCK_SUPERVISOR': 'Supervisor Andén',
       'SHIFT_LEADER': 'Líder de Turno',
       'CONTROL_DESK': 'Mesa de Control',
@@ -653,6 +682,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
         return 'avatar--admin';
       case 'OPERATIONS_MANAGER':
       case 'WAREHOUSE_MANAGER':
+      case 'OPERATIONS_COORDINATOR':
         return 'avatar--manager';
       case 'OPERATIONS_SUPERVISOR':
       case 'DOCK_SUPERVISOR':

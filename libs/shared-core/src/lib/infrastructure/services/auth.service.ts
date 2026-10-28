@@ -22,19 +22,19 @@ import { environment } from '../../../environments/environment';
 
 /** Claves de localStorage para persistencia de sesión */
 const STORAGE_KEYS = {
-  ACCESS_TOKEN:  '4guard_access_token',
+  ACCESS_TOKEN: '4guard_access_token',
   REFRESH_TOKEN: '4guard_refresh_token',
-  USER:          '4guard_user',
+  USER: '4guard_user',
 } as const;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly http   = inject(HttpClient);
+  private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
 
   // ─── Señales de estado ────────────────────────────────────────────────────
   private readonly _currentUser = signal<User | null>(this.loadUserFromStorage());
-  private readonly _isLoading   = signal<boolean>(false);
+  private readonly _isLoading = signal<boolean>(false);
 
   /** Usuario autenticado actual (Signal de solo lectura) */
   readonly currentUser: Signal<User | null> = this._currentUser.asReadonly();
@@ -91,11 +91,14 @@ export class AuthService {
           fullName: rawUser?.fullName || rawUser?.name || `${rawUser?.firstName || ''} ${rawUser?.lastName || ''}`.trim() || rawUser?.username || credentials.email.split('@')[0],
           email: rawUser?.email || credentials.email,
           username: rawUser?.username || credentials.email.split('@')[0],
+          forkliftOperatorId: rawUser?.forkliftOperatorId ? String(rawUser.forkliftOperatorId) : undefined,
+          employeeCode: rawUser?.employeeCode || rawUser?.username || undefined,
           role,
           organizationId: rawUser?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
           branchId: rawUser?.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
           branchName: rawUser?.branchName || (rawUser?.branchId === 'b73f0907-9fa5-4bdf-87db-2eb5e7683936' ? 'CENTRO DE DISTRIBUCION CDMX' : null) || 'CENTRO DE DISTRIBUCION CDMX',
           organizationName: rawUser?.organizationName || '4GUARD LOGISTICS CORP',
+          changePasswordRequired: Boolean(rawUser?.changePasswordRequired),
           active: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -114,12 +117,12 @@ export class AuthService {
       }),
       catchError((err) => {
         this._isLoading.set(false);
-        const errMsg = err?.error?.message 
-          || (err.status === 404 
-              ? 'Endpoint no encontrado (404). Asegúrate de haber reiniciado "npm run start:rf" para cargar el proxy.' 
-              : (err.status === 0 
-                  ? 'No hay conexión con el backend (127.0.0.1:8080). Verifica que Spring Boot esté activo.' 
-                  : (err.status === 401 ? 'Credenciales incorrectas. Verifica tu usuario y contraseña.' : 'Error al autenticar en el servidor.')));
+        const errMsg = err?.error?.message
+          || (err.status === 404
+            ? 'Endpoint no encontrado (404). Asegúrate de haber reiniciado "npm run start:rf" para cargar el proxy.'
+            : (err.status === 0
+              ? 'No hay conexión con el backend (127.0.0.1:8080). Verifica que Spring Boot esté activo.'
+              : (err.status === 401 ? 'Credenciales incorrectas. Verifica tu usuario y contraseña.' : 'Error al autenticar en el servidor.')));
         throw new Error(errMsg);
       })
     );
@@ -131,13 +134,26 @@ export class AuthService {
    * @param reason Razón opcional para mostrar en la pantalla de login.
    */
   logout(reason?: string): void {
-    // Aquí iría la llamada al backend para invalidar el token si existiera endpoint real
-    // ej: this.http.post(`${environment.apiUrl}/auth/logout`, {}).subscribe({ error: () => {} });
-
     this.clearSession();
-    
+
     const navExtras = { replaceUrl: true, queryParams: reason ? { reason } : {} };
     this.router.navigate(['/login'], navExtras);
+  }
+
+  /**
+   * Actualiza la contraseña o PIN temporal del usuario autenticado por uno personal definitivo.
+   */
+  changePassword(newPassword: string): Observable<void> {
+    return this.http.put<any>('/api/v1/users/change-password', { newPassword }).pipe(
+      map(() => {
+        const current = this._currentUser();
+        if (current) {
+          const updated: User = { ...current, changePasswordRequired: false, updatedAt: new Date().toISOString() };
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
+          this._currentUser.set(updated);
+        }
+      })
+    );
   }
 
   /**
@@ -145,32 +161,34 @@ export class AuthService {
    * Retorna el nuevo access token como string.
    */
   refreshToken(): Observable<string> {
-    const user = this.currentUser();
-    const role = user?.role ?? UserRole.ADMIN;
-    const dummyToken = `mock-jwt-token-for-${role}-${Date.now()}`;
-    
-    return of(dummyToken).pipe(
-      tap((newToken) => {
-        const rawUser = localStorage.getItem(STORAGE_KEYS.USER);
-        const userObj: User = rawUser ? JSON.parse(rawUser) : {
-          id: 'u-admin',
-          fullName: 'Carlos Herrera',
-          email: 'admin@4guard.mx',
-          role: UserRole.ADMIN,
-          branchId: 'BR-MTY-01',
-          branchName: 'Sucursal Monterrey',
-          active: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-
-        const response: AuthResponse = {
-          accessToken: newToken,
-          refreshToken: `mock-refresh-token-for-${role}-${Date.now()}`,
-          expiresIn: 3600,
-          user: userObj
-        };
-        this.saveSession(response);
+    const storedRefresh = this.getRefreshToken();
+    const existingAccess = this.getAccessToken();
+    if (!storedRefresh || storedRefresh.startsWith('mock-')) {
+      return of(existingAccess || '');
+    }
+    return this.http.post<any>('/api/v1/auth/refresh', { refreshToken: storedRefresh }).pipe(
+      map((res: any) => {
+        const data = res?.data || res;
+        const newToken = data?.accessToken || data?.token || existingAccess || '';
+        const newRefresh = data?.refreshToken || storedRefresh;
+        const rawUser = data?.user;
+        let userObj = this.currentUser() || this.loadUserFromStorage();
+        if (userObj && rawUser) {
+          userObj = {
+            ...userObj,
+            forkliftOperatorId: rawUser.forkliftOperatorId ? String(rawUser.forkliftOperatorId) : userObj.forkliftOperatorId,
+            employeeCode: rawUser.employeeCode || userObj.employeeCode
+          };
+        }
+        if (userObj && newToken) {
+          this.saveSession({
+            accessToken: newToken,
+            refreshToken: newRefresh,
+            expiresIn: data?.expiresIn || 3600,
+            user: userObj
+          });
+        }
+        return newToken;
       })
     );
   }
@@ -215,15 +233,15 @@ export class AuthService {
    */
   switchRoleForTesting(role: UserRole, customName?: string): void {
     const roleNames: Record<UserRole, string> = {
-      [UserRole.ADMIN]:                  'Ing. Carlos Herrera (Director General)',
-      [UserRole.OPERATIONS_MANAGER]:     'Ing. Roberto Garza (Gerente Operaciones)',
+      [UserRole.ADMIN]: 'Ing. Carlos Herrera (Director General)',
+      [UserRole.OPERATIONS_MANAGER]: 'Ing. Roberto Garza (Gerente Operaciones)',
       [UserRole.OPERATIONS_COORDINATOR]: 'Lic. Fernando Lozano (Coordinador Operaciones)',
-      [UserRole.OPERATIONS_SUPERVISOR]:  'Ing. Héctor Salinas (Supervisor Operaciones)',
-      [UserRole.CONTROL_DESK]:           'Lic. Patricia Gómez (Mesa de Control)',
-      [UserRole.SHIFT_LEADER]:           'Ricardo Peña (Líder de Turno)',
-      [UserRole.WAREHOUSE_OPERATOR]:     'Oficial Montacarguista',
-      [UserRole.QM_INSPECTOR]:           'Dra. Elena Ramos (Inspector de Calidad)',
-      [UserRole.SECURITY_GUARD]:         'Oficial de Turno Caseta',
+      [UserRole.OPERATIONS_SUPERVISOR]: 'Ing. Héctor Salinas (Supervisor Operaciones)',
+      [UserRole.CONTROL_DESK]: 'Lic. Patricia Gómez (Mesa de Control)',
+      [UserRole.SHIFT_LEADER]: 'Ricardo Peña (Líder de Turno)',
+      [UserRole.WAREHOUSE_OPERATOR]: 'Oficial Montacarguista',
+      [UserRole.QM_INSPECTOR]: 'Dra. Elena Ramos (Inspector de Calidad)',
+      [UserRole.SECURITY_GUARD]: 'Oficial de Turno Caseta',
     };
 
     const updatedUser: User = {
@@ -264,14 +282,13 @@ export class AuthService {
    * Método expuesto para soportar flujos de login en múltiples pasos (ej. selección de sucursal).
    */
   saveSession(response: AuthResponse): void {
-    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN,  response.accessToken);
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.accessToken);
     localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
     this._currentUser.set(response.user);
   }
 
   private clearSession(): void {
-    // 1. Limpiar JWTs y buffers residuales del LocalStorage
     localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
@@ -279,17 +296,14 @@ export class AuthService {
     localStorage.removeItem('4guard_active_mission');
     localStorage.removeItem('4guard_missions_buffer');
 
-    // 2. Limpiar SessionStorage por completo (previene persistencia en pestaña)
     sessionStorage.clear();
 
-    // 3. Destruir todas las cookies accesibles por Javascript
     document.cookie.split(';').forEach((cookie) => {
       const eqPos = cookie.indexOf('=');
       const name = eqPos > -1 ? cookie.substring(0, eqPos) : cookie;
       document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
     });
 
-    // 4. Limpiar estado reactivo en la memoria de la aplicación
     this._currentUser.set(null);
   }
 

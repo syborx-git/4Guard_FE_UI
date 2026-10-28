@@ -329,6 +329,12 @@
                 </div>
                 <div class="carrier-item__meta">
                   <span class="carrier-item__rfc">{{ op.code }}</span>
+                  @if (op.branchName) {
+                    <span class="carrier-item__type" style="display: inline-flex; align-items: center; gap: 2px;">
+                      <span class="material-symbols-outlined" style="font-size: 11px;">location_on</span>
+                      {{ op.branchName }}
+                    </span>
+                  }
                   @if (op.licenseNumberDc3) {
                     <span class="carrier-item__type">DC-3: {{ op.licenseNumberDc3 }}</span>
                   }
@@ -506,7 +512,43 @@
               </div>
             </fieldset>
 
-            <!-- SECCIÓN 2 — Acceso a Terminal RF / Tableta -->
+            <!-- SECCIÓN 2 — Asignación Operativa (Sucursal & Turno WMS) -->
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">hub</span>
+                Asignación Operativa (Sucursal & Turno)
+              </legend>
+
+              <div class="carriers-form-grid carriers-form-grid--2">
+                <div class="fg-field">
+                  <label class="fg-label" for="branchId">Sucursal Asignada</label>
+                  <select
+                    id="branchId"
+                    class="fg-select"
+                    formControlName="branchId">
+                    <option [ngValue]="null">Acceso Corporativo / Todas las sucursales</option>
+                    @for (b of availableBranches(); track b.id) {
+                      <option [ngValue]="b.id">{{ b.code }} — {{ b.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="shiftId">Turno Operativo de Almacén</label>
+                  <select
+                    id="shiftId"
+                    class="fg-select"
+                    formControlName="shiftId">
+                    <option [ngValue]="null">Sin turno fijo / Horario flexible</option>
+                    @for (s of availableShifts(); track s.id) {
+                      <option [ngValue]="s.id">{{ s.code }} — {{ s.name }} ({{ s.startTime }} - {{ s.endTime }})</option>
+                    }
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Acceso a Terminal RF / Tableta -->
             <fieldset class="carriers-form-section">
               <legend class="carriers-form-section__legend">
                 <span class="material-symbols-outlined">tablet_mac</span>

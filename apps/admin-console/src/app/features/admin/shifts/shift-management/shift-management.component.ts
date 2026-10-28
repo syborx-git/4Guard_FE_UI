@@ -91,7 +91,32 @@ import { RouterLink } from '@angular/router';
   styleUrl: './shift-management.component.css',
 })
 export class ShiftManagementComponent implements OnInit, OnDestroy {
-  // ── Estado: KPIs Comprimidos / Colapsables ───────────────
+  // ── Inyecciones y Estado de Sucursal ──────────────────────
+  protected readonly authService = inject(AuthService);
+  protected readonly activeBranchName = computed(() => {
+    const user = this.authService.getCurrentUser();
+    return user?.branchName || 'CDMX-01';
+  });
+
+  // ── Control de Acordeón de Auditoría (Homologado con Usuarios) ──
+  protected readonly showAuditTimeline = signal<boolean>(true);
+
+  protected toggleShowAuditTimeline(): void {
+    this.showAuditTimeline.update((v) => !v);
+  }
+
+  protected getShiftInitials(shift: Shift): string {
+    if (!shift) return 'TR';
+    const words = (shift.name || '').trim().split(/\s+/);
+    if (words.length >= 2) {
+      return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+    }
+    return (shift.code || 'TR').slice(0, 2).toUpperCase();
+  }
+
+  // ── Estado: Modal de Eliminación y KPIs ───────────────────
+  protected readonly showDeleteConfirmModal = signal<boolean>(false);
+  protected readonly isDeleting = signal<boolean>(false);
   protected readonly isKpiCollapsed = signal<boolean>(true);
 
   protected toggleKpiCollapse(): void {
@@ -107,7 +132,6 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
   }
   private readonly fb = inject(FormBuilder);
   protected readonly shiftService = inject(ShiftService);
-  private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
   private readonly destroy$ = new Subject<void>();
 
@@ -498,6 +522,35 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
         },
       });
     }
+  }
+
+  
+
+  protected onClickDeleteShift(): void {
+    if (this.isShiftLeaderReadOnly() || !this.shiftService.selectedShift()) return;
+    this.showDeleteConfirmModal.set(true);
+  }
+
+  protected cancelDeleteShift(): void {
+    this.showDeleteConfirmModal.set(false);
+  }
+
+  protected confirmDeleteShift(): void {
+    const selected = this.shiftService.selectedShift();
+    if (!selected) return;
+
+    this.isDeleting.set(true);
+    this.shiftService.deleteShift(selected.id).subscribe({
+      next: () => {
+        this.isDeleting.set(false);
+        this.showDeleteConfirmModal.set(false);
+        this.forceStartNewShift();
+      },
+      error: () => {
+        this.isDeleting.set(false);
+        this.showDeleteConfirmModal.set(false);
+      },
+    });
   }
 
   protected onToggleStatus(): void {

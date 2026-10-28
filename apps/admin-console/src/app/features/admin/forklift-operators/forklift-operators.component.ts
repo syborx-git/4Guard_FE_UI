@@ -12,6 +12,8 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ForkliftOperatorAdminService } from '../services/forklift-operator.service';
+import { BranchService } from '../services/branch.service';
+import { ShiftService } from '../shifts/services/shift.service';
 import {
   ForkliftOperator,
   CreateForkliftOperatorRequest,
@@ -32,7 +34,14 @@ export type FormMode = 'idle' | 'create' | 'edit';
 })
 export class ForkliftOperatorsComponent implements OnInit {
   protected readonly forkliftService = inject(ForkliftOperatorAdminService);
+  protected readonly branchService   = inject(BranchService);
+  protected readonly shiftService    = inject(ShiftService);
   private readonly fb                = inject(FormBuilder);
+
+  protected readonly availableBranches = computed(() => this.branchService.branches());
+  protected readonly availableShifts   = computed(() =>
+    this.shiftService.shifts().filter(s => s.status === 'ACTIVE' || !s.status)
+  );
 
   @ViewChild('formSection') formSection!: ElementRef<HTMLElement>;
 
@@ -116,6 +125,8 @@ export class ForkliftOperatorsComponent implements OnInit {
     firstName:             ['', [Validators.required, Validators.minLength(2)]],
     lastNamePaternal:      ['', [Validators.required, Validators.minLength(2)]],
     lastNameMaternal:      ['', [Validators.required, Validators.minLength(2)]],
+    branchId:              [null as string | null],
+    shiftId:               [null as string | null],
     licenseNumberDc3:      [''],
     licenseExpirationDate: [''],
     createAccess:          [true],
@@ -128,6 +139,8 @@ export class ForkliftOperatorsComponent implements OnInit {
   ngOnInit(): void {
     this.startNewOperator();
     this.reloadOperators();
+    this.shiftService.loadShifts();
+    this.branchService.loadBranches().subscribe({ error: () => {} });
   }
 
   reloadOperators(): void {
@@ -155,6 +168,7 @@ export class ForkliftOperatorsComponent implements OnInit {
     this.formMode.set('edit');
     this.populateForm(op);
     this.loadAuditLogs(op.id);
+    this.formSection?.nativeElement?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   loadAuditLogs(id: string): void {
@@ -209,6 +223,7 @@ export class ForkliftOperatorsComponent implements OnInit {
     this.auditEntries.set([]);
     this.formMode.set('create');
     this.resetForm();
+    this.formSection?.nativeElement?.scrollTo({ top: 0, behavior: 'smooth' });
     this.scrollToForm();
   }
 
@@ -222,6 +237,8 @@ export class ForkliftOperatorsComponent implements OnInit {
       firstName:             op.firstName,
       lastNamePaternal:      op.lastNamePaternal,
       lastNameMaternal:      op.lastNameMaternal,
+      branchId:              op.branchId || null,
+      shiftId:               op.shiftId || null,
       licenseNumberDc3:      op.licenseNumberDc3 || '',
       licenseExpirationDate: op.licenseExpirationDate || '',
       createAccess:          !!op.userId,
@@ -248,6 +265,8 @@ export class ForkliftOperatorsComponent implements OnInit {
       const request: UpdateForkliftOperatorRequest = {
         id:                    selectedId,
         organizationId:        currentOp?.organizationId || orgId,
+        branchId:              val.branchId || undefined,
+        shiftId:               val.shiftId || undefined,
         jobTitle:              currentOp?.jobTitle || 'Montacarguista',
         firstName:             val.firstName!,
         lastNamePaternal:      val.lastNamePaternal!,
@@ -273,6 +292,8 @@ export class ForkliftOperatorsComponent implements OnInit {
     } else {
       const request: CreateForkliftOperatorRequest = {
         organizationId:        orgId,
+        branchId:              val.branchId || undefined,
+        shiftId:               val.shiftId || undefined,
         jobTitle:              'Montacarguista',
         firstName:             val.firstName!,
         lastNamePaternal:      val.lastNamePaternal!,
@@ -316,6 +337,8 @@ export class ForkliftOperatorsComponent implements OnInit {
       firstName: '',
       lastNamePaternal: '',
       lastNameMaternal: '',
+      branchId: null,
+      shiftId: null,
       licenseNumberDc3: '',
       licenseExpirationDate: '',
       createAccess: true,
@@ -428,7 +451,8 @@ export class ForkliftOperatorsComponent implements OnInit {
   // ─── Utilidades ─────────────────────────────────────────────────────────────
 
   scrollToForm(): void {
-    if (this.formSection) {
+    if (this.formSection?.nativeElement) {
+      this.formSection.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
       this.formSection.nativeElement.scrollIntoView({ behavior: 'smooth' });
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });

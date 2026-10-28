@@ -2448,9 +2448,19 @@ export class WarehouseMovementsService {
       storageLocationId: (formVals.storageLocationId && isUuid(formVals.storageLocationId)) ? formVals.storageLocationId : null,
       storageLocationCode: formVals.storageLocation || formVals.storageLocationCode || null,
       storageLocation: formVals.storageLocation || formVals.storageLocationCode || null,
-      forkliftOperatorId: formVals.forkliftOperatorId || null,
-      forkliftOperatorName: formVals.forkliftOperator || formVals.forkliftOperatorName || null,
-      rampId: formVals.rampId || null,
+      forkliftOperatorId: (() => {
+        const rawOpId = formVals.forkliftOperatorId || null;
+        const rawOpName = formVals.forkliftOperator || formVals.forkliftOperatorName || null;
+        const matched = this.forkliftOperators().find(
+          (op: any) =>
+            (rawOpId && (op.id === rawOpId || op.code === rawOpId)) ||
+            (rawOpName && (op.fullName === rawOpName || op.name === rawOpName || op.code === rawOpName))
+        );
+        if (matched && isUuid(matched.id)) return matched.id;
+        return isUuid(rawOpId) ? rawOpId : null;
+      })(),
+      forkliftOperatorName: formVals.forkliftOperator || formVals.forkliftOperatorName || formVals.forkliftOperatorId || null,
+      rampId: (formVals.rampId && isUuid(formVals.rampId)) ? formVals.rampId : null,
       rampNumber: formVals.rampNumber || null,
       rampCode: formVals.rampCode || null,
       status: formVals.status || null,
@@ -2743,10 +2753,21 @@ export class WarehouseMovementsService {
     const cleanLocationId = isUuid(current?.storageLocationId) ? current!.storageLocationId : null;
     const locationCode = current?.storageLocationCode || current?.storageLocation || null;
 
+    const rawOpCode = current?.checkIn?.forkliftOperatorCode || null;
+    const rawOpName = operatorName || current?.checkIn?.forkliftOperator || null;
+    const matchedOp = this.forkliftOperators().find(
+      (op: any) =>
+        (rawOpCode && (op.id === rawOpCode || op.code === rawOpCode)) ||
+        (rawOpName && (op.fullName === rawOpName || op.name === rawOpName || op.code === rawOpName))
+    );
+    const validOpUuid = (matchedOp && isUuid(matchedOp.id))
+      ? matchedOp.id
+      : (isUuid(rawOpCode) ? rawOpCode : null);
+
     const payload = {
       status: 'IN_PROGRESS',
-      forkliftOperatorName: operatorName || current?.checkIn?.forkliftOperator || null,
-      forkliftOperatorId: current?.checkIn?.forkliftOperatorCode || null,
+      forkliftOperatorName: rawOpName || rawOpCode || null,
+      forkliftOperatorId: validOpUuid,
       rampNumber: current?.checkIn?.rampNumber || null,
       rampCode: current?.checkIn?.rampCode || null,
       lotNumber: current?.lotNumber || null,
@@ -3458,6 +3479,23 @@ export class WarehouseMovementsService {
     );
 
     if (updated) {
+      const isUuid = (val: any) =>
+        typeof val === 'string' &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+      if (isUuid(updated.id)) {
+        const matchedOp = this.forkliftOperators().find(
+          (op: any) => op.id === operatorId || op.code === operatorId || op.fullName === operatorName || op.name === operatorName
+        );
+        const validOpUuid = (matchedOp && isUuid(matchedOp.id)) ? matchedOp.id : (isUuid(operatorId) ? operatorId : null);
+        this.movementsApi.updateOutbound(updated.id, {
+          status: 'ASSIGNED',
+          rampNumber,
+          rampCode: `LOC-RAMP-${String(rampNumber).padStart(2, '0')}`,
+          forkliftOperatorId: validOpUuid,
+          forkliftOperatorName: operatorName || operatorId || null,
+          observations: observations || updated.observations || null,
+        }).subscribe({ error: (e) => console.warn('[WMS] updateOutbound assign warn:', e) });
+      }
       this.addOutboundAudit(updated.folio, {
         id: `aud-out-asg-${Date.now()}`,
         action: 'SALIDA_ASIGNADA',
@@ -3486,6 +3524,12 @@ export class WarehouseMovementsService {
     );
 
     if (updated) {
+      if (updated.id && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(updated.id)) {
+        this.movementsApi.updateOutbound(updated.id, {
+          status: 'IN_PROGRESS',
+          forkliftOperatorName: operatorName || updated.forkliftOperator || null,
+        }).subscribe({ error: (e) => console.warn('[WMS] updateOutbound startLoading warn:', e) });
+      }
       this.addOutboundAudit(updated.folio, {
         id: `aud-out-inp-${Date.now()}`,
         action: 'CARGA_INICIADA',
@@ -3523,6 +3567,16 @@ export class WarehouseMovementsService {
     const updated = this.updateOutbound(folioOrId, partial, true);
 
     if (updated) {
+      if (updated.id && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(updated.id)) {
+        const validItemIds = (updated.items || [])
+          .map((it) => it.id)
+          .filter((id): id is string => !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(id));
+        this.movementsApi.updateOutbound(updated.id, {
+          status: 'LOADED',
+          sealNumber: sealNumber || updated.sealNumber || null,
+          ...(validItemIds.length > 0 ? { selectedItemIds: validItemIds } : {}),
+        }).subscribe({ error: (e) => console.warn('[WMS] updateOutbound finishLoading warn:', e) });
+      }
       this.addOutboundAudit(updated.folio, {
         id: `aud-out-load-${Date.now()}`,
         action: 'CARGA_CONCLUIDA',
@@ -3584,6 +3638,16 @@ export class WarehouseMovementsService {
 
     const newArr = list.map((o) => (o.folio === target.folio || o.id === target.id ? updated : o));
     this.outboundsSignal.set(newArr);
+
+    if (updated.id && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(updated.id)) {
+      const validItemIds = (resolvedItems || [])
+        .map((it) => it.id)
+        .filter((id): id is string => !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(id));
+      this.movementsApi.updateOutbound(updated.id, {
+        status: 'COMPLETED',
+        ...(validItemIds.length > 0 ? { selectedItemIds: validItemIds } : {}),
+      }).subscribe({ error: (e) => console.warn('[WMS] updateOutbound completeDispatch warn:', e) });
+    }
 
     this.addOutboundAudit(updated.folio, {
       id: `aud-out-cmp-${Date.now()}`,
