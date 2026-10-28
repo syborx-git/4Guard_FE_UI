@@ -13,7 +13,7 @@ import {
   BusinessRuleFilters,
   BusinessRuleKpis,
 } from './business-rules.models';
-import { MOCK_BUSINESS_RULES } from './business-rules.mock';
+import { SEED_BUSINESS_RULES } from './business-rules.mock';
 
 @Injectable({
   providedIn: 'root',
@@ -21,7 +21,8 @@ import { MOCK_BUSINESS_RULES } from './business-rules.mock';
 export class BusinessRulesService {
   // ─── Estado reactivo principal ────────────────────────────────────────────
 
-  private readonly _allRules = signal<BusinessRule[]>(MOCK_BUSINESS_RULES);
+  private readonly _allRules = signal<BusinessRule[]>(SEED_BUSINESS_RULES);
+
   private readonly _activeFilters = signal<BusinessRuleFilters | null>(null);
   private readonly _selectedRuleId = signal<string | null>('rule-01');
 

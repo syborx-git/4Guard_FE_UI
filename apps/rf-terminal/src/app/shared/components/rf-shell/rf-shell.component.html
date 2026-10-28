@@ -104,6 +104,16 @@
       <!-- Centro de Notificaciones Operativas en Tiempo Real (Pre-Recepciones y Andenes) -->
       <fg-rf-notifications />
 
+      <!-- Botón ForBot AI — Asistente de Operación y Voz en Andén -->
+      <button 
+        type="button" 
+        class="forbot-rf-header-btn" 
+        (click)="openForbotModal()"
+        title="Abrir Asistente ForBot AI (Voz & Consultas)">
+        <img src="assets/forbot-avatar.png" alt="ForBot" class="forbot-rf-avatar" />
+        <span class="forbot-rf-text">ForBot</span>
+      </button>
+
       <!-- Theme Switcher (Dark/Light) -->
       <button 
         type="button" 
@@ -115,6 +125,7 @@
           {{ themeService.currentTheme() === 'dark' ? 'light_mode' : 'dark_mode' }}
         </span>
       </button>
+
 
       <!-- User Operator Avatar / Profile Menu Trigger -->
       <button
@@ -394,4 +405,11 @@
     </div>
   }
 
+  <!-- Modal Táctil de Asistencia Operativa ForBot AI -->
+  <fg-rf-forbot-modal
+    [isOpen]="showForbotModal()"
+    (closeModal)="closeForbotModal()">
+  </fg-rf-forbot-modal>
+
 </div>
+

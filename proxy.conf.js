@@ -583,6 +583,17 @@ const PROXY_CONFIG = {
         return true;
       }
 
+      // 3.6 Interceptar PURGE / RESET TOTAL de entorno (Dev & QA): POST o DELETE /api/v1/dev/purge-all
+      if ((req.method === 'POST' || req.method === 'DELETE') && (url.includes('/dev/purge-all') || url.includes('/security-gate/purge-all'))) {
+        inMemoryPasses.clear();
+        inMemoryReceptions.clear();
+        inMemoryOutbounds.clear();
+        nextReceptionFolioSeq = 26510;
+        nextOutboundFolioSeq = 1;
+        sendJson(res, 200, { success: true, message: 'Entorno de pruebas y pases reiniciados en ceros' });
+        return true;
+      }
+
       // Para el resto de peticiones (catálogos, auth, etc.), retornar undefined para que el proxy continúe hacia target
       return undefined;
     },

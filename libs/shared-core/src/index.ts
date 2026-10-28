@@ -54,6 +54,17 @@ export { jwtInterceptor }    from './lib/infrastructure/interceptors/jwt.interce
 export { branchInterceptor } from './lib/infrastructure/interceptors/branch.interceptor';
 export { mockBackendInterceptor } from './lib/infrastructure/interceptors/mock-backend.interceptor';
 
+// ─── Domain — ForBot AI Models ────────────────────────────────────────────────
+export type {
+  ForbotMode,
+  ForbotIntentType,
+  ForbotWidgetItem,
+  ForbotActionPayload,
+  ForbotWidgetData,
+  ForbotChatMessage,
+  VoiceRecognitionState,
+} from './lib/domain/models/forbot.model';
+
 // ─── Infrastructure — Services (Singletons) ───────────────────────────────────
 export { AuthService }    from './lib/infrastructure/services/auth.service';
 export { LoginService }    from './lib/infrastructure/services/login.service';
@@ -65,6 +76,7 @@ export { ZoneLeaseService } from './lib/infrastructure/services/zone-lease.servi
 export type { ZoneLeaseStatus } from './lib/infrastructure/services/zone-lease.service';
 export { ToastService } from './lib/infrastructure/services/toast.service';
 export type { ToastType, ToastItem } from './lib/infrastructure/services/toast.service';
+export { ForbotVoiceService } from './lib/infrastructure/services/forbot-voice.service';
 export { OfflineIndexedDb } from './lib/infrastructure/db/offline-indexed-db';
 export type {
   OfflineTransactionRecord,
@@ -77,3 +89,4 @@ export type {
 export { AuthState }      from './lib/application/state/auth.state';
 export { InventoryState } from './lib/application/state/inventory.state';
 export { SyncState }      from './lib/application/state/sync.state';
+

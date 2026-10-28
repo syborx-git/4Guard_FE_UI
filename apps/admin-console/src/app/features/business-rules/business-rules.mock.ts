@@ -5,7 +5,8 @@
 
 import { BusinessRule } from './business-rules.models';
 
-export const MOCK_BUSINESS_RULES: BusinessRule[] = [
+export const SEED_BUSINESS_RULES: BusinessRule[] = [
+
   {
     id: 'rule-01',
     code: 'PICKING_STRATEGY',
