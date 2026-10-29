@@ -246,16 +246,23 @@ export class ActiveSessionsMonitorComponent implements OnInit {
   /** Traduce el rol técnico a etiqueta legible */
   getRoleLabel(role?: string): string {
     if (!role) return 'Operario';
+    const clean = role.replace('ROLE_', '').toUpperCase();
     const labels: Record<string, string> = {
-      'ROLE_ADMIN': 'Administrador',
-      'ROLE_OPERATIONS_MANAGER': 'Gerente de Operaciones',
-      'ROLE_WAREHOUSE_MANAGER': 'Gerente de Almacén',
-      'ROLE_DOCK_SUPERVISOR': 'Supervisor de Andén',
-      'ROLE_WAREHOUSE_OPERATOR': 'Operario',
-      'ROLE_QM_INSPECTOR': 'Inspector de Calidad',
-      'ROLE_AUDITOR': 'Auditor',
-      'ROLE_CLIENT': 'Cliente 3PL',
+      'ADMIN': 'Director General',
+      'CEO': 'Director General',
+      'OPERATIONS_MANAGER': 'Gerente de Operaciones',
+      'OPERATIONS_COORDINATOR': 'Coordinador de Operaciones',
+      'OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
+      'CONTROL_DESK': 'Mesa de Control',
+      'SHIFT_LEADER': 'Líder de Turno',
+      'QM_INSPECTOR': 'Inspector de Calidad',
+      'WAREHOUSE_OPERATOR': 'Operario de Almacén',
+      'SECURITY_GUARD': 'Guardia de Seguridad',
+      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'DOCK_SUPERVISOR': 'Supervisor de Andén',
+      'AUDITOR': 'Auditor',
+      'CLIENT': 'Cliente 3PL',
     };
-    return labels[role] ?? role.replace('ROLE_', '').replace(/_/g, ' ');
+    return labels[clean] ?? labels[role] ?? role.replace('ROLE_', '').replace(/_/g, ' ');
   }
 }

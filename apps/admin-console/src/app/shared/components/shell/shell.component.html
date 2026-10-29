@@ -885,6 +885,9 @@
 <fg-forbot-chat-drawer></fg-forbot-chat-drawer>
 
 <!-- Floating Action Button (FAB) ForBot AI — Esquina Inferior Derecha -->
-<div class="fixed bottom-6 right-6 z-50">
-  <fg-forbot-trigger-button></fg-forbot-trigger-button>
-</div>
+@if (!forbotEngine.isDrawerOpen()) {
+  <div class="fixed bottom-6 right-6 z-40">
+    <fg-forbot-trigger-button></fg-forbot-trigger-button>
+  </div>
+}
+

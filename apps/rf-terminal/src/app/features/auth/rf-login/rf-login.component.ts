@@ -9,7 +9,7 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthState, AuthService, UserRole } from '@4guard/shared-core';
+import { AuthState, AuthService, UserRole, User } from '@4guard/shared-core';
 import { PwaService } from '../../../core/services/pwa.service';
 
 type LoginMode = 'credentials' | 'pin' | 'scan';
@@ -37,6 +37,13 @@ export class RfLoginComponent {
   protected readonly error           = signal<string | null>(null);
   protected readonly isOffline       = signal(!navigator.onLine);
   protected readonly currentLiveTime = signal<string>(new Date().toLocaleTimeString('es-MX'));
+
+  // ── Cambio obligatorio de PIN / Contraseña temporal tras reseteo ──
+  protected readonly mustChangePin   = signal<boolean>(false);
+  protected readonly pendingUser     = signal<User | null>(null);
+  protected readonly newPin          = signal<string>('');
+  protected readonly confirmNewPin   = signal<string>('');
+  protected readonly pinChangeStep   = signal<'new' | 'confirm'>('new');
 
   protected readonly loginForm = this.fb.nonNullable.group({
     identifier: ['', [Validators.required]],
@@ -72,6 +79,15 @@ export class RfLoginComponent {
     return '●'.repeat(this.pin().length) + '•'.repeat(Math.max(0, 4 - this.pin().length));
   }
 
+  protected get activeNewPinValue(): string {
+    return this.pinChangeStep() === 'new' ? this.newPin() : this.confirmNewPin();
+  }
+
+  protected get newPinDisplay(): string {
+    const val = this.activeNewPinValue;
+    return '●'.repeat(val.length) + '•'.repeat(Math.max(0, 4 - val.length));
+  }
+
   protected get canSubmitPin(): boolean {
     return this.pin().length === 4 && this.operatorCode().trim().length > 0;
   }
@@ -96,6 +112,97 @@ export class RfLoginComponent {
 
   protected clearPin(): void {
     this.pin.set('');
+  }
+
+  // ── Métodos para actualización de PIN Personal ──
+  protected appendNewPinDigit(digit: string): void {
+    this.error.set(null);
+    if (this.pinChangeStep() === 'new') {
+      if (this.newPin().length < 4) {
+        this.newPin.update(p => p + digit);
+      }
+    } else {
+      if (this.confirmNewPin().length < 4) {
+        this.confirmNewPin.update(p => p + digit);
+      }
+    }
+  }
+
+  protected deleteNewPinDigit(): void {
+    this.error.set(null);
+    if (this.pinChangeStep() === 'new') {
+      this.newPin.update(p => p.slice(0, -1));
+    } else {
+      this.confirmNewPin.update(p => p.slice(0, -1));
+    }
+  }
+
+  protected clearNewPinDigits(): void {
+    this.error.set(null);
+    if (this.pinChangeStep() === 'new') {
+      this.newPin.set('');
+    } else {
+      this.confirmNewPin.set('');
+    }
+  }
+
+  protected resetPinChangeStep(): void {
+    this.pinChangeStep.set('new');
+    this.newPin.set('');
+    this.confirmNewPin.set('');
+    this.error.set(null);
+  }
+
+  protected cancelPinChange(): void {
+    this.mustChangePin.set(false);
+    this.pendingUser.set(null);
+    this.newPin.set('');
+    this.confirmNewPin.set('');
+    this.error.set(null);
+    this.authService.logout();
+  }
+
+  protected proceedOrSubmitNewPin(): void {
+    if (this.pinChangeStep() === 'new') {
+      if (this.newPin().length !== 4) {
+        this.error.set('Tu nuevo PIN personal debe tener exactamente 4 dígitos.');
+        return;
+      }
+      this.error.set(null);
+      this.pinChangeStep.set('confirm');
+      return;
+    }
+
+    if (this.confirmNewPin().length !== 4) {
+      this.error.set('Confirma los 4 dígitos de tu nuevo PIN personal.');
+      return;
+    }
+
+    if (this.newPin() !== this.confirmNewPin()) {
+      this.error.set('Los PIN ingresados no coinciden. Inténtalo de nuevo.');
+      this.confirmNewPin.set('');
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    this.authService.changePassword(this.newPin()).subscribe({
+      next: () => {
+        this.isLoading.set(false);
+        const user = this.pendingUser() || this.authService.currentUser();
+        this.mustChangePin.set(false);
+        this.pendingUser.set(null);
+        this.newPin.set('');
+        this.confirmNewPin.set('');
+        this.navigateToUserLanding(user);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        const msg = err?.error?.message || err?.message || 'No se pudo actualizar el PIN personal. Intenta con otro PIN de 4 dígitos.';
+        this.error.set(msg);
+      }
+    });
   }
 
   protected triggerScan(): void {
@@ -132,6 +239,14 @@ export class RfLoginComponent {
         this.isLoading.set(false);
         this.pin.set('');
         this.operatorCode.set('');
+        if (user?.changePasswordRequired) {
+          this.pendingUser.set(user);
+          this.newPin.set('');
+          this.confirmNewPin.set('');
+          this.pinChangeStep.set('new');
+          this.mustChangePin.set(true);
+          return;
+        }
         this.navigateToUserLanding(user);
       },
       error: (err) => {
@@ -157,6 +272,14 @@ export class RfLoginComponent {
     this.authService.login({ email: cleanIdentifier, password }).subscribe({
       next: (user) => {
         this.isLoading.set(false);
+        if (user?.changePasswordRequired) {
+          this.pendingUser.set(user);
+          this.newPin.set('');
+          this.confirmNewPin.set('');
+          this.pinChangeStep.set('new');
+          this.mustChangePin.set(true);
+          return;
+        }
         this.navigateToUserLanding(user);
       },
       error: (err) => {

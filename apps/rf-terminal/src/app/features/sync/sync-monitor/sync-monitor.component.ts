@@ -444,13 +444,20 @@ export class SyncMonitorComponent implements OnInit, OnDestroy {
   };
 
   constructor() {
-    // Sincronizar reactivamente las colas de ejemplo al conmutar el rol activo
+    // Sincronizar reactivamente con la cola real de IndexedDB (SyncState)
     effect(() => {
-      const role = this.currentRole();
-      const defaultQueue = ROLE_DEFAULT_QUEUES[role] || ROLE_DEFAULT_QUEUES[UserRole.WAREHOUSE_OPERATOR] || [];
-      const defaultHist = ROLE_DEFAULT_HISTORY[role] || ROLE_DEFAULT_HISTORY[UserRole.WAREHOUSE_OPERATOR] || [];
-      this.queue.set(JSON.parse(JSON.stringify(defaultQueue)));
-      this.syncedHistory.set(JSON.parse(JSON.stringify(defaultHist)));
+      const realOps = this.syncState.syncQueue();
+      const mappedQueue: SyncEntryItem[] = realOps.map((op) => ({
+        id: op.id,
+        opType: (op.actionType as SyncEntryItem['opType']) || 'SCAN_RECEIPT',
+        title: op.description || `${op.method} ${op.url}`,
+        referenceCode: op.id.slice(0, 12).toUpperCase(),
+        timestamp: new Date(op.createdAt).toISOString(),
+        status: op.failed ? 'ERROR' : 'PENDING',
+        retries: op.retryCount,
+        payloadSummary: op.lastError || (op.body ? op.body.slice(0, 90) : 'Operación en cola IndexedDB'),
+      }));
+      this.queue.set(mappedQueue);
     });
   }
 
@@ -583,6 +590,7 @@ export class SyncMonitorComponent implements OnInit, OnDestroy {
    * Eliminar una transacción específica de la cola
    */
   protected discardOperation(id: string): void {
+    void this.syncState.discardOperation(id);
     this.queue.update(q => q.filter(e => e.id !== id));
     this.toast.warning(`Transacción ${id} descartada de la cola local.`, 'OPERACIÓN DESCARTADA');
   }

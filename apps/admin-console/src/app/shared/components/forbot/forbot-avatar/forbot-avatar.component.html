@@ -1,19 +1,22 @@
 <div
-  class="forbot-avatar-container relative inline-flex items-center justify-center select-none"
+  class="forbot-avatar-container relative flex items-center justify-center select-none"
   [style.width.px]="size"
   [style.height.px]="size"
+  [style.max-width.px]="size"
+  [style.max-height.px]="size"
 >
   <!-- Halo exterior Dorado / Ámbar luminoso -->
-  <div class="absolute -inset-0.5 rounded-full bg-gradient-to-tr from-amber-400/40 via-amber-300/50 to-yellow-500/40 blur-xs opacity-80 animate-pulse"></div>
+  <div class="absolute -inset-0.5 rounded-full bg-gradient-to-tr from-amber-400/40 via-amber-300/50 to-yellow-500/40 blur-[1px] opacity-80 animate-pulse"></div>
 
   <!-- Contenedor del Avatar en Fondo Blanco Puro y Borde Dorado -->
-  <div class="relative w-full h-full rounded-full bg-white border border-amber-400/60 p-0.5 flex items-center justify-center shadow-md overflow-hidden">
-    <img src="assets/forbot-avatar.png" alt="ForBot AI" class="w-full h-full object-contain select-none" />
+  <div class="relative w-full h-full rounded-full bg-white border border-amber-400/70 p-0.5 flex items-center justify-center shadow-md overflow-hidden shrink-0">
+    <img src="assets/forbot-avatar.png" alt="ForBot AI" class="w-full h-full object-contain select-none max-w-full max-h-full block shrink-0" />
   </div>
 
   <!-- Punto Verde "En Vivo / Online" -->
-  <span class="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 z-10">
+  <span class="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5 z-10">
     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-white shadow-[0_0_6px_rgba(16,185,129,0.9)]"></span>
+    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 border border-white shadow-[0_0_6px_rgba(16,185,129,0.9)]"></span>
   </span>
 </div>
+

@@ -34,9 +34,16 @@ export interface User {
 
   /** Indica si la cuenta está activa */
   active: boolean;
+  changePasswordRequired?: boolean;
 
   /** Username institucional (opcional si usa email) */
   username?: string;
+
+  /** UUID del registro de Montacarguista vinculado (wms.forklift_operators.id) */
+  forkliftOperatorId?: string;
+
+  /** Código de operador / gafete (ej. MC-001) */
+  employeeCode?: string;
 
   /** Organización o Corporativo */
   organizationName?: string;

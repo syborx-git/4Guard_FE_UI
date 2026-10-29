@@ -55,8 +55,9 @@ function locationCodeValidator(ctrl: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector:        'fg-layout-management',
-  standalone:      true,
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+
   imports:         [CommonModule, ReactiveFormsModule, NgTemplateOutlet, RouterLink],
   templateUrl:     './layout-management.component.html',
   styleUrl:        './layout-management.component.css',

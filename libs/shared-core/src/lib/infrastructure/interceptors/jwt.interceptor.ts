@@ -19,6 +19,9 @@ const PUBLIC_ENDPOINTS: string[] = [
   '/api/auth/login',
   '/api/auth/refresh',
   '/api/auth/forgot-password',
+  '/api/v1/auth/login',
+  '/api/v1/auth/refresh',
+  '/api/v1/auth/forgot-password',
 ];
 
 /**
@@ -69,7 +72,7 @@ export const jwtInterceptor: HttpInterceptorFn = (
       }
 
       // 401 Unauthorized: intentar refrescar el token real
-      if (error.status === 401 && !request.url.includes('/api/auth/refresh')) {
+      if (error.status === 401 && !request.url.includes('/auth/refresh')) {
         return authService.refreshToken().pipe(
           switchMap((newToken) => {
             const retryRequest = addAuthorizationHeader(request, newToken);

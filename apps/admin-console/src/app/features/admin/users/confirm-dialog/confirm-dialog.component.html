@@ -1,11 +1,11 @@
 <!-- confirm-dialog.component.html -->
 <!-- Diálogo de confirmación genérico y reutilizable — 4GUARD WMS -->
 <div class="cd-backdrop" role="dialog" aria-modal="true" [attr.aria-labelledby]="'cd-title'">
-  <div class="cd-card" tabindex="-1">
+  <div class="cd-card" [class.cd-card--danger]="variant() === 'danger'" tabindex="-1">
 
-    <!-- Icono de advertencia -->
-    <div class="cd-icon-wrap">
-      <span class="material-symbols-outlined cd-icon">lock_reset</span>
+    <!-- Icono de advertencia o peligro -->
+    <div class="cd-icon-wrap" [class.cd-icon-wrap--danger]="variant() === 'danger'">
+      <span class="material-symbols-outlined cd-icon">{{ icon() }}</span>
     </div>
 
     <!-- Contenido -->
@@ -31,14 +31,16 @@
       <button
         id="cd-confirm-btn"
         type="button"
-        class="cd-btn cd-btn--primary"
+        class="cd-btn"
+        [class.cd-btn--primary]="variant() === 'primary'"
+        [class.cd-btn--danger]="variant() === 'danger'"
         [disabled]="isLoading()"
         (click)="onConfirm()">
         @if (isLoading()) {
           <span class="cd-spinner" aria-hidden="true"></span>
-          <span>Generando...</span>
+          <span>Procesando...</span>
         } @else {
-          <span>{{ confirmLabel() }}</span>
+          <span class="cd-btn-text">{{ confirmLabel() }}</span>
         }
       </button>
 

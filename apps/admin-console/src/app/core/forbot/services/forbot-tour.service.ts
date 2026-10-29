@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { driver, Driver, DriveStep } from 'driver.js';
 
 @Injectable({
@@ -8,52 +8,72 @@ export class ForbotTourService {
   private activeDriver: Driver | null = null;
 
   /**
-   * Inicia el Tour Guiado e Interactivo de 4GUARD WMS usando Driver.js
+   * Inicia el Tour Guiado e Interactivo de 4GUARD WMS usando Driver.js.
+   * Utiliza selectores garantizados presentes en el Shell general para funcionar
+   * sin importar en qué pantalla o módulo se encuentre el usuario.
    */
   startInterfaceTour(onComplete?: () => void): void {
     const steps: DriveStep[] = [
       {
-        element: '#sidebar-nav, .sidebar-container, nav',
+        element: '.sidebar__nav',
         popover: {
-          title: '🧭 1. Menú de Navegación 4GUARD',
-          description: 'Accede rápidamente a los módulos operativos: Inventarios, Recepción en Andén, Traspasos y Despacho.',
+          title: '🧭 1. Menú Principal de Navegación',
+          description: 'Accede rápidamente a todos los módulos operativos: Caseta de Seguridad, Recepción en Andén, Calidad QM, Topología de Almacén y Consulta de Inventario.',
           side: 'right',
           align: 'start'
         }
       },
       {
-        element: '#inventory-search-bar, .search-container, input[type="search"]',
+        element: '.shell__branch-selector',
         popover: {
-          title: '🔍 2. Búsqueda Multicriterio',
-          description: 'Filtra al instante por SKU, Folio consecutivo (#563633), Remisión, Lote o Cliente corporativo.',
+          title: '🏢 2. Centro de Distribución & Sucursal',
+          description: 'Identifica la sucursal activa (Toluca BR-TOL-01). Todas las transacciones, andenes y existencias se filtran según esta sede.',
+          side: 'bottom',
+          align: 'start'
+        }
+      },
+      {
+        element: '.shell__live-clock',
+        popover: {
+          title: '⏱️ 3. Sincronización en Tiempo Real',
+          description: 'Reloj operacional sincronizado al segundo. Marca el tiempo oficial de entrada a caseta, estadía en rampa y corte de turnos.',
           side: 'bottom',
           align: 'center'
         }
       },
       {
-        element: '#inventory-grid, .inventory-table, table',
+        element: '#waffle-menu-btn',
         popover: {
-          title: '📊 3. Grid de Inventario en Tiempo Real',
-          description: 'Controla el ciclo de vida del producto con los 8 estados FSM y la semaforización de la Regla de Pablo (<30 días).',
-          side: 'top',
-          align: 'center'
+          title: '📦 4. Ecosistema 4GUARD & Google Suite',
+          description: 'Acceso directo a herramientas complementarias: Gmail, Google Drive, WhatsApp de transportistas, reglas de negocio y manuales operativos.',
+          side: 'bottom',
+          align: 'end'
         }
       },
       {
-        element: '#btn-export-xlsx, .export-btn, button:has(svg)',
+        element: '#theme-toggle-btn',
         popover: {
-          title: '📑 4. Exportación Oficial XLSX',
-          description: 'Genera y descarga en tu navegador el reporte oficial de 21 columnas en tiempo real.',
+          title: '🌓 5. Modo Día / Modo Noche',
+          description: 'Alterna al instante entre la interfaz de alto contraste para exteriores de andén y el modo nocturno para reducción de fatiga visual.',
+          side: 'bottom',
+          align: 'end'
+        }
+      },
+      {
+        element: '.sidebar__user',
+        popover: {
+          title: '👤 6. Perfil, Turno & Bloqueo por PIN',
+          description: 'Consulta tu rol asignado, pausa o bloquea tu estación de trabajo y realiza cambio rápido de operador de montacargas por PIN de 4 dígitos.',
+          side: 'right',
+          align: 'end'
+        }
+      },
+      {
+        element: 'fg-forbot-trigger-button',
+        popover: {
+          title: '🤖 7. ForBot AI — Copiloto WMS (Ctrl + K)',
+          description: 'Tu asistente inteligente en vivo. Presiona Ctrl + K en cualquier momento para consultar mermas, caducidades FEFO, normas NOM-251 y dictámenes de calidad.',
           side: 'left',
-          align: 'center'
-        }
-      },
-      {
-        element: '#forbot-widget-container, .forbot-trigger-btn, fg-forbot-trigger-button',
-        popover: {
-          title: '🤖 5. ForBot AI — Tu Mano Derecha',
-          description: 'Consulta dudas de reglas de negocio, recibe alertas preventivas y capacítate en cualquier momento.',
-          side: 'top',
           align: 'end'
         }
       }
@@ -64,8 +84,8 @@ export class ForbotTourService {
       animate: true,
       allowClose: true,
       overlayColor: 'rgba(15, 23, 42, 0.82)',
-      stagePadding: 6,
-      stageRadius: 10,
+      stagePadding: 8,
+      stageRadius: 12,
       nextBtnText: 'Siguiente ➔',
       prevBtnText: '⬅ Anterior',
       doneBtnText: '¡Entendido! 🎉',
@@ -88,3 +108,4 @@ export class ForbotTourService {
     }
   }
 }
+

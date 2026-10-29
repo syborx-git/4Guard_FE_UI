@@ -567,7 +567,7 @@ export class QualityStateService {
       message: `Bloqueo #${folio} para SKU ${created.sku} (${created.defectCategory || 'Defecto'} - ${created.quantity} ${created.unitOfMeasure || 'UAs'}).`,
       referenceFolio: folio,
       route: '/quality/blocks',
-      targetRoles: ['ADMIN', 'QM_INSPECTOR', 'QUALITY_LEADER', 'AUDITOR', 'OPERATIONS_MANAGER'],
+      targetRoles: ['ADMIN', 'QM_INSPECTOR', 'QUALITY_LEADER', 'AUDITOR'],
       targetRoutes: ['/quality'],
       severity: created.severity === 'CRITICAL' ? 'CRITICAL' : 'WARNING',
       data: created

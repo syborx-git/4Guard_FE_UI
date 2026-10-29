@@ -1,51 +1,14 @@
 /**
  * @file forbot.models.ts
- * @description Modelos de datos para el asistente conversacional inteligente ForBot (4GUARD AI).
+ * @description Re-exportación de modelos de ForBot (4GUARD AI) desde @4guard/shared-core.
  */
 
-export type ForbotMode = 'operativo' | 'tutor';
-
-export type ForbotIntentType =
-  | 'CADUCIDAD_MERMAS'
-  | 'ESTADO_RAMPAS'
-  | 'SATURACION_BODEGAS'
-  | 'PRODUCTIVIDAD_MONTACARGAS'
-  | 'BLOQUEOS_CALIDAD_NOM251'
-  | 'REGLA_DIUREX_PT'
-  | 'TOLERANCIA_INCLINACION_5'
-  | 'LIMITE_HUMEDAD_65'
-  | 'MUESTREO_MATERIALES_IT01'
-  | 'REPARACION_TARIMAS_IT02'
-  | 'RESTRICCION_LIBERACION_RBAC'
-  | 'CRITERIOS_TRANSPORTE_F01'
-  | 'CONSULTA_TARIMA_SSCC_CALIDAD'
-  | 'GENERAL_HELP'
-  | 'TOUR_DRIVER_JS'
-  | 'FSM_8_ESTADOS'
-  | 'REGLA_PABLO_INFO'
-  | 'UNKNOWN';
-
-export interface ForbotWidgetItem {
-  label: string;
-  value: string;
-  badgeColor?: 'emerald' | 'amber' | 'rose' | 'blue' | 'purple';
-}
-
-export interface ForbotWidgetData {
-  type: 'kpi-summary' | 'status-list' | 'warning-card' | 'tutorial-card';
-  title: string;
-  items: ForbotWidgetItem[];
-  actionRoute?: string;
-  actionLabel?: string;
-  proactiveTip?: string;
-}
-
-export interface ForbotChatMessage {
-  id: string;
-  sender: 'user' | 'bot';
-  text: string;
-  timestamp: string; // Formato HH:MM:SS
-  intent?: ForbotIntentType;
-  widgetData?: ForbotWidgetData;
-  isTyping?: boolean;
-}
+export type {
+  ForbotMode,
+  ForbotIntentType,
+  ForbotWidgetItem,
+  ForbotActionPayload,
+  ForbotWidgetData,
+  ForbotChatMessage,
+  VoiceRecognitionState,
+} from '@4guard/shared-core';

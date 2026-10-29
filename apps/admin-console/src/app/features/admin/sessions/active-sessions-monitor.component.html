@@ -358,6 +358,8 @@
     [title]="'Revocar Sesión Activa'"
     [message]="'¿Estás seguro de que deseas revocar la sesión activa de ' + session.fullName + '? El usuario será desconectado inmediatamente del sistema.'"
     [confirmLabel]="'Revocar Sesión'"
+    [icon]="'logout'"
+    [variant]="'danger'"
     [isLoading]="isRevoking()"
     (confirmed)="confirmRevoke()"
     (cancelled)="cancelRevoke()"

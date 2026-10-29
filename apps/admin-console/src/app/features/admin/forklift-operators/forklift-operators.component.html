@@ -187,186 +187,176 @@
     </div>
   }
 
-  <!-- ═══════════════════════════════════════════════════════════════════
-       SPLIT VIEW 35/65 (MASTER/DETAIL)
+    <!-- ═══════════════════════════════════════════════════════════════════
+       BARRA DE SELECCIÓN FLOTANTE (OPCIÓN A)
        ════════════════════════════════════════════════════════════════ -->
-  <div class="carriers-split">
-
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA — Directorio (35%)
-         ───────────────────────────────────────────────────────────── -->
-    <aside class="carriers-directory" aria-label="Directorio de montacarguistas">
-
-      <!-- Buscador y Filtros -->
-      <div class="carriers-directory__filters">
-
-        <div class="carriers-search">
-          <span class="material-symbols-outlined carriers-search__icon" aria-hidden="true">search</span>
-          <input
-            id="operator-search"
-            class="carriers-search__input"
-            type="search"
-            placeholder="Nombre, código o licencia DC-3…"
-            [value]="searchTerm()"
-            (input)="searchTerm.set($any($event.target).value)"
-            aria-label="Buscar montacarguista por nombre, código o licencia DC-3"
-            autocomplete="off"
-          />
+  <div class="operators-selector-bar">
+    <div class="operator-selector-dropdown-wrap">
+      <button
+        type="button"
+        class="operator-selector-btn"
+        (click)="toggleOperatorDropdown($event)"
+        [class.operator-selector-btn--open]="isOperatorDropdownOpen()"
+        aria-haspopup="listbox"
+        [attr.aria-expanded]="isOperatorDropdownOpen()"
+        aria-label="Abrir directorio desplegable de montacarguistas">
+        <div class="operator-selector-btn__avatar">
+          {{ selectedOperator() ? (selectedOperator()!.firstName[0] + selectedOperator()!.lastNamePaternal[0]) : '🚜' }}
         </div>
-
-        <div class="carriers-filters-row">
-          <div class="carriers-filter-group">
-            <select
-              id="filter-license"
-              class="carriers-filter-select"
-              [value]="licenseFilter()"
-              (change)="licenseFilter.set($any($event.target).value)"
-              aria-label="Filtrar por estatus de licencia">
-              <option value="ALL">Todas las licencias</option>
-              <option value="VIGENTE">Licencia Vigente</option>
-              <option value="POR_VENCER">Por Vencer (&lt; 30 días)</option>
-              <option value="VENCIDA">Licencia Vencida</option>
-            </select>
-          </div>
-
-          @if (searchTerm() || licenseFilter() !== 'ALL') {
-            <button
-              class="carriers-filter-clear"
-              type="button"
-              (click)="clearFilters()"
-              title="Limpiar filtros"
-              aria-label="Limpiar filtros">
-              <span class="material-symbols-outlined">filter_alt_off</span>
-            </button>
-          }
-        </div>
-
-        <p class="carriers-search__hint">
-          <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          Filtra por nombre, código o licencia DC-3
-        </p>
-      </div>
-
-      <!-- Estados de la Lista -->
-      @if (isLoading()) {
-        <div class="carriers-directory__list" aria-busy="true" aria-label="Cargando montacarguistas">
-          @for (i of [1,2,3,4]; track i) {
-            <div class="carrier-item carrier-item--skeleton">
-              <div class="skeleton skeleton--avatar"></div>
-              <div class="carrier-item__body">
-                <div class="skeleton skeleton--line skeleton--line-wide"></div>
-                <div class="skeleton skeleton--line skeleton--line-medium"></div>
-                <div class="skeleton skeleton--line skeleton--line-short"></div>
-              </div>
-            </div>
-          }
-        </div>
-      } @else if (loadError()) {
-        <div class="carriers-state carriers-state--error" role="alert">
-          <div class="carriers-state__icon-wrap">
-            <span class="material-symbols-outlined carriers-state__icon">cloud_off</span>
-          </div>
-          <p class="carriers-state__title">Error de conexión</p>
-          <p class="carriers-state__desc">{{ loadError() }}</p>
-          <button class="carriers-btn carriers-btn--ghost carriers-btn--sm" type="button" (click)="reloadOperators()">
-            <span class="material-symbols-outlined">refresh</span>
-            Reintentar
-          </button>
-        </div>
-      } @else if (isListEmpty()) {
-        <div class="carriers-state" role="status">
-          <div class="carriers-state__icon-wrap">
-            <span class="material-symbols-outlined carriers-state__icon">engineering</span>
-          </div>
-          <p class="carriers-state__title">Sin registros</p>
-          <p class="carriers-state__desc">No hay montacarguistas registrados aún en la base de datos.</p>
-          <button class="carriers-btn carriers-btn--primary carriers-btn--sm" type="button" (click)="startNewOperator()">
-            <span class="material-symbols-outlined">add</span>
-            Registrar el primero
-          </button>
-        </div>
-      } @else if (hasNoResults()) {
-        <div class="carriers-state" role="status">
-          <div class="carriers-state__icon-wrap">
-            <span class="material-symbols-outlined carriers-state__icon">search_off</span>
-          </div>
-          <p class="carriers-state__title">Sin coincidencias</p>
-          <p class="carriers-state__desc">Ningún operador coincide con los filtros aplicados.</p>
-          <button class="carriers-btn carriers-btn--ghost carriers-btn--sm" type="button" (click)="clearFilters()">
-            <span class="material-symbols-outlined">filter_alt_off</span>
-            Limpiar filtros
-          </button>
-        </div>
-      } @else {
-        <!-- Lista de Operadores -->
-        <ul class="carriers-directory__list" role="listbox" aria-label="Lista de montacarguistas">
-          @for (op of filteredOperators(); track op.id) {
-            <li
-              class="carrier-item"
-              [class.carrier-item--selected]="selectedOperatorId() === op.id"
-              [class.carrier-item--suspended]="op.licenseStatus === 'POR_VENCER'"
-              [class.carrier-item--inactive]="op.licenseStatus === 'VENCIDA'"
-              role="option"
-              [attr.aria-selected]="selectedOperatorId() === op.id"
-              (click)="selectOperator(op)"
-              tabindex="0">
-
-              <!-- Avatar -->
-              <div class="carrier-avatar avatar--external" aria-hidden="true">
-                {{ (op.firstName ? op.firstName[0] : '') + (op.lastNamePaternal ? op.lastNamePaternal[0] : '') }}
-              </div>
-
-              <!-- Info -->
-              <div class="carrier-item__body">
-                <div class="carrier-item__name">{{ op.fullName }}</div>
-                <div class="carrier-item__business" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 2px 0;">
-                  @if (op.hasAccess || op.userId) {
-                    <span class="carrier-status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3); font-size: 0.62rem; padding: 1px 6px;">
-                      <span class="material-symbols-outlined" style="font-size: 11px; margin-right: 2px;">tablet_mac</span>
-                      &#64;{{ op.username || op.code }}
-                    </span>
-                  }
-                </div>
-                <div class="carrier-item__meta">
-                  <span class="carrier-item__rfc">{{ op.code }}</span>
-                  @if (op.licenseNumberDc3) {
-                    <span class="carrier-item__type">DC-3: {{ op.licenseNumberDc3 }}</span>
-                  }
-                </div>
-              </div>
-
-              <!-- Estado Licencia -->
-              <div class="carrier-item__status-col">
-                <span
-                  class="carrier-status-badge"
-                  [ngClass]="{
-                    'carrier-status-badge--active': op.licenseStatus === 'VIGENTE',
-                    'carrier-status-badge--suspended': op.licenseStatus === 'POR_VENCER',
-                    'carrier-status-badge--inactive': op.licenseStatus === 'VENCIDA'
-                  }">
-                  {{ op.licenseStatus === 'VIGENTE' ? 'Vigente' : op.licenseStatus === 'POR_VENCER' ? 'Por vencer' : 'Vencida' }}
-                </span>
-                <time class="carrier-item__date">{{ op.licenseExpirationDate }}</time>
-              </div>
-
-            </li>
-          }
-        </ul>
-
-        <!-- Contador -->
-        <div class="carriers-directory__footer">
-          <span class="carriers-count">
-            {{ filteredOperators().length }} montacarguista{{ filteredOperators().length !== 1 ? 's' : '' }}
+        <div class="operator-selector-btn__text">
+          <span class="operator-selector-btn__eyebrow">
+            {{ formMode() === 'create' ? 'Alta de Nuevo Montacarguista' : 'Montacarguista Seleccionado' }}
+          </span>
+          <span class="operator-selector-btn__title">
+            {{ selectedOperator() ? (selectedOperator()!.fullName + ' (' + selectedOperator()!.code + ' · ' + (selectedOperator()!.username ? '@' + selectedOperator()!.username : 'Sin RF') + ')') : 'Directorio de Montacarguistas WMS — Clic para seleccionar...' }}
           </span>
         </div>
+        <span class="material-symbols-outlined operator-selector-btn__chevron">
+          {{ isOperatorDropdownOpen() ? 'expand_less' : 'expand_more' }}
+        </span>
+      </button>
+
+      <!-- Panel Popover Flotante de Selección -->
+      @if (isOperatorDropdownOpen()) {
+        <div class="operator-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+          <div class="operator-dropdown-popover__header">
+            <div class="operator-dropdown-popover__title-box">
+              <span class="material-symbols-outlined text-amber-500">engineering</span>
+              <span>Directorio de Montacarguistas ({{ filteredOperators().length }} registrados)</span>
+            </div>
+            <button type="button" class="operator-dropdown-popover__close" (click)="closeOperatorDropdown()" title="Cerrar selector">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- Buscador y filtros integrados -->
+          <div class="operator-dropdown-popover__filters">
+            <div class="carriers-search">
+              <span class="material-symbols-outlined carriers-search__icon" aria-hidden="true">search</span>
+              <input
+                id="operator-search-popover"
+                class="carriers-search__input"
+                type="search"
+                placeholder="Nombre, código o licencia DC-3…"
+                [value]="searchTerm()"
+                (input)="searchTerm.set($any($event.target).value)"
+                aria-label="Buscar montacarguista"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="carriers-filters-row">
+              <select
+                id="filter-license-popover"
+                class="carriers-filter-select"
+                [value]="licenseFilter()"
+                (change)="licenseFilter.set($any($event.target).value)"
+                aria-label="Filtrar por estatus de licencia">
+                <option value="ALL">Todas las licencias</option>
+                <option value="VIGENTE">Licencia Vigente</option>
+                <option value="POR_VENCER">Por Vencer (&lt; 30 días)</option>
+                <option value="VENCIDA">Licencia Vencida</option>
+              </select>
+
+              @if (searchTerm() || licenseFilter() !== 'ALL') {
+                <button
+                  class="carriers-filter-clear"
+                  type="button"
+                  (click)="clearFilters()"
+                  title="Limpiar filtros"
+                  aria-label="Limpiar filtros">
+                  <span class="material-symbols-outlined">filter_alt_off</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Lista scrolleable interna de montacarguistas -->
+          <div class="operator-dropdown-popover__scrollable">
+            @if (isLoading()) {
+              <div class="carriers-directory__list" aria-busy="true">
+                @for (i of [1,2,3,4]; track i) {
+                  <div class="carrier-item carrier-item--skeleton">
+                    <div class="skeleton skeleton--avatar"></div>
+                    <div class="carrier-item__body">
+                      <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                      <div class="skeleton skeleton--line skeleton--line-medium"></div>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else if (loadError()) {
+              <div class="carriers-state carriers-state--error">
+                <p class="carriers-state__title">Error al cargar</p>
+                <p class="carriers-state__desc">{{ loadError() }}</p>
+                <button class="carriers-btn carriers-btn--ghost" type="button" (click)="forkliftService.loadOperators()">Reintentar</button>
+              </div>
+            } @else if (isListEmpty() || hasNoResults()) {
+              <div class="carriers-state">
+                <span class="material-symbols-outlined carriers-state__icon">search_off</span>
+                <p class="carriers-state__title">Sin coincidencias</p>
+                <p class="carriers-state__desc">Ningún operador coincide con los filtros aplicados.</p>
+              </div>
+            } @else {
+              <ul class="carriers-directory__list" role="listbox">
+                @for (op of filteredOperators(); track op.id) {
+                  <li
+                    class="carrier-item"
+                    [class.carrier-item--selected]="selectedOperatorId() === op.id"
+                    [class.carrier-item--inactive]="!op.isActive"
+                    role="option"
+                    (click)="selectOperator(op)"
+                    tabindex="0">
+                    <div class="carrier-avatar" aria-hidden="true">
+                      {{ op.firstName[0] }}{{ op.lastNamePaternal[0] }}
+                    </div>
+                    <div class="carrier-item__body">
+                      <div class="carrier-item__name" [title]="op.fullName">
+                        {{ op.fullName }}
+                      </div>
+                      <div class="carrier-item__code">
+                        <span class="font-mono text-emerald-400 font-bold">&#64;{{ op.username || op.code }}</span>
+                      </div>
+                      <div class="carrier-item__rfc">
+                        <span class="carrier-rfc-badge">{{ op.code }}</span>
+                      </div>
+                      <div class="carrier-item__branch-line" [title]="op.branchName || 'Todas las sucursales'">
+                        <span class="material-symbols-outlined carrier-item__branch-icon">location_on</span>
+                        <span>{{ op.branchName ? (op.branchName.replace('CENTRO DE DISTRIBUCION ', 'CEDIS ')) : 'Corporativo' }}</span>
+                      </div>
+                      <div class="carrier-item__footer-info">
+                        <span class="carrier-status-badge text-[10px]" [ngClass]="{
+                          'carrier-status-badge--active': op.licenseStatus === 'VIGENTE',
+                          'carrier-status-badge--suspended': op.licenseStatus === 'POR_VENCER',
+                          'carrier-status-badge--inactive': op.licenseStatus === 'VENCIDA'
+                        }">
+                          {{ op.licenseStatus === 'VIGENTE' ? 'DC-3 Vigente' : op.licenseStatus === 'POR_VENCER' ? 'DC-3 Por vencer' : 'DC-3 Vencida' }}
+                        </span>
+                      </div>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
       }
+    </div>
 
-    </aside>
+    <!-- Botón directo de Nuevo Montacarguista -->
+    <button
+      id="btn-new-operator-bar"
+      class="carriers-btn carriers-btn--primary"
+      type="button"
+      (click)="startNewOperator(); closeOperatorDropdown()"
+      aria-label="Registrar nuevo montacarguista">
+      <span class="material-symbols-outlined">person_add</span>
+      + Nuevo Montacarguista
+    </button>
+  </div>
 
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA DERECHA — Detalle / Formulario (65%)
-         ───────────────────────────────────────────────────────────── -->
-    <main class="carriers-detail" aria-label="Detalle del montacarguista">
+  <div class="operators-fullwidth-content">
+    <main class="carriers-detail carriers-detail--fullwidth" aria-label="Detalle del montacarguista">
 
       <div #formSection class="carriers-form-container">
 
@@ -506,7 +496,43 @@
               </div>
             </fieldset>
 
-            <!-- SECCIÓN 2 — Acceso a Terminal RF / Tableta -->
+            <!-- SECCIÓN 2 — Asignación Operativa (Sucursal & Turno WMS) -->
+            <fieldset class="carriers-form-section">
+              <legend class="carriers-form-section__legend">
+                <span class="material-symbols-outlined">hub</span>
+                Asignación Operativa (Sucursal & Turno)
+              </legend>
+
+              <div class="carriers-form-grid carriers-form-grid--2">
+                <div class="fg-field">
+                  <label class="fg-label" for="branchId">Sucursal Asignada</label>
+                  <select
+                    id="branchId"
+                    class="fg-select"
+                    formControlName="branchId">
+                    <option [ngValue]="null">Acceso Corporativo / Todas las sucursales</option>
+                    @for (b of availableBranches(); track b.id) {
+                      <option [ngValue]="b.id">{{ b.code }} — {{ b.name }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="fg-field">
+                  <label class="fg-label" for="shiftId">Turno Operativo de Almacén</label>
+                  <select
+                    id="shiftId"
+                    class="fg-select"
+                    formControlName="shiftId">
+                    <option [ngValue]="null">Sin turno fijo / Horario flexible</option>
+                    @for (s of availableShifts(); track s.id) {
+                      <option [ngValue]="s.id">{{ s.code }} — {{ s.name }} ({{ s.startTime }} - {{ s.endTime }})</option>
+                    }
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- SECCIÓN 3 — Acceso a Terminal RF / Tableta -->
             <fieldset class="carriers-form-section">
               <legend class="carriers-form-section__legend">
                 <span class="material-symbols-outlined">tablet_mac</span>
