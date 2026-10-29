@@ -467,7 +467,8 @@ export class UsersListComponent implements OnInit, OnDestroy {
       });
     } else if (mode === 'edit' && this.selectedUser()) {
       const userId = this.selectedUser()!.id;
-      const currentStatus = this.selectedUser()?.status || 'ACTIVE';
+      // Respetar estrictamente el estado actual: si está INACTIVE se preserva deshabilitado
+      const currentStatus = this.selectedUser()?.status || this.form.get('status')?.value || 'ACTIVE';
       this.userAdminService.update(userId, {
         firstName: raw.firstName.trim(),
         lastName: raw.lastName.trim(),
@@ -484,11 +485,13 @@ export class UsersListComponent implements OnInit, OnDestroy {
           this.saveSuccess.set(true);
           const fullName = `${raw.firstName.trim()} ${raw.lastName.trim()}`;
           this.toastService.success(`⚡ Usuario "${fullName}" actualizado con éxito.`, 4000);
-          this.loadUsers();
-          const updated = this.userAdminService.users().find(u => u.id === userId);
-          if (updated) {
-            this.selectedUser.set(updated);
-          }
+          this.userAdminService.loadUsers().subscribe(() => {
+            const updated = this.userAdminService.users().find(u => u.id === userId);
+            if (updated) {
+              this.selectedUser.set(updated);
+              this.populateForm(updated);
+            }
+          });
           this.submitAttempted.set(false);
           this.form.markAsPristine();
           this.loadAuditLogs(userId);
@@ -506,7 +509,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ── Cambios de Estado Directos ───────────────────────────
+  // ── Cambios de Estado Directos (Activar / Desactivar) ─────
   protected toggleUserStatus(user?: UserAdminItem): void {
     const target = user || this.selectedUser();
     if (!target) return;
@@ -517,13 +520,27 @@ export class UsersListComponent implements OnInit, OnDestroy {
       isEnabled: newStatus === 'ACTIVE'
     }).subscribe({
       next: () => {
-        const updated = this.userAdminService.users().find(u => u.id === target.id);
-        if (updated) {
-          this.selectedUser.set(updated);
-          this.populateForm(updated);
+        // Sincronizar el form reactivo
+        this.form.patchValue({ status: newStatus });
+        this.form.markAsPristine();
+
+        // Actualizar el estado local
+        if (this.selectedUser()?.id === target.id) {
+          const current = this.selectedUser()!;
+          this.selectedUser.set({
+            ...current,
+            status: newStatus,
+            isEnabled: newStatus === 'ACTIVE'
+          });
         }
+
+        // Recargar usuarios y bitácora
+        this.userAdminService.loadUsers().subscribe();
         this.loadAuditLogs(target.id);
-        this.toastService.success(`Usuario "${target.firstName} ${target.lastName}" ${newStatus === 'ACTIVE' ? 'activado' : 'desactivado'} con éxito.`, 3500);
+        this.toastService.success(
+          `Usuario "${target.firstName} ${target.lastName}" ${newStatus === 'ACTIVE' ? 'activado' : 'desactivado (baja lógica)'} con éxito.`,
+          4000
+        );
       },
       error: (err: HttpErrorResponse) => {
         const msg = err?.error?.message || 'Error al cambiar el estado del usuario.';
@@ -577,7 +594,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
     this.tempPasswordUser.set(null);
   }
 
-  // ── Eliminación de Usuario ───────────────────────────────
+  // ── Eliminación de Usuario con Fallback de Trazabilidad ──
   protected openDeleteConfirm(user?: UserAdminItem): void {
     const target = user || this.selectedUser();
     if (target) {
@@ -604,10 +621,62 @@ export class UsersListComponent implements OnInit, OnDestroy {
         this.toastService.success(`Usuario "${user.firstName} ${user.lastName}" eliminado correctamente.`, 4000);
       },
       error: (err: HttpErrorResponse) => {
-        this.isDeleting.set(false);
-        this.deletingUser.set(null);
-        const msg = err?.error?.message || err?.message || 'Error al eliminar el usuario.';
-        this.toastService.error(msg, 4000);
+        const errorMsg = (err?.error?.message || err?.message || '').toLowerCase();
+        const isConstraintOrTraceability = 
+          err?.status === 409 || 
+          err?.status === 400 || 
+          err?.status === 500 ||
+          errorMsg.includes('constraint') || 
+          errorMsg.includes('foreign') || 
+          errorMsg.includes('trazabilidad') || 
+          errorMsg.includes('violates') || 
+          errorMsg.includes('history') ||
+          errorMsg.includes('reference') ||
+          errorMsg.includes('fk_');
+
+        if (isConstraintOrTraceability) {
+          // Fallback Automático a Baja Lógica para preservar la integridad referencial y auditoría
+          this.userAdminService.update(user.id, {
+            status: 'INACTIVE',
+            isEnabled: false
+          }).subscribe({
+            next: () => {
+              this.isDeleting.set(false);
+              this.deletingUser.set(null);
+              this.form.patchValue({ status: 'INACTIVE' });
+              this.form.markAsPristine();
+
+              if (this.selectedUser()?.id === user.id) {
+                this.selectedUser.set({
+                  ...this.selectedUser()!,
+                  status: 'INACTIVE',
+                  isEnabled: false
+                });
+              }
+
+              this.userAdminService.loadUsers().subscribe();
+              this.loadAuditLogs(user.id);
+
+              this.toastService.warning(
+                `🛡️ Por trazabilidad legal y operativa (tiene pases de caseta o movimientos registrados), no puede borrarse de la BD. Ha sido dado de baja lógica e inhabilitado permanentemente.`,
+                7000
+              );
+            },
+            error: () => {
+              this.isDeleting.set(false);
+              this.deletingUser.set(null);
+              this.toastService.error(
+                `No se pudo eliminar ni desactivar al usuario: ${err?.error?.message || 'Error en el servidor.'}`,
+                5000
+              );
+            }
+          });
+        } else {
+          this.isDeleting.set(false);
+          this.deletingUser.set(null);
+          const msg = err?.error?.message || err?.message || 'Error al eliminar el usuario.';
+          this.toastService.error(msg, 4000);
+        }
       }
     });
   }

@@ -16,18 +16,18 @@
     
     <!-- ════════════ HEADER DEL DRAWER ════════════ -->
     <div
-      class="px-5 py-3.5 border-b flex items-center justify-between shadow-xs transition-colors"
+      class="px-4 py-3 border-b flex items-center justify-between gap-2 shadow-xs transition-colors shrink-0"
       [ngClass]="{
-        'bg-slate-900 border-slate-800': forbotEngine.isDarkMode(),
-        'bg-white border-slate-200': !forbotEngine.isDarkMode()
+        'bg-slate-900 border-slate-800 text-white': forbotEngine.isDarkMode(),
+        'bg-white border-slate-200 text-slate-950': !forbotEngine.isDarkMode()
       }"
     >
-      <div class="flex items-center gap-3">
-        <fg-forbot-avatar [size]="38"></fg-forbot-avatar>
-        <div>
-          <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <fg-forbot-avatar [size]="34"></fg-forbot-avatar>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5">
             <h2
-              class="text-sm font-black tracking-tight font-sans"
+              class="text-sm font-black tracking-tight font-sans whitespace-nowrap"
               [ngClass]="{
                 'text-white': forbotEngine.isDarkMode(),
                 'text-slate-950': !forbotEngine.isDarkMode()
@@ -36,7 +36,7 @@
               ForBot AI
             </h2>
             <span
-              class="text-[9px] px-1.5 py-0.5 rounded-full font-bold font-mono tracking-wider border"
+              class="text-[9px] px-1.5 py-0.5 rounded-full font-bold font-mono tracking-wider border shrink-0"
               [ngClass]="{
                 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400': forbotEngine.isDarkMode(),
                 'bg-emerald-100 border-emerald-400 text-emerald-950': !forbotEngine.isDarkMode()
@@ -46,10 +46,10 @@
             </span>
           </div>
           <p
-            class="text-[11px] font-semibold"
+            class="text-[10.5px] font-semibold truncate"
             [ngClass]="{
-              'text-slate-300': forbotEngine.isDarkMode(),
-              'text-slate-700': !forbotEngine.isDarkMode()
+              'text-slate-400': forbotEngine.isDarkMode(),
+              'text-slate-600': !forbotEngine.isDarkMode()
             }"
           >
             Copiloto WMS 4GUARD
@@ -58,7 +58,7 @@
       </div>
 
       <!-- SELECTOR DE MODOS (Operativo vs Tutor) + BOTÓN CERRAR -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1.5 shrink-0">
         <div
           class="flex p-0.5 rounded-xl border text-xs font-bold shadow-xs"
           [ngClass]="{
@@ -72,9 +72,9 @@
             [class.bg-[#1B2B4B]]="forbotEngine.currentMode() === 'operativo'"
             [class.text-white]="forbotEngine.currentMode() === 'operativo'"
             [class.shadow-sm]="forbotEngine.currentMode() === 'operativo'"
-            [class.text-slate-300]="forbotEngine.currentMode() !== 'operativo' && forbotEngine.isDarkMode()"
-            [class.text-slate-700]="forbotEngine.currentMode() !== 'operativo' && !forbotEngine.isDarkMode()"
-            class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1"
+            [class.text-slate-400]="forbotEngine.currentMode() !== 'operativo' && forbotEngine.isDarkMode()"
+            [class.text-slate-600]="forbotEngine.currentMode() !== 'operativo' && !forbotEngine.isDarkMode()"
+            class="px-2 py-1 rounded-lg text-[10.5px] font-extrabold transition-all cursor-pointer flex items-center gap-1"
           >
             <span>🛠️</span>
             <span>Operativo</span>
@@ -85,9 +85,9 @@
             [class.bg-amber-600]="forbotEngine.currentMode() === 'tutor'"
             [class.text-white]="forbotEngine.currentMode() === 'tutor'"
             [class.shadow-sm]="forbotEngine.currentMode() === 'tutor'"
-            [class.text-slate-300]="forbotEngine.currentMode() !== 'tutor' && forbotEngine.isDarkMode()"
-            [class.text-slate-700]="forbotEngine.currentMode() !== 'tutor' && !forbotEngine.isDarkMode()"
-            class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1"
+            [class.text-slate-400]="forbotEngine.currentMode() !== 'tutor' && forbotEngine.isDarkMode()"
+            [class.text-slate-600]="forbotEngine.currentMode() !== 'tutor' && !forbotEngine.isDarkMode()"
+            class="px-2 py-1 rounded-lg text-[10.5px] font-extrabold transition-all cursor-pointer flex items-center gap-1"
           >
             <span>🎓</span>
             <span>Tutor</span>
@@ -97,39 +97,39 @@
         <button
           type="button"
           (click)="onCloseDrawer()"
-          class="w-8 h-8 rounded-xl flex items-center justify-center transition-colors border cursor-pointer font-bold"
+          class="w-7 h-7 rounded-lg flex items-center justify-center transition-colors border cursor-pointer font-bold shrink-0"
           [ngClass]="{
             'bg-slate-800 text-slate-300 hover:text-white border-slate-700': forbotEngine.isDarkMode(),
             'bg-slate-100 text-slate-900 hover:text-black border-slate-300 hover:bg-slate-200': !forbotEngine.isDarkMode()
           }"
           aria-label="Cerrar"
         >
-          <span class="material-symbols-outlined text-lg">close</span>
+          <span class="material-symbols-outlined text-base font-bold">close</span>
         </button>
       </div>
     </div>
 
     <!-- ════════════ SUB-BARRA DE CONTEXTO RBAC (Alto Contraste) ════════════ -->
     <div
-      class="px-5 py-2 border-b flex items-center justify-between text-[11px] font-medium"
+      class="px-4 py-2 border-b flex items-center justify-between text-[11px] font-medium shrink-0"
       [ngClass]="{
         'bg-slate-900/95 border-slate-800 text-slate-200': forbotEngine.isDarkMode(),
         'bg-slate-100 border-slate-300 text-slate-900': !forbotEngine.isDarkMode()
       }"
     >
-      <div class="flex items-center gap-2 truncate">
+      <div class="flex items-center gap-2 truncate min-w-0">
         <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
         <span
-          class="font-black truncate"
+          class="font-black truncate text-[11px]"
           [ngClass]="{
             'text-white': forbotEngine.isDarkMode(),
             'text-slate-950': !forbotEngine.isDarkMode()
           }"
         >
-          {{ authState.currentUser()?.fullName || authState.currentUser()?.username || 'Enrique Architect' }}
+          {{ authState.currentUser()?.fullName || authState.userFullName() || 'Enrique Architect' }}
         </span>
         <span
-          class="px-1.5 py-0.5 rounded text-[10px] font-mono font-black border"
+          class="px-1.5 py-0.5 rounded text-[10px] font-mono font-black border shrink-0"
           [ngClass]="{
             'bg-amber-950/70 border-amber-600/50 text-amber-300': forbotEngine.isDarkMode(),
             'bg-amber-100 border-amber-400 text-amber-950': !forbotEngine.isDarkMode()
@@ -149,12 +149,13 @@
       </span>
     </div>
 
+
     <!-- ════════════ PÍLDORAS DE ACCIÓN RÁPIDA (QUICK PILLS) ════════════ -->
     <div
-      class="p-2.5 border-b flex items-center gap-2 overflow-x-auto no-scrollbar transition-colors"
+      class="p-2.5 border-b flex items-center gap-2 overflow-x-auto no-scrollbar transition-colors shrink-0"
       [ngClass]="{
         'bg-slate-900/60 border-slate-800': forbotEngine.isDarkMode(),
-        'bg-white border-slate-200': !forbotEngine.isDarkMode()
+        'bg-slate-50 border-slate-200': !forbotEngine.isDarkMode()
       }"
     >
       @for (pill of activePills(); track pill.label) {
@@ -164,13 +165,14 @@
           class="px-3 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap transition-all border shrink-0 active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-xs"
           [ngClass]="{
             'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700': forbotEngine.isDarkMode(),
-            'bg-slate-50 hover:bg-slate-100 text-slate-950 border-slate-300 hover:border-slate-400': !forbotEngine.isDarkMode()
+            'bg-white hover:bg-slate-100 text-slate-900 border-slate-300 hover:border-slate-400': !forbotEngine.isDarkMode()
           }"
         >
           <span>{{ pill.label }}</span>
         </button>
       }
     </div>
+
 
     <!-- ════════════ FEED CONVERSACIONAL DE MENSAJES ════════════ -->
     <div
@@ -348,7 +350,7 @@
 
     <!-- ════════════ CAMPO DE ENTRADA DE MENSAJES ════════════ -->
     <div
-      class="p-3.5 border-t transition-colors shadow-lg"
+      class="p-3.5 border-t transition-colors shadow-lg shrink-0"
       [ngClass]="{
         'bg-slate-900 border-slate-800': forbotEngine.isDarkMode(),
         'bg-white border-slate-200': !forbotEngine.isDarkMode()
@@ -368,6 +370,23 @@
           }"
         />
 
+        <!-- Botón de Micrófono (Dictado por Voz) -->
+        <button
+          type="button"
+          (click)="toggleVoice()"
+          [class.bg-rose-600]="voiceService.isListening()"
+          [class.text-white]="voiceService.isListening()"
+          [class.animate-pulse]="voiceService.isListening()"
+          [class.bg-slate-800]="!voiceService.isListening() && forbotEngine.isDarkMode()"
+          [class.text-slate-300]="!voiceService.isListening() && forbotEngine.isDarkMode()"
+          [class.bg-slate-200]="!voiceService.isListening() && !forbotEngine.isDarkMode()"
+          [class.text-slate-800]="!voiceService.isListening() && !forbotEngine.isDarkMode()"
+          class="absolute right-12 p-2 rounded-lg transition-all font-bold shadow-xs flex items-center justify-center cursor-pointer hover:brightness-110 active:scale-95"
+          [title]="voiceService.isListening() ? 'Detener dictado de voz' : 'Dictar mensaje por voz'"
+        >
+          <span class="material-symbols-outlined text-base">{{ voiceService.isListening() ? 'mic' : 'mic_none' }}</span>
+        </button>
+
         <button
           type="submit"
           [disabled]="!userQueryText().trim()"
@@ -378,6 +397,7 @@
         </button>
       </form>
     </div>
+
 
   </aside>
 }

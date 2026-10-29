@@ -1,0 +1,149 @@
+<!-- Modal Táctil de ForBot AI para Terminal RF (Landscape Tablet) -->
+@if (isOpen) {
+  <!-- Backdrop con efecto Blur -->
+  <div class="rf-forbot-backdrop" (click)="onClose()"></div>
+
+  <!-- Contenedor Modal Central Ergonómico para Tablet -->
+  <div class="rf-forbot-dialog" role="dialog" aria-modal="true">
+    
+    <!-- Header del Asistente -->
+    <header class="rf-forbot-header">
+      <div class="rf-forbot-brand">
+        <div class="avatar-halo">
+          <img src="assets/forbot-avatar.png" alt="ForBot AI" class="avatar-img" />
+          <span class="online-indicator"></span>
+        </div>
+        <div class="brand-text">
+          <div class="title-row">
+            <h2 class="assistant-title">ForBot AI</h2>
+            <span class="role-chip">TERMINAL RF</span>
+            <span class="shift-chip">{{ authState.userShiftBadge() }}</span>
+          </div>
+          <p class="assistant-subtitle">Asistente Operativo Inteligente de Almacén</p>
+        </div>
+      </div>
+
+      <button type="button" class="close-btn" (click)="onClose()" aria-label="Cerrar modal">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </header>
+
+    <!-- Píldoras de Acceso Rápido Táctiles (Targets Grandes) -->
+    <div class="quick-pills-bar">
+      @for (pill of warehousePills; track pill.label) {
+        <button
+          type="button"
+          class="pill-btn"
+          (click)="sendPillQuery(pill.query)">
+          <span>{{ pill.label }}</span>
+        </button>
+      }
+    </div>
+
+    <!-- Área de Conversación con Scroll Inteligente -->
+    <main class="chat-feed" #chatScrollContainer>
+      @for (msg of chatMessages(); track msg.id) {
+        <div class="msg-wrapper" [class.msg-wrapper--user]="msg.sender === 'user'">
+          
+          <!-- Avatar del bot en mensajes -->
+          @if (msg.sender === 'bot') {
+            <div class="msg-avatar">
+              <img src="assets/forbot-avatar.png" alt="ForBot" />
+            </div>
+          }
+
+          <div class="bubble" [class.bubble--user]="msg.sender === 'user'" [class.bubble--bot]="msg.sender === 'bot'">
+            <!-- Indicador de escritura animado -->
+            @if (msg.isTyping) {
+              <div class="typing-dots">
+                <span></span><span></span><span></span>
+              </div>
+            } @else {
+              <!-- Texto del mensaje con formato -->
+              <p class="bubble-text">{{ msg.text }}</p>
+
+              <!-- Tarjetas de Información / KPIs Operativos -->
+              @if (msg.widgetData) {
+                <div class="widget-card">
+                  <div class="widget-header">
+                    <span class="material-symbols-outlined widget-icon">info</span>
+                    <span class="widget-title">{{ msg.widgetData.title }}</span>
+                  </div>
+
+                  <div class="widget-items-grid">
+                    @for (item of msg.widgetData.items; track item.label) {
+                      <div class="widget-item">
+                        <span class="item-label">{{ item.label }}</span>
+                        <span class="item-val font-mono" [class]="'badge--' + (item.badgeColor || 'blue')">
+                          {{ item.value }}
+                        </span>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Botón de Acción Directa / Navegación -->
+                  @if (msg.widgetData.actionLabel) {
+                    <button
+                      type="button"
+                      class="widget-action-btn"
+                      (click)="executeAction(msg.widgetData.actionRoute)">
+                      <span class="material-symbols-outlined">touch_app</span>
+                      <span>{{ msg.widgetData.actionLabel }}</span>
+                    </button>
+                  }
+                </div>
+              }
+
+              <span class="timestamp font-mono">{{ msg.timestamp }}</span>
+            }
+          </div>
+        </div>
+      }
+    </main>
+
+    <!-- Barra de Entrada Inferior con Botón de Voz Destacado -->
+    <footer class="rf-forbot-footer">
+      <form class="input-form" (submit)="onSendMessage(); $event.preventDefault()">
+        
+        <!-- Botón de Micrófono para Entrada de Voz -->
+        <button
+          type="button"
+          class="voice-btn"
+          [class.voice-btn--listening]="voiceService.isListening()"
+          (click)="toggleVoice()"
+          [title]="voiceService.isListening() ? 'Detener micrófono' : 'Hablar por micrófono (Voz a Texto)'">
+          <span class="material-symbols-outlined">
+            {{ voiceService.isListening() ? 'mic' : 'mic_none' }}
+          </span>
+          @if (voiceService.isListening()) {
+            <span class="voice-pulse-ring"></span>
+          }
+        </button>
+
+        <!-- Campo de Texto -->
+        <input
+          type="text"
+          class="chat-input font-sans"
+          [(ngModel)]="userQueryText"
+          name="rfUserQuery"
+          [placeholder]="voiceService.isListening() ? 'Escuchando tu voz...' : 'Escribe tu consulta o usa el micrófono...'"
+        />
+
+        <!-- Botón de Enviar -->
+        <button
+          type="submit"
+          class="send-btn"
+          [disabled]="!userQueryText().trim()">
+          <span class="material-symbols-outlined">send</span>
+        </button>
+      </form>
+
+      @if (voiceService.lastError()) {
+        <p class="voice-error-hint text-rose-400">
+          ⚠️ {{ voiceService.lastError() }}
+        </p>
+      }
+    </footer>
+
+  </div>
+}

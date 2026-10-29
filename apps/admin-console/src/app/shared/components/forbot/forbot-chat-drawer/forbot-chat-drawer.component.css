@@ -1,4 +1,4 @@
-﻿:host {
+:host {
   display: contents;
 }
 
@@ -57,6 +57,7 @@
 }
 
 /* Modo Oscuro para la caja proactiva */
+:host-context(.theme-dark) .proactive-alert-box,
 :host-context(.dark) .proactive-alert-box,
 .dark .proactive-alert-box,
 .dark-theme .proactive-alert-box {
@@ -65,12 +66,14 @@
   color: #fef08a !important;
 }
 
+:host-context(.theme-dark) .proactive-alert-box p,
 :host-context(.dark) .proactive-alert-box p,
 .dark .proactive-alert-box p,
 .dark-theme .proactive-alert-box p {
   color: #fef08a !important;
   font-weight: 700 !important;
 }
+
 
 /* ══════════════════════════════════════════════════════════
    ALTO CONTRASTE TIPOGRÁFICO GENERAL

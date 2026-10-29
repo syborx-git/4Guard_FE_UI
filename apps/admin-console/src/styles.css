@@ -7,6 +7,8 @@
 
 /* Design tokens del sistema Antigravity */
 @import './assets/design-tokens.css';
+@import 'driver.js/dist/driver.css';
+
 
 /* ── Reset y base ──────────────────────────────────────────── */
 *,
@@ -1058,136 +1060,103 @@ h2.page-title,
   color: #94a3b8 !important;
 }
 
-/* ── Escritura y Renderizado en Mayúsculas Global (Formularios y Observaciones) ── */
-input[type="text"]:not(.preserve-case):not([type="email"]):not([type="password"]),
-input:not([type]):not(.preserve-case),
-textarea:not(.preserve-case),
-.form-input:not([type="email"]):not([type="password"]):not([type="date"]):not([type="time"]):not(.preserve-case),
-.form-textarea:not(.preserve-case),
-.form-control:not([type="email"]):not([type="password"]):not([type="date"]):not([type="time"]):not(.preserve-case) {
-  text-transform: uppercase;
+/* ══════════════════════════════════════════════════════════
+   DRIVER.JS 4GUARD THEMED POPOVER & OVERLAY STYLING
+   ══════════════════════════════════════════════════════════ */
+.driver-popover {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(234, 195, 73, 0.4) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 20px rgba(234, 195, 73, 0.15) !important;
+  padding: 18px 20px !important;
+  font-family: var(--font-primary, 'DM Sans', sans-serif) !important;
+  max-width: 380px !important;
+  z-index: 1000000000 !important;
 }
 
-input::placeholder,
-textarea::placeholder,
-.form-input::placeholder,
-.form-textarea::placeholder,
-.form-control::placeholder {
-  text-transform: none;
+.driver-popover-title {
+  color: #eac349 !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  margin-bottom: 8px !important;
+  letter-spacing: -0.01em !important;
 }
 
-/* ── Formatos de Impresión Oficiales en Mayúsculas ── */
-.print-container,
-.f01-print-sheet,
-.print-layout-root {
-  text-transform: uppercase;
+.driver-popover-description {
+  color: #cbd5e1 !important;
+  font-size: 12.5px !important;
+  line-height: 1.55 !important;
+  margin-bottom: 12px !important;
 }
 
-@media print {
-  .print-container,
-  .f01-print-sheet,
-  .print-layout-root {
-    text-transform: uppercase !important;
-  }
+.driver-popover-progress-text {
+  color: #94a3b8 !important;
+  font-size: 11px !important;
+  font-family: var(--font-mono, monospace) !important;
+  font-weight: 700 !important;
 }
 
-/* ── Auditoría y Normalización de Modo Oscuro Global (Sin Fragmentos Blancos ni Bajo Contraste) ── */
-.dark,
-.theme-dark,
-[data-theme='dark'] {
-  /* Entradas de búsqueda y filtros en módulos de Administración, Operadores y Usuarios */
-  .carriers-search__input,
-  .users-search__input,
-  .carriers-filter-select,
-  .users-filter-select {
-    background-color: #111a26 !important;
-    border-color: #334155 !important;
-    color: #edf1f5 !important;
-    color-scheme: dark !important;
-  }
+.driver-popover-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-top: 14px !important;
+  gap: 8px !important;
+}
 
-  .carriers-search__input:focus,
-  .users-search__input:focus,
-  .carriers-filter-select:focus,
-  .users-filter-select:focus {
-    background-color: #16212f !important;
-    border-color: #d0af67 !important;
-    color: #ffffff !important;
-    box-shadow: 0 0 0 3px rgba(208, 175, 103, 0.2) !important;
-  }
+.driver-popover-next-btn,
+.driver-popover-done-btn {
+  background: linear-gradient(135deg, #1b2b4b 0%, #2a3e66 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(234, 195, 73, 0.5) !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  padding: 7px 16px !important;
+  text-shadow: none !important;
+  cursor: pointer !important;
+  transition: all 180ms ease !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
 
-  .carriers-filter-select option,
-  .users-filter-select option,
-  select option {
-    background-color: #111a26 !important;
-    color: #edf1f5 !important;
-  }
+.driver-popover-next-btn:hover,
+.driver-popover-done-btn:hover {
+  background: linear-gradient(135deg, #253960 0%, #364e7c 100%) !important;
+  border-color: #eac349 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(234, 195, 73, 0.25) !important;
+}
 
-  .users-btn--secondary,
-  .carriers-btn--secondary {
-    background-color: #16212f !important;
-    border-color: rgba(208, 175, 103, 0.3) !important;
-    color: #edf1f5 !important;
-  }
+.driver-popover-prev-btn {
+  background-color: #1e293b !important;
+  color: #94a3b8 !important;
+  border: 1px solid #475569 !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  padding: 7px 14px !important;
+  cursor: pointer !important;
+  transition: all 180ms ease !important;
+}
 
-  .users-btn--secondary:hover,
-  .carriers-btn--secondary:hover {
-    background-color: #1c2b3d !important;
-    border-color: #d0af67 !important;
-    color: #ffffff !important;
-  }
+.driver-popover-prev-btn:hover {
+  color: #ffffff !important;
+  background-color: #334155 !important;
+}
 
-  /* Dropdowns Predictivos Flotantes (Montacarguistas, SKUs, Bahías, Clientes) */
-  .sku-autocomplete-dropdown {
-    background-color: #0f172a !important;
-    border-color: #f59e0b !important;
-    box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.7) !important;
-  }
+.driver-popover-close-btn {
+  color: #94a3b8 !important;
+  font-size: 18px !important;
+  cursor: pointer !important;
+  transition: color 150ms ease !important;
+}
 
-  .sku-autocomplete-header {
-    background-color: #1e293b !important;
-    border-color: #334155 !important;
-    color: #fcd34d !important;
-  }
+.driver-popover-close-btn:hover {
+  color: #ffffff !important;
+}
 
-  .sku-autocomplete-header__hint {
-    color: #cbd5e1 !important;
-  }
-
-  .sku-autocomplete-item {
-    background-color: #0f172a !important;
-    border-bottom-color: #1e293b !important;
-    color: #f8fafc !important;
-  }
-
-  .sku-autocomplete-item:hover {
-    background-color: #1e293b !important;
-  }
-
-  .sku-autocomplete-item--selected {
-    background-color: #334155 !important;
-  }
-
-  .sku-autocomplete-name {
-    color: #f8fafc !important;
-    font-weight: 800 !important;
-  }
-
-  .sku-autocomplete-item span {
-    color: #f8fafc !important;
-  }
-
-  .sku-autocomplete-item .text-slate-500,
-  .sku-autocomplete-item .text-slate-400,
-  .sku-autocomplete-item .dark\:text-slate-400 {
-    color: #cbd5e1 !important;
-    font-weight: 600 !important;
-  }
-
-  .sku-autocomplete-empty {
-    background-color: #0f172a !important;
-    color: #f8fafc !important;
-    border-color: #f59e0b !important;
-  }
+.driver-popover-arrow {
+  border-color: #0f172a !important;
 }
 

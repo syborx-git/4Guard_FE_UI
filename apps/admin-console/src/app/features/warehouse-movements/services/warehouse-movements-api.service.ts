@@ -319,7 +319,7 @@ export class WarehouseMovementsApiService {
     } catch {}
   }
 
-  private broadcastEvent(type: string, data: any): void {
+  public broadcastEvent(type: string, data: any): void {
     try {
       if (typeof window !== 'undefined') {
         localStorage.setItem('4g_cross_tab_event', JSON.stringify({ type, data, timestamp: Date.now() }));
@@ -330,6 +330,54 @@ export class WarehouseMovementsApiService {
         }
       }
     } catch {}
+  }
+
+  removeLocalReception(idOrFolio: string): void {
+    try {
+      if (typeof localStorage === 'undefined') return;
+      const current = this.getLocalReceptions();
+      const filtered = current.filter((r: any) => r.id !== idOrFolio && r.folio !== idOrFolio);
+      localStorage.setItem(this.LOCAL_RECEPTIONS_KEY, JSON.stringify(filtered));
+    } catch {}
+  }
+
+  removeLocalOutbound(idOrFolio: string): void {
+    try {
+      if (typeof localStorage === 'undefined') return;
+      const current = this.getLocalOutbounds();
+      const filtered = current.filter((o: any) => o.id !== idOrFolio && o.folio !== idOrFolio);
+      localStorage.setItem(this.LOCAL_OUTBOUNDS_KEY, JSON.stringify(filtered));
+    } catch {}
+  }
+
+  clearAllLocalOperationalData(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(this.LOCAL_RECEPTIONS_KEY);
+        localStorage.removeItem(this.LOCAL_OUTBOUNDS_KEY);
+        localStorage.removeItem(this.LOCAL_PASSES_KEY);
+        localStorage.removeItem('4g_notified_ready_exit_tokens');
+        localStorage.removeItem('4g_security_gate_history');
+        localStorage.removeItem('4g_carrier_passes');
+        localStorage.removeItem('4g_active_transfer_folio');
+        localStorage.removeItem('4g_simulated_bay_positions');
+        localStorage.removeItem('4g_global_max_pallet_number');
+        localStorage.setItem('4g_warehouse_clean_mode', 'true');
+        localStorage.setItem('4g_env_purged_at', String(Date.now()));
+      }
+    } catch {}
+  }
+
+  purgeAllTestData(): Observable<any> {
+    this.clearAllLocalOperationalData();
+    const purgeTime = Date.now();
+    this.broadcastEvent('PURGE_ALL', { timestamp: purgeTime });
+
+    // Intenta notificar al backend/proxy para reset general si el endpoint existe
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/api/v1/dev/purge-all`, {}).pipe(
+      map((res) => res?.data || { success: true }),
+      catchError(() => of({ success: true }))
+    );
   }
 
   createCheckIn(body: any): Observable<any> {
