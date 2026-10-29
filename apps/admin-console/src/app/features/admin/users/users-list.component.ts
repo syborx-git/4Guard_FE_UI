@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, OnDestroy, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -135,13 +135,40 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected readonly deletingUser = signal<UserAdminItem | null>(null);
   protected readonly isDeleting = signal(false);
 
+  // ── Estado: Selector Desplegable Flotante (Opción A) ────
+  protected readonly isUserDropdownOpen = signal<boolean>(false);
+
+  protected toggleUserDropdown(event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.isUserDropdownOpen.update(v => !v);
+  }
+
+  protected closeUserDropdown(): void {
+    this.isUserDropdownOpen.set(false);
+  }
+
+  @HostListener('document:click', [''])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (this.isUserDropdownOpen() && !target.closest('.user-selector-dropdown-wrap')) {
+      this.closeUserDropdown();
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.isUserDropdownOpen()) {
+      this.closeUserDropdown();
+    }
+  }
+
   // ── Formulario Reactivo ─────────────────────────────────
   protected readonly form: FormGroup = this.fb.group({
     firstName: ['', [Validators.required, Validators.maxLength(100), noWhitespaceValidator]],
     lastName: ['', [Validators.required, Validators.maxLength(100), noWhitespaceValidator]],
     username: ['', [Validators.required, Validators.maxLength(50), noWhitespaceValidator]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
-    role: [UserRole.WAREHOUSE_OPERATOR, Validators.required],
+    role: ['ADMIN', Validators.required],
     branchId: [null],
     status: ['ACTIVE', Validators.required]
   });
@@ -154,7 +181,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
     const dbRoles = this.roleService.roles();
     if (dbRoles && dbRoles.length > 0) {
       return dbRoles
-        .filter(r => r.name !== 'VIGILANCIA')
+        .filter(r => r.name !== 'VIGILANCIA' && r.name !== 'WAREHOUSE_OPERATOR' && r.name !== 'ROLE_WAREHOUSE_OPERATOR' && r.name !== 'FORKLIFT_OPERATOR')
         .map(r => ({
           id: r.id,
           name: r.name,
@@ -170,14 +197,14 @@ export class UsersListComponent implements OnInit, OnDestroy {
       { id: 'CONTROL_DESK', name: 'CONTROL_DESK', label: 'Mesa de Control' },
       { id: 'QM_INSPECTOR', name: 'QM_INSPECTOR', label: 'Inspector de Calidad' },
       { id: 'SHIFT_LEADER', name: 'SHIFT_LEADER', label: 'Líder de Turno' },
-      { id: 'WAREHOUSE_OPERATOR', name: 'WAREHOUSE_OPERATOR', label: 'Operario de Almacén' },
       { id: 'SECURITY_GUARD', name: 'SECURITY_GUARD', label: 'Guardia de Seguridad' },
     ];
   });
 
   // ── Computed Lista Filtrada (Reactiva en tiempo real) ─────
   protected readonly filteredUsers = computed(() => {
-    let list = this.userAdminService.users();
+    // Excluir montacarguistas / operarios de terminal de este módulo (tienen su módulo exclusivo)
+    let list = this.userAdminService.users().filter(u => !this.isForkliftOperator(u));
 
     const search = this.filterText().toLowerCase().trim();
     const statusVal = this.filterStatus();
@@ -210,11 +237,11 @@ export class UsersListComponent implements OnInit, OnDestroy {
   });
 
   // ── Computed KPIs ────────────────────────────────────────
-  protected readonly totalUsers = computed(() => this.userAdminService.users().length);
+  protected readonly totalUsers = computed(() => this.userAdminService.users().filter(u => !this.isForkliftOperator(u)).length);
   protected readonly systemUsersCount = computed(() => this.userAdminService.users().filter(u => !this.isForkliftOperator(u)).length);
   protected readonly operatorUsersCount = computed(() => this.userAdminService.users().filter(u => this.isForkliftOperator(u)).length);
-  protected readonly kpiActive = computed(() => this.userAdminService.users().filter(u => u.status === 'ACTIVE').length);
-  protected readonly kpiInactive = computed(() => this.userAdminService.users().filter(u => u.status !== 'ACTIVE').length);
+  protected readonly kpiActive = computed(() => this.userAdminService.users().filter(u => !this.isForkliftOperator(u) && u.status === 'ACTIVE').length);
+  protected readonly kpiInactive = computed(() => this.userAdminService.users().filter(u => !this.isForkliftOperator(u) && u.status !== 'ACTIVE').length);
   protected readonly kpiAdminSupervisors = computed(() => {
     const adminSupervisorSet = new Set([
       'ADMIN', 'ROLE_ADMIN',
@@ -288,6 +315,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
     this.saveSuccess.set(false);
     this.loadAuditLogs(user.id);
     this.resetFormScroll();
+    this.closeUserDropdown();
   }
 
   protected startNewUser(): void {

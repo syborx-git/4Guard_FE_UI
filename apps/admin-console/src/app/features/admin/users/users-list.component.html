@@ -167,207 +167,186 @@
     </section>
   </header>
 
-  <!-- ═══════════════════════════════════════════════════════════════════
-       SPLIT VIEW
+    <!-- ═══════════════════════════════════════════════════════════════════
+       BARRA DE SELECCIÓN FLOTANTE (OPCIÓN A)
        ════════════════════════════════════════════════════════════════ -->
-  <div class="users-split" [class.users-split--form-open]="formMode() !== 'idle'">
-
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA — Directorio (35%)
-         ───────────────────────────────────────────────────────────── -->
-    <aside class="users-directory" aria-label="Directorio de usuarios">
-
-      <!-- Buscador y filtros -->
-      <div class="users-directory__filters">
-
-        <div class="users-search">
-          <span class="material-symbols-outlined users-search__icon" aria-hidden="true">search</span>
-          <input
-            id="user-search"
-            class="users-search__input"
-            type="search"
-            placeholder="Nombre, usuario, correo o rol…"
-            [ngModel]="filterText()"
-            (ngModelChange)="filterText.set($event)"
-            aria-label="Buscar usuario"
-            autocomplete="off"
-          />
+  <div class="users-selector-bar">
+    <div class="user-selector-dropdown-wrap">
+      <button
+        type="button"
+        class="user-selector-btn"
+        (click)="toggleUserDropdown($event)"
+        [class.user-selector-btn--open]="isUserDropdownOpen()"
+        aria-haspopup="listbox"
+        [attr.aria-expanded]="isUserDropdownOpen()"
+        aria-label="Abrir directorio desplegable de usuarios">
+        <div class="user-selector-btn__avatar" [class]="selectedUser() ? getAvatarClass(selectedUser()!.role) : 'user-selector-btn__avatar--default'">
+          {{ selectedUser() ? getInitials(selectedUser()!) : '👥' }}
         </div>
-
-        <div class="users-filters-row">
-          <div class="users-filter-group">
-            <label class="sr-only" for="filter-status">Estado</label>
-            <select
-              id="filter-status"
-              class="users-filter-select"
-              [ngModel]="filterStatus()"
-              (ngModelChange)="filterStatus.set($event)"
-              aria-label="Filtrar por estado">
-              <option value="">Todos los estados</option>
-              <option value="ACTIVE">Activos</option>
-              <option value="INACTIVE">Inactivos</option>
-              <option value="SUSPENDED">Suspendidos</option>
-            </select>
-          </div>
-
-          <div class="users-filter-group">
-            <label class="sr-only" for="filter-role">Rol</label>
-            <select
-              id="filter-role"
-              class="users-filter-select"
-              [ngModel]="filterRole()"
-              (ngModelChange)="filterRole.set($event)"
-              aria-label="Filtrar por rol">
-              <option value="">Todos los roles</option>
-              @for (r of availableRoles(); track r.name) {
-                <option [value]="r.name">{{ r.label }}</option>
-              }
-            </select>
-          </div>
-
-          @if (hasActiveFilters) {
-            <button
-              class="users-filter-clear"
-              type="button"
-              (click)="clearFilters()"
-              aria-label="Limpiar filtros">
-              <span class="material-symbols-outlined">filter_alt_off</span>
-            </button>
-          }
-        </div>
-
-        <!-- Hint -->
-        <p class="users-search__hint">
-          <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          Busca por nombre, usuario, correo o rol del sistema
-        </p>
-      </div>
-
-      <!-- ── Estados de la lista ──────────────────────────────────── -->
-      @if (isLoadingUsers()) {
-        <div class="users-directory__list" aria-busy="true" aria-label="Cargando usuarios">
-          @for (i of [1,2,3,4,5]; track i) {
-            <div class="user-item user-item--skeleton">
-              <div class="skeleton skeleton--avatar"></div>
-              <div class="user-item__body">
-                <div class="skeleton skeleton--line skeleton--line-wide"></div>
-                <div class="skeleton skeleton--line skeleton--line-medium"></div>
-                <div class="skeleton skeleton--line skeleton--line-short"></div>
-              </div>
-            </div>
-          }
-        </div>
-      } @else if (loadUsersError()) {
-        <div class="users-state users-state--error" role="alert">
-          <span class="material-symbols-outlined users-state__icon">cloud_off</span>
-          <p class="users-state__title">Error al cargar</p>
-          <p class="users-state__desc">{{ loadUsersError() }}</p>
-          <button class="users-btn users-btn--ghost" type="button" (click)="loadUsers()">
-            <span class="material-symbols-outlined">refresh</span>
-            Reintentar
-          </button>
-        </div>
-      } @else if (isListEmpty) {
-        <div class="users-state" role="status">
-          <span class="material-symbols-outlined users-state__icon">group_off</span>
-          <p class="users-state__title">Sin usuarios</p>
-          <p class="users-state__desc">No hay usuarios registrados aún.</p>
-          <button class="users-btn users-btn--primary" type="button" (click)="startNewUser()">
-            <span class="material-symbols-outlined">person_add</span>
-            Registrar el primero
-          </button>
-        </div>
-      } @else if (hasNoResults) {
-        <div class="users-state" role="status">
-          <span class="material-symbols-outlined users-state__icon">search_off</span>
-          <p class="users-state__title">Sin coincidencias</p>
-          <p class="users-state__desc">
-            Ningún usuario coincide con los filtros aplicados.
-          </p>
-          <button class="users-btn users-btn--ghost" type="button" (click)="clearFilters()">
-            <span class="material-symbols-outlined">filter_alt_off</span>
-            Limpiar filtros
-          </button>
-        </div>
-      } @else {
-
-        <ul class="users-directory__list" role="listbox" aria-label="Lista de usuarios">
-          @for (user of filteredUsers(); track user.id) {
-            <li
-              class="user-item"
-              [class.user-item--selected]="isSelectedUser(user)"
-              [class.user-item--inactive]="user.status !== 'ACTIVE'"
-              role="option"
-              [attr.aria-selected]="isSelectedUser(user)"
-              (click)="selectUser(user)"
-              (keydown.enter)="selectUser(user)"
-              (keydown.space)="selectUser(user)"
-              tabindex="0"
-              [id]="'user-item-' + user.id">
-
-              <!-- Avatar -->
-              <div class="user-avatar {{ getAvatarClass(user.role) }}" aria-hidden="true">
-                {{ getInitials(user) }}
-              </div>
-
-              <!-- Info Compacta en 3 filas fluidas -->
-              <div class="user-item__body">
-                <!-- Fila 1: Nombre + Status Pill -->
-                <div class="user-item__row-top">
-                  <span class="user-item__name" [title]="user.firstName + ' ' + user.lastName">
-                    {{ user.firstName }} {{ user.lastName }}
-                  </span>
-                  <span
-                    class="user-status-pill user-status-pill--{{ (user.status || 'ACTIVE').toLowerCase() }}"
-                    [attr.aria-label]="'Estado: ' + user.status">
-                    <span class="user-status-pill__dot"></span>
-                    {{ user.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
-                  </span>
-                </div>
-
-                <!-- Fila 2: Username oro mono + Email -->
-                <div class="user-item__row-mid">
-                  <span class="user-item__username">&#64;{{ user.username }}</span>
-                  <span class="user-item__dot-sep">•</span>
-                  <span class="user-item__email" [title]="user.email">{{ user.email }}</span>
-                </div>
-
-                <!-- Fila 3: Chip de Rol Compacto + Sucursal con icono -->
-                <div class="user-item__row-bottom">
-                  <span
-                    class="user-role-badge user-role-badge--{{ (user.role || '').toLowerCase() }}"
-                    [title]="getRoleLabel(user.role)">
-                    {{ getRoleShortLabel(user.role) }}
-                  </span>
-                  <span class="user-item__branch" [title]="user.branchName || 'Acceso Corporativo'">
-                    <span class="material-symbols-outlined user-item__branch-icon">location_on</span>
-                    <span>{{ user.branchName ? (user.branchName.replace('CENTRO DE DISTRIBUCION ', 'CEDIS ')) : 'Corporativo' }}</span>
-                  </span>
-                </div>
-              </div>
-
-            </li>
-          }
-        </ul>
-
-        <!-- Contador -->
-        <div class="users-directory__footer">
-          <span class="users-count">
-            {{ filteredUsers().length }}
-            @if (filteredUsers().length !== totalUsers()) {
-              de {{ totalUsers() }}
-            }
-            usuario{{ filteredUsers().length !== 1 ? 's' : '' }}
+        <div class="user-selector-btn__text">
+          <span class="user-selector-btn__eyebrow">
+            {{ formMode() === 'new' ? 'Alta de Nuevo Colaborador' : 'Colaborador Seleccionado' }}
+          </span>
+          <span class="user-selector-btn__title">
+            {{ selectedUser() ? (selectedUser()!.firstName + ' ' + selectedUser()!.lastName + ' (@' + selectedUser()!.username + ')') : 'Directorio de Personal WMS — Clic para seleccionar...' }}
           </span>
         </div>
+        <span class="material-symbols-outlined user-selector-btn__chevron">
+          {{ isUserDropdownOpen() ? 'expand_less' : 'expand_more' }}
+        </span>
+      </button>
+
+      <!-- Panel Popover Flotante de Selección -->
+      @if (isUserDropdownOpen()) {
+        <div class="user-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+          <div class="user-dropdown-popover__header">
+            <div class="user-dropdown-popover__title-box">
+              <span class="material-symbols-outlined text-amber-500">manage_accounts</span>
+              <span>Directorio de Personal ({{ filteredUsers().length }} colaboradores)</span>
+            </div>
+            <button type="button" class="user-dropdown-popover__close" (click)="closeUserDropdown()" title="Cerrar selector">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- Buscador y filtros integrados -->
+          <div class="user-dropdown-popover__filters">
+            <div class="users-search">
+              <span class="material-symbols-outlined users-search__icon" aria-hidden="true">search</span>
+              <input
+                id="user-search"
+                class="users-search__input"
+                type="search"
+                placeholder="Nombre, usuario, correo o rol…"
+                [ngModel]="filterText()"
+                (ngModelChange)="filterText.set($event)"
+                aria-label="Buscar usuario"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="users-filters-row">
+              <select
+                id="filter-status"
+                class="users-filter-select"
+                [ngModel]="filterStatus()"
+                (ngModelChange)="filterStatus.set($event)"
+                aria-label="Filtrar por estado">
+                <option value="">Todos los estados</option>
+                <option value="ACTIVE">Activos</option>
+                <option value="INACTIVE">Inactivos</option>
+                <option value="SUSPENDED">Suspendidos</option>
+              </select>
+
+              <select
+                id="filter-role"
+                class="users-filter-select"
+                [ngModel]="filterRole()"
+                (ngModelChange)="filterRole.set($event)"
+                aria-label="Filtrar por rol">
+                <option value="">Todos los roles</option>
+                @for (r of availableRoles(); track r.name) {
+                  <option [value]="r.name">{{ r.label }}</option>
+                }
+              </select>
+
+              @if (hasActiveFilters) {
+                <button
+                  class="users-filter-clear"
+                  type="button"
+                  (click)="clearFilters()"
+                  aria-label="Limpiar filtros">
+                  <span class="material-symbols-outlined">filter_alt_off</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Lista scrolleable interna de usuarios -->
+          <div class="user-dropdown-popover__scrollable">
+            @if (isLoadingUsers()) {
+              <div class="users-directory__list" aria-busy="true">
+                @for (i of [1,2,3,4]; track i) {
+                  <div class="user-item user-item--skeleton">
+                    <div class="skeleton skeleton--avatar"></div>
+                    <div class="user-item__body">
+                      <div class="skeleton skeleton--line skeleton--line-wide"></div>
+                      <div class="skeleton skeleton--line skeleton--line-medium"></div>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else if (loadUsersError()) {
+              <div class="users-state users-state--error">
+                <p class="users-state__title">Error al cargar</p>
+                <p class="users-state__desc">{{ loadUsersError() }}</p>
+                <button class="users-btn users-btn--ghost" type="button" (click)="loadUsers()">Reintentar</button>
+              </div>
+            } @else if (isListEmpty || hasNoResults) {
+              <div class="users-state">
+                <span class="material-symbols-outlined users-state__icon">search_off</span>
+                <p class="users-state__title">Sin coincidencias</p>
+                <p class="users-state__desc">Ningún usuario coincide con los filtros aplicados.</p>
+              </div>
+            } @else {
+              <ul class="users-directory__list" role="listbox">
+                @for (user of filteredUsers(); track user.id) {
+                  <li
+                    class="user-item"
+                    [class.user-item--selected]="isSelectedUser(user)"
+                    [class.user-item--inactive]="user.status !== 'ACTIVE'"
+                    role="option"
+                    (click)="selectUser(user)"
+                    tabindex="0">
+                    <div class="user-avatar {{ getAvatarClass(user.role) }}" aria-hidden="true">
+                      {{ getInitials(user) }}
+                    </div>
+                    <div class="user-item__body">
+                      <div class="user-item__row-top">
+                        <span class="user-item__name">{{ user.firstName }} {{ user.lastName }}</span>
+                        <span class="user-status-pill user-status-pill--{{ (user.status || 'ACTIVE').toLowerCase() }}">
+                          <span class="user-status-pill__dot"></span>
+                          {{ user.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
+                        </span>
+                      </div>
+                      <div class="user-item__row-mid">
+                        <span class="user-item__username">&#64;{{ user.username }}</span>
+                        <span class="user-item__dot-sep">•</span>
+                        <span class="user-item__email">{{ user.email }}</span>
+                      </div>
+                      <div class="user-item__row-bottom">
+                        <span class="user-role-badge user-role-badge--{{ (user.role || '').toLowerCase() }}">
+                          {{ getRoleShortLabel(user.role) }}
+                        </span>
+                        <span class="user-item__branch">
+                          <span class="material-symbols-outlined user-item__branch-icon">location_on</span>
+                          <span>{{ user.branchName ? (user.branchName.replace('CENTRO DE DISTRIBUCION ', 'CEDIS ')) : 'Corporativo' }}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
       }
+    </div>
 
-    </aside>
+    <!-- Botón directo de Nuevo Usuario -->
+    <button
+      id="btn-new-user-bar"
+      class="users-btn users-btn--primary"
+      type="button"
+      (click)="startNewUser(); closeUserDropdown()"
+      aria-label="Registrar nuevo usuario">
+      <span class="material-symbols-outlined">person_add</span>
+      + Alta de Usuario
+    </button>
+  </div>
 
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA DERECHA — Detalle / Formulario (65%)
-         ───────────────────────────────────────────────────────────── -->
-    <main class="users-detail" aria-label="Detalle del usuario">
+  <div class="users-fullwidth-content">
+    <main class="users-detail users-detail--fullwidth" aria-label="Detalle del usuario">
 
       <div class="users-form-container" #formContainer>
 

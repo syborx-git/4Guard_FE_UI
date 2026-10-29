@@ -151,13 +151,35 @@ export class SmartNotificationService {
     const currentRole = (user.role || '').toUpperCase();
     const currentRoute = this.router.url;
 
-    // 1. Super Administradores y Directores reciben todas las alertas
+    // El Gerente de Operaciones no debe recibir alertas ni notificaciones de Caseta ni Calidad
+    if (
+      currentRole === 'OPERATIONS_MANAGER' ||
+      currentRole === 'ROLE_OPERATIONS_MANAGER' ||
+      currentRole === 'WAREHOUSE_MANAGER' ||
+      currentRole === 'ROLE_WAREHOUSE_MANAGER'
+    ) {
+      if (notif.category === 'SECURITY' || notif.category === 'QUALITY') {
+        return false;
+      }
+    }
+
+    // 1. Director General, Super Administradores y Directores reciben todas las alertas
     if (
       currentRole.includes('ADMIN') ||
-      currentRole.includes('MANAGER') ||
       currentRole.includes('DIRECTOR') ||
+      currentRole.includes('CEO')
+    ) {
+      return true;
+    }
+
+    // 1.1 Gerentes y Supervisores operativos para sus categorias pertinentes
+    if (
+      currentRole.includes('MANAGER') ||
       (user.roleLevel && user.roleLevel >= 3)
     ) {
+      if (notif.category === 'SECURITY' || notif.category === 'QUALITY') {
+        return false;
+      }
       return true;
     }
 

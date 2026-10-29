@@ -121,11 +121,15 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   protected readonly isSecurityUser = computed(() => {
     const role = (this.authState.role() || '').toUpperCase();
+    // El Gerente de Operaciones no tiene asignado el modulo ni las alertas de Caseta de Seguridad
+    if (role === 'OPERATIONS_MANAGER' || role === 'ROLE_OPERATIONS_MANAGER' || role === 'WAREHOUSE_MANAGER' || role === 'ROLE_WAREHOUSE_MANAGER') {
+      return false;
+    }
     const route = this.router.url;
     return (
       role.includes('ADMIN') ||
-      role.includes('MANAGER') ||
       role.includes('DIRECTOR') ||
+      role.includes('CEO') ||
       role.includes('SECURITY') ||
       role.includes('VIGILAN') ||
       role.includes('GUARD') ||
@@ -142,6 +146,7 @@ export class ShellComponent implements OnInit, OnDestroy {
       role.includes('ADMIN') ||
       role.includes('MANAGER') ||
       role.includes('DIRECTOR') ||
+      role.includes('CEO') ||
       role.includes('WAREHOUSE') ||
       role.includes('DOCK') ||
       role.includes('OPERAT') ||
@@ -154,11 +159,15 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly isQualityUser = computed(() => {
     if (this.isGuardOnly()) return false;
     const role = (this.authState.role() || '').toUpperCase();
+    // El Gerente de Operaciones no tiene asignado el modulo ni las alertas de Control de Calidad
+    if (role === 'OPERATIONS_MANAGER' || role === 'ROLE_OPERATIONS_MANAGER' || role === 'WAREHOUSE_MANAGER' || role === 'ROLE_WAREHOUSE_MANAGER') {
+      return false;
+    }
     const route = this.router.url;
     return (
       role.includes('ADMIN') ||
-      role.includes('MANAGER') ||
       role.includes('DIRECTOR') ||
+      role.includes('CEO') ||
       role.includes('QM') ||
       role.includes('QUALIT') ||
       role.includes('CALIDAD') ||
@@ -422,6 +431,7 @@ export class ShellComponent implements OnInit, OnDestroy {
       // Restricción RBAC en accesos directos
       if (item.route) {
         if (item.route.startsWith('/security') && !this.authState.canAccessModule('security')) return false;
+        if (item.route.startsWith('/quality') && !this.authState.canAccessModule('quality')) return false;
         if (item.route.startsWith('/receiving') && !this.authState.canAccessModule('warehouse-movements') && !this.authState.canAccessModule('receiving')) return false;
         if (item.route.startsWith('/dashboard') && !this.authState.canAccessModule('dashboard')) return false;
         if (item.route.startsWith('/layout') && !this.authState.canAccessModule('layout') && !this.authState.canAccessModule('catalogs')) return false;

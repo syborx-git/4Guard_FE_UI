@@ -7,7 +7,7 @@
  * Homologado al 100% con la arquitectura Split-View (Master/Detail) de Transportistas.
  */
 
-import { Component, inject, signal, computed, ViewChild, ElementRef, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, ViewChild, ElementRef, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -64,6 +64,33 @@ export class ForkliftOperatorsComponent implements OnInit {
 
   // ─── Toast ──────────────────────────────────────────────────────────────────
   protected readonly toastMessage = signal<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // ─── Selector Desplegable Flotante (Opción A) ───────────────────────────────
+  protected readonly isOperatorDropdownOpen = signal<boolean>(false);
+
+  protected toggleOperatorDropdown(event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.isOperatorDropdownOpen.update(v => !v);
+  }
+
+  protected closeOperatorDropdown(): void {
+    this.isOperatorDropdownOpen.set(false);
+  }
+
+  @HostListener('document:click', [''])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (this.isOperatorDropdownOpen() && !target.closest('.operator-selector-dropdown-wrap')) {
+      this.closeOperatorDropdown();
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.isOperatorDropdownOpen()) {
+      this.closeOperatorDropdown();
+    }
+  }
 
   // ─── Auditoría en Tiempo Real ───────────────────────────────────────────────
   protected readonly auditEntries  = signal<any[]>([]);
@@ -169,6 +196,7 @@ export class ForkliftOperatorsComponent implements OnInit {
     this.populateForm(op);
     this.loadAuditLogs(op.id);
     this.formSection?.nativeElement?.scrollTo({ top: 0, behavior: 'smooth' });
+    this.closeOperatorDropdown();
   }
 
   loadAuditLogs(id: string): void {

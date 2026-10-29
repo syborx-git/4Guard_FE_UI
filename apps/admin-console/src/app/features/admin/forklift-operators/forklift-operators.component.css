@@ -1551,3 +1551,180 @@
 :host-context(.dark) .carriers-tl-node__line {
   background: rgba(255, 255, 255, 0.08);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   OPCIÓN A — SELECTOR DESPLEGABLE FLOTANTE & VISTA FULL-WIDTH
+   ════════════════════════════════════════════════════════════════ */
+
+.operators-selector-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  width: 100%;
+}
+
+.operator-selector-dropdown-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 650px;
+}
+
+.operator-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border-radius: 14px;
+  background: var(--bg-card, rgba(255, 255, 255, 0.95));
+  border: 1px solid var(--border-gold, rgba(197, 168, 107, 0.3));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.operator-selector-btn:hover {
+  border-color: var(--accent-gold, #c5a86b);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 6px 20px rgba(197, 168, 107, 0.18);
+  transform: translateY(-1px);
+}
+
+.operator-selector-btn--open {
+  border-color: var(--accent-gold, #c5a86b);
+  box-shadow: 0 0 0 3px rgba(197, 168, 107, 0.25);
+}
+
+.operator-selector-btn__avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  background: rgba(197, 168, 107, 0.12);
+  color: #c5a86b;
+  border: 1px solid rgba(197, 168, 107, 0.25);
+}
+
+.operator-selector-btn__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.operator-selector-btn__eyebrow {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #9b7626;
+}
+
+.operator-selector-btn__title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary, #1c2940);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.operator-selector-btn__chevron {
+  font-size: 1.4rem;
+  color: #c5a86b;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+/* POPOVER FLOTANTE */
+.operator-dropdown-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 520px;
+  max-width: 95vw;
+  background: #172033;
+  border: 1px solid rgba(197, 168, 107, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+}
+
+.operator-dropdown-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.15rem;
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.operator-dropdown-popover__title-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: 0.02em;
+}
+
+.operator-dropdown-popover__close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  padding: 4px;
+  transition: all 0.15s ease;
+}
+
+.operator-dropdown-popover__close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.operator-dropdown-popover__filters {
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.operator-dropdown-popover__scrollable {
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+/* VISTA FULLWIDTH DEL FORMULARIO */
+.operators-fullwidth-content {
+  width: 100%;
+}
+
+.carriers-detail--fullwidth {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.carriers-detail--fullwidth .carriers-form-container {
+  max-height: none !important;
+  overflow: visible !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
