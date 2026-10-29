@@ -62,18 +62,30 @@ export class AuthState {
     if (!role) return '';
 
     const labels: Record<string, string> = {
-      'ADMIN': 'Administrador',
-      'ROLE_ADMIN': 'Administrador',
-      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
-      'ROLE_WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'ADMIN': 'Director General',
+      'ROLE_ADMIN': 'Director General',
+      'CEO': 'Director General',
+      'ROLE_CEO': 'Director General',
       'OPERATIONS_MANAGER': 'Gerente de Operaciones',
       'ROLE_OPERATIONS_MANAGER': 'Gerente de Operaciones',
-      'DOCK_SUPERVISOR': 'Supervisor de Andén',
-      'ROLE_DOCK_SUPERVISOR': 'Supervisor de Andén',
-      'WAREHOUSE_OPERATOR': 'Operario de Almacén',
-      'ROLE_WAREHOUSE_OPERATOR': 'Operario de Almacén',
+      'OPERATIONS_COORDINATOR': 'Coordinador de Operaciones',
+      'ROLE_OPERATIONS_COORDINATOR': 'Coordinador de Operaciones',
+      'OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
+      'ROLE_OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
+      'CONTROL_DESK': 'Mesa de Control',
+      'ROLE_CONTROL_DESK': 'Mesa de Control',
+      'SHIFT_LEADER': 'Líder de Turno',
+      'ROLE_SHIFT_LEADER': 'Líder de Turno',
       'QM_INSPECTOR': 'Inspector de Calidad',
       'ROLE_QM_INSPECTOR': 'Inspector de Calidad',
+      'WAREHOUSE_OPERATOR': 'Operario de Almacén',
+      'ROLE_WAREHOUSE_OPERATOR': 'Operario de Almacén',
+      'SECURITY_GUARD': 'Guardia de Seguridad',
+      'ROLE_SECURITY_GUARD': 'Guardia de Seguridad',
+      'WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'ROLE_WAREHOUSE_MANAGER': 'Gerente de Almacén',
+      'DOCK_SUPERVISOR': 'Supervisor de Andén',
+      'ROLE_DOCK_SUPERVISOR': 'Supervisor de Andén',
       'AUDITOR': 'Auditor',
       'ROLE_AUDITOR': 'Auditor',
       'CLIENT': 'Cliente 3PL',
@@ -231,25 +243,43 @@ export class AuthState {
 
     const normRole = String(rawRole).trim().toUpperCase();
 
-    // Super Administradores, Administradores, Gerentes y Supervisores de Operaciones tienen acceso completo
+    // 0. Director General / Administradores: Acceso total e irrestricto a todos los modulos
     if (
       normRole === 'SUPER_ADMIN' ||
       normRole === 'ROLE_SUPER_ADMIN' ||
       normRole === 'ROLE_ADMIN' ||
       normRole === 'ADMIN' ||
+      normRole === 'CEO' ||
+      normRole === 'ROLE_CEO'
+    ) {
+      return true;
+    }
+
+    // 1. Gerente de Operaciones: Acceso total operativo WMS EXCLUYENDO Seguridad y Calidad
+    if (
       normRole === 'OPERATIONS_MANAGER' ||
       normRole === 'ROLE_OPERATIONS_MANAGER' ||
+      normRole === 'WAREHOUSE_MANAGER' ||
+      normRole === 'ROLE_WAREHOUSE_MANAGER'
+    ) {
+      if (module === 'security' || module === 'quality') {
+        return false;
+      }
+      return true;
+    }
+
+    // 2. Coordinadores y Supervisores de Operaciones
+    if (
       normRole === 'OPERATIONS_COORDINATOR' ||
       normRole === 'ROLE_OPERATIONS_COORDINATOR' ||
-      normRole === 'CEO' ||
-      normRole === 'ROLE_CEO' ||
-      normRole === 'WAREHOUSE_MANAGER' ||
-      normRole === 'ROLE_WAREHOUSE_MANAGER' ||
       normRole === 'OPERATIONS_SUPERVISOR' ||
       normRole === 'ROLE_OPERATIONS_SUPERVISOR' ||
       normRole === 'WAREHOUSE_SUPERVISOR' ||
       normRole === 'ROLE_WAREHOUSE_SUPERVISOR'
     ) {
+      if (module === 'security' || module === 'quality') {
+        return false;
+      }
       return true;
     }
 

@@ -365,11 +365,11 @@ export class TaskMenuComponent {
       id: 'mod-print',
       icon: 'print',
       title: 'Impresión de Etiquetas Zebra SSCC',
-      description: 'Generar, duplicar y reimprimir identificadores GS1-128 de tarima completa y máster.',
+      description: 'Generar, duplicar y reimprimir identificadores GS1-128 de tarima completa y máster en andén.',
       badgeText: 'Zebra ZT411 OK',
       badgeType: 'orange',
-      actionLabel: 'Imprimir Etiquetas',
-      route: '/receiving',
+      actionLabel: 'Imprimir en Cockpit',
+      route: '/cockpit',
     },
   ];
 
@@ -416,12 +416,28 @@ export class TaskMenuComponent {
         };
       }
 
-      // Si no hay misiones pendientes en la base de datos ni en el buffer
+      const nextInQueue = this.missionService.queuedMissions()[0];
+      if (nextInQueue) {
+        return {
+          folio: nextInQueue.folio,
+          statusBadge: 'Asignada a tu Perfil',
+          title: `${nextInQueue.typeLabel} • ${nextInQueue.totalExpectedPallets || 1} Tarima(s) • ${nextInQueue.originLocation}`,
+          subtitle: `Asignado a: ${this.authState.userFullName() || 'Montacarguista'} • Rampa lista para maniobra`,
+          operatorName: this.authState.userFullName() || 'Montacarguista',
+          elapsedMinutes: 1,
+          icon: 'forklift',
+          actionLabel: 'INICIAR MANIOBRA',
+          route: '/cockpit',
+          bannerTheme: 'inbound',
+        };
+      }
+
+      // Si no hay misiones asignadas al montacarguista en la base de datos
       return {
-        folio: 'ALMACÉN AL DÍA',
+        folio: 'SIN ASIGNACIONES',
         statusBadge: 'Al Día',
-        title: 'Cola de Trabajo Despejada • Sin Maniobras Pendientes',
-        subtitle: 'Esperando asignación de tráilers en andén desde Caseta de Seguridad.',
+        title: 'Cola Personal Despejada • Sin Maniobras Asignadas',
+        subtitle: 'Esperando que Mesa de Control o Caseta te asigne una rampa.',
         operatorName: this.authState.userFullName() || 'Montacarguista',
         elapsedMinutes: 0,
         icon: 'task_alt',

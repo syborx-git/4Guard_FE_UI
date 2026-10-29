@@ -22,25 +22,22 @@
 
     <div class="rf-topbar__status">
       @if (pwaService.canInstall()) {
-        <button 
-          type="button" 
-          class="rf-pwa-install-btn animate-fade-in" 
-          (click)="promptInstallPwa()"
-          title="Instalar terminal en este dispositivo">
-          <span class="material-symbols-outlined text-sm">install_mobile</span>
-          <span>Instalar Terminal PWA</span>
-        </button>
+      <button type="button" class="rf-pwa-install-btn animate-fade-in" (click)="promptInstallPwa()"
+        title="Instalar terminal en este dispositivo">
+        <span class="material-symbols-outlined text-sm">install_mobile</span>
+        <span>Instalar Terminal PWA</span>
+      </button>
       }
       @if (isOffline()) {
-        <span class="rf-status-chip rf-status-chip--offline">
-          <span class="rf-status-chip__dot rf-status-chip__dot--red" aria-hidden="true"></span>
-          Sin Conexión
-        </span>
+      <span class="rf-status-chip rf-status-chip--offline">
+        <span class="rf-status-chip__dot rf-status-chip__dot--red" aria-hidden="true"></span>
+        Sin Conexión
+      </span>
       } @else {
-        <span class="rf-status-chip rf-status-chip--online">
-          <span class="rf-status-chip__dot" aria-hidden="true"></span>
-          Sistema En Línea
-        </span>
+      <span class="rf-status-chip rf-status-chip--online">
+        <span class="rf-status-chip__dot" aria-hidden="true"></span>
+        Sistema En Línea
+      </span>
       }
       <span class="rf-clock" aria-live="polite">⏱ {{ currentLiveTime() }}</span>
     </div>
@@ -49,6 +46,90 @@
   <!-- ░░ Panel Principal Glassmorphic ░░ -->
   <main class="rf-main">
     <section class="rf-card" aria-labelledby="rf-login-title">
+
+      @if (mustChangePin()) {
+      <div class="rf-panel animate-fade-in" role="dialog" aria-labelledby="rf-pin-change-title">
+        <div class="rf-card__header" style="margin-bottom: 1rem;">
+          <span class="rf-card__eyebrow" style="color: #fbbf24;">Seguridad de Operador · Primer Acceso</span>
+          <h2 id="rf-pin-change-title">Configura tu PIN Personal</h2>
+          <p class="rf-card__subtitle">
+            Hola <strong>{{ pendingUser()?.fullName || 'Operador' }}</strong>. Tu PIN fue restablecido por un
+            administrador. Por seguridad, ingresa un nuevo PIN personal de 4 dígitos.
+          </p>
+        </div>
+
+        <div
+          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding: 0.5rem 0.75rem; border-radius: 10px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3);">
+          <span
+            style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: #fbbf24;">
+            <span class="material-symbols-outlined text-base">lock_reset</span>
+            @if (pinChangeStep() === 'new') {
+            <span>Paso 1 de 2: Ingresa tu nuevo PIN (4 dígitos)</span>
+            } @else {
+            <span>Paso 2 de 2: Confirma tu nuevo PIN (4 dígitos)</span>
+            }
+          </span>
+          @if (pinChangeStep() === 'confirm') {
+          <button type="button" (click)="resetPinChangeStep()"
+            style="font-size: 0.75rem; color: #38bdf8; background: transparent; border: none; cursor: pointer; font-weight: 600;">
+            Cambiar PIN
+          </button>
+          }
+        </div>
+
+        <div class="pin-display" aria-label="Nuevo PIN ingresado" aria-live="polite">
+          <span class="pin-dots">{{ newPinDisplay }}</span>
+          <span class="pin-counter text-xs text-muted font-mono">{{ activeNewPinValue.length }}/4 dígitos</span>
+        </div>
+
+        @if (error()) {
+        <div class="pin-error" role="alert" aria-live="assertive">
+          <span class="material-symbols-outlined text-base">error</span>
+          <span>{{ error() }}</span>
+        </div>
+        }
+
+        <div class="numpad" role="group" aria-label="Teclado numérico para nuevo PIN">
+          @for (digit of ['1','2','3','4','5','6','7','8','9','C','0','⌫']; track digit) {
+          @if (digit === 'C') {
+          <button type="button" class="numpad-key numpad-key--clear" (click)="clearNewPinDigits()"
+            aria-label="Limpiar">C</button>
+          } @else if (digit === '⌫') {
+          <button type="button" class="numpad-key numpad-key--del" (click)="deleteNewPinDigit()"
+            aria-label="Borrar último dígito">
+            <span class="material-symbols-outlined text-lg">backspace</span>
+          </button>
+          } @else {
+          <button type="button" class="numpad-key" (click)="appendNewPinDigit(digit)"
+            [attr.aria-label]="'Dígito ' + digit">
+            {{ digit }}
+          </button>
+          }
+          }
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem;">
+          <button type="button" class="rf-btn"
+            style="flex: 1; background: rgba(148, 163, 184, 0.14); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1;"
+            [disabled]="isLoading()" (click)="cancelPinChange()">
+            <span>Cancelar</span>
+          </button>
+          <button id="pin-change-confirm-btn" type="button" class="rf-btn rf-btn--primary" style="flex: 2;"
+            [disabled]="activeNewPinValue.length !== 4 || isLoading()" (click)="proceedOrSubmitNewPin()">
+            @if (isLoading()) {
+            <span class="material-symbols-outlined text-xl animate-spin" aria-hidden="true">refresh</span>
+            <span>Guardando PIN…</span>
+            } @else if (pinChangeStep() === 'new') {
+            <span>Continuar a Confirmación</span>
+            <span class="material-symbols-outlined text-xl">arrow_forward</span>
+            } @else {
+            <span>Guardar PIN y Entrar</span>
+            <span class="material-symbols-outlined text-xl">verified_user</span>
+            }
+          </button>
+        </div>
+      </div>
+      } @else {
 
       <div class="rf-card__header">
         <span class="rf-card__eyebrow">Acceso Seguro al Terminal</span>
@@ -60,48 +141,32 @@
 
       <!-- Offline alert banner si aplica -->
       @if (isOffline()) {
-        <div class="offline-banner" role="alert" aria-live="assertive">
-          <span class="material-symbols-outlined text-base">wifi_off</span>
-          <span>Modo Sin Conexión — Autenticando con caché seguro local</span>
-        </div>
+      <div class="offline-banner" role="alert" aria-live="assertive">
+        <span class="material-symbols-outlined text-base">wifi_off</span>
+        <span>Modo Sin Conexión — Autenticando con caché seguro local</span>
+      </div>
       }
 
       <!-- Tabs Segmentadas Estilo Fintech Industrial -->
-      <div class="rf-tabs" role="tablist" aria-label="Método de acceso" [attr.data-active]="mode() === 'credentials' ? 0 : (mode() === 'pin' ? 1 : 2)">
+      <div class="rf-tabs" role="tablist" aria-label="Método de acceso"
+        [attr.data-active]="mode() === 'credentials' ? 0 : (mode() === 'pin' ? 1 : 2)">
         <span class="rf-tabs__indicator" aria-hidden="true"></span>
 
-        <button
-          type="button"
-          role="tab"
-          id="tab-credentials"
-          class="rf-tabs__btn"
-          [class.is-active]="mode() === 'credentials'"
-          (click)="switchMode('credentials')"
+        <button type="button" role="tab" id="tab-credentials" class="rf-tabs__btn"
+          [class.is-active]="mode() === 'credentials'" (click)="switchMode('credentials')"
           [attr.aria-selected]="mode() === 'credentials'">
           <span class="material-symbols-outlined text-[18px]">badge</span>
           <span>Credenciales</span>
         </button>
 
-        <button
-          type="button"
-          role="tab"
-          id="tab-pin"
-          class="rf-tabs__btn"
-          [class.is-active]="mode() === 'pin'"
-          (click)="switchMode('pin')"
-          [attr.aria-selected]="mode() === 'pin'">
+        <button type="button" role="tab" id="tab-pin" class="rf-tabs__btn" [class.is-active]="mode() === 'pin'"
+          (click)="switchMode('pin')" [attr.aria-selected]="mode() === 'pin'">
           <span class="material-symbols-outlined text-[18px]">pin</span>
           <span>PIN Rápido</span>
         </button>
 
-        <button
-          type="button"
-          role="tab"
-          id="tab-scan"
-          class="rf-tabs__btn"
-          [class.is-active]="mode() === 'scan'"
-          (click)="switchMode('scan')"
-          [attr.aria-selected]="mode() === 'scan'">
+        <button type="button" role="tab" id="tab-scan" class="rf-tabs__btn" [class.is-active]="mode() === 'scan'"
+          (click)="switchMode('scan')" [attr.aria-selected]="mode() === 'scan'">
           <span class="material-symbols-outlined text-[18px]">qr_code_scanner</span>
           <span>Escaneo QR</span>
         </button>
@@ -109,204 +174,171 @@
 
       <!-- ═══ MODO 1: CREDENCIALES WMS ═══ -->
       @if (mode() === 'credentials') {
-        <div class="rf-panel animate-fade-in" role="tabpanel" aria-labelledby="tab-credentials">
-          <form [formGroup]="loginForm" (ngSubmit)="submitCredentials()" class="rf-form">
-            
-            <div class="rf-field">
-              <label for="username" class="rf-field__label">Usuario o Correo Institucional</label>
-              <div class="rf-field__control">
-                <span class="rf-field__icon" aria-hidden="true">
-                  <span class="material-symbols-outlined text-lg">alternate_email</span>
-                </span>
-                <input
-                  id="username"
-                  type="text"
-                  formControlName="identifier"
-                  placeholder="ej. operator@4guard.mx, guard@4guard.mx"
-                  class="rf-field__input"
-                  autocomplete="username" />
-              </div>
-            </div>
+      <div class="rf-panel animate-fade-in" role="tabpanel" aria-labelledby="tab-credentials">
+        <form [formGroup]="loginForm" (ngSubmit)="submitCredentials()" class="rf-form">
 
-            <div class="rf-field">
-              <label for="password" class="rf-field__label">Contraseña de Seguridad</label>
-              <div class="rf-field__control">
-                <span class="rf-field__icon" aria-hidden="true">
-                  <span class="material-symbols-outlined text-lg">lock</span>
-                </span>
-                <input
-                  id="password"
-                  [type]="showPassword() ? 'text' : 'password'"
-                  formControlName="password"
-                  placeholder="Introduce tu contraseña"
-                  class="rf-field__input"
-                  autocomplete="current-password" />
-                <button
-                  type="button"
-                  class="rf-field__toggle"
-                  (click)="toggleShowPassword()"
-                  [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Ver contraseña'">
-                  <span class="material-symbols-outlined text-lg">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
-                </button>
-              </div>
+          <div class="rf-field">
+            <label for="username" class="rf-field__label">Usuario o Correo Institucional</label>
+            <div class="rf-field__control">
+              <span class="rf-field__icon" aria-hidden="true">
+                <span class="material-symbols-outlined text-lg">alternate_email</span>
+              </span>
+              <input id="username" type="text" formControlName="identifier"
+                placeholder="ej. operator@4guard.mx, guard@4guard.mx" class="rf-field__input" autocomplete="username" />
             </div>
+          </div>
 
-            <div class="rf-row">
-              <label class="rf-checkbox">
-                <input type="checkbox" formControlName="remember" />
-                <span class="rf-checkbox__box" aria-hidden="true"></span>
-                <span class="rf-checkbox__text">Recordar en esta terminal</span>
-              </label>
-              <span class="rf-tech-badge">SLA &lt;1.5s</span>
+          <div class="rf-field">
+            <label for="password" class="rf-field__label">Contraseña de Seguridad</label>
+            <div class="rf-field__control">
+              <span class="rf-field__icon" aria-hidden="true">
+                <span class="material-symbols-outlined text-lg">lock</span>
+              </span>
+              <input id="password" [type]="showPassword() ? 'text' : 'password'" formControlName="password"
+                placeholder="Introduce tu contraseña" class="rf-field__input" autocomplete="current-password" />
+              <button type="button" class="rf-field__toggle" (click)="toggleShowPassword()"
+                [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Ver contraseña'">
+                <span class="material-symbols-outlined text-lg">{{ showPassword() ? 'visibility_off' : 'visibility'
+                  }}</span>
+              </button>
             </div>
+          </div>
 
-            @if (error()) {
-              <div class="pin-error" role="alert" aria-live="assertive">
-                <span class="material-symbols-outlined text-base">error</span>
-                <span>{{ error() }}</span>
-              </div>
+          <div class="rf-row">
+            <label class="rf-checkbox">
+              <input type="checkbox" formControlName="remember" />
+              <span class="rf-checkbox__box" aria-hidden="true"></span>
+              <span class="rf-checkbox__text">Recordar en esta terminal</span>
+            </label>
+            <span class="rf-tech-badge">SLA &lt;1.5s</span>
+          </div>
+
+          @if (error()) {
+          <div class="pin-error" role="alert" aria-live="assertive">
+            <span class="material-symbols-outlined text-base">error</span>
+            <span>{{ error() }}</span>
+          </div>
+          }
+
+          <button id="btn-login-credentials" type="submit" class="rf-btn rf-btn--primary"
+            [disabled]="loginForm.invalid || isLoading()" aria-label="Iniciar Sesión en el Terminal">
+            @if (isLoading()) {
+            <span class="material-symbols-outlined text-xl animate-spin" aria-hidden="true">refresh</span>
+            <span>Verificando credenciales…</span>
+            } @else {
+            <span>Ingresar al Terminal</span>
+            <span class="material-symbols-outlined text-xl">arrow_forward</span>
             }
-
-            <button
-              id="btn-login-credentials"
-              type="submit"
-              class="rf-btn rf-btn--primary"
-              [disabled]="loginForm.invalid || isLoading()"
-              aria-label="Iniciar Sesión en el Terminal">
-              @if (isLoading()) {
-                <span class="material-symbols-outlined text-xl animate-spin" aria-hidden="true">refresh</span>
-                <span>Verificando credenciales…</span>
-              } @else {
-                <span>Ingresar al Terminal</span>
-                <span class="material-symbols-outlined text-xl">arrow_forward</span>
-              }
-            </button>
-          </form>
-        </div>
+          </button>
+        </form>
+      </div>
       }
 
       <!-- ═══ MODO 2: PIN RÁPIDO ═══ -->
       @if (mode() === 'pin') {
-        <div class="rf-panel animate-fade-in" role="tabpanel" aria-labelledby="tab-pin">
-          
-          <!-- Campo Código de Operador / Gafete -->
-          <div class="rf-field" style="margin-bottom: 1.25rem;">
-            <label for="rf-operator-input" class="rf-field__label" style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="display: inline-flex; align-items: center; gap: 6px;">
-                <span class="material-symbols-outlined text-sm text-amber-400">badge</span>
-                <span>Código de Operador / Gafete</span>
-              </span>
-              <span class="text-xs text-amber-400 font-mono" style="font-weight: 600; letter-spacing: 0.04em;">Requerido</span>
-            </label>
-            <div class="rf-field__control">
-              <span class="rf-field__icon" aria-hidden="true">
-                <span class="material-symbols-outlined text-lg text-amber-400">forklift</span>
-              </span>
-              <input
-                id="rf-operator-input"
-                type="text"
-                [value]="operatorCode()"
-                (input)="setOperatorCode($any($event.target).value)"
-                placeholder="Ej. MC-001"
-                class="rf-field__input"
-                style="text-transform: uppercase; font-family: monospace; letter-spacing: 0.08em; font-weight: 700;"
-                autocomplete="off" />
-              @if (operatorCode()) {
-                <button
-                  type="button"
-                  class="rf-field__toggle"
-                  (click)="clearOperatorCode()"
-                  aria-label="Limpiar código">
-                  <span class="material-symbols-outlined text-lg">close</span>
-                </button>
-              }
-            </div>
-          </div>
+      <div class="rf-panel animate-fade-in" role="tabpanel" aria-labelledby="tab-pin">
 
-          <!-- Display estilizado del PIN -->
-          <div class="pin-display" aria-label="PIN ingresado" aria-live="polite">
-            <span class="pin-dots">{{ pinDisplay }}</span>
-            <span class="pin-counter text-xs text-muted font-mono">{{ pin().length }}/4 dígitos</span>
-          </div>
-
-          @if (error()) {
-            <div class="pin-error" role="alert" aria-live="assertive">
-              <span class="material-symbols-outlined text-base">error</span>
-              <span>{{ error() }}</span>
-            </div>
-          }
-
-          <!-- Teclado Numérico Ergonómico Industrial -->
-          <div class="numpad" role="group" aria-label="Teclado numérico">
-            @for (digit of ['1','2','3','4','5','6','7','8','9','C','0','⌫']; track digit) {
-              @if (digit === 'C') {
-                <button type="button" class="numpad-key numpad-key--clear" (click)="clearPin()" aria-label="Limpiar">C</button>
-              } @else if (digit === '⌫') {
-                <button type="button" class="numpad-key numpad-key--del" (click)="deletePin()" aria-label="Borrar último dígito">
-                  <span class="material-symbols-outlined text-lg">backspace</span>
-                </button>
-              } @else {
-                <button
-                  type="button"
-                  class="numpad-key"
-                  (click)="appendPin(digit)"
-                  [attr.aria-label]="'Dígito ' + digit">
-                  {{ digit }}
-                </button>
-              }
+        <!-- Campo Código de Operador / Gafete -->
+        <div class="rf-field" style="margin-bottom: 1.25rem;">
+          <label for="rf-operator-input" class="rf-field__label"
+            style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="display: inline-flex; align-items: center; gap: 6px;">
+              <span class="material-symbols-outlined text-sm text-amber-400">badge</span>
+              <span>Código de Operador / Gafete</span>
+            </span>
+            <span class="text-xs text-amber-400 font-mono"
+              style="font-weight: 600; letter-spacing: 0.04em;">Requerido</span>
+          </label>
+          <div class="rf-field__control">
+            <span class="rf-field__icon" aria-hidden="true">
+              <span class="material-symbols-outlined text-lg text-amber-400">forklift</span>
+            </span>
+            <input id="rf-operator-input" type="text" [value]="operatorCode()"
+              (input)="setOperatorCode($any($event.target).value)" placeholder="Ej. MC-001" class="rf-field__input"
+              style="text-transform: uppercase; font-family: monospace; letter-spacing: 0.08em; font-weight: 700;"
+              autocomplete="off" />
+            @if (operatorCode()) {
+            <button type="button" class="rf-field__toggle" (click)="clearOperatorCode()" aria-label="Limpiar código">
+              <span class="material-symbols-outlined text-lg">close</span>
+            </button>
             }
           </div>
-
-          <!-- Botón Confirmar PIN -->
-          <button
-            id="pin-confirm-btn"
-            type="button"
-            class="rf-btn rf-btn--primary"
-            [disabled]="!canSubmitPin || isLoading()"
-            (click)="submitPin()"
-            aria-label="Confirmar PIN e ingresar">
-            @if (isLoading()) {
-              <span class="material-symbols-outlined text-xl animate-spin" aria-hidden="true">refresh</span>
-              <span>Validando PIN…</span>
-            } @else {
-              <span>Confirmar Acceso PIN</span>
-              <span class="material-symbols-outlined text-xl">login</span>
-            }
-          </button>
         </div>
+
+        <!-- Display estilizado del PIN -->
+        <div class="pin-display" aria-label="PIN ingresado" aria-live="polite">
+          <span class="pin-dots">{{ pinDisplay }}</span>
+          <span class="pin-counter text-xs text-muted font-mono">{{ pin().length }}/4 dígitos</span>
+        </div>
+
+        @if (error()) {
+        <div class="pin-error" role="alert" aria-live="assertive">
+          <span class="material-symbols-outlined text-base">error</span>
+          <span>{{ error() }}</span>
+        </div>
+        }
+
+        <!-- Teclado Numérico Ergonómico Industrial -->
+        <div class="numpad" role="group" aria-label="Teclado numérico">
+          @for (digit of ['1','2','3','4','5','6','7','8','9','C','0','⌫']; track digit) {
+          @if (digit === 'C') {
+          <button type="button" class="numpad-key numpad-key--clear" (click)="clearPin()"
+            aria-label="Limpiar">C</button>
+          } @else if (digit === '⌫') {
+          <button type="button" class="numpad-key numpad-key--del" (click)="deletePin()"
+            aria-label="Borrar último dígito">
+            <span class="material-symbols-outlined text-lg">backspace</span>
+          </button>
+          } @else {
+          <button type="button" class="numpad-key" (click)="appendPin(digit)" [attr.aria-label]="'Dígito ' + digit">
+            {{ digit }}
+          </button>
+          }
+          }
+        </div>
+
+        <!-- Botón Confirmar PIN -->
+        <button id="pin-confirm-btn" type="button" class="rf-btn rf-btn--primary"
+          [disabled]="!canSubmitPin || isLoading()" (click)="submitPin()" aria-label="Confirmar PIN e ingresar">
+          @if (isLoading()) {
+          <span class="material-symbols-outlined text-xl animate-spin" aria-hidden="true">refresh</span>
+          <span>Validando PIN…</span>
+          } @else {
+          <span>Confirmar Acceso PIN</span>
+          <span class="material-symbols-outlined text-xl">login</span>
+          }
+        </button>
+      </div>
       }
 
       <!-- ═══ MODO 3: ESCANEO QR / RFID ═══ -->
       @if (mode() === 'scan') {
-        <div class="rf-panel animate-fade-in" role="tabpanel" aria-labelledby="tab-scan">
-          <p class="rf-scan-hint">
-            Coloca tu gafete de operario o credencial con código QR frente al sensor óptico de la tableta.
-          </p>
+      <div class="rf-panel animate-fade-in" role="tabpanel" aria-labelledby="tab-scan">
+        <p class="rf-scan-hint">
+          Coloca tu gafete de operario o credencial con código QR frente al sensor óptico de la tableta.
+        </p>
 
-          <button
-            id="scan-trigger-btn"
-            type="button"
-            class="rf-scan-btn"
-            [class.rf-scan-btn--scanning]="isScanning()"
-            (click)="triggerScan()"
-            [disabled]="isScanning()"
-            aria-label="Activar sensor para escanear QR o RFID">
-            @if (!isScanning()) {
-              <div class="rf-scan-btn__radar"></div>
-              <span class="material-symbols-outlined text-4xl text-amber-400">qr_code_scanner</span>
-              <span class="rf-scan-btn__label">ESCANEAR</span>
-              <span class="rf-scan-btn__sub">Gafete · QR · RFID</span>
-            } @else {
-              <span class="material-symbols-outlined text-4xl text-cyan-400 animate-spin">refresh</span>
-              <span class="rf-scan-btn__label">Leyendo sensor…</span>
-              <span class="rf-scan-btn__sub">Mantén tu credencial estable</span>
-            }
-          </button>
-        </div>
+        <button id="scan-trigger-btn" type="button" class="rf-scan-btn" [class.rf-scan-btn--scanning]="isScanning()"
+          (click)="triggerScan()" [disabled]="isScanning()" aria-label="Activar sensor para escanear QR o RFID">
+          @if (!isScanning()) {
+          <div class="rf-scan-btn__radar"></div>
+          <span class="material-symbols-outlined text-4xl text-amber-400">qr_code_scanner</span>
+          <span class="rf-scan-btn__label">ESCANEAR</span>
+          <span class="rf-scan-btn__sub">Gafete · QR · RFID</span>
+          } @else {
+          <span class="material-symbols-outlined text-4xl text-cyan-400 animate-spin">refresh</span>
+          <span class="rf-scan-btn__label">Leyendo sensor…</span>
+          <span class="rf-scan-btn__sub">Mantén tu credencial estable</span>
+          }
+        </button>
+      </div>
+      }
+
       }
 
       <p class="rf-card__legal">
-        Terminal Operativo 4GUARD Security &amp; Yard Management. Sesión cifrada sujeta a bitácora y auditoría institucional.
+        Terminal Operativo 4GUARD Security &amp; Yard Management. Sesión cifrada sujeta a bitácora y auditoría
+        institucional.
       </p>
     </section>
   </main>

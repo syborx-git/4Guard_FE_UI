@@ -72,7 +72,7 @@
           <div class="wms-kpi-summary-item">
             <span class="wms-kpi-summary-dot wms-kpi-summary-dot--blue"></span>
             <span class="wms-kpi-summary-label">Sucursal:</span>
-            <strong class="wms-kpi-summary-value text-blue-600 dark:text-blue-400">CDMX-01</strong>
+            <strong class="wms-kpi-summary-value text-blue-600 dark:text-blue-400">{{ activeBranchName() }}</strong>
           </div>
 
           <div class="wms-kpi-summary-item">
@@ -190,41 +190,66 @@
         <ul class="shift-list">
           @for (shift of shiftService.filteredShifts(); track shift.id) {
           <li
-            class="shift-item"
-            [class.shift-item--selected]="shiftService.selectedShiftId() === shift.id && formMode() !== 'new'"
+            class="user-item shift-card-item"
+            [class.user-item--selected]="shiftService.selectedShiftId() === shift.id && formMode() !== 'new'"
+            [class.user-item--inactive]="shift.status === 'INACTIVE'"
+            [class.shift-item--has-conflict]="hasConflict(shift.id)"
             (click)="onSelectShift(shift.id)"
             tabindex="0"
             (keydown.enter)="onSelectShift(shift.id)"
             (keydown.space)="onSelectShift(shift.id); $event.preventDefault()"
           >
-            <div class="shift-item__avatar" [class.shift-item__avatar--inactive]="shift.status === 'INACTIVE'">
-              <span class="material-symbols-outlined">schedule</span>
+            <!-- Avatar con iniciales al estilo del módulo de usuarios -->
+            <div class="user-avatar shift-avatar" [class.shift-avatar--inactive]="shift.status === 'INACTIVE'" aria-hidden="true">
+              {{ getShiftInitials(shift) }}
             </div>
 
-            <div class="shift-item__info">
-              <div class="shift-item__header">
-                <span class="shift-item__code">{{ shift.code }}</span>
+            <!-- Cuerpo de 3 filas fluidas homólogo a Usuarios -->
+            <div class="user-item__body">
+              <!-- Fila 1: Nombre del Turno + Status Pill (• Activo / • Inactivo) -->
+              <div class="user-item__row-top">
+                <span class="user-item__name font-bold text-sm" [title]="shift.name">
+                  {{ shift.name }}
+                </span>
                 <span
-                  class="shift-badge"
-                  [class.shift-badge--active]="shift.status === 'ACTIVE'"
-                  [class.shift-badge--inactive]="shift.status === 'INACTIVE'"
-                >
-                  {{ statusLabels[shift.status] }}
+                  class="user-status-pill user-status-pill--{{ (shift.status || 'ACTIVE').toLowerCase() }}"
+                  [attr.aria-label]="'Estado: ' + shift.status">
+                  <span class="user-status-pill__dot"></span>
+                  {{ shift.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
                 </span>
               </div>
 
-              <h3 class="shift-item__name">{{ shift.name }}</h3>
-
-              <div class="shift-item__meta">
-                <span class="shift-item__time">
-                  <span class="material-symbols-outlined meta-icon">schedule</span>
+              <!-- Fila 2: Código mono oro + Horario operativo -->
+              <div class="user-item__row-mid">
+                <span class="user-item__username font-mono font-bold text-xs text-amber-600 dark:text-amber-400">&#64;{{ shift.code }}</span>
+                <span class="user-item__dot-sep text-slate-400">•</span>
+                <span class="user-item__email flex items-center gap-1 font-mono text-xs">
+                  <span class="material-symbols-outlined text-[13px] text-slate-400">schedule</span>
                   {{ shift.startTime }} → {{ shift.endTime }}
                 </span>
+              </div>
 
-                <span class="shift-item__days">
-                  <span class="material-symbols-outlined meta-icon">calendar_today</span>
+              <!-- Fila 3: Chips de Días Operativos + Sucursal con icono + Badges de conflicto/nocturno -->
+              <div class="user-item__row-bottom flex items-center gap-2 flex-wrap mt-1">
+                <span class="user-role-badge user-role-badge--operator text-[11px] font-bold">
                   {{ getDayShortLabels(shift.operatingDays) }}
                 </span>
+
+                <span class="user-item__branch flex items-center gap-0.5 text-[11px] text-slate-500">
+                  <span class="material-symbols-outlined user-item__branch-icon text-[13px]">location_on</span>
+                  <span>{{ activeBranchName() }}</span>
+                </span>
+
+                @if (hasConflict(shift.id)) {
+                  <span class="shift-badge shift-badge--conflict text-[10px]" title="Conflicto de solapamiento">
+                    <span class="material-symbols-outlined text-[11px]">warning</span> Conflicto
+                  </span>
+                }
+                @if (shift.isOvernight) {
+                  <span class="shift-badge shift-badge--night text-[10px]" title="Jornada que cruza medianoche">
+                    <span class="material-symbols-outlined text-[11px]">nightlight</span> Nocturno
+                  </span>
+                }
               </div>
             </div>
           </li>
@@ -491,74 +516,129 @@
             Los cambios guardados se aplican al catálogo operativo de 4GUARD WMS. La persistencia transaccional y los registros de auditoría detallados (audit_logs) son procesados automáticamente por el backend.
           </p>
 
-          <!-- SECCIÓN DE AUDITORÍA Y TRAZABILIDAD EN TIEMPO REAL (BE GET /api/v1/shifts/{id}/audit) -->
+          <!-- SECCIÓN — Control & Auditoría en Tiempo Real (Homologada con Usuarios y Recepción) -->
           @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {
-            <div class="carriers-timeline-preview">
-              <div class="carriers-timeline-preview__header">
-                <div class="carriers-timeline-preview__title">
-                  <span class="material-symbols-outlined text-base">timeline</span>
-                  <span>Línea de Tiempo de Auditoría</span>
+            <div class="users-form-section users-audit-section mt-6 pt-4 border-t border-subtle">
+              <!-- Acordeón Header idéntico a Usuarios -->
+              <div
+                (click)="toggleShowAuditTimeline()"
+                class="users-audit-accordion-header flex items-center justify-between p-3.5 rounded-xl bg-surface-variant/40 hover:bg-surface-variant/70 border border-subtle cursor-pointer transition-colors shadow-sm"
+              >
+                <div class="flex items-center gap-2.5">
+                  <span class="material-symbols-outlined text-base text-gold text-amber-500">history</span>
+                  <span class="text-xs font-bold text-gold uppercase tracking-wider text-amber-500">
+                    Información de Control &amp; Auditoría
+                  </span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    {{ auditLogs().length }} evento(s)
+                  </span>
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="carriers-timeline-preview__count">{{ auditLogs().length }} evento(s)</span>
-                  <button
-                    type="button"
-                    class="p-1 rounded text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-                    (click)="loadAuditLogs(current.id)"
-                    title="Actualizar historial de auditoría"
-                    [disabled]="isLoadingAudit()">
-                    <span class="material-symbols-outlined text-sm" [class.animate-spin]="isLoadingAudit()">sync</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  class="text-xs font-bold text-slate-400 flex items-center gap-1 hover:text-slate-200"
+                >
+                  <span>{{ showAuditTimeline() ? 'Ocultar Historial' : 'Ver Historial de Auditoría' }}</span>
+                  <span class="material-symbols-outlined text-base transition-transform duration-200" [class.rotate-180]="showAuditTimeline()">
+                    expand_more
+                  </span>
+                </button>
               </div>
 
-              @if (isLoadingAudit()) {
-                <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4 flex items-center justify-center gap-2">
-                  <span class="material-symbols-outlined animate-spin text-sm">sync</span>
-                  <span>Cargando historial de auditoría desde el servidor…</span>
-                </div>
-              } @else if (auditLogs().length === 0) {
-                <div class="text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4">
-                  No se encontraron registros de auditoría para este turno.
-                </div>
-              } @else {
-                <div class="carriers-timeline-preview__nodes">
-                  @for (entry of auditLogs(); track entry.logId || $index; let isLast = $last) {
-                    <div class="carriers-tl-node" [ngClass]="getAuditColorClass(entry.action)">
-                      <div class="carriers-tl-node__dot">
-                        <span class="material-symbols-outlined text-sm">{{ getAuditIcon(entry.action) }}</span>
+              @if (showAuditTimeline()) {
+                <div class="mt-4 space-y-4 animate-fade-in">
+                  <!-- Metadatos de lectura rápida (4 Cards Bento idénticas a Usuarios) -->
+                  <div class="carriers-readonly-grid grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="carriers-readonly-field">
+                      <span class="carriers-readonly-field__label">Código de Turno</span>
+                      <span class="carriers-readonly-field__value font-mono font-black text-xs">&#64;{{ current.code }}</span>
+                    </div>
+                    <div class="carriers-readonly-field">
+                      <span class="carriers-readonly-field__label">Sucursal Asignada</span>
+                      <span class="carriers-readonly-field__value text-xs font-black">{{ activeBranchName() }}</span>
+                    </div>
+                    <div class="carriers-readonly-field">
+                      <span class="carriers-readonly-field__label">Horario &amp; Duración</span>
+                      <span class="carriers-readonly-field__value text-xs font-black">{{ current.startTime }} → {{ current.endTime }} ({{ durationCalculation().formattedNetHours }})</span>
+                    </div>
+                    <div class="carriers-readonly-field">
+                      <span class="carriers-readonly-field__label">Estado Operativo</span>
+                      <span class="carriers-readonly-field__value text-xs font-black flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full" [ngClass]="current.status === 'ACTIVE' ? 'bg-emerald-500 shadow-[0_0_6px_#10b981]' : 'bg-slate-400'"></span>
+                        {{ current.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Línea de Tiempo de Auditoría (Trazabilidad WMS) idéntica a Usuarios -->
+                  <div class="carriers-timeline-preview">
+                    <div class="carriers-timeline-preview__header">
+                      <div class="carriers-timeline-preview__title flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base text-amber-500">timeline</span>
+                        <span class="font-bold">Línea de Tiempo de Auditoría (Trazabilidad WMS)</span>
                       </div>
-                      @if (!isLast) {
-                        <div class="carriers-tl-node__line"></div>
-                      }
-                      <div class="carriers-tl-node__content">
-                        <div class="carriers-tl-node__header">
-                          <span class="carriers-tl-node__action">{{ getAuditSummary(entry.action) }}</span>
-                          <span class="carriers-tl-node__tag">&#64;{{ entry.username }}</span>
-                        </div>
-
-                        @if (entry.details && entry.details.length > 0) {
-                          <div class="carriers-tl-node__diffs">
-                            @for (d of entry.details; track d.fieldName) {
-                              <div class="carriers-tl-diff">
-                                <span class="carriers-tl-diff__field">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
-                                @if (d.oldValue !== null && d.oldValue !== undefined && d.oldValue !== '' && d.oldValue !== 'null' && d.oldValue !== d.newValue) {
-                                  <span class="carriers-tl-diff__old">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
-                                  <span class="carriers-tl-diff__arrow">➔</span>
-                                }
-                                <span class="carriers-tl-diff__new">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
-                              </div>
-                            }
-                          </div>
-                        }
-
-                        <span class="carriers-tl-node__meta">
-                          <span class="material-symbols-outlined text-[13px]">schedule</span>
-                          <span>{{ entry.createdAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
-                        </span>
+                      <div class="flex items-center gap-2">
+                        <span class="carriers-timeline-preview__count">{{ auditLogs().length }} evento(s)</span>
+                        <button
+                          type="button"
+                          class="carriers-btn-icon"
+                          (click)="loadAuditLogs(current.id); $event.stopPropagation()"
+                          title="Actualizar bitácora"
+                          [disabled]="isLoadingAudit()">
+                          <span class="material-symbols-outlined text-sm" [class.spin]="isLoadingAudit()">refresh</span>
+                        </button>
                       </div>
                     </div>
-                  }
+
+                    @if (isLoadingAudit()) {
+                      <div class="carriers-timeline-preview__loading p-4 flex items-center justify-center gap-2 text-xs font-bold text-slate-400">
+                        <span class="material-symbols-outlined spin text-sm">sync</span>
+                        <span>Cargando bitácora de auditoría desde el servidor…</span>
+                      </div>
+                    } @else if (auditLogs().length === 0) {
+                      <div class="carriers-timeline-preview__empty text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4">
+                        No se encontraron registros de auditoría para este turno.
+                      </div>
+                    } @else {
+                      <div class="carriers-timeline-preview__nodes">
+                        @for (entry of auditLogs(); track entry.logId || $index; let isLast = $last) {
+                          <div class="carriers-tl-node" [ngClass]="getAuditColorClass(entry.action)">
+                            <div class="carriers-tl-node__dot">
+                              <span class="material-symbols-outlined text-sm">{{ getAuditIcon(entry.action) }}</span>
+                            </div>
+                            @if (!isLast) {
+                              <div class="carriers-tl-node__line"></div>
+                            }
+                            <div class="carriers-tl-node__content">
+                              <div class="carriers-tl-node__header">
+                                <span class="carriers-tl-node__action font-bold">{{ getAuditSummary(entry.action) }}</span>
+                                <span class="carriers-tl-node__tag">&#64;{{ entry.username }}</span>
+                              </div>
+
+                              @if (entry.details && entry.details.length > 0) {
+                                <div class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2.5 rounded-lg bg-surface border border-subtle">
+                                  @for (d of entry.details; track d.fieldName) {
+                                    <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
+                                      <span class="carriers-tl-diff__field font-bold text-slate-700 dark:text-slate-300">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                                      @if (d.oldValue !== null && d.oldValue !== undefined && d.oldValue !== '' && d.oldValue !== 'null' && d.oldValue !== d.newValue) {
+                                        <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                                        <span class="carriers-tl-diff__arrow text-slate-400 mx-1.5 font-bold">➔</span>
+                                      }
+                                      <span class="carriers-tl-diff__new text-emerald-700 dark:text-emerald-400 font-mono font-bold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
+                                    </div>
+                                  }
+                                </div>
+                              }
+
+                              <span class="carriers-tl-node__meta flex items-center gap-1.5 mt-1 text-slate-400">
+                                <span class="material-symbols-outlined text-[13px]">schedule</span>
+                                <span>{{ entry.createdAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
+                              </span>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
                 </div>
               }
             </div>
@@ -579,40 +659,96 @@
           <!-- Botones de Acción -->
           @if (canCreateOrEdit()) {
           <div class="shift-editor__actions">
+            <!-- Botón Eliminar Turno (Lado Izquierdo, Destructivo con Confirmación) -->
             @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {
-            <button
-              type="button"
-              class="shift-btn"
-              [class.shift-btn--danger]="current.status === 'ACTIVE'"
-              [class.shift-btn--success]="current.status === 'INACTIVE'"
-              (click)="onToggleStatus()"
-              [disabled]="isSubmitting()"
-            >
-              <span class="material-symbols-outlined">
-                {{ current.status === 'ACTIVE' ? 'power_settings_new' : 'check_circle' }}
-              </span>
-              <span>{{ current.status === 'ACTIVE' ? 'Desactivar Turno' : 'Activar Turno' }}</span>
-            </button>
+              <button
+                type="button"
+                class="shift-btn shift-btn--delete"
+                (click)="onClickDeleteShift()"
+                [disabled]="isSubmitting() || isDeleting()"
+                title="Dar de baja lógica el turno del catálogo de almacén"
+              >
+                <span class="material-symbols-outlined">delete_outline</span>
+                <span>Eliminar Turno</span>
+              </button>
+            } @else {
+              <div></div>
             }
 
-            <button
-              type="submit"
-              class="shift-btn shift-btn--primary"
-              [disabled]="isSubmitting() || shiftForm.invalid || !shiftForm.dirty"
-            >
-              <span class="material-symbols-outlined">save</span>
-              <span>
-                @if (isSubmitting()) { Guardando... }
-                @else if (formMode() === 'new') { Crear Turno }
-                @else { Guardar Cambios }
-              </span>
-            </button>
+            <div class="shift-editor__actions-right">
+              @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {
+              <!-- Botón Pausar / Reanudar (Toggle no destructivo con estética ámbar/esmeralda) -->
+              <button
+                type="button"
+                class="shift-btn shift-btn--toggle-status"
+                [class.shift-btn--status-active]="current.status === 'ACTIVE'"
+                [class.shift-btn--status-inactive]="current.status === 'INACTIVE'"
+                (click)="onToggleStatus()"
+                [disabled]="isSubmitting() || isDeleting()"
+                title="Cambiar estado entre activo e inactivo"
+              >
+                <span class="material-symbols-outlined">
+                  {{ current.status === 'ACTIVE' ? 'pause_circle' : 'play_circle' }}
+                </span>
+                <span>{{ current.status === 'ACTIVE' ? 'Pausar Turno' : 'Activar Turno' }}</span>
+              </button>
+              }
+
+              <button
+                type="submit"
+                class="shift-btn shift-btn--primary"
+                [disabled]="isSubmitting() || isDeleting() || shiftForm.invalid || !shiftForm.dirty"
+              >
+                <span class="material-symbols-outlined">save</span>
+                <span>
+                  @if (isSubmitting()) { Guardando... }
+                  @else if (formMode() === 'new') { Crear Turno }
+                  @else { Guardar Cambios }
+                </span>
+              </button>
+            </div>
           </div>
           }
         </form>
       </div>
     </main>
   </div>
+
+    <!-- ==================== MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE TURNO ==================== -->
+  @if (showDeleteConfirmModal()) {
+  <div class="modal-overlay" (click)="cancelDeleteShift()">
+    <div class="modal-card modal-card--danger animate-fade-in" (click)="$event.stopPropagation()">
+      <header class="modal-card__header modal-card__header--danger">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-red-500">warning</span>
+          <h3 class="modal-card__title text-red-600 dark:text-red-400">Eliminar Turno Operativo</h3>
+        </div>
+        <button type="button" class="modal-card__close-btn" (click)="cancelDeleteShift()" [disabled]="isDeleting()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="modal-card__body">
+        <p class="text-base text-slate-800 dark:text-slate-100 font-semibold mb-2">
+          ¿Desea dar de baja definitiva el turno <strong class="text-red-600 dark:text-red-400">{{ shiftService.selectedShift()?.name }}</strong> (<code>{{ shiftService.selectedShift()?.code }}</code>)?
+        </p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          Esta acción deshabilitará el turno de las cuadrillas activas de almacén y registrará la baja lógica en la bitácora de auditoría de PostgreSQL.
+        </p>
+      </div>
+
+      <footer class="modal-card__footer">
+        <button type="button" class="shift-btn shift-btn--secondary" (click)="cancelDeleteShift()" [disabled]="isDeleting()">
+          Cancelar
+        </button>
+        <button type="button" class="shift-btn shift-btn--danger-solid" (click)="confirmDeleteShift()" [disabled]="isDeleting()">
+          <span class="material-symbols-outlined">delete_forever</span>
+          <span>{{ isDeleting() ? 'Eliminando...' : 'Sí, Eliminar Turno' }}</span>
+        </button>
+      </footer>
+    </div>
+  </div>
+  }
 
   <!-- ==================== MODAL DE CONFIRMACIÓN DE CAMBIOS NO GUARDADOS ==================== -->
   @if (showUnsavedChangesModal()) {
