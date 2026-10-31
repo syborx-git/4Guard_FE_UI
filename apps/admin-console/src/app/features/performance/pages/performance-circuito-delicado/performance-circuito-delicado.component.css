@@ -11,6 +11,8 @@
   /* ── Tokens Light Mode ── */
   --bg-page:        #f5f4f0;
   --bg-card:        rgba(255, 255, 255, 0.92);
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --border-card-gold: rgba(197, 168, 107, 0.35);
   --bg-card-hover:  #ffffff;
   --border-card:    rgba(76, 86, 105, 0.10);
   --border-subtle:  rgba(76, 86, 105, 0.08);
@@ -55,6 +57,8 @@
   /* ── Tokens Dark Mode ── */
   --bg-page:        #0b1119;
   --bg-card:        rgba(17, 26, 38, 0.94);
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --bg-card-hover:  rgba(23, 35, 50, 0.98);
   --border-card:    rgba(255, 255, 255, 0.08);
   --border-subtle:  rgba(255, 255, 255, 0.06);
@@ -112,21 +116,23 @@
 }
 
 .perf-kpi-pill-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.15rem 1.25rem;
   display: flex;
   align-items: center;
   gap: 1rem;
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .perf-kpi-pill-card:hover {
   transform: translateY(-2px);
-  border-color: var(--gold-border);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .perf-kpi-pill-icon {
@@ -202,9 +208,10 @@
 /* ── SECCIÓN PRINCIPAL ── */
 
 .perf-section {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.5rem;
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
@@ -427,9 +434,9 @@
 }
 
 .perf-unit-avatar {
-  background: rgba(37, 99, 235, 0.1);
-  color: #2563eb;
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: var(--c-info-bg);
+  color: var(--c-info);
+  border: 1px solid var(--c-info-bdr);
 }
 
 .perf-driver-avatar .material-symbols-outlined,

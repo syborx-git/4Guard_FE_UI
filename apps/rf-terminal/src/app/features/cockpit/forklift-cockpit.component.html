@@ -760,7 +760,7 @@
   <!-- ── 6. MODAL 2: MODAL DEDICADO DE LECTURA LÁSER / CÁMARA EN VIVO ── -->
   @if (showScanningModal() && activeMission(); as current) {
     <div class="rf-modal-backdrop laser-hud-backdrop" (click)="closeScanningModal()">
-      <div class="rf-modal-card laser-hud-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="rf-modal-card laser-hud-card" [class.laser-hud-card--expanded]="isCameraExpanded()" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         
         <!-- Header del Lector (Ultra Compacto en 1 Sola Línea) -->
         <div class="laser-hud-header">
@@ -797,6 +797,17 @@
                 <span class="btn-action-text">{{ currentFacingMode() === 'environment' ? 'Frontal' : 'Trasera' }}</span>
               </button>
             }
+
+            <button
+              type="button"
+              (click)="toggleCameraExpanded()"
+              class="btn-hud-action btn-hud-expand"
+              [title]="isCameraExpanded() ? 'Reducir tamaño' : 'Maximizar cámara en pantalla grande'">
+              <span class="material-symbols-outlined text-sm">
+                {{ isCameraExpanded() ? 'close_fullscreen' : 'open_in_full' }}
+              </span>
+              <span class="btn-action-text">{{ isCameraExpanded() ? 'Reducir' : 'Pantalla Grande' }}</span>
+            </button>
 
             <button
               type="button"
@@ -869,7 +880,7 @@
           
           <!-- 1. Cuadro de Cámara / Visor Láser Limpio y Despejado -->
           <div
-            class="laser-reticle"
+            class="laser-reticle" [class.laser-reticle--expanded]="isCameraExpanded()"
             [class.laser-reticle--drop]="current.status === 'ACTIVE_DROP'"
             (click)="onCameraFeedTapped()"
             title="Tocar pantalla para reconocer código de barras automáticamente">

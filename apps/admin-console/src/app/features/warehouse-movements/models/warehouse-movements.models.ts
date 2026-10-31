@@ -154,6 +154,7 @@ export interface CheckInCasetaData {
   sealNumbers?: string[];   // Lista de sellos agregados
   noEcoTractor?: string;    // No. Económico Tracto
   noEcoCaja?: string;       // No. Económico Caja
+  preCheckinId?: string;    // ID de pase digital QR de caseta
   transportType?: string;   // Tipo de transporte
   medidasCaja?: string;     // Medidas de la caja
   noCartaPorte?: string;    // Carta Porte

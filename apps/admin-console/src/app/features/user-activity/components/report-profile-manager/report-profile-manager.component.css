@@ -4,6 +4,11 @@
 */
 
 :host {
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+  --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --shadow-card:      0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --radius-xl:        18px;
+
   --navy: #172033;
   --navy-mid: #25324a;
   --gold: #c5a86b;
@@ -24,6 +29,10 @@
 }
 
 :host-context(.theme-dark) {
+  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
   --bg-card: rgba(22, 30, 50, 0.99);
   --border-card: rgba(255, 255, 255, 0.08);
   --text-primary: #e8e6e0;
@@ -166,12 +175,12 @@
 .rp-list { display: flex; flex-direction: column; gap: 0.875rem; }
 
 .rp-card {
-  border-radius: 14px;
-  border: 1px solid var(--border-card);
-  background: var(--bg-card);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-  overflow: hidden;
-  transition: box-shadow 200ms;
+  border-radius: var(--radius-xl, 18px);
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  background: var(--bg-card-exec, var(--bg-card));
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 200ms, transform 200ms;
 }
 
 .rp-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.09); }

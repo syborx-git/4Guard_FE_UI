@@ -147,10 +147,10 @@ export class UsersListComponent implements OnInit, OnDestroy {
     this.isUserDropdownOpen.set(false);
   }
 
-  @HostListener('document:click', [''])
+  @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    if (this.isUserDropdownOpen() && !target.closest('.user-selector-dropdown-wrap')) {
+    const target = event?.target as HTMLElement | null;
+    if (this.isUserDropdownOpen() && target && !target.closest('.user-selector-dropdown-wrap')) {
       this.closeUserDropdown();
     }
   }

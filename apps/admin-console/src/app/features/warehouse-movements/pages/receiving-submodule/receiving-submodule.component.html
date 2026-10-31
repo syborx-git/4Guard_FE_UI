@@ -709,10 +709,10 @@
                 </span>
                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span class="logistics-command-badge-plate">
-                    T: {{ (rec.checkIn.noEcoTractor ? 'Eco ' + rec.checkIn.noEcoTractor + ' / ' : '') }}{{ rec.checkIn.tractorPlates || 'S/P' }}
+                    T: {{ (getEcoTractor(rec) ? 'Eco ' + getEcoTractor(rec) + ' / ' : '') }}{{ rec.checkIn.tractorPlates || 'S/P' }}
                   </span>
                   <span class="logistics-command-badge-plate">
-                    C: {{ (rec.checkIn.noEcoCaja ? 'Eco ' + rec.checkIn.noEcoCaja + ' / ' : '') }}{{ rec.checkIn.boxPlates || 'S/P' }}
+                    C: {{ (getEcoCaja(rec) ? 'Eco ' + getEcoCaja(rec) + ' / ' : '') }}{{ rec.checkIn.boxPlates || 'S/P' }}
                   </span>
                 </div>
               </div>
@@ -3491,7 +3491,7 @@
               <span class="material-symbols-outlined text-lg">edit_note</span>
             </div>
             <div>
-              <h3 class="font-black text-sm text-slate-950 dark:text-slate-100 uppercase tracking-wide m-0" style="color: #0f172a !important;">
+              <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide m-0" >
                 Modificar Ficha Operativa de Arribo
               </h3>
               <p class="text-[11px] text-slate-800 dark:text-slate-200 m-0 font-bold">

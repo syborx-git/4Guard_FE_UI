@@ -345,9 +345,11 @@ h1, h2, h3, h4, h5, h6 {
    CARD CONTENEDOR PRINCIPAL SYNEXIA
    ───────────────────────────────────────────────────────────── */
 .synexia-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  position: relative;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(16px);
 }
@@ -488,27 +490,27 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 850;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #0f172a !important;
+  color: var(--text-primary) !important;
   margin: 0;
   line-height: 1.2;
 }
 
 :host-context(.theme-dark) .form-card-title,
 :host-context(.dark) .form-card-title {
-  color: #f8fafc !important;
+  color: var(--text-primary)!important;
 }
 
 .form-card-subtitle {
   font-size: 0.78rem;
   font-weight: 500;
-  color: #475569 !important;
+  color: var(--text-secondary) !important;
   margin: 0;
   line-height: 1.35;
 }
 
 :host-context(.theme-dark) .form-card-subtitle,
 :host-context(.dark) .form-card-subtitle {
-  color: #94a3b8 !important;
+  color: var(--text-secondary)!important;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -519,10 +521,10 @@ h1, h2, h3, h4, h5, h6 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem 0.75rem;
   padding: 0.6rem 0.85rem;
-  border-radius: 0.75rem;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.28);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  border-radius: var(--radius-xl, 14px);
+  background: var(--gold-bg);
+  border: 1.5px solid var(--gold-border);
+  box-shadow: var(--shadow-xs);
 }
 
 :host-context(.theme-dark) .caseta-summary-card,
@@ -1282,9 +1284,10 @@ h1, h2, h3, h4, h5, h6 {
 .movement-kpi-card {
   position: relative;
   overflow: hidden;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1rem 1.15rem;
   display: flex;
   align-items: center;
@@ -1298,8 +1301,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .movement-kpi-card:hover {
   transform: translateY(-2px);
-  border-color: var(--gold-border);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .movement-kpi-card__icon {
@@ -2006,15 +2009,16 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .modal-card {
-  background: #ffffff !important;
-  border: 1px solid rgba(88, 98, 116, 0.2);
-  border-radius: 20px;
+  background: var(--bg-card-exec, var(--bg-card)) !important;
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 20px);
   color: var(--text-primary, #0f172a);
   max-height: 82vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-card);
 }
 
 .modal-card h1,
@@ -2500,19 +2504,21 @@ h1, h2, h3, h4, h5, h6 {
    DIRECTORIO EJECUTIVO DE TRASPASOS - ESTILO OFICIAL 4GUARD / SYNEXIA
    ═══════════════════════════════════════════════════════════════ */
 .executive-directory-card {
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-card, #e2e8f0);
-  border-radius: 20px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.25rem 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
   margin-top: 0;
 }
 
 :host-context(.theme-dark) .executive-directory-card,
 :host-context(.dark) .executive-directory-card {
-  background: rgba(15, 23, 42, 0.75);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  background: var(--bg-card-exec, var(--bg-card));
+  border-color: var(--border-card-gold, var(--gold-border));
+  border-top-color: var(--gold);
+  box-shadow: var(--shadow-card);
 }
 
 /* Header Row */
@@ -2737,11 +2743,12 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── EXECUTIVE CARDS GRID & ITEM ── */
 .executive-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.25rem 1.35rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -2752,14 +2759,15 @@ h1, h2, h3, h4, h5, h6 {
 
 .executive-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(245, 158, 11, 0.5);
-  box-shadow: 0 10px 24px rgba(245, 158, 11, 0.12), 0 4px 8px rgba(0, 0, 0, 0.03);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 :host-context(.theme-dark) .executive-card,
 :host-context(.dark) .executive-card {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(255, 255, 255, 0.07);
+  background: var(--bg-card-exec, var(--bg-card));
+  border-color: var(--border-card-gold, var(--gold-border));
+  border-top-color: var(--gold);
 }
 
 :host-context(.theme-dark) .executive-card:hover,
@@ -2807,7 +2815,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display, inherit);
   font-size: 0.85rem;
   font-weight: 850;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 0;
   line-height: 1.25;
   text-transform: uppercase;
@@ -2819,12 +2827,12 @@ h1, h2, h3, h4, h5, h6 {
 
 :host-context(.theme-dark) .executive-title,
 :host-context(.dark) .executive-title {
-  color: #f8fafc;
+  color: var(--text-primary);
 }
 
 .executive-subtitle {
   font-size: 0.74rem;
-  color: #64748b;
+  color: var(--text-secondary);
   margin: 0.2rem 0 0;
   white-space: nowrap;
   overflow: hidden;
@@ -2833,7 +2841,7 @@ h1, h2, h3, h4, h5, h6 {
 
 :host-context(.theme-dark) .executive-subtitle,
 :host-context(.dark) .executive-subtitle {
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 /* Status Badge */

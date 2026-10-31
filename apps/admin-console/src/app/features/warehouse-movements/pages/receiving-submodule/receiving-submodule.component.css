@@ -659,11 +659,13 @@ h6 {
    CARDS Y CONTENEDORES SYNEXIA
    ───────────────────────────────────────────────────────────── */
 .synexia-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: 18px;
+  position: relative;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   backdrop-filter: blur(20px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-card);
 }
 
 .bg-surface-subtle {
@@ -834,9 +836,10 @@ h6 {
 .movement-kpi-card {
   position: relative;
   overflow: hidden;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1rem 1.15rem;
   display: flex;
   align-items: center;
@@ -846,13 +849,12 @@ h6 {
   min-height: 82px;
   box-sizing: border-box;
   backdrop-filter: blur(12px);
-  position: relative;
-  overflow: hidden;
 }
 
 .movement-kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .movement-kpi-card--primary:hover {
@@ -1309,16 +1311,17 @@ h6 {
 }
 
 .modal-card {
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-card, rgba(226, 232, 240, 0.9));
-  border-radius: 16px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   color: var(--text-primary, #0f172a);
   max-height: min(84vh, 620px);
   width: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-card);
   margin: auto;
 }
 
@@ -1344,9 +1347,15 @@ h6 {
   color: #94a3b8 !important;
 }
 
-:host-context(.dark) .modal-card {
-  background: #0f172a;
-  border-color: rgba(51, 65, 85, 0.7);
+:host-context(.theme-dark) .modal-card,
+:host-context(.dark) .modal-card,
+:host(.theme-dark) .modal-card,
+:host(.dark) .modal-card,
+.theme-dark .modal-card,
+.dark .modal-card {
+  background: #0f172a !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  border-top: 3.5px solid #d0af67 !important;
   color: #f8fafc;
   box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
@@ -3165,20 +3174,20 @@ h6 {
   flex-direction: column;
   gap: 0.85rem;
   padding: 1.15rem 1.35rem;
-  background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  border-left: 4.5px solid #f59e0b !important;
-  border-radius: 1rem !important;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+  background: var(--bg-card-exec, var(--bg-card)) !important;
+  border: 1.5px solid var(--border-card-gold, var(--gold-border)) !important;
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px) !important;
+  box-shadow: var(--shadow-card) !important;
   transition: all 0.25s ease;
 }
 
 :host-context(.theme-dark) .logistics-command-panel,
 :host-context(.dark) .logistics-command-panel {
-  background: #111a26 !important;
-  border-color: #1e293b !important;
-  border-left-color: #f59e0b !important;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45) !important;
+  background: var(--bg-card-exec, var(--bg-card)) !important;
+  border-color: var(--border-card-gold, var(--gold-border)) !important;
+  border-top-color: var(--gold) !important;
+  box-shadow: var(--shadow-card) !important;
 }
 
 .logistics-command-panel__header {
@@ -3533,9 +3542,10 @@ h6 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.875rem;
   padding: 1rem 1.25rem;
-  border-radius: 0.875rem;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1.5px solid rgba(245, 158, 11, 0.32);
+  border-radius: var(--radius-xl, 14px);
+  background: var(--gold-bg);
+  border: 1.5px solid var(--gold-border);
+  box-shadow: var(--shadow-xs);
 }
 
 @media (min-width: 640px) {
@@ -5270,19 +5280,21 @@ h6 {
    DIRECTORIO EJECUTIVO - ESTILO OFICIAL 4GUARD / SYNEXIA (PIXEL-PERFECT)
    ═══════════════════════════════════════════════════════════════ */
 .executive-directory-card {
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-card, #e2e8f0);
-  border-radius: 20px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.25rem 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
   margin-top: 0;
 }
 
 :host-context(.theme-dark) .executive-directory-card,
 :host-context(.dark) .executive-directory-card {
-  background: rgba(15, 23, 42, 0.75);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  background: var(--bg-card-exec, var(--bg-card));
+  border-color: var(--border-card-gold, var(--gold-border));
+  border-top-color: var(--gold);
+  box-shadow: var(--shadow-card);
 }
 
 /* Header Row */
@@ -5522,11 +5534,12 @@ h6 {
 
 /* ── EXECUTIVE CARDS GRID & ITEM ── */
 .executive-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.25rem 1.35rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -5537,14 +5550,15 @@ h6 {
 
 .executive-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(245, 158, 11, 0.5);
-  box-shadow: 0 10px 24px rgba(245, 158, 11, 0.12), 0 4px 8px rgba(0, 0, 0, 0.03);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 :host-context(.theme-dark) .executive-card,
 :host-context(.dark) .executive-card {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(255, 255, 255, 0.07);
+  background: var(--bg-card-exec, var(--bg-card));
+  border-color: var(--border-card-gold, var(--gold-border));
+  border-top-color: var(--gold);
 }
 
 :host-context(.theme-dark) .executive-card:hover,

@@ -78,6 +78,7 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   protected readonly cameraLoading = signal(false);
   protected readonly cameraError = signal<string | null>(null);
   protected readonly useCameraOverlay = signal(true);
+  protected readonly isCameraExpanded = signal(false);
   protected readonly currentFacingMode = signal<'environment' | 'user'>('environment');
   protected readonly availableCamerasCount = signal<number>(1);
   private mediaStream: MediaStream | null = null;
@@ -324,6 +325,10 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     }
     this.cameraActive.set(false);
     this.cameraLoading.set(false);
+  }
+
+  toggleCameraExpanded(): void {
+    this.isCameraExpanded.update(v => !v);
   }
 
   toggleCamera(): void {

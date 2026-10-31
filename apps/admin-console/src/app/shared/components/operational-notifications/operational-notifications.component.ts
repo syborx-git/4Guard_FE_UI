@@ -182,7 +182,7 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
         this.isOpen.set(true);
         this.smartNotification.clearDropdownOpenRequest();
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit(): void {

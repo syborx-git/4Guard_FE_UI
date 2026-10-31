@@ -427,9 +427,10 @@ h1, h2, h3, h4, h5, h6 {
 .movement-kpi-card {
   position: relative;
   overflow: hidden;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1rem 1.15rem;
   display: flex;
   align-items: center;
@@ -443,8 +444,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .movement-kpi-card:hover {
   transform: translateY(-2px);
-  border-color: var(--gold-border);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .movement-kpi-card__icon {
@@ -642,9 +643,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .outbound-kpi-card {
   flex: 1;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   padding: 1.1rem 1.25rem;
   display: flex;
@@ -657,7 +659,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .outbound-kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 40px rgba(36, 44, 58, 0.12);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .outbound-kpi-card::after {
@@ -1584,11 +1587,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .modal-card {
-  background: #ffffff;
+  background: var(--bg-card-exec, var(--bg-card));
   color: var(--text-primary, #0f172a);
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 20px);
+  box-shadow: var(--shadow-card);
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -2009,9 +2013,11 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── CONFIRM DATA CARD ── */
 .confirm-data-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 14px);
+  box-shadow: var(--shadow-card);
   padding: 0.65rem 0.9rem;
   display: flex;
   flex-direction: column;
@@ -2092,9 +2098,11 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── CONFIRM PRODUCTS CARD (MULTI-PRODUCT SUPPORT) ── */
 .confirm-products-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 14px);
+  box-shadow: var(--shadow-card);
   padding: 0.65rem 0.9rem;
   display: flex;
   flex-direction: column;
@@ -3880,9 +3888,9 @@ h1, h2, h3, h4, h5, h6 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  background: var(--gold-bg);
+  border: 1.5px solid var(--gold-border);
+  border-radius: var(--radius-xl, 12px);
   padding: 0.65rem 0.85rem;
 }
 

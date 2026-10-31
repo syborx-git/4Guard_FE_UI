@@ -67,6 +67,8 @@ export type {
 
 // ─── Infrastructure — Services (Singletons) ───────────────────────────────────
 export { AuthService }    from './lib/infrastructure/services/auth.service';
+export { BiometricAuthService } from './lib/infrastructure/services/biometric-auth.service';
+export type { BiometricStatus } from './lib/infrastructure/services/biometric-auth.service';
 export { LoginService }    from './lib/infrastructure/services/login.service';
 export { BackendService } from './lib/infrastructure/services/backend.service';
 export type { ApiError, QueryParams } from './lib/infrastructure/services/backend.service';

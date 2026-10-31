@@ -3,6 +3,48 @@
  * Process Cycles & Dock Times — Synexia Design System
  */
 
+:host {
+  display: block;
+  width: 100%;
+
+  /* ── Fallback Tokens Light Mode ── */
+  --bg-page:          #f5f4f0;
+  --bg-card:          rgba(255, 255, 255, 0.92);
+  --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --border-card:      rgba(76, 86, 105, 0.10);
+  --border-card-gold: rgba(197, 168, 107, 0.35);
+  --shadow-card:      0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --shadow-hover:     0 16px 40px rgba(197, 168, 107, 0.22);
+  --text-primary:     #1c2940;
+  --text-secondary:   #5a6477;
+  --text-muted:       #8b94a3;
+  --text-gold:        #9b7626;
+  --gold:             #c5a86b;
+  --gold-bg:          rgba(197, 168, 107, 0.10);
+  --gold-border:      rgba(197, 168, 107, 0.28);
+  --radius-xl:        18px;
+  --radius-card:      18px;
+}
+
+:host-context(.theme-dark),
+:host-context(.dark) {
+  /* ── Fallback Tokens Dark Mode ── */
+  --bg-page:          #0b1119;
+  --bg-card:          rgba(17, 26, 38, 0.94);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --border-card:      rgba(255, 255, 255, 0.08);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
+  --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-hover:     0 20px 44px rgba(208, 175, 103, 0.18);
+  --text-primary:     #edf1f5;
+  --text-secondary:   #9aa6b4;
+  --text-muted:       #667585;
+  --text-gold:        #d0af67;
+  --gold:             #d0af67;
+  --gold-bg:          rgba(208, 175, 103, 0.12);
+  --gold-border:      rgba(208, 175, 103, 0.25);
+}
+
 .perf-operations-view {
   display: flex;
   flex-direction: column;
@@ -11,9 +53,10 @@
 }
 
 .perf-section {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.5rem;
   box-shadow: var(--shadow-card);
   display: flex;
@@ -83,14 +126,22 @@
 }
 
 .perf-gate-step-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: 12px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1rem;
   display: flex;
   align-items: center;
   gap: 0.85rem;
   box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.perf-gate-step-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .perf-gate-step-icon {
@@ -214,20 +265,22 @@
 }
 
 .perf-flow-card {
-  background: rgba(139, 148, 163, 0.04);
-  border: 1px solid var(--border-card);
-  border-radius: 14px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.15rem;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .perf-flow-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
-  border-color: rgba(197, 168, 107, 0.3);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--gold);
 }
 
 .perf-flow-card__top {
@@ -356,12 +409,21 @@
 }
 
 .perf-dock-stat {
-  background: rgba(139, 148, 163, 0.04);
-  border: 1px solid var(--border-card);
-  border-radius: 12px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1rem;
   display: flex;
   flex-direction: column;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.perf-dock-stat:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .perf-dock-stat__label {
@@ -396,13 +458,22 @@
 }
 
 .perf-ramp-card {
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid var(--border-card);
-  border-radius: 12px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.perf-ramp-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 :host-context(.theme-dark) .perf-ramp-card,

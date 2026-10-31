@@ -1949,3 +1949,77 @@ h1, h2, h3, h4, h5, h6 {
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(197, 168, 107, 0.45);
 }
+
+
+/* Modo Cámara Expandida en Conteo Ciego */
+.camera-reticle--expanded {
+  height: clamp(420px, 58vh, 600px) !important;
+  min-height: 420px !important;
+  max-height: 65vh !important;
+  border-style: solid !important;
+  border-color: #f59e0b !important;
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(245, 158, 11, 0.35) !important;
+}
+
+.btn-cam-expand {
+  background: rgba(208, 175, 103, 0.15) !important;
+  color: #d0af67 !important;
+  border: 1px solid rgba(208, 175, 103, 0.35) !important;
+}
+
+.btn-cam-expand:hover {
+  background: rgba(208, 175, 103, 0.3) !important;
+}
+
+/* Stepper Táctil Industrial para Guantes */
+.industrial-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--bg-card);
+  padding: 0.25rem 0.4rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-subtle);
+}
+
+.industrial-stepper .btn-mini-step {
+  height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: var(--bg-surface-subtle, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--border-card);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.industrial-stepper .btn-mini-step:hover {
+  background: var(--gold);
+  color: #0b1119;
+}
+
+.industrial-stepper .btn-step-wide {
+  min-width: 48px;
+}
+
+.industrial-stepper .mini-stepper-input {
+  height: 44px;
+  width: 70px;
+  text-align: center;
+  border-radius: 0.5rem;
+  border: 1.5px solid var(--border-card);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+@media (max-width: 860px) {
+  .hero-hud-split-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .camera-reticle-viewfinder {
+    height: 280px;
+    min-height: 240px;
+  }
+}

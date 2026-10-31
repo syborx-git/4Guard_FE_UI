@@ -225,19 +225,78 @@ export class WarehouseMovementsService {
   // ── MATRIZ DE OCUPACIÓN Y BLOQUEO DE RAMPAS (1 - 12) ──
   readonly rampOccupancyStatus = computed<RampOccupancyStatus[]>(() => {
     const allRamps = this.rampsSignal();
-    const activeReceptions = this.receptionsSignal().filter(
-      (r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED' && (
-        !!r.checkIn?.rampNumber || !!r.checkIn?.rampCode ||
-        !!(r as any).rampNumber || !!(r as any).rampCode || !!(r as any).rampId ||
-        !!(r as any).ramp?.rampNumber || !!(r as any).ramp?.code || !!(r as any).ramp?.id
-      )
-    );
-    const activeOutbounds = this.outboundsSignal().filter(
-      (o) => o.status !== 'COMPLETED' && o.status !== 'CANCELLED' && (
-        !!o.rampNumber || !!o.rampCode || !!(o as any).rampId ||
-        !!(o as any).ramp?.rampNumber || !!(o as any).ramp?.code || !!(o as any).ramp?.id
-      )
-    );
+
+    // Folios y tokens de unidades que ya completaron su Check-Out físico de salida en Caseta
+    const exitTokensOrFolios = new Set<string>();
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem('4g_discarded_yard_folios');
+        if (raw) {
+          const arr = JSON.parse(raw);
+          if (Array.isArray(arr)) {
+            arr.forEach((k) => {
+              if (k) exitTokensOrFolios.add(String(k).trim().toUpperCase());
+            });
+          }
+        }
+      }
+    } catch {}
+
+    const activeReceptions = this.receptionsSignal().filter((r) => {
+      if (r.status === 'CANCELLED') return false;
+
+      // Si no tiene rampa asignada (null, undefined, 0), no ocupa ningún andén
+      const hasRamp = (
+        (r.checkIn?.rampNumber != null && Number(r.checkIn.rampNumber) > 0) ||
+        (r.checkIn?.rampCode && r.checkIn.rampCode !== 'LOC-RAMP-01' && r.checkIn.rampCode !== 'Pendiente de Asignación') ||
+        (!!(r as any).rampNumber && Number((r as any).rampNumber) > 0) ||
+        (!!(r as any).ramp?.rampNumber && Number((r as any).ramp.rampNumber) > 0)
+      );
+      if (!hasRamp) return false;
+
+      // Si ya concluyó su salida física en Caseta de Seguridad, se libera el andén
+      const folioKey = (r.folio || '').trim().toUpperCase();
+      const docKey = (r.checkIn?.docNumber || (r as any).docNumber || '').trim().toUpperCase();
+      const idKey = (r.id || '').trim().toUpperCase();
+      const tokenKey = ((r as any).token || (r as any).checkIn?.token || '').trim().toUpperCase();
+
+      if (
+        (folioKey && exitTokensOrFolios.has(folioKey)) ||
+        (docKey && exitTokensOrFolios.has(docKey)) ||
+        (idKey && exitTokensOrFolios.has(idKey)) ||
+        (tokenKey && exitTokensOrFolios.has(tokenKey))
+      ) {
+        return false;
+      }
+
+      // La rampa permanece bloqueada mientras la unidad esté en patio/andén
+      return true;
+    });
+
+    const activeOutbounds = this.outboundsSignal().filter((o) => {
+      if (o.status === 'CANCELLED') return false;
+
+      const hasRamp = (
+        (o.rampNumber != null && Number(o.rampNumber) > 0) ||
+        (o.rampCode && o.rampCode !== 'Pendiente de Asignación') ||
+        (!!(o as any).ramp?.rampNumber && Number((o as any).ramp.rampNumber) > 0)
+      );
+      if (!hasRamp) return false;
+
+      const folioKey = (o.folio || '').trim().toUpperCase();
+      const remKey = (o.remisionNo || '').trim().toUpperCase();
+      const idKey = (o.id || '').trim().toUpperCase();
+
+      if (
+        (folioKey && exitTokensOrFolios.has(folioKey)) ||
+        (remKey && exitTokensOrFolios.has(remKey)) ||
+        (idKey && exitTokensOrFolios.has(idKey))
+      ) {
+        return false;
+      }
+
+      return true;
+    });
 
     return allRamps.map((ramp) => {
       // 1. Verificar si está ocupada por Recepción Inbound en andén
@@ -263,6 +322,8 @@ export class WarehouseMovementsService {
           statusLabel = 'Descarga Concluida (Por Auditar)';
         } else if (recMatch.status === 'REGISTERED') {
           statusLabel = 'Pre-registro Caseta (Entrada)';
+        } else if (recMatch.status === 'COMPLETED') {
+          statusLabel = 'Descarga Concluida (Espera Salida Caseta)';
         }
 
         return {
@@ -302,6 +363,8 @@ export class WarehouseMovementsService {
           statusLabel = 'Carga Concluida (Por Auditar)';
         } else if (outMatch.status === 'REGISTERED') {
           statusLabel = 'Pre-registro Caseta (Salida)';
+        } else if (outMatch.status === 'COMPLETED') {
+          statusLabel = 'Carga Concluida (Espera Salida Caseta)';
         }
 
         return {
@@ -969,15 +1032,18 @@ export class WarehouseMovementsService {
           }
         }
 
-        // Combinar con recepciones en memoria y locales para NUNCA borrarlas si el backend remoto responde vacío
+        // Solo combinar con registros creados localmente fuera de línea (_offlineCreated)
+        // para respetar limpiados de base de datos cuando el backend responde correctamente
         const currentList = this.receptionsSignal();
         for (const r of currentList) {
-          const idKey = (r.id || r.folio || '').trim();
-          const docKey = (r.checkIn?.docNumber || r.folio || '').trim().toUpperCase();
-          if (idKey && !seenIds.has(idKey) && (!docKey || !seenDocs.has(docKey))) {
-            seenIds.add(idKey);
-            if (docKey) seenDocs.add(docKey);
-            unique.push(r);
+          if ((r as any)._offlineCreated) {
+            const idKey = (r.id || r.folio || '').trim();
+            const docKey = (r.checkIn?.docNumber || r.folio || '').trim().toUpperCase();
+            if (idKey && !seenIds.has(idKey) && (!docKey || !seenDocs.has(docKey))) {
+              seenIds.add(idKey);
+              if (docKey) seenDocs.add(docKey);
+              unique.push(r);
+            }
           }
         }
 
@@ -1046,6 +1112,14 @@ export class WarehouseMovementsService {
       list.filter((r) => r.folio !== key && r.id !== key)
     );
     this.movementsApi.removeLocalReception(key);
+  }
+
+  public removeOutbound(folioOrId: string): void {
+    const key = (folioOrId || '').trim();
+    this.outboundsSignal.update((list) =>
+      list.filter((o) => o.folio !== key && o.id !== key)
+    );
+    this.movementsApi.removeLocalOutbound(key);
   }
 
   public purgeAllOperationalData(): Observable<{ success: boolean; message: string }> {
@@ -1849,24 +1923,25 @@ export class WarehouseMovementsService {
           : (isUuid(data.rampCode) ? data.rampCode : null));
 
     // Normalizar hora a formato HH:mm:ss 24h
-    let receptionTime = data.receptionTime ? data.receptionTime.trim() : '09:00:00';
-    if (receptionTime.includes('p.m.') || receptionTime.includes('p. m.')) {
-      const match = receptionTime.match(/(\d+):(\d+)/);
+    let receptionTime = '09:00:00';
+    try {
+      const raw = (data.receptionTime || '').trim();
+      const isPm = /p\.?\s*m\.?/i.test(raw);
+      const isAm = /a\.?\s*m\.?/i.test(raw);
+      const match = raw.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
       if (match) {
         let hr = parseInt(match[1], 10);
-        if (hr < 12) hr += 12;
-        receptionTime = `${String(hr).padStart(2, '0')}:${match[2]}:00`;
+        const min = match[2];
+        const sec = match[3] || '00';
+        if (isPm && hr < 12) hr += 12;
+        if (isAm && hr === 12) hr = 0;
+        receptionTime = `${String(hr).padStart(2, '0')}:${min}:${sec}`;
+      } else {
+        const d = new Date();
+        receptionTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
       }
-    } else if (receptionTime.includes('a.m.') || receptionTime.includes('a. m.')) {
-      const match = receptionTime.match(/(\d+):(\d+)/);
-      if (match) {
-        let hr = parseInt(match[1], 10);
-        if (hr === 12) hr = 0;
-        receptionTime = `${String(hr).padStart(2, '0')}:${match[2]}:00`;
-      }
-    }
-    if (receptionTime.length === 5) {
-      receptionTime = `${receptionTime}:00`;
+    } catch {
+      receptionTime = '09:00:00';
     }
 
     const seals: string[] = [];
@@ -1884,6 +1959,10 @@ export class WarehouseMovementsService {
       }
     });
 
+    if (seals.length === 0) {
+      seals.push('SELLO-PATIO-01');
+    }
+
     const payload = {
       organizationId: orgId,
       branchId: branchId,
@@ -1895,14 +1974,17 @@ export class WarehouseMovementsService {
       carrierLine: data.carrierLine,
       forkliftOperatorId: forkliftOperatorId,
       rampId: rampId,
-      rampNumber: data.rampNumber || (rampItem ? rampItem.rampNumber : 1),
-      rampCode: data.rampCode || (rampItem ? rampItem.code : 'LOC-RAMP-01'),
+      rampNumber: (data.rampNumber != null && Number(data.rampNumber) > 0) ? Number(data.rampNumber) : (rampItem ? rampItem.rampNumber : undefined),
+      rampCode: data.rampCode || (rampItem ? rampItem.code : undefined),
       docNumber: data.docNumber,
       docDate: data.docDate || new Date().toISOString().slice(0, 10),
       receptionTime: receptionTime,
       driverName: data.driverName,
       tractorPlates: data.tractorPlates,
       boxPlates: data.boxPlates,
+      noEcoTractor: data.noEcoTractor || (data as any).ecoTractor || null,
+      noEcoCaja: data.noEcoCaja || (data as any).ecoCaja || null,
+      preCheckinId: (data as any).preCheckinId || (data as any).passId || null,
       lotNumber: data.lotNumber || null,
       elaborationDate: data.elaborationDate || null,
       expirationDate: data.expirationDate || null,
@@ -1920,6 +2002,8 @@ export class WarehouseMovementsService {
             ...data,
             carrierLine: res.carrierName || data.carrierLine,
             client: res.clientName || data.client,
+            noEcoTractor: res.noEcoTractor || data.noEcoTractor || '',
+            noEcoCaja: res.noEcoCaja || data.noEcoCaja || '',
           },
           lotNumber: res.lotNumber || data.lotNumber || '',
           elaborationDate: res.elaborationDate || data.elaborationDate || '',
@@ -2318,7 +2402,11 @@ export class WarehouseMovementsService {
         docDate: r.docDate || r.checkIn?.docDate || '',
         client: r.clientName || r.client || r.checkIn?.client || '',
         clientCode: r.clientId || r.clientCode || r.checkIn?.clientCode || '',
-        rampNumber: r.rampName ? (parseInt(String(r.rampName).replace(/\D/g, ''), 10) || 1) : (r.rampNumber || r.checkIn?.rampNumber || 1),
+        rampNumber: (r.rampNumber != null && Number(r.rampNumber) > 0)
+        ? Number(r.rampNumber)
+        : (r.checkIn?.rampNumber != null && Number(r.checkIn.rampNumber) > 0
+          ? Number(r.checkIn.rampNumber)
+          : (r.rampName ? (parseInt(String(r.rampName).replace(/\D/g, ''), 10) || null) : null)),
         rampCode: r.rampId || r.rampCode || r.checkIn?.rampCode || '',
         forkliftOperator: opName,
         forkliftOperatorCode: r.forkliftOperatorId || r.forkliftOperatorCode || r.checkIn?.forkliftOperatorCode || '',
@@ -2609,6 +2697,12 @@ export class WarehouseMovementsService {
       return this.movementsApi.updateReceptionParameters(resolvedId, payload).pipe(
         map((res: any) => {
           const mapped = this.mapReceptionResponseToHeader(res);
+          if (checkIn.noEcoTractor && !mapped.checkIn?.noEcoTractor) {
+            mapped.checkIn.noEcoTractor = checkIn.noEcoTractor;
+          }
+          if (checkIn.noEcoCaja && !mapped.checkIn?.noEcoCaja) {
+            mapped.checkIn.noEcoCaja = checkIn.noEcoCaja;
+          }
           this.updateReception(resolvedId, mapped, true);
           return mapped;
         }),

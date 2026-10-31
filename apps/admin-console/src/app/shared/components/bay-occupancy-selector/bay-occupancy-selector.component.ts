@@ -5,9 +5,42 @@ import { WarehouseMovementsApiService } from '../../../features/warehouse-moveme
 import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
 import { BayRemisionSummary } from '../../../features/warehouse-movements/models/warehouse-movements.models';
 import { WarehouseLayoutService } from '../../../features/catalogs/services/warehouse-layout.service';
-import { PositionDetail, WarehouseSection } from '../../../features/catalogs/models/warehouse-catalog.models';
+import { PositionDetail, PositionStatus, WarehouseSection } from '../../../features/catalogs/models/warehouse-catalog.models';
 
 export type BayCategory = 'FIXED_STORAGE' | 'TEMPORARY_BUFFER' | 'PRELOAD_STAGING';
+
+export interface SvgBayItem {
+  id: string;
+  code: string;
+  sectionCode: string;
+  sectionId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  status: PositionStatus;
+  category: 'FIXED_STORAGE' | 'TEMPORARY_BUFFER' | 'PRELOAD_STAGING';
+  aisle: string;
+  rack: string;
+  level: number;
+  capacityTarimas: number;
+  currentTarimas: number;
+  skuDescription: string;
+  batchNumber?: string;
+  rawPosition?: PositionDetail;
+  alertType?: 'NONE' | 'WARNING' | 'CRITICAL';
+  alertMessage?: string;
+}
+
+export interface SectionAisleRoute {
+  aisleCode: string;
+  sectionCode: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  mainCorridorTarget: { x: number; y: number };
+}
 
 export interface BayOccupancyItem {
   id: string;
@@ -306,8 +339,360 @@ export interface BaySelectionResult {
   imports: [CommonModule, FormsModule],
   templateUrl: './bay-occupancy-selector.component.html',
   styleUrls: ['./bay-occupancy-selector.component.css'],
+  host: {
+    '[class.dark]': 'isDarkMode()',
+    '[class.theme-dark]': 'isDarkMode()',
+    '[class.theme-light]': '!isDarkMode()',
+  }
 })
 export class BayOccupancySelectorComponent implements OnInit {
+  protected readonly isDarkMode = computed(() => {
+    if (typeof document === 'undefined') return false;
+    return document.documentElement.classList.contains('dark') || document.documentElement.classList.contains('theme-dark');
+  });
+  protected readonly Math = Math;
+  // ── ESTADO VISOR 2D TIPO CAD / ALMACÉN ──
+  protected readonly zoomScale = signal<number>(1.0);
+  protected readonly panOffset = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+  protected readonly showBaysInBlueprint = signal<boolean>(true);
+  protected readonly showTransitRoutes = signal<boolean>(true);
+  protected readonly hoveredSvgBay = signal<SvgBayItem | null>(null);
+  protected readonly activeHoveredCode = computed(() => this.hoveredSvgBay()?.code || null);
+
+  private isPanning = false;
+  private startPanX = 0;
+  private startPanY = 0;
+  private initialPanOffsetX = 0;
+  private initialPanOffsetY = 0;
+
+  private readonly BAY_GEOMETRY = {
+    bayW: 9,        // ancho de bahía
+    bayH: 12,       // fondo de bahía
+    gapY: 5,        // separación entre bahías consecutivas
+    rackGap: 12,    // pasillo de montacargas entre rack izquierdo y derecho
+    pitch: 56,      // distancia entre ejes de pasillos
+    wallMargin: 8   // holgura mínima contra muros
+  } as const;
+
+  private parsePolygon(points: string | undefined | null): Array<[number, number]> {
+    return (points ?? '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(p => {
+        const [x, y] = p.split(',').map(Number);
+        return [x, y] as [number, number];
+      })
+      .filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
+  }
+
+  private pointInPolygon(x: number, y: number, pts: Array<[number, number]>): boolean {
+    let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, yi] = pts[i];
+      const [xj, yj] = pts[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+
+  private rectInsidePolygon(x: number, y: number, w: number, h: number, pts: Array<[number, number]>, m: number): boolean {
+    const x0 = x - m, y0 = y - m, x1 = x + w + m, y1 = y + h + m;
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    const probes: Array<[number, number]> = [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [mx, y0], [mx, y1], [x0, my], [x1, my]];
+    if (!probes.every(([px, py]) => this.pointInPolygon(px, py, pts))) return false;
+    return !pts.some(([vx, vy]) => vx > x0 && vx < x1 && vy > y0 && vy < y1);
+  }
+
+  readonly zoneBayLayout = computed(() => {
+    const g = this.BAY_GEOMETRY;
+    const zones: Array<{
+      zoneCode: string;
+      aisles: Array<{ aisleCode: string; cx: number; yStart: number; yEnd: number; slots: Array<{ x: number; y: number; rack: 'R1' | 'R2' }> }>;
+    }> = [];
+
+    for (const sec of this.displaySections()) {
+      const pts = this.parsePolygon(sec.polygonPoints);
+      if (pts.length < 3) continue;
+      const xs = pts.map(p => p[0]);
+      const ys = pts.map(p => p[1]);
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+      const pairWidth = 2 * g.bayW + g.rackGap;
+      const available = (maxX - minX) - 2 * g.wallMargin;
+      if (available < pairWidth) continue;
+      const count = Math.floor((available - pairWidth) / g.pitch) + 1;
+      const firstCx = minX + ((maxX - minX) - (count - 1) * g.pitch) / 2;
+
+      const aisles: Array<{ aisleCode: string; cx: number; yStart: number; yEnd: number; slots: Array<{ x: number; y: number; rack: 'R1' | 'R2' }> }> = [];
+      for (let i = 0; i < count; i++) {
+        const cx = firstCx + i * g.pitch;
+        const xLeft = cx - g.rackGap / 2 - g.bayW;
+        const xRight = cx + g.rackGap / 2;
+        const slots: Array<{ x: number; y: number; rack: 'R1' | 'R2' }> = [];
+        for (let y = minY + g.wallMargin; y + g.bayH <= maxY - g.wallMargin; y += g.bayH + g.gapY) {
+          if (this.rectInsidePolygon(xLeft, y, g.bayW, g.bayH, pts, g.wallMargin)) slots.push({ x: xLeft, y, rack: 'R1' });
+          if (this.rectInsidePolygon(xRight, y, g.bayW, g.bayH, pts, g.wallMargin)) slots.push({ x: xRight, y, rack: 'R2' });
+        }
+        if (!slots.length) continue;
+        aisles.push({
+          aisleCode: `P-${String(aisles.length + 1).padStart(2, '0')}`,
+          cx,
+          yStart: Math.min(...slots.map(s => s.y)),
+          yEnd: Math.max(...slots.map(s => s.y)) + g.bayH,
+          slots
+        });
+      }
+      if (aisles.length) zones.push({ zoneCode: sec.code, aisles });
+    }
+    return zones;
+  });
+
+  readonly sectionAisleRoutes = computed<SectionAisleRoute[]>(() =>
+    this.zoneBayLayout().flatMap(zone =>
+      zone.aisles.map(a => ({
+        aisleCode: `${zone.zoneCode}-${a.aisleCode}`,
+        sectionCode: zone.zoneCode,
+        x1: a.cx,
+        y1: a.yStart,
+        x2: a.cx,
+        y2: a.yEnd,
+        mainCorridorTarget: { x: a.cx, y: a.yEnd }
+      }))
+    )
+  );
+
+  readonly svgBays = computed<SvgBayItem[]>(() => {
+    const g = this.BAY_GEOMETRY;
+    const allBays = this.bays();
+    const result: SvgBayItem[] = [];
+
+    const baysByCode = new Map<string, BayOccupancyItem>();
+    for (const b of allBays) {
+      if (b && b.code) {
+        baysByCode.set(b.code.toUpperCase().trim(), b);
+      }
+    }
+
+    for (const zone of this.zoneBayLayout()) {
+      const zoneCode = zone.zoneCode;
+      let posIdx = 0;
+
+      for (const a of zone.aisles) {
+        for (const slot of a.slots) {
+          posIdx++;
+          const candidateCode = `POS-${zoneCode}-${posIdx.toString().padStart(3, '0')}`;
+          const bayData = baysByCode.get(candidateCode.toUpperCase()) || null;
+          const codeKey = bayData?.code || candidateCode;
+
+          const currentTarimas = bayData ? bayData.currentStoredPallets : 0;
+          const capacityTarimas = bayData ? bayData.capacityPallets : 22;
+          const isBlocked = bayData?.isBlocked || bayData?.status === 'BLOCKED';
+
+          let status: PositionStatus = 'AVAILABLE';
+          if (isBlocked) {
+            status = 'BLOCKED';
+          } else if (currentTarimas >= capacityTarimas && capacityTarimas > 0) {
+            status = 'OCCUPIED';
+          } else if (currentTarimas > 0) {
+            status = 'OCCUPIED';
+          }
+
+          const skuDescription = bayData?.storedRemisiones?.[0]?.productName || (currentTarimas > 0 ? 'Mercancía en Bahía' : 'Posición Disponible');
+          const batchNumber = bayData?.storedRemisiones?.[0]?.remisionNo;
+
+          result.push({
+            id: bayData?.id || `bay-${zoneCode}-${a.aisleCode}-${posIdx}`,
+            code: codeKey,
+            sectionCode: zoneCode,
+            sectionId: `sec-${zoneCode.toLowerCase()}`,
+            x: slot.x,
+            y: slot.y,
+            width: g.bayW,
+            height: g.bayH,
+            status,
+            category: (bayData?.category as any) || 'FIXED_STORAGE',
+            aisle: a.aisleCode,
+            rack: slot.rack,
+            level: 1,
+            capacityTarimas,
+            currentTarimas,
+            skuDescription,
+            batchNumber,
+            alertType: isBlocked ? 'CRITICAL' : (currentTarimas >= capacityTarimas ? 'WARNING' : 'NONE'),
+            alertMessage: isBlocked ? 'Bloqueada por Calidad QM' : undefined
+          });
+        }
+      }
+    }
+
+    // Bahías de Staging / Rampas 1..12
+    for (const r of this.rampStagingCoords) {
+      const bayData = baysByCode.get(r.code.toUpperCase()) || baysByCode.get(`STAGING-R${r.ramp}`) || null;
+      const currentTarimas = bayData ? bayData.currentStoredPallets : 0;
+      const capacityTarimas = 22;
+      const isBlocked = bayData?.isBlocked || bayData?.status === 'BLOCKED';
+      const status: PositionStatus = isBlocked ? 'BLOCKED' : (currentTarimas > 0 ? 'OCCUPIED' : 'AVAILABLE');
+
+      result.push({
+        id: bayData?.id || `bay-${r.code.toLowerCase()}`,
+        code: r.code,
+        sectionCode: 'SEC-RAMP',
+        sectionId: 'sec-ramp',
+        x: r.x,
+        y: r.y,
+        width: 15,
+        height: 13,
+        status,
+        category: 'TEMPORARY_BUFFER',
+        aisle: 'ANDÉN',
+        rack: 'PISO',
+        level: 1,
+        capacityTarimas,
+        currentTarimas,
+        skuDescription: bayData?.storedRemisiones?.[0]?.productName || `Buffer Temporal Rampa ${r.ramp}`,
+        batchNumber: bayData?.storedRemisiones?.[0]?.remisionNo || 'N/A',
+        alertType: currentTarimas > 0 ? 'WARNING' : 'NONE',
+        alertMessage: currentTarimas > 0 ? `Mercancía en Andén (${currentTarimas} T)` : undefined
+      });
+    }
+
+    return result;
+  });
+
+  protected getBayHeatmapClass(bay: SvgBayItem): string {
+    if (bay.status === 'BLOCKED' || bay.alertType === 'CRITICAL') {
+      return 'cad__bay-slot--heat-blocked';
+    }
+    if (bay.category === 'TEMPORARY_BUFFER') {
+      if (bay.sectionCode === 'SEC-RAMP' && bay.currentTarimas === 0) {
+        return 'cad__bay-slot--ramp-vacant';
+      }
+      return bay.currentTarimas > 0 ? 'cad__bay-slot--heat-temp' : 'cad__bay-slot--heat-vacant';
+    }
+    if (bay.category === 'PRELOAD_STAGING') {
+      return bay.currentTarimas > 0 ? 'cad__bay-slot--heat-preload' : 'cad__bay-slot--heat-vacant';
+    }
+    const cap = bay.capacityTarimas || 22;
+    const curr = bay.currentTarimas || 0;
+    const ratio = cap > 0 ? (curr / cap) : 0;
+
+    if (curr === 0 || ratio === 0) {
+      return 'cad__bay-slot--heat-vacant';
+    } else if (ratio > 0.80) {
+      return 'cad__bay-slot--heat-full';
+    } else if (ratio > 0.30) {
+      return 'cad__bay-slot--heat-medium';
+    } else {
+      return 'cad__bay-slot--heat-empty';
+    }
+  }
+
+  protected onSvgBayMouseEnter(event: MouseEvent, bay: SvgBayItem): void {
+    this.hoveredSvgBay.set(bay);
+  }
+
+  protected onSvgBayMouseLeave(): void {
+    this.hoveredSvgBay.set(null);
+  }
+
+  protected onSvgBayClick(bay: SvgBayItem, event: MouseEvent): void {
+    event.stopPropagation();
+    let found = this.bays().find(b => b.code.toUpperCase() === bay.code.toUpperCase() || b.id === bay.id);
+    if (!found) {
+      found = {
+        id: bay.id,
+        code: bay.code,
+        name: `Almacén ${bay.sectionCode} · ${bay.code}`,
+        zone: `Almacén ${bay.sectionCode}`,
+        sectionName: `Almacén ${bay.sectionCode}`,
+        aisle: bay.aisle,
+        rack: bay.rack,
+        level: String(bay.level),
+        position: bay.code,
+        capacityPallets: bay.capacityTarimas,
+        currentStoredPallets: bay.currentTarimas,
+        availableUnits: Math.max(0, bay.capacityTarimas - bay.currentTarimas),
+        occupancyPercentage: bay.capacityTarimas > 0 ? Math.min(100, Math.round((bay.currentTarimas / bay.capacityTarimas) * 100)) : 0,
+        status: bay.status,
+        isBlocked: bay.status === 'BLOCKED',
+        category: bay.category,
+        trafficLight: bay.status === 'BLOCKED' || bay.currentTarimas >= bay.capacityTarimas ? 'RED' : (bay.currentTarimas > 0 ? 'AMBER' : 'GREEN'),
+        isRecommended: false,
+        storedRemisiones: bay.currentTarimas > 0 ? [{
+          receptionFolio: bay.batchNumber || 'INV',
+          remisionNo: bay.batchNumber || 'Stock',
+          clientName: 'Cliente WMS',
+          palletsCount: bay.currentTarimas,
+          productName: bay.skuDescription || 'Mercancía',
+          status: bay.status
+        }] : []
+      };
+      this.bays.update(l => [found!, ...l]);
+    }
+    this.selectBay(found);
+  }
+
+  // ── CONTROLES DE ZOOM Y PAN ──
+  protected onMapMouseDown(e: MouseEvent): void {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target && target.classList && target.classList.contains('cad__bay-slot')) return;
+
+    this.isPanning = true;
+    this.startPanX = e.clientX;
+    this.startPanY = e.clientY;
+    this.initialPanOffsetX = this.panOffset().x;
+    this.initialPanOffsetY = this.panOffset().y;
+  }
+
+  protected onMapMouseMove(e: MouseEvent): void {
+    if (!this.isPanning) return;
+    const dx = e.clientX - this.startPanX;
+    const dy = e.clientY - this.startPanY;
+    this.panOffset.set({
+      x: this.initialPanOffsetX + dx,
+      y: this.initialPanOffsetY + dy
+    });
+  }
+
+  protected onMapMouseUp(): void {
+    this.isPanning = false;
+  }
+
+  protected onMapWheel(e: WheelEvent): void {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.15 : -0.15;
+    this.zoomScale.update(s => Math.min(3.5, Math.max(0.6, +(s + delta).toFixed(2))));
+  }
+
+  protected zoomIn(): void {
+    this.zoomScale.update(s => Math.min(3.5, +(s + 0.2).toFixed(2)));
+  }
+
+  protected zoomOut(): void {
+    this.zoomScale.update(s => Math.max(0.6, +(s - 0.2).toFixed(2)));
+  }
+
+  protected setZoom(scale: number): void {
+    this.zoomScale.set(scale);
+    this.panOffset.set({ x: 0, y: 0 });
+  }
+
+  protected resetZoomAndPan(): void {
+    this.zoomScale.set(1.0);
+    this.panOffset.set({ x: 0, y: 0 });
+  }
+
+  protected toggleBaysVisibility(): void {
+    this.showBaysInBlueprint.update(v => !v);
+  }
+
+  protected toggleTransitVisibility(): void {
+    this.showTransitRoutes.update(v => !v);
+  }
+
   private readonly apiService = inject(WarehouseMovementsApiService);
   private readonly layoutService = inject(WarehouseLayoutService);
   private readonly movementsService = inject(WarehouseMovementsService);

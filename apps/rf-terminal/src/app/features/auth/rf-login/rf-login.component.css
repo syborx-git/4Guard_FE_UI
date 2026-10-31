@@ -360,6 +360,20 @@
 .rf-tabs[data-active="1"] .rf-tabs__indicator { transform: translateX(calc(100% + 4px)); }
 .rf-tabs[data-active="2"] .rf-tabs__indicator { transform: translateX(calc(200% + 8px)); }
 
+/* ── Adaptación para 4 pestañas cuando el dispositivo soporta Face ID ── */
+.rf-tabs.has-face-id {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.rf-tabs.has-face-id .rf-tabs__indicator {
+  width: calc((100% - 10px - 12px) / 4);
+}
+
+.rf-tabs.has-face-id[data-active="0"] .rf-tabs__indicator { transform: translateX(0); }
+.rf-tabs.has-face-id[data-active="1"] .rf-tabs__indicator { transform: translateX(calc(100% + 4px)); }
+.rf-tabs.has-face-id[data-active="2"] .rf-tabs__indicator { transform: translateX(calc(200% + 8px)); }
+.rf-tabs.has-face-id[data-active="3"] .rf-tabs__indicator { transform: translateX(calc(300% + 12px)); }
+
 .rf-tabs__btn {
   position: relative;
   z-index: 1;
@@ -925,5 +939,189 @@
   .rf-glow, .rf-scanline { animation: none; }
 }
 
+/* ============================================================
+   PANEL BIOMÉTRICO (FACE ID / WEBAUTHN)
+   ============================================================ */
+.biometric-panel-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 18px;
+  padding: 8px 0;
+}
 
+.biometric-radar {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: grid;
+  place-items: center;
+  margin: 6px auto;
+}
 
+.biometric-radar__ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(232, 197, 71, 0.35);
+  pointer-events: none;
+}
+
+.biometric-radar__ring--1 {
+  width: 130px;
+  height: 130px;
+  animation: rf-spin-cw 20s linear infinite;
+}
+
+.biometric-radar__ring--2 {
+  width: 95px;
+  height: 95px;
+  border-style: solid;
+  border-color: rgba(34, 211, 238, 0.3);
+  animation: rf-spin-ccw 14s linear infinite;
+}
+
+.biometric-radar.is-scanning .biometric-radar__ring--1 {
+  border-color: #38bdf8;
+  animation-duration: 4s;
+}
+
+.biometric-radar.is-scanning .biometric-radar__ring--2 {
+  border-color: #fbbf24;
+  animation-duration: 3s;
+}
+
+.biometric-radar__core {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232, 197, 71, 0.22) 0%, rgba(10, 16, 26, 0.85) 75%);
+  border: 1px solid rgba(232, 197, 71, 0.5);
+  box-shadow: 0 0 24px rgba(232, 197, 71, 0.35);
+  display: grid;
+  place-items: center;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.biometric-radar.is-scanning .biometric-radar__core {
+  box-shadow: 0 0 32px rgba(56, 189, 248, 0.6);
+  border-color: #38bdf8;
+}
+
+.biometric-radar__icon {
+  font-size: 38px;
+  color: var(--rf-gold-400);
+  transition: transform 0.25s ease;
+}
+
+.biometric-radar.is-scanning .biometric-radar__icon {
+  color: #38bdf8;
+  animation: rf-pulse-face 1.2s ease-in-out infinite;
+}
+
+.biometric-enrolled-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.76rem;
+  color: #6ee7b7;
+  margin-bottom: 8px;
+}
+
+.biometric-title {
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+}
+
+.biometric-desc {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--rf-text-secondary);
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.biometric-fallback {
+  margin-top: 2px;
+}
+
+.rf-fallback-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.rf-fallback-btn:hover {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+}
+
+/* Enrolamiento Post-Login Modal Preview */
+.biometric-enroll-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  margin-bottom: 12px;
+}
+
+.biometric-badge-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, rgba(15, 23, 42, 0.8) 80%);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  display: grid;
+  place-items: center;
+}
+
+.biometric-features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  width: 100%;
+}
+
+.biometric-feat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.79rem;
+  color: #cbd5e1;
+}
+
+@keyframes rf-spin-cw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes rf-spin-ccw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+
+@keyframes rf-pulse-face {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.08); opacity: 0.85; }
+}

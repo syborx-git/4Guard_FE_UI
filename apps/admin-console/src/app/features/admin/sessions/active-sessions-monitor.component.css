@@ -4,6 +4,19 @@
  */
 
 :host {
+  --gold:             #c5a86b;
+  --gold-light:       #e0c87a;
+  --gold-bg:          rgba(197, 168, 107, 0.10);
+  --gold-border:      rgba(197, 168, 107, 0.28);
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+  --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --bg-card:          rgba(255, 255, 255, 0.94);
+  --shadow-card:      0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --text-primary:     #1c2940;
+  --text-secondary:   #5a6477;
+  --text-muted:       #8b94a3;
+  --radius-xl:        18px;
+
   display: block;
   width: 100%;
   min-height: 100%;
@@ -41,6 +54,18 @@
 
 :host-context(.theme-dark),
 :host-context(.dark) {
+  --gold:             #d0af67;
+  --gold-light:       #e1c47c;
+  --gold-bg:          rgba(208, 175, 103, 0.12);
+  --gold-border:      rgba(208, 175, 103, 0.25);
+  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --bg-card:          rgba(17, 26, 38, 0.94);
+  --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --text-primary:     #edf1f5;
+  --text-secondary:   #9aa6b4;
+  --text-muted:       #667585;
+
   --app-bg-start:   #0b1119;
   --app-bg-end:     #080e18;
   --surface-card:   rgba(17, 26, 38, 0.94);
@@ -402,15 +427,11 @@
   gap: 1rem;
   padding: 1rem;
   overflow: hidden;
-  border: 1px solid rgba(23, 36, 61, 0.075);
-  border-radius: 18px;
-  background:
-    linear-gradient(145deg,
-      rgba(255, 255, 255, 0.95),
-      rgba(249, 247, 242, 0.86));
-  box-shadow:
-    0 10px 26px rgba(31, 42, 68, 0.045),
-    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec, var(--bg-card));
+  box-shadow: var(--shadow-card);
   transition:
     transform 170ms ease,
     box-shadow 170ms ease,

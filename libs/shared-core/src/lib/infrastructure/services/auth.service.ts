@@ -18,6 +18,7 @@ import { Router } from '@angular/router';
 import { Observable, tap, map, of, delay, catchError } from 'rxjs';
 import { AuthResponse, JwtPayload, LoginRequest, User } from '../../domain/models/user.model';
 import { UserRole } from '../../domain/enums/role.enum';
+import { OfflineIndexedDb } from '../db/offline-indexed-db';
 import { environment } from '../../../environments/environment';
 
 /** Claves de localStorage para persistencia de sesión */
@@ -286,6 +287,17 @@ export class AuthService {
     localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
     this._currentUser.set(response.user);
+
+    // Persistir en IndexedDB auth_cache para desbloqueo biométrico Offline-First (ADR-012)
+    OfflineIndexedDb.saveAuthCache({
+      userId: response.user.id,
+      username: response.user.username || response.user.email,
+      token: response.accessToken,
+      role: response.user.role,
+      branchId: response.user.branchId || '',
+      cachedAt: Date.now(),
+      expiresAt: Date.now() + (12 * 60 * 60 * 1000)
+    }).catch(() => { /* silent fallback */ });
   }
 
   private clearSession(): void {

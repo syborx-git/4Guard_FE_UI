@@ -170,13 +170,25 @@ export class WarehouseMovementsApiService {
     );
   }
 
-  getPassHistory(options?: { organizationId?: string; branchId?: string; search?: string }): Observable<any[]> {
+  getPassHistory(options?: {
+    organizationId?: string;
+    branchId?: string;
+    search?: string;
+    currentShiftOnly?: boolean;
+    shiftSessionId?: string;
+    from?: string;
+    to?: string;
+  }): Observable<any[]> {
     const orgId = options?.organizationId || this.getSessionOrgId();
     let params = new HttpParams().set('organizationId', orgId);
     if (options?.branchId && options.branchId !== 'ALL' && options.branchId !== 'null' && options.branchId !== 'undefined') {
       params = params.set('branchId', options.branchId);
     }
     if (options?.search) params = params.set('search', options.search);
+    if (options?.currentShiftOnly !== undefined) params = params.set('currentShiftOnly', String(options.currentShiftOnly));
+    if (options?.shiftSessionId) params = params.set('shiftSessionId', options.shiftSessionId);
+    if (options?.from) params = params.set('from', options.from);
+    if (options?.to) params = params.set('to', options.to);
 
     return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/history`, { params }).pipe(
       timeout(8000),
@@ -202,9 +214,18 @@ export class WarehouseMovementsApiService {
   }
 
   deletePass(passIdOrToken: string, secondaryToken?: string): Observable<void> {
-    this.removeLocalSubmittedPass(passIdOrToken);
-    if (secondaryToken) this.removeLocalSubmittedPass(secondaryToken);
-    return this.http.delete<ApiResponse<void>>(`${this.securityGateUrl}/passes/${passIdOrToken}`).pipe(
+    const p1 = (passIdOrToken || '').trim();
+    const p2 = (secondaryToken || '').trim();
+
+    if (p1) this.removeLocalSubmittedPass(p1);
+    if (p2) this.removeLocalSubmittedPass(p2);
+
+    const idToSend = p1 || p2;
+    if (!idToSend) {
+      return of(void 0);
+    }
+
+    return this.http.delete<ApiResponse<void>>(`${this.securityGateUrl}/passes/${encodeURIComponent(idToSend)}`).pipe(
       map(() => void 0),
       catchError(() => of(void 0))
     );

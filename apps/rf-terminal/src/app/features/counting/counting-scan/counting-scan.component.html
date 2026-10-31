@@ -45,7 +45,7 @@
           <span>Control de Inventario</span>
         </div>
         <h1 class="cockpit-title font-display">Panel de Auditoría de Inventario</h1>
-        <p class="cockpit-subtitle font-body">Conteo ciego de alta rotación, validación de presencia en rack y resolución de discrepancias.</p>
+        
       </div>
     </div>
 
@@ -246,7 +246,7 @@
 
         <!-- Visor Reticle Interactivo -->
         <div
-          class="camera-reticle-viewfinder"
+          class="camera-reticle-viewfinder" [class.camera-reticle--expanded]="isCameraExpanded()"
           [class.camera-reticle--unlocked]="isRackUnlocked()"
           (click)="onCameraTapped()"
           title="Toca el visor para capturar código automáticamente">
