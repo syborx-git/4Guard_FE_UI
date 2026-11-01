@@ -643,6 +643,42 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  startTransfer(id: string, operatorId?: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.transfersUrl}/${id}/start`, { operatorId }).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  pauseTransfer(id: string, reason?: string, notes?: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.transfersUrl}/${id}/pause`, { reason, notes }).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  resumeTransfer(id: string, operatorId?: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.transfersUrl}/${id}/resume`, { operatorId }).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  completeTransfer(id: string, destinationLocationId?: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.transfersUrl}/${id}/complete`, { destinationLocationId }).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  updateTransferPriority(id: string, priority: 'NORMAL' | 'URGENT'): Observable<any> {
+    return this.http.patch<ApiResponse<any>>(`${this.transfersUrl}/${id}/priority`, { priority }).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  reassignTransferOperator(id: string, forkliftOperatorId: string): Observable<any> {
+    return this.http.put<ApiResponse<any>>(`${this.transfersUrl}/${id}/reassign`, { forkliftOperatorId }).pipe(
+      map((res) => res.data)
+    );
+  }
+
   // ─── 3. SALIDAS DE ALMACÉN (OUTBOUND) ───────────────────────────────────────
 
   createOutbound(body: any): Observable<any> {
@@ -681,6 +717,27 @@ export class WarehouseMovementsApiService {
         const local = this.getLocalOutbounds().find(o => o.id === id || o.folio === id);
         return of(local || null);
       })
+    );
+  }
+
+  updateOutboundPriority(id: string, priority: 'NORMAL' | 'URGENT'): Observable<any> {
+    return this.http.put<ApiResponse<any>>(`${this.outboundsUrl}/${id}/priority`, { priority }).pipe(
+      map((res) => res?.data || { id, priority }),
+      catchError(() => this.updateOutbound(id, { priority }))
+    );
+  }
+
+  pauseOutbound(id: string, reason: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.outboundsUrl}/${id}/pause`, { reason }).pipe(
+      map((res) => res?.data || { id, status: 'PAUSED', pauseReason: reason }),
+      catchError(() => this.updateOutbound(id, { status: 'PAUSED', pauseReason: reason }))
+    );
+  }
+
+  resumeOutbound(id: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.outboundsUrl}/${id}/resume`, {}).pipe(
+      map((res) => res?.data || { id, status: 'IN_PROGRESS' }),
+      catchError(() => this.updateOutbound(id, { status: 'IN_PROGRESS' }))
     );
   }
 

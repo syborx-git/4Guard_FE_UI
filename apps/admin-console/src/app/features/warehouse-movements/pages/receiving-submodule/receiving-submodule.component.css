@@ -6415,3 +6415,120 @@ h6 {
   background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%);
   border-color: rgba(129, 140, 248, 0.4);
 }
+
+/* ── BOTÓN Y PÍLDORAS DE PRIORIDAD URGENTE & ARRASTRE DE TURNO ── */
+.reception-priority-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.reception-priority-btn--normal {
+  background: rgba(148, 163, 184, 0.1);
+  color: #64748b;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.reception-priority-btn--normal:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.reception-priority-btn--urgent {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.3));
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+  position: relative;
+}
+
+.reception-priority-btn--urgent:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.45));
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.5);
+  transform: translateY(-1px);
+}
+
+.priority-pulse-beacon {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background-color: #ef4444;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  animation: beacon-pulse 1.5s infinite;
+}
+
+@keyframes beacon-pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.filter-pill--carryover {
+  border-color: rgba(249, 115, 22, 0.3);
+}
+.filter-pill--carryover.filter-pill--active {
+  background: rgba(249, 115, 22, 0.15);
+  border-color: #f97316;
+  color: #ea580c;
+}
+
+.filter-pill--urgent {
+  border-color: rgba(239, 68, 68, 0.35);
+}
+.filter-pill--urgent.filter-pill--active {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+.dot--orange {
+  background-color: #f97316;
+}
+
+.dot--crimson {
+  background-color: #ef4444;
+}
+
+.badge-urgent-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.badge-carryover-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}

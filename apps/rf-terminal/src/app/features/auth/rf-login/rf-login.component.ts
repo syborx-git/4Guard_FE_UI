@@ -1,41 +1,37 @@
 /**
  * @file rf-login.component.ts
  * @description P6 — Login RF (Acceso Rápido) [HU-002].
- * Botón masivo para QR/RFID. PIN numérico con código de operador.
+ * Acceso por PIN numérico con código de operador.
  * Acceso biométrico con Face ID / W3C WebAuthn de plataforma (Zero Biometric Knowledge).
  * Autenticación real contra el backend (/api/v1/auth/login) y base de datos PostgreSQL.
  */
 
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthState, AuthService, BiometricAuthService, UserRole, User } from '@4guard/shared-core';
 import { PwaService } from '../../../core/services/pwa.service';
 
-export type LoginMode = 'credentials' | 'pin' | 'scan' | 'face-id';
+export type LoginMode = 'pin' | 'face-id';
 
 @Component({
   selector: 'fg-rf-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule],
   templateUrl: './rf-login.component.html',
   styleUrl: './rf-login.component.css',
 })
 export class RfLoginComponent implements OnInit {
-  private readonly fb               = inject(FormBuilder);
   private readonly authState        = inject(AuthState);
   private readonly authService      = inject(AuthService);
-  private readonly biometricService  = inject(BiometricAuthService);
+  private readonly biometricService = inject(BiometricAuthService);
   private readonly router           = inject(Router);
   protected readonly pwaService     = inject(PwaService);
 
-  protected readonly mode            = signal<LoginMode>('credentials');
+  protected readonly mode            = signal<LoginMode>('pin');
   protected readonly pin             = signal<string>('');
   protected readonly operatorCode    = signal<string>('');
-  protected readonly isScanning      = signal(false);
   protected readonly isLoading       = signal(false);
-  protected readonly showPassword    = signal(false);
   protected readonly error           = signal<string | null>(null);
   protected readonly isOffline       = signal(!navigator.onLine);
   protected readonly currentLiveTime = signal<string>(new Date().toLocaleTimeString('es-MX'));
@@ -54,12 +50,6 @@ export class RfLoginComponent implements OnInit {
   protected readonly newPin          = signal<string>('');
   protected readonly confirmNewPin   = signal<string>('');
   protected readonly pinChangeStep   = signal<'new' | 'confirm'>('new');
-
-  protected readonly loginForm = this.fb.nonNullable.group({
-    identifier: ['', [Validators.required]],
-    password: ['', [Validators.required, Validators.minLength(4)]],
-    remember: [true]
-  });
 
   constructor() {
     setInterval(() => {
@@ -96,17 +86,7 @@ export class RfLoginComponent implements OnInit {
   }
 
   protected get currentTabIndex(): number {
-    switch (this.mode()) {
-      case 'credentials': return 0;
-      case 'pin': return 1;
-      case 'scan': return 2;
-      case 'face-id': return 3;
-      default: return 0;
-    }
-  }
-
-  protected toggleShowPassword(): void {
-    this.showPassword.update(v => !v);
+    return this.mode() === 'face-id' ? 1 : 0;
   }
 
   protected async promptInstallPwa(): Promise<void> {
@@ -253,17 +233,6 @@ export class RfLoginComponent implements OnInit {
     });
   }
 
-  protected triggerScan(): void {
-    this.isScanning.set(true);
-    this.error.set(null);
-
-    // Detección óptica de gafete / credencial RFID
-    setTimeout(() => {
-      this.isScanning.set(false);
-      this.mode.set('pin');
-    }, 700);
-  }
-
   protected submitPin(): void {
     const code = this.operatorCode().trim().toUpperCase();
     const pin = this.pin();
@@ -302,37 +271,6 @@ export class RfLoginComponent implements OnInit {
         this.pin.set('');
         const msg = err?.error?.message || err?.message || 'Código de operador o PIN incorrecto. Verifica tus credenciales en el sistema.';
         this.error.set(msg);
-      }
-    });
-  }
-
-  protected submitCredentials(): void {
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
-      return;
-    }
-
-    const { identifier, password } = this.loginForm.getRawValue();
-    this.isLoading.set(true);
-    this.error.set(null);
-
-    const cleanIdentifier = identifier.trim();
-    this.authService.login({ email: cleanIdentifier, password }).subscribe({
-      next: (user) => {
-        this.isLoading.set(false);
-        if (user?.changePasswordRequired) {
-          this.pendingUser.set(user);
-          this.newPin.set('');
-          this.confirmNewPin.set('');
-          this.pinChangeStep.set('new');
-          this.mustChangePin.set(true);
-          return;
-        }
-        this.checkEnrollmentOrNavigate(user);
-      },
-      error: (err) => {
-        this.isLoading.set(false);
-        this.error.set(err?.error?.message || err?.message || 'Credenciales inválidas o error de conexión con el servidor.');
       }
     });
   }
@@ -411,7 +349,6 @@ export class RfLoginComponent implements OnInit {
    * Verifica si el usuario debe recibir la oferta de enrolar Face ID o pasar directo a su panel.
    */
   private checkEnrollmentOrNavigate(user: any): void {
-    // Si el hardware soporta Face ID pero este operador aún no lo vincula en este dispositivo
     if (this.isBiometricsSupported() && !this.isBiometricsEnrolled()) {
       this.pendingEnrollUser.set(user);
       this.showEnrollmentBanner.set(true);

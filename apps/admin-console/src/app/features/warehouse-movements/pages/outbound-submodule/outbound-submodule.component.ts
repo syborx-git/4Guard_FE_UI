@@ -154,6 +154,29 @@ export class OutboundSubmoduleComponent implements OnInit {
   readonly kpiInAnden = computed(() => this.boardOutbounds().filter((o) => ['ASSIGNED', 'IN_PROGRESS', 'LOADED'].includes(o.status)).length);
   readonly kpiCompleted = computed(() => this.boardOutbounds().filter((o) => o.status === 'COMPLETED').length);
   readonly kpiCancelled = computed(() => this.boardOutbounds().filter((o) => o.status === 'CANCELLED').length);
+  readonly kpiUrgent = computed(() => this.boardOutbounds().filter((o) => o.priority === 'URGENT').length);
+  readonly kpiPaused = computed(() => this.boardOutbounds().filter((o) => o.status === 'PAUSED').length);
+  readonly kpiCarryOver = computed(() => this.boardOutbounds().filter((o) => this.isCarryOver(o)).length);
+
+  isUrgentFilter = signal<boolean>(false);
+  isCarryOverFilter = signal<boolean>(false);
+  isUrgentNewOutbound = signal<boolean>(false);
+
+  toggleUrgentFilter(): void {
+    this.isUrgentFilter.update((v) => !v);
+  }
+
+  isUrgentFilterActive(): boolean {
+    return this.isUrgentFilter();
+  }
+
+  toggleCarryOverFilter(): void {
+    this.isCarryOverFilter.update((v) => !v);
+  }
+
+  isCarryOverFilterActive(): boolean {
+    return this.isCarryOverFilter();
+  }
 
   // Estado de Compactación de Métricas / KPIs
   isKpiCollapsed = signal<boolean>(localStorage.getItem('4g_outbound_kpis_collapsed') === 'true');
@@ -2744,6 +2767,8 @@ export class OutboundSubmoduleComponent implements OnInit {
         }
       }
       if (!matchStatus) return false;
+      if (this.isUrgentFilter() && o.priority !== 'URGENT') return false;
+      if (this.isCarryOverFilter() && !this.isCarryOver(o)) return false;
 
       if (!q) return true;
       return (
@@ -3714,5 +3739,122 @@ export class OutboundSubmoduleComponent implements OnInit {
         this.cancelErrorMessage.set(err.message || 'Error de autenticación o validación de cancelación.');
       }
     }
+  }
+
+  // ── PRIORIDAD URGENTE Y PAUSA OPERATIVA / CORTE DE TURNO (ADR-016, ADR-019, ADR-022) ──
+
+  toggleOutboundPriority(outbound: WarehouseOutbound): void {
+    const newPriority: 'NORMAL' | 'URGENT' = outbound.priority === 'URGENT' ? 'NORMAL' : 'URGENT';
+    const oldPriority = outbound.priority || 'NORMAL';
+
+    const updated: WarehouseOutbound = { ...outbound, priority: newPriority };
+    this.svc.updateOutbound(outbound.folio, { priority: newPriority }, true);
+    if (this.selectedOutbound()?.id === outbound.id || this.selectedOutbound()?.folio === outbound.folio) {
+      this.selectedOutbound.set(updated);
+    }
+
+    if (outbound.id && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(outbound.id)) {
+      this.movementsApi.updateOutboundPriority(outbound.id, newPriority).subscribe({
+        next: () => {
+          this.toast.success(
+            newPriority === 'URGENT'
+              ? `⚡ Despacho #${outbound.folio} marcado como URGENTE. Priorizado en Terminal RF.`
+              : `Despacho #${outbound.folio} restablecido a prioridad Normal.`
+          );
+        },
+        error: () => {
+          this.toast.info(`Prioridad actualizada localmente (${newPriority}).`);
+        }
+      });
+    }
+
+    this.svc.addOutboundAudit(outbound.folio, {
+      id: `aud-prio-${Date.now()}`,
+      action: 'SALIDA_ACTUALIZADA',
+      actionLabel: 'Cambio de Prioridad de Despacho',
+      username: this.authState.currentUser()?.fullName || 'Mesa de Control',
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [{ fieldName: 'Prioridad Operativa', oldValue: oldPriority, newValue: newPriority }]
+    });
+  }
+
+  showPauseOutboundModal = signal<boolean>(false);
+  outboundToPause = signal<WarehouseOutbound | null>(null);
+  pauseOutboundReason = signal<string>('Cambio de turno / Pausa operativa');
+
+  openPauseOutboundModal(outbound: WarehouseOutbound): void {
+    this.outboundToPause.set(outbound);
+    this.pauseOutboundReason.set('Cambio de turno / Pausa operativa');
+    this.showPauseOutboundModal.set(true);
+  }
+
+  closePauseOutboundModal(): void {
+    this.showPauseOutboundModal.set(false);
+    this.outboundToPause.set(null);
+  }
+
+  confirmPauseOutbound(): void {
+    const ob = this.outboundToPause();
+    if (!ob) return;
+    const reason = this.pauseOutboundReason().trim() || 'Pausa operativa';
+    const nowIso = new Date().toISOString();
+
+    const updated: WarehouseOutbound = {
+      ...ob,
+      status: 'PAUSED',
+      pausedAt: nowIso,
+      pauseReason: reason
+    };
+    this.svc.updateOutbound(ob.folio, { status: 'PAUSED', pausedAt: nowIso, pauseReason: reason }, true);
+    if (this.selectedOutbound()?.id === ob.id || this.selectedOutbound()?.folio === ob.folio) {
+      this.selectedOutbound.set(updated);
+    }
+
+    if (ob.id && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(ob.id)) {
+      this.movementsApi.pauseOutbound(ob.id, reason).subscribe({
+        next: () => {
+          this.toast.warning(`Despacho #${ob.folio} puesto en PAUSA. Tarimas en tráiler preservadas.`);
+        },
+        error: () => {}
+      });
+    }
+
+    this.svc.addOutboundAudit(ob.folio, {
+      id: `aud-pause-${Date.now()}`,
+      action: 'SALIDA_ACTUALIZADA',
+      actionLabel: 'Pausa de Despacho por Turno / Urgencia',
+      username: this.authState.currentUser()?.fullName || 'Mesa de Control',
+      timestamp: new Date().toLocaleString('es-MX'),
+      reason,
+      details: [{ fieldName: 'Estatus', oldValue: ob.status, newValue: 'PAUSED' }]
+    });
+
+    this.closePauseOutboundModal();
+  }
+
+  resumeOutbound(outbound: WarehouseOutbound): void {
+    const updated: WarehouseOutbound = { ...outbound, status: 'IN_PROGRESS' };
+    this.svc.updateOutbound(outbound.folio, { status: 'IN_PROGRESS' }, true);
+    if (this.selectedOutbound()?.id === outbound.id || this.selectedOutbound()?.folio === outbound.folio) {
+      this.selectedOutbound.set(updated);
+    }
+
+    if (outbound.id && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(outbound.id)) {
+      this.movementsApi.resumeOutbound(outbound.id).subscribe({
+        next: () => {
+          this.toast.success(`Despacho #${outbound.folio} reanudado en andén.`);
+        },
+        error: () => {}
+      });
+    }
+
+    this.svc.addOutboundAudit(outbound.folio, {
+      id: `aud-resume-${Date.now()}`,
+      action: 'SALIDA_ACTUALIZADA',
+      actionLabel: 'Reanudación de Despacho en Andén',
+      username: this.authState.currentUser()?.fullName || 'Mesa de Control',
+      timestamp: new Date().toLocaleString('es-MX'),
+      details: [{ fieldName: 'Estatus', oldValue: 'PAUSED', newValue: 'IN_PROGRESS' }]
+    });
   }
 }

@@ -226,6 +226,32 @@ export class CountingScanComponent implements AfterViewInit, OnDestroy {
   // ─── Filtros Contextuales (Pills de Auditoría Homologadas) ────────────────
   protected readonly currentFilter = signal<'ALL' | 'CURRENT' | 'PENDING' | 'AUDITED' | 'DISCREPANCY'>('ALL');
   protected readonly showCameraModal = signal<boolean>(false);
+  // ─── Homologación con Picking FEFO ─────────────────────────────────────────
+  protected readonly activeTab = signal<'ROUTE' | 'BUFFER'>('ROUTE');
+  protected readonly alertFlash = signal<boolean>(false);
+  protected readonly successFlash = signal<boolean>(false);
+
+  protected readonly completedLocationsCount = computed(() => this.auditedLocationsCount());
+
+  protected readonly auditedPercentage = computed(() => {
+    const total = this.totalLocationsCount();
+    return total > 0 ? Math.round((this.auditedLocationsCount() / total) * 100) : 0;
+  });
+
+  protected focusScan(): void {
+    this.focusInput();
+  }
+
+  private triggerSuccessFlash(): void {
+    this.successFlash.set(true);
+    setTimeout(() => this.successFlash.set(false), 800);
+  }
+
+  private triggerAlertFlash(): void {
+    this.alertFlash.set(true);
+    setTimeout(() => this.alertFlash.set(false), 1500);
+  }
+
 
   // ─── Señales Computadas ───────────────────────────────────────────────────
   protected readonly currentLocation = computed<CountingLocationItem>(() => {

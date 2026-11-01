@@ -864,6 +864,46 @@ export class ReceivingSubmoduleComponent implements OnInit {
   kpiInProcess = computed(() => this.boardReceptions().filter((r) => r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED').length);
   kpiCompleted = computed(() => this.boardReceptions().filter((r) => r.status === 'COMPLETED').length);
   kpiCancelled = computed(() => this.boardReceptions().filter((r) => r.status === 'CANCELLED').length);
+  isCarryOverFilterActive = signal<boolean>(false);
+  isUrgentFilterActive = signal<boolean>(false);
+  kpiCarryOver = computed(() => this.boardReceptions().filter((r) => this.isCarryOver(r)).length);
+  kpiUrgent = computed(() => this.boardReceptions().filter((r) => r.priority === 'URGENT' && this.isActiveStatus(r.status)).length);
+
+  toggleCarryOverFilter(): void {
+    this.isCarryOverFilterActive.update((v) => !v);
+  }
+
+  toggleUrgentFilter(): void {
+    this.isUrgentFilterActive.update((v) => !v);
+  }
+
+  toggleReceptionPriority(rec?: ReceptionHeader | null): void {
+    const target = rec || this.selectedReception();
+    if (!target) return;
+    const targetId = target.id || target.folio;
+    const newPriority: 'NORMAL' | 'URGENT' = target.priority === 'URGENT' ? 'NORMAL' : 'URGENT';
+
+    // Actualización reactiva optimista inmediata en memoria local
+    target.priority = newPriority;
+    this.movementsService.updateReception(targetId, { priority: newPriority }, true);
+
+    this.movementsService.setReceptionPriority(targetId, newPriority).subscribe({
+      next: () => {
+        this.toast.success(
+          newPriority === 'URGENT'
+            ? `⚡ Remisión ${target.checkIn?.docNumber || target.folio} marcada como PRIORIDAD URGENTE. Cola preemptiva de montacargas notificada.`
+            : `Prioridad normal restablecida para remisión ${target.checkIn?.docNumber || target.folio}.`
+        );
+      },
+      error: (err) => {
+        console.error('Error al actualizar prioridad:', err);
+        target.priority = newPriority === 'URGENT' ? 'NORMAL' : 'URGENT';
+        this.movementsService.updateReception(targetId, { priority: target.priority }, true);
+        this.toast.error('No se pudo actualizar la prioridad de la remisión.');
+      }
+    });
+  }
+
 
   // Filtros Multi-Estado Píldoras
   // Por defecto el tablero operativo arranca en "En Caseta" (REGISTERED).
@@ -965,6 +1005,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
         (r.productName && r.productName.toLowerCase().includes(q)) ||
         (r.productId && r.productId.toLowerCase().includes(q));
 
+      if (this.isCarryOverFilterActive() && !this.isCarryOver(r)) {
+        return false;
+      }
+      if (this.isUrgentFilterActive() && r.priority !== 'URGENT') {
+        return false;
+      }
       return matchStatus && matchQuery;
     });
   });

@@ -17,6 +17,7 @@ import {
   OnDestroy,
   ElementRef,
   ViewChild,
+  HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -96,6 +97,7 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
 
   // ─── Modal 5: Intercambio / Alta de Nuevo Lote en Andén ──────────────────
   protected readonly showLotSwapModal = signal(false);
+  protected readonly showLotsQuickDrawer = signal(false);
   protected readonly selectedPalletForEdit = signal<InboundPalletItem | null>(null);
   protected readonly newCustomLotInput = signal('');
   protected readonly newCustomPiecesInput = signal(48);
@@ -133,7 +135,11 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   protected readonly queuedMissions = this.missionService.queuedMissions;
   protected readonly counts = this.missionService.counts;
   protected readonly currentFilter = this.missionService.currentFilter;
+  protected readonly activeFilter = this.missionService.currentFilter;
   protected readonly scanFeedback = this.missionService.scanFeedback;
+  protected readonly urgentQueuedMission = this.missionService.urgentPreemptCandidate;
+  protected readonly pausedMission = this.missionService.pausedMission;
+  protected readonly hasUrgentPreemption = this.missionService.hasUrgentPreemption;
 
   protected readonly operatorName = computed(() => {
     return this.authState.userFullName() || this.authState.user()?.fullName || 'Oficial Montacarguista';
@@ -247,6 +253,25 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     this.stopCamera();
     this.showScanningModal.set(false);
     this.scannedInput.set('');
+  }
+
+  // ─── Preemption de Misiones Urgentes y Reanudación Segura ─────────────────
+  preemptToUrgent(urgent: ForkliftMission): void {
+    const current = this.activeMission();
+    if (current && current.status === 'ACTIVE_DROP') {
+      this.toast.warning('Tienes una tarima sobre las horquillas. Concluye el depósito asignado o déjala en bahía de buffer antes de tomar la urgencia.', 'CARGA EN TRÁNSITO');
+      this.openScanningModal();
+      return;
+    }
+    this.missionService.preemptCurrentMissionForUrgent(urgent.id);
+    this.toast.warning(`Pausada misión ${current?.folio || ''}. Atendiendo URGENTE: ${urgent.folio}`, 'MISIÓN URGENTE');
+    this.openScanningModal();
+  }
+
+  resumePausedMission(): void {
+    this.missionService.resumePausedMission();
+    this.toast.success('Misión previa reanudada en el punto exacto de interrupción.', 'MISIÓN REANUDADA');
+    this.openScanningModal();
   }
 
   // ─── Gestión de Cámara en Vivo (Tableta / Móvil) ──────────────────────────
@@ -440,6 +465,43 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   closeCustomLotModal(): void {
     this.showLotSwapModal.set(false);
     this.selectedPalletForEdit.set(null);
+  }
+
+  openLotsQuickDrawer(): void {
+    this.showLotsQuickDrawer.set(true);
+    this.audioService.playSuccess();
+  }
+
+  closeLotsQuickDrawer(): void {
+    this.showLotsQuickDrawer.set(false);
+  }
+
+  selectLotFromDrawer(lotNumber: string): void {
+    this.selectScanningLot(lotNumber);
+    this.closeLotsQuickDrawer();
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  handleGlobalKeydown(event: KeyboardEvent): void {
+    const activeElem = document.activeElement;
+    if (activeElem && (activeElem.tagName === 'INPUT' || activeElem.tagName === 'TEXTAREA')) {
+      const input = activeElem as HTMLInputElement;
+      if (input.classList.contains('modal-input') || input.id === 'searchFilter') {
+        return;
+      }
+    }
+
+    const mission = this.activeMission();
+    if (!mission || mission.type !== 'INBOUND_UNLOAD') return;
+
+    if (/^[1-9]$/.test(event.key) && !event.ctrlKey && !event.altKey && !event.metaKey) {
+      const idx = parseInt(event.key, 10) - 1;
+      const lots = this.availableLotsList();
+      if (lots && lots[idx]) {
+        this.selectScanningLot(lots[idx].lotNumber);
+        this.audioService.playSuccess();
+      }
+    }
   }
 
   evaluateShelfLife(expirationDateStr: string, elaborationDateStr?: string): ShelfLifeEvaluation | null {

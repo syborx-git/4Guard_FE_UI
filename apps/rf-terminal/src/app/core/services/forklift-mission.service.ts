@@ -20,7 +20,7 @@ import { RfNotificationService } from './rf-notification.service';
 
 export type MovementType = 'INBOUND_UNLOAD' | 'INTERNAL_PUTAWAY' | 'OUTBOUND_DISPATCH';
 export type MissionPriority = 'URGENT' | 'HIGH' | 'NORMAL';
-export type MissionStatus = 'QUEUED' | 'ACTIVE_PICK' | 'ACTIVE_DROP' | 'PARTIAL_DISCHARGED' | 'DISCHARGED' | 'COMPLETED' | 'POSTPONED' | 'INCIDENT_HOLD';
+export type MissionStatus = 'QUEUED' | 'ACTIVE_PICK' | 'ACTIVE_DROP' | 'PARTIAL_DISCHARGED' | 'DISCHARGED' | 'COMPLETED' | 'POSTPONED' | 'INCIDENT_HOLD' | 'PAUSED';
 export type CockpitFilter = 'ALL' | 'INBOUND' | 'INTERNAL' | 'OUTBOUND' | 'URGENT';
 
 /**
@@ -129,6 +129,7 @@ export interface ForkliftMission {
   currentPendingSscc?: string;
   currentPendingPieces?: number;
   pallets?: InboundPalletItem[]; // Manifiesto dinámico de tarimas escaneadas en andén
+  shiftSessionId?: string | null;
 }
 
 export interface ScanFeedback {
@@ -140,6 +141,7 @@ export interface ScanFeedback {
 const BUFFER_STORAGE_KEY = '4g_forklift_missions_buffer';
 const COMPLETED_STORAGE_KEY = '4g_forklift_completed_buffer';
 const ACTIVE_MISSION_ID_KEY = '4g_forklift_active_id';
+const PAUSED_MISSION_ID_KEY = '4g_forklift_paused_id';
 const PENDING_SYNC_QUEUE_KEY = '4g_forklift_pending_sync';
 const RECEPTIONS_CACHE_KEY = '4g_warehouse_receptions_cache';
 
@@ -165,7 +167,37 @@ export class ForkliftMissionService {
   // ─── Estado Reactivo Principal con Buffer Offline ──────────────────────────
   private readonly rawMissions = signal<ForkliftMission[]>(this.loadBufferMissions());
   private readonly activeMissionId = signal<string | null>(this.loadActiveMissionId());
+  private readonly pausedMissionId = signal<string | null>(this.loadPausedMissionId());
   private readonly completedMissions = signal<ForkliftMission[]>(this.loadCompletedBuffer());
+
+  public readonly currentPausedMissionId = computed(() => this.pausedMissionId());
+
+  public readonly pausedMission = computed<ForkliftMission | null>(() => {
+    const id = this.pausedMissionId();
+    if (!id) return null;
+    return this.rawMissions().find((m) => m.id === id) || null;
+  });
+
+  public readonly urgentPreemptCandidate = computed<ForkliftMission | null>(() => {
+    const current = this.activeMission();
+    if (!current || current.priority === 'URGENT') return null;
+
+    const queue = this.rawMissions();
+    return (
+      queue.find(
+        (m) =>
+          m.id !== current.id &&
+          m.priority === 'URGENT' &&
+          m.status !== 'COMPLETED' &&
+          m.status !== 'DISCHARGED' &&
+          m.status !== 'INCIDENT_HOLD'
+      ) || null
+    );
+  });
+
+  public readonly hasUrgentPreemption = computed<boolean>(() => {
+    return this.urgentPreemptCandidate() !== null;
+  });
   private readonly activeFilter = signal<CockpitFilter>('ALL');
   private readonly lastScanFeedback = signal<ScanFeedback | null>(null);
 
@@ -306,6 +338,26 @@ export class ForkliftMissionService {
     } catch (_) {}
   }
 
+  private loadPausedMissionId(): string | null {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    try {
+      return localStorage.getItem(PAUSED_MISSION_ID_KEY) || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  public savePausedMissionId(id: string | null): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      if (id) {
+        localStorage.setItem(PAUSED_MISSION_ID_KEY, id);
+      } else {
+        localStorage.removeItem(PAUSED_MISSION_ID_KEY);
+      }
+    } catch (_) {}
+  }
+
   private getPendingSyncQueue(): any[] {
     if (typeof window === 'undefined' || !window.localStorage) return [];
     try {
@@ -343,14 +395,20 @@ export class ForkliftMissionService {
     const weightKg = Number(rec.totalWeight || (pieces * 17.5) || 840);
 
     let availableLots: AuthorizedLotItem[] = [];
-    if (Array.isArray(rec.availableLots) && rec.availableLots.length > 0) {
-      availableLots = rec.availableLots.map((l: any) => ({
+    const lotsSource = (Array.isArray(rec.availableLots) && rec.availableLots.length > 0)
+      ? rec.availableLots
+      : (Array.isArray(rec.lots) && rec.lots.length > 0)
+        ? rec.lots
+        : null;
+
+    if (lotsSource) {
+      availableLots = lotsSource.map((l: any, idx: number) => ({
         lotNumber: String(l.lotNumber || l).trim().toUpperCase(),
         expirationDate: l.expirationDate,
         elaborationDate: l.elaborationDate,
-        shelfLifePct: l.shelfLifePct,
-        isCompliant: l.isCompliant ?? true,
-        isPrimary: l.isPrimary ?? false,
+        shelfLifePct: l.shelfLifePct || l.shelfLifeDaysRemaining,
+        isCompliant: l.isCompliant ?? (l.shelfLifeStatus !== 'REJECTED'),
+        isPrimary: l.isPrimary ?? (idx === 0),
       }));
     } else {
       availableLots = [{ lotNumber: defaultLot, isPrimary: true }];
@@ -439,6 +497,44 @@ export class ForkliftMissionService {
     return 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
   }
 
+  public mapTransferToMission(transfer: any): ForkliftMission {
+    const originCode = transfer.originLocationCode || transfer.originLocation || 'ORIGEN';
+    const destCode = transfer.destinationLocationCode || transfer.destinationLocation || 'DESTINO';
+    const firstItem = transfer.items?.[0];
+    const palletsCount = transfer.totalPallets || (transfer.items ? transfer.items.length : 1);
+    const piecesCount = transfer.totalPieces || (firstItem?.pieces ? Number(firstItem.pieces) : 48);
+    const isUrgent = transfer.priority === 'URGENT';
+
+    return {
+      id: String(transfer.id || `tr-${transfer.folio}`),
+      folio: transfer.folio || `CAM-${String(transfer.id).slice(0, 8)}`,
+      type: 'INTERNAL_PUTAWAY',
+      typeLabel: 'Reubicación / Putaway',
+      priority: isUrgent ? 'URGENT' : 'NORMAL',
+      priorityLabel: isUrgent ? '🚨 Reubicación Urgente' : (transfer.reasonLabel || 'Cambio de Almacén'),
+      status: transfer.status === 'IN_PROGRESS' ? 'ACTIVE_PICK' : (transfer.status === 'PAUSED' ? 'PAUSED' : 'QUEUED'),
+      statusLabel: transfer.status === 'IN_PROGRESS' ? 'En Reubicación Activa' : (transfer.status === 'PAUSED' ? 'Pausada por Turno' : 'En Cola de Reubicación'),
+      originLocation: `Bahía ${originCode}`,
+      originBarcode: originCode,
+      destinationLocation: `Bahía ${destCode}`,
+      destBarcode: destCode,
+      ssccBarcode: firstItem?.palletCode || `SSCC-${transfer.folio}-01`,
+      sku: firstItem?.skuCode || 'SKU-REUBICACION',
+      lotNumber: String(firstItem?.lotNumber || 'LOT-REUBICACION').toUpperCase(),
+      productName: firstItem?.skuDescription || 'Mercancía en Reubicación',
+      quantity: piecesCount,
+      unit: 'Tarima',
+      weightKg: palletsCount * 750,
+      assignedVehicle: 'Montacargas Crown #07',
+      assignedZoneLease: `${originCode} ➔ ${destCode}`,
+      slaCountdownMinutes: isUrgent ? 15 : 30,
+      arrivalTime: transfer.createdAt ? new Date(transfer.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : 'Ahora',
+      notes: transfer.observations || `Motivo: ${transfer.reasonLabel || 'Reubicación interna'}`,
+      totalExpectedPallets: palletsCount,
+      shiftSessionId: transfer.shiftSessionId,
+    };
+  }
+
   public loadMissionsFromBackend(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     this.isSyncing.set(true);
@@ -460,7 +556,14 @@ export class ForkliftMissionService {
         if (Array.isArray(rawList)) {
           this.http.get<any>(`/api/v1/warehouse-outbounds`, { params }).pipe(catchError(() => of(null))).subscribe((outRes) => {
             const outList = outRes?.data || outRes || [];
-            this.mergeBackendReceptionsWithBuffer(rawList, Array.isArray(outList) ? outList : []);
+            this.http.get<any>(`/api/v1/warehouse-transfers`, { params }).pipe(catchError(() => of(null))).subscribe((transRes) => {
+              const transList = transRes?.data || transRes || [];
+              this.mergeBackendReceptionsWithBuffer(
+                rawList,
+                Array.isArray(outList) ? outList : [],
+                Array.isArray(transList) ? transList : []
+              );
+            });
           });
         }
       },
@@ -485,7 +588,7 @@ export class ForkliftMissionService {
     }
   }
 
-  private mergeBackendReceptionsWithBuffer(backendList: any[], outboundList: any[] = []): void {
+  private mergeBackendReceptionsWithBuffer(backendList: any[], outboundList: any[] = [], transferList: any[] = []): void {
     // Regla ADR-020: El montacarguista SOLO ve misiones explícitamente asignadas a él (en estado ASSIGNED, IN_PROGRESS o PARTIAL_DISCHARGED)
     const activeBackend = backendList.filter(
       (r: any) =>
@@ -576,16 +679,21 @@ export class ForkliftMissionService {
           }))
         : [];
       const existingOut = currentMissions.find((m) => m.id === key || m.folio === folio);
-      const status: MissionStatus = existingOut?.status || ((out.status === 'IN_PROGRESS' || out.status === 'ACTIVE_PICK') ? 'ACTIVE_PICK' : 'QUEUED');
+      const status: MissionStatus = existingOut?.status || (
+        (out.status === 'IN_PROGRESS' || out.status === 'ACTIVE_PICK') ? 'ACTIVE_PICK' :
+        out.status === 'PAUSED' ? 'PAUSED' : 'QUEUED'
+      );
+      const isUrgent = out.priority === 'URGENT' || out.priority === 'HIGH';
+      const priority: MissionPriority = isUrgent ? 'URGENT' : 'NORMAL';
       mergedList.push({
         id: key,
         folio,
         type: 'OUTBOUND_DISPATCH',
         typeLabel: 'Carga Salida Outbound',
-        priority: rampNum ? 'URGENT' : 'HIGH',
-        priorityLabel: `Rampa ${rampNum} • Embarque`,
+        priority,
+        priorityLabel: isUrgent ? `⚡ Rampa ${rampNum} • Embarque URGENTE` : `Rampa ${rampNum} • Embarque`,
         status,
-        statusLabel: status === 'ACTIVE_PICK' ? 'En Carga Activa' : 'En Cola Embarque',
+        statusLabel: status === 'ACTIVE_PICK' ? 'En Carga Activa' : status === 'PAUSED' ? 'Pausada (Relevo/Urgencia)' : 'En Cola Embarque',
         originLocation: originLoc,
         originBarcode: originLoc,
         destinationLocation: `Rampa ${String(rampNum).padStart(2, '0')} (${carrier})`,
@@ -611,8 +719,41 @@ export class ForkliftMissionService {
         notes: out.observations || `Embarque Outbound hacia ${out.destinationName || client}.`,
         totalExpectedPallets: totalPallets,
         defaultPiecesPerPallet: pieces,
+        shiftSessionId: out.shiftSessionId || null,
         pallets: existingOut?.pallets && existingOut.pallets.length > 0 ? existingOut.pallets : mappedOutPallets,
       });
+    }
+
+    // Mapeo e inclusión de Cambios de Almacén / Reubicaciones internas (ADR-011, ADR-017)
+    const activeTransfers = transferList.filter(
+      (t: any) =>
+        t &&
+        t.status !== 'COMPLETED' &&
+        t.status !== 'CANCELLED' &&
+        (this.isMissionAssignedToCurrentUser(t) || !t.forkliftOperatorId)
+    );
+
+    for (const trans of activeTransfers) {
+      const mapped = this.mapTransferToMission(trans);
+      const key = mapped.id;
+      if (handledIds.has(key)) continue;
+      handledIds.add(key);
+
+      if (completedList.some((c) => c.id === key || c.folio === mapped.folio)) {
+        continue;
+      }
+
+      const existing = currentMissions.find((m) => m.id === key || m.folio === mapped.folio);
+      if (existing) {
+        mergedList.push({
+          ...mapped,
+          status: existing.status,
+          statusLabel: existing.statusLabel,
+          notes: existing.notes || mapped.notes,
+        });
+      } else {
+        mergedList.push(mapped);
+      }
     }
 
     this.rawMissions.set(mergedList);
@@ -984,11 +1125,10 @@ export class ForkliftMissionService {
 
     const queue = active ? list.filter((m) => m.id !== active.id) : list;
 
-    if (filter === 'ALL') return queue;
+    if (filter === 'URGENT') return queue.filter((m) => m.priority === 'URGENT');
     if (filter === 'INBOUND') return queue.filter((m) => m.type === 'INBOUND_UNLOAD');
     if (filter === 'INTERNAL') return queue.filter((m) => m.type === 'INTERNAL_PUTAWAY');
     if (filter === 'OUTBOUND') return queue.filter((m) => m.type === 'OUTBOUND_DISPATCH');
-    if (filter === 'URGENT') return queue.filter((m) => m.priority === 'URGENT');
     return queue;
   });
 
@@ -1216,10 +1356,15 @@ export class ForkliftMissionService {
           next: (res) => {
             this.isBackendConnected.set(true);
             const recDetail = res?.data || res;
-            if (recDetail && Array.isArray(recDetail.pallets) && recDetail.pallets.length > 0) {
+            if (recDetail) {
               const hydrated = this.mapReceptionToMission(recDetail);
               this.rawMissions.update((curr) =>
-                curr.map((m) => (m.id === missionId ? { ...m, pallets: hydrated.pallets } : m))
+                curr.map((m) => (m.id === missionId ? {
+                  ...m,
+                  pallets: hydrated.pallets && hydrated.pallets.length > 0 ? hydrated.pallets : m.pallets,
+                  availableLots: hydrated.availableLots && hydrated.availableLots.length > 0 ? hydrated.availableLots : m.availableLots,
+                  activeScanningLot: m.activeScanningLot || hydrated.activeScanningLot,
+                } : m))
               );
             }
           },
@@ -1232,6 +1377,37 @@ export class ForkliftMissionService {
           next: () => this.isBackendConnected.set(true),
           error: () => {},
         });
+
+        if (!target.pallets || target.pallets.length === 0) {
+          this.http.get<any>(`/api/v1/warehouse-outbounds/${missionId}`).subscribe({
+            next: (res) => {
+              const detail = res?.data || res;
+              if (detail && Array.isArray(detail.items) && detail.items.length > 0) {
+                const arrivalStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                const mappedPallets: InboundPalletItem[] = detail.items.map((it: any, idx: number) => ({
+                  id: String(it.id || it.itemId || `out-pal-${idx + 1}`),
+                  palletNumber: idx + 1,
+                  ssccBarcode: String(it.palletCode || it.sscc || `SSCC-OUT-${idx + 1}`),
+                  productId: String(it.skuCode || it.productId || 'SKU-OUTBOUND'),
+                  productName: String(it.skuDescription || it.description || 'Carga Salida'),
+                  supplierName: detail.clientName || 'Cliente',
+                  lotNumber: String(it.lotNumber || 'LOT-FEFO').toUpperCase(),
+                  pieces: Number(it.pieces || 48),
+                  unit: 'Piezas',
+                  weightKg: 650,
+                  palletTypeLabel: 'Tarima Estándar',
+                  status: 'STAGED' as const,
+                  stagedAt: arrivalStr,
+                  expirationDate: it.expirationDate,
+                }));
+                this.rawMissions.update((curr) =>
+                  curr.map((m) => (m.id === missionId ? { ...m, pallets: mappedPallets, totalExpectedPallets: mappedPallets.length } : m))
+                );
+              }
+            },
+            error: () => {},
+          });
+        }
       }
     }
 
@@ -1475,6 +1651,40 @@ export class ForkliftMissionService {
     // FLUJO INBOUND: ESCANEO LIBRE TARIMA POR TARIMA CON SELECCIÓN DE LOTE
     // ─────────────────────────────────────────────────────────────────────────
     if (current.type === 'INBOUND_UNLOAD') {
+      const availableLots = current.availableLots || [];
+      const cleanUpper = cleanCode.toUpperCase();
+      const normalizedCode = cleanUpper.replace(/^(?:LOT|LOTE):/i, '').trim();
+
+      // [ZERO-TOUCH LÁSER]: Conmutación instantánea al escanear código de lote directamente
+      const matchedDirectLot = availableLots.find(
+        (l) => l.lotNumber.toUpperCase() === cleanUpper || l.lotNumber.toUpperCase() === normalizedCode
+      );
+
+      if (matchedDirectLot && (current.status === 'ACTIVE_PICK' || current.status === 'QUEUED')) {
+        this.setActiveScanningLot(current.id, matchedDirectLot.lotNumber);
+        const feedback: ScanFeedback = {
+          success: true,
+          message: `🔄 Lote conmutado por láser a [${matchedDirectLot.lotNumber}] para la Tarima #${(current.pallets?.length || 0) + 1}`,
+          phase: 'LOT_SWITCH' as any,
+        };
+        this.lastScanFeedback.set(feedback);
+        this.audioService.playSuccess();
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate([40, 30, 40]);
+        }
+        return feedback;
+      }
+
+      // [ZERO-TOUCH GS1]: Si la etiqueta física trae GS1 con AI (10) de lote
+      const gs1LotMatch = cleanCode.match(/(?:\(10\)|\b10\b)([A-Z0-9\-_]{3,25})/i);
+      if (gs1LotMatch) {
+        const potentialLot = gs1LotMatch[1].toUpperCase();
+        const foundGs1Lot = availableLots.find((l) => l.lotNumber.toUpperCase() === potentialLot);
+        if (foundGs1Lot) {
+          this.setActiveScanningLot(current.id, foundGs1Lot.lotNumber);
+        }
+      }
+
       const pallets = current.pallets || [];
       const nextPalletNum = pallets.length + 1;
       const activeLot = current.activeScanningLot || current.lotNumber || 'LOT-2026-X99';
@@ -1792,7 +2002,10 @@ export class ForkliftMissionService {
         });
     });
 
-    if (remaining.length > 0) {
+    if (this.pausedMissionId()) {
+      // Prioridad: Reanudar la misión pausada si existía
+      this.resumePausedMission();
+    } else if (remaining.length > 0) {
       const nextMission = remaining[0];
       this.activeMissionId.set(nextMission.id);
       this.saveActiveMissionId(nextMission.id);
@@ -1924,7 +2137,165 @@ export class ForkliftMissionService {
   }
 
   /** Posponer la misión actual al final de la cola */
-  postponeMission(missionId: string, reason = 'Pospuesta por el operador (obstrucción de pasillo o espera de andén)'): void {
+  /**
+   * Interrupción Preventiva por Prioridad Urgente (Preemptive Dispatching)
+   * Pausa la misión actual conservando al 100% sus tarimas físicas escaneadas y lote activo,
+   * y conmuta inmediatamente el foco operativo a la misión urgente.
+   */
+  preemptCurrentMissionForUrgent(urgentMissionId: string): void {
+    const current = this.activeMission();
+    const list = this.rawMissions();
+    const urgentMission = list.find((m) => m.id === urgentMissionId);
+
+    if (!urgentMission) {
+      this.toast.error('Misión urgente no encontrada en la cola.', 'ERROR DE DESPACHO');
+      return;
+    }
+
+    const nowStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    let updatedList = [...list];
+
+    // 1. Si hay misión en curso y no es urgente, pausarla conservando toda su data física
+    if (current && current.id !== urgentMissionId && current.priority !== 'URGENT') {
+      const scannedCount = current.pallets?.length || 0;
+      const pausedMission: ForkliftMission = {
+        ...current,
+        status: 'PAUSED',
+        statusLabel: `Pausada por Urgencia (${scannedCount} tarimas en buffer)`,
+        notes: `${current.notes || ''} [Pausada a las ${nowStr} para atender urgencia ${urgentMission.folio} en ${urgentMission.originLocation}]`.trim(),
+      };
+
+      updatedList = updatedList.map((m) => (m.id === current.id ? pausedMission : m));
+      this.pausedMissionId.set(current.id);
+      this.savePausedMissionId(current.id);
+
+      // Notificar al backend de forma segura si es Inbound
+      if (this.isUuid(current.id) && current.type === 'INBOUND_UNLOAD') {
+        this.http
+          .put(`/api/v1/warehouse-receptions/${current.id}/parameters`, {
+            observations: pausedMission.notes,
+          })
+          .pipe(catchError(() => of(null)))
+          .subscribe();
+      } else if (this.isUuid(current.id) && current.type === 'OUTBOUND_DISPATCH') {
+        this.http
+          .put(`/api/v1/warehouse-outbounds/${current.id}`, {
+            status: 'PAUSED',
+            observations: pausedMission.notes,
+            pauseReason: 'Preemption por Misión Urgente',
+          })
+          .pipe(catchError(() => of(null)))
+          .subscribe();
+      }
+    }
+
+    // 2. Promover la misión urgente a activa en estado ACTIVE_PICK
+    const promotedUrgent: ForkliftMission = {
+      ...urgentMission,
+      status: 'ACTIVE_PICK',
+      statusLabel: 'En Maniobra Activa (Prioridad Urgente)',
+    };
+
+    // 3. Reordenar: colocar la urgente al frente de la cola activa
+    const remaining = updatedList.filter((m) => m.id !== urgentMissionId);
+    const finalList = [promotedUrgent, ...remaining];
+
+    this.rawMissions.set(finalList);
+    this.saveBufferMissions(finalList);
+
+    this.activeMissionId.set(urgentMissionId);
+    this.saveActiveMissionId(urgentMissionId);
+
+    // 4. Actualizar backend para la misión urgente a IN_PROGRESS
+    if (this.isUuid(urgentMissionId)) {
+      if (urgentMission.type === 'INBOUND_UNLOAD') {
+        this.http
+          .put(`/api/v1/warehouse-receptions/${urgentMissionId}/parameters`, {
+            status: 'IN_PROGRESS',
+          })
+          .pipe(catchError(() => of(null)))
+          .subscribe();
+      } else if (urgentMission.type === 'OUTBOUND_DISPATCH') {
+        this.http
+          .put(`/api/v1/warehouse-outbounds/${urgentMissionId}`, {
+            status: 'IN_PROGRESS',
+          })
+          .pipe(catchError(() => of(null)))
+          .subscribe();
+      }
+    }
+
+    // 5. Señales acústicas, hápticas y Toast
+    this.audioService.playWarning();
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([100, 50, 100, 50, 200]);
+    }
+    this.toast.warning(
+      `🚨 Maniobra pausada. Atendiendo de inmediato Misión Urgente: ${urgentMission.folio} en ${urgentMission.originLocation}`,
+      '⚡ PRIORIDAD URGENTE ACTIVADA'
+    );
+  }
+
+  /**
+   * Reanudar la misión previamente interrumpida por urgencia
+   * Restaura el contexto exacto de descarga y el contador de tarimas correlativo
+   */
+  resumePausedMission(): void {
+    const pausedId = this.pausedMissionId();
+    if (!pausedId) return;
+
+    const list = this.rawMissions();
+    const target = list.find((m) => m.id === pausedId);
+
+    if (!target) {
+      this.pausedMissionId.set(null);
+      this.savePausedMissionId(null);
+      return;
+    }
+
+    const nowStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    const scannedCount = target.pallets?.length || 0;
+    const nextPalletNum = scannedCount + 1;
+
+    const isPendingDrop = Boolean(target.currentPendingSscc);
+    const restoredStatus: MissionStatus = isPendingDrop ? 'ACTIVE_DROP' : 'ACTIVE_PICK';
+    const restoredLabel = isPendingDrop
+      ? `En Tránsito (Depositando Tarima #${scannedCount})`
+      : (target.type === 'INBOUND_UNLOAD'
+          ? `En Descarga Activa (Continuando Tarima #${nextPalletNum})`
+          : 'En Curso Activo');
+
+    const resumedMission: ForkliftMission = {
+      ...target,
+      status: restoredStatus,
+      statusLabel: restoredLabel,
+      notes: `${target.notes || ''} [Reanudada automáticamente tras urgencia a las ${nowStr}]`.trim(),
+    };
+
+    const remaining = list.filter((m) => m.id !== pausedId);
+    const updatedList = [resumedMission, ...remaining];
+
+    this.rawMissions.set(updatedList);
+    this.saveBufferMissions(updatedList);
+
+    this.activeMissionId.set(pausedId);
+    this.saveActiveMissionId(pausedId);
+
+    // Limpiar señal de pausa
+    this.pausedMissionId.set(null);
+    this.savePausedMissionId(null);
+
+    this.audioService.playSuccess();
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([60, 40, 60]);
+    }
+    this.toast.success(
+      `Se ha reanudado la misión ${resumedMission.folio}. ${scannedCount} tarimas previas conservadas intactas.`,
+      '🔄 MANIOBRA REANUDADA'
+    );
+  }
+
+    postponeMission(missionId: string, reason = 'Pospuesta por el operador (obstrucción de pasillo o espera de andén)'): void {
     const list = this.rawMissions();
     const target = list.find((m) => m.id === missionId);
     if (!target) return;
@@ -1997,6 +2368,69 @@ export class ForkliftMissionService {
       success: true,
       message: `Expediente de siniestro registrado. Tarima enviada a cuarentena virtual.`,
       phase: 'ANOMALY_HOLD',
+    });
+
+    // ─── BRIDGE CON MÓDULO DE CALIDAD (QM) ADR-021 / SDD-quality.md ────────
+    const lowerType = incidentType.toLowerCase();
+    let defectCategory: 'TRANSPORT' | 'DOCUMENTATION' | 'MATERIAL' = 'MATERIAL';
+    if (lowerType.includes('transporte') || lowerType.includes('vehículo') || lowerType.includes('camión') || lowerType.includes('caja seca') || lowerType.includes('piso')) {
+      defectCategory = 'TRANSPORT';
+    } else if (lowerType.includes('document') || lowerType.includes('remisión') || lowerType.includes('sello') || lowerType.includes('coa')) {
+      defectCategory = 'DOCUMENTATION';
+    }
+
+    const palletCode = target.ssccBarcode || (target.pallets && target.pallets.length > 0 ? target.pallets[target.pallets.length - 1].ssccBarcode : undefined) || ('SSCC-2026-' + Math.floor(100000 + Math.random() * 900000));
+
+    // 1. Reflejar en el estado reactivo local de Calidad RF
+    this.qualityState.createBlock({
+      sku: target.sku || 'SKU-INBOUND',
+      description: target.productName || 'Producto en Andén',
+      clientId: 'cli-inbound',
+      clientName: target.supplierName || target.carrierName || 'Recepción Inbound',
+      batchNumber: target.lotNumber || 'LOTE-INBOUND',
+      sscc: palletCode,
+      quantity: 1,
+      unitOfMeasure: UnitOfMeasure.PALLET,
+      locationId: target.originLocation || 'RAMPA-01',
+      stage: 'INBOUND_UNLOAD',
+      defectCategory: defectCategory,
+      defectCriteria: [incidentType],
+      severity: 'CRITICAL',
+      reportedBy: 'Oficial Montacarguista (Terminal RF)',
+      notes: `${incidentType}: ${note}`.trim(),
+      evidenceFiles: photoEvidenceUrl ? [{ id: 'ev-' + Date.now(), name: 'evidencia.jpg', url: photoEvidenceUrl, size: '1.2 MB', type: 'image', uploadedAt: new Date().toISOString() }] : []
+    });
+
+    // 2. Disparar POST /api/v1/quality/blocks al backend central Spring Boot
+    const blockPayload = {
+      itemId: this.isUuid(target.id) ? target.id : undefined,
+      sscc: palletCode,
+      stage: 'INBOUND_UNLOAD',
+      defectCategory: defectCategory,
+      defectCriteria: [incidentType],
+      severity: 'CRITICAL',
+      quantity: 1,
+      notes: `${incidentType}: ${note}`.trim(),
+      evidenceFiles: photoEvidenceUrl ? [
+        {
+          fileName: 'evidencia-incidente.jpg',
+          fileUrl: photoEvidenceUrl,
+          fileType: 'IMAGE',
+          uploadedAt: new Date().toISOString()
+        }
+      ] : []
+    };
+
+    this.http.post<any>('/api/v1/quality/blocks', blockPayload).pipe(
+      catchError((err) => {
+        console.warn('[QM Bridge] Error enviando bloqueo a backend central (se mantendrá en caché local):', err);
+        return of(null);
+      })
+    ).subscribe((res) => {
+      const data = res?.data || res;
+      if (data && data.folio) {
+        this.toast.error(`Tarima bloqueada con folio central: ${data.folio}`, 'EXPEDIENTE QM CREADO');
+      }
     });
 
     this.audioService.playWarning();
@@ -2084,7 +2518,10 @@ export class ForkliftMissionService {
       );
     }
 
-    if (remaining.length > 0) {
+    if (this.pausedMissionId()) {
+      // Prioridad: Reanudar la misión pausada si existía
+      this.resumePausedMission();
+    } else if (remaining.length > 0) {
       const nextMission = remaining[0];
       this.activeMissionId.set(nextMission.id);
       this.saveActiveMissionId(nextMission.id);

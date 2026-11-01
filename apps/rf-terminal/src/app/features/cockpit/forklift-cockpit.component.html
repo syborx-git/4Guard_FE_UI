@@ -77,63 +77,167 @@
     </div>
   </header>
 
-  <!-- ── 2. BARRA DE FILTRO CONTEXTUAL (PILLS CON CONTADORES EN VIVO) ─ -->
-  <nav class="filter-pills-bar" aria-label="Filtros de Misión">
-    <!-- Todas -->
+  <!-- ── 2. BARRA DE COLA SECUENCIAL CONTINUA (FLUJO FIFO) ─ -->
+  <div class="fifo-telemetry-bar" role="toolbar" aria-label="Cola de Trabajo Secuencial">
+    <div class="fifo-telemetry-left">
+      <div class="fifo-badge">
+        <span class="material-symbols-outlined fifo-icon">alt_route</span>
+        <span class="fifo-title">Flujo Secuencial Continuo (FIFO)</span>
+      </div>
+      <span class="fifo-queue-summary">
+        Atendiendo remisiones y movimientos en orden de arribo • <strong>{{ counts().all }}</strong> asignadas
+      </span>
+    </div>
+
+    <div class="fifo-telemetry-right">
+      @if (pausedMission(); as paused) {
+        <button
+          type="button"
+          class="fifo-paused-pill"
+          (click)="resumePausedMission()"
+          title="Toque para reanudar la misión pausada">
+          <span class="material-symbols-outlined text-amber-400 animate-pulse">pause_circle</span>
+          <span class="paused-pill-text">1 Misión en Pausa: <strong>{{ paused.folio }}</strong></span>
+        </button>
+      }
+
+      @if (counts().urgent > 0) {
+        <div class="fifo-urgent-badge">
+          <span class="urgent-pulse-indicator"></span>
+          <span>{{ counts().urgent }} URGENTE(S) EN COLA</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ── BARRA DE PÍLDORAS DE FILTRADO TÁCTICO INDUSTRIAL ── -->
+  <nav class="filter-pills-bar" aria-label="Filtros tácticos de cola de trabajo">
     <button
       type="button"
       class="filter-pill"
-      [class.active]="currentFilter() === 'ALL'"
-      (click)="setFilter('ALL')">
-      <span class="material-symbols-outlined pill-icon">dashboard</span>
-      <span class="pill-label">Todas en Cola</span>
+      [class.active]="activeFilter() === 'ALL'"
+      (click)="setFilter('ALL')"
+      title="Ver todas las misiones en secuencia FIFO">
+      <span class="material-symbols-outlined text-base">format_list_bulleted</span>
+      <span>Todas en Cola</span>
       <span class="pill-count">{{ counts().all }}</span>
     </button>
 
-    <!-- Descargas Inbound -->
     <button
       type="button"
-      class="filter-pill filter-pill--inbound"
-      [class.active]="currentFilter() === 'INBOUND'"
-      (click)="setFilter('INBOUND')">
-      <span class="material-symbols-outlined pill-icon">download</span>
-      <span class="pill-label">Descargas Inbound</span>
-      <span class="pill-count">{{ counts().inbound }}</span>
+      class="filter-pill"
+      [class.active]="activeFilter() === 'INBOUND'"
+      (click)="setFilter('INBOUND')"
+      title="Descargas de Tráiler en Rampa Inbound">
+      <span class="material-symbols-outlined text-base text-amber-400">move_to_inbox</span>
+      <span>Descargas Inbound</span>
+      <span class="pill-count text-amber-300 font-bold">{{ counts().inbound }}</span>
     </button>
 
-    <!-- Reubicaciones Putaway -->
     <button
       type="button"
-      class="filter-pill filter-pill--putaway"
-      [class.active]="currentFilter() === 'INTERNAL'"
-      (click)="setFilter('INTERNAL')">
-      <span class="material-symbols-outlined pill-icon">sync_alt</span>
-      <span class="pill-label">Reubicaciones / Putaway</span>
-      <span class="pill-count">{{ counts().internal }}</span>
+      class="filter-pill"
+      [class.active]="activeFilter() === 'INTERNAL'"
+      (click)="setFilter('INTERNAL')"
+      title="Cambio de Almacén, Reubicaciones y Putaway de Tarimas">
+      <span class="material-symbols-outlined text-base text-cyan-400">compare_arrows</span>
+      <span>Reubicaciones / Putaway</span>
+      <span class="pill-count text-cyan-300 font-bold">{{ counts().internal }}</span>
     </button>
 
-    <!-- Cargas Outbound -->
     <button
       type="button"
-      class="filter-pill filter-pill--outbound"
-      [class.active]="currentFilter() === 'OUTBOUND'"
-      (click)="setFilter('OUTBOUND')">
-      <span class="material-symbols-outlined pill-icon">upload</span>
-      <span class="pill-label">Cargas Salida</span>
-      <span class="pill-count">{{ counts().outbound }}</span>
+      class="filter-pill"
+      [class.active]="activeFilter() === 'OUTBOUND'"
+      (click)="setFilter('OUTBOUND')"
+      title="Cargas de Salida y Embarques">
+      <span class="material-symbols-outlined text-base text-emerald-400">local_shipping</span>
+      <span>Cargas Salida</span>
+      <span class="pill-count text-emerald-300 font-bold">{{ counts().outbound }}</span>
     </button>
 
-    <!-- Urgentes -->
     <button
       type="button"
       class="filter-pill filter-pill--urgent"
-      [class.active]="currentFilter() === 'URGENT'"
-      (click)="setFilter('URGENT')">
-      <span class="material-symbols-outlined pill-icon">alarm</span>
-      <span class="pill-label">Urgentes</span>
-      <span class="pill-count pill-count--urgent">{{ counts().urgent }}</span>
+      [class.active]="activeFilter() === 'URGENT'"
+      (click)="setFilter('URGENT')"
+      title="Misiones con Prioridad Alta / Urgente">
+      <span class="material-symbols-outlined text-base text-rose-400 animate-pulse">bolt</span>
+      <span>Urgentes</span>
+      <span class="pill-count text-rose-300 font-black">{{ counts().urgent }}</span>
     </button>
   </nav>
+
+  <!-- ── 2.1 BANNER DE PREEMPTION URGENTE (INTERRUPCIÓN CON 1 TOQUE) ── -->
+  @if (urgentQueuedMission(); as urgent) {
+    <section class="urgent-preemption-dock" role="alert" aria-live="assertive">
+      <div class="preemption-dock-left">
+        <div class="preemption-beacon">
+          <span class="material-symbols-outlined text-3xl text-rose-500 animate-bounce">emergency_home</span>
+        </div>
+        <div class="preemption-info">
+          <div class="preemption-tags">
+            <span class="badge-urgent-flash">🚨 PRIORIDAD URGENTE DETECTADA</span>
+            <span class="badge-sla-tag">SLA: {{ urgent.slaCountdownMinutes }} min restantes</span>
+          </div>
+          <h2 class="preemption-heading">
+            {{ urgent.folio }} • {{ urgent.originLocation }}
+          </h2>
+          <p class="preemption-subheading">
+            {{ urgent.productName }} • {{ urgent.carrierName || urgent.supplierName || 'Carga Prioritaria' }}
+          </p>
+        </div>
+      </div>
+
+      <div class="preemption-dock-right">
+        <button
+          type="button"
+          class="btn-preempt-urgent"
+          (click)="preemptToUrgent(urgent)"
+          title="Pausar la maniobra actual y atender de inmediato esta urgencia">
+          <span class="material-symbols-outlined text-2xl">bolt</span>
+          <div class="btn-preempt-text">
+            <span class="btn-preempt-primary">PAUSAR ACTUAL Y ATENDER URGENTE</span>
+            <span class="btn-preempt-secondary">La descarga actual se guardará intacta</span>
+          </div>
+        </button>
+      </div>
+    </section>
+  }
+
+  <!-- ── 2.2 BANNER DE REANUDACIÓN DE MISIÓN PREVIA (POST-URGENCIA) ── -->
+  @if (!urgentQueuedMission() && pausedMission(); as paused) {
+    <section class="resumption-dock" role="region" aria-label="Reanudación de Maniobra">
+      <div class="resumption-dock-left">
+        <div class="resumption-beacon">
+          <span class="material-symbols-outlined text-3xl text-emerald-400">history_toggle_off</span>
+        </div>
+        <div class="resumption-info">
+          <div class="resumption-tag">🔄 MISIÓN PREVIA EN PAUSA</div>
+          <h2 class="resumption-heading">
+            {{ paused.folio }} • {{ paused.originLocation }}
+          </h2>
+          <p class="resumption-subheading">
+            {{ paused.pallets?.length || 0 }} tarimas descargadas en buffer listas para continuar sin pérdida de avance.
+          </p>
+        </div>
+      </div>
+
+      <div class="resumption-dock-right">
+        <button
+          type="button"
+          class="btn-resume-mission"
+          (click)="resumePausedMission()"
+          title="Reanudar la descarga previa">
+          <span class="material-symbols-outlined text-2xl">play_circle</span>
+          <div class="btn-resume-text">
+            <span class="btn-resume-primary">REANUDAR MISIÓN (TARIMA #{{ (paused.pallets?.length || 0) + 1 }})</span>
+            <span class="btn-resume-secondary">Restaura lote y rampa de origen</span>
+          </div>
+        </button>
+      </div>
+    </section>
+  }
 
   <!-- ── 2.5 BANNER PREVENTIVO DE FIN DE TURNO (REGLA DE HORARIOS - AVISO 15 MIN) ── -->
   @if (isShiftEndingSoon()) {
@@ -850,27 +954,48 @@
           </div>
 
           @if (current.type === 'INBOUND_UNLOAD') {
-            <div class="hud-lots-quick-pills">
-              <span class="hud-lots-lbl">Lote:</span>
-              @for (lot of availableLotsList(); track lot.lotNumber) {
+            <div class="hud-lots-scroller-wrap">
+              <span class="hud-lots-lbl">
+                <span class="material-symbols-outlined text-xs text-amber-500">sell</span>
+                <span>Lote [1..9]:</span>
+              </span>
+
+              <div class="hud-lots-quick-pills" role="region" aria-label="Selector táctil de lote">
+                @for (lot of availableLotsList(); track lot.lotNumber; let idx = $index) {
+                  <button
+                    type="button"
+                    (click)="selectScanningLot(lot.lotNumber)"
+                    class="hud-quick-lot-btn"
+                    [class.hud-quick-lot-btn--active]="activeScanningLot() === lot.lotNumber"
+                    [title]="'Activar lote ' + lot.lotNumber + ' (Atajo tecla: ' + (idx + 1) + ')'">
+                    @if (idx < 9) {
+                      <span class="hud-lot-hotkey">#{{ idx + 1 }}</span>
+                    }
+                    <span class="hud-lot-name">{{ lot.lotNumber }}</span>
+                    <span class="hud-lot-count">{{ getPalletCountForLot(lot.lotNumber) }} T</span>
+                  </button>
+                }
+
+                @if (availableLotsList().length >= 4) {
+                  <button
+                    type="button"
+                    (click)="openLotsQuickDrawer()"
+                    class="hud-quick-lot-btn hud-quick-lot-grid-btn"
+                    title="Abrir panel con todos los lotes">
+                    <span class="material-symbols-outlined text-xs">grid_view</span>
+                    <span>Todos ({{ availableLotsList().length }})</span>
+                  </button>
+                }
+
                 <button
                   type="button"
-                  (click)="selectScanningLot(lot.lotNumber)"
-                  class="hud-quick-lot-btn"
-                  [class.hud-quick-lot-btn--active]="activeScanningLot() === lot.lotNumber"
-                  [title]="'Activar lote ' + lot.lotNumber + ' para escaneo inmediato'">
-                  <span>{{ lot.lotNumber }}</span>
-                  <span class="hud-lot-count">({{ getPalletCountForLot(lot.lotNumber) }} T)</span>
+                  (click)="openCustomLotModal()"
+                  class="hud-quick-lot-btn hud-quick-lot-add"
+                  title="Intercambiar o registrar nuevo lote físico en caliente">
+                  <span class="material-symbols-outlined text-xs">add_circle</span>
+                  <span>+ Lote</span>
                 </button>
-              }
-              <button
-                type="button"
-                (click)="openCustomLotModal()"
-                class="hud-quick-lot-btn hud-quick-lot-add"
-                title="Intercambiar o registrar nuevo lote físico">
-                <span class="material-symbols-outlined text-xs">sync_saved_locally</span>
-                <span>+ Lote</span>
-              </button>
+              </div>
             </div>
           }
         </div>
@@ -955,9 +1080,12 @@
                     <div class="inbound-prompt-sub">El sistema detectará el código físico y lo registrará en el manifiesto</div>
                   </div>
                 </div>
-                <div class="inbound-prompt-lot-badge">
-                  <span class="prompt-lot-lbl">Lote a Asignar:</span>
-                  <span class="prompt-lot-val">{{ activeScanningLot() }}</span>
+                <div class="inbound-prompt-lot-badge inbound-prompt-lot-badge--interactive" (click)="openLotsQuickDrawer()" role="button" tabindex="0" title="Toca aquí para selector multi-lote">
+                  <span class="prompt-lot-lbl">Lote a Asignar (Toca para cambiar):</span>
+                  <span class="prompt-lot-val">
+                    <span>{{ activeScanningLot() }}</span>
+                    <span class="material-symbols-outlined text-xs">touch_app</span>
+                  </span>
                 </div>
               </div>
             } @else {
@@ -1628,6 +1756,74 @@
             class="btn-modal-confirm-partial">
             <span class="material-symbols-outlined text-lg">history_toggle_off</span>
             <span>GUARDAR CORTE Y ENTREGAR TURNO</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+
+  <!-- ── 10. MODAL DRAWER INDUSTRIAL: SELECTOR RÁPIDO MULTI-LOTE (HASTA 10 LOTES) ── -->
+  @if (showLotsQuickDrawer()) {
+    <div class="rf-modal-backdrop" (click)="closeLotsQuickDrawer()">
+      <div class="rf-modal-card lots-drawer-card" (click)="$event.stopPropagation()">
+        
+        <div class="rf-modal-header border-b border-amber-500/20 bg-amber-500/5">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-500 text-2xl">category</span>
+            <div>
+              <h3 class="rf-modal-title">Selector Rápido Multi-Lote Inbound</h3>
+              <p class="rf-modal-sub">Toca para conmutar el lote activo de la siguiente tarima</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeLotsQuickDrawer()" class="btn-modal-close" title="Cerrar selector">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="lots-drawer-body">
+          <div class="lots-touch-grid">
+            @for (lot of availableLotsList(); track lot.lotNumber; let idx = $index) {
+              <button
+                type="button"
+                (click)="selectLotFromDrawer(lot.lotNumber)"
+                class="lot-touch-tile"
+                [class.lot-touch-tile--active]="activeScanningLot() === lot.lotNumber">
+                <div class="lot-tile-top">
+                  @if (idx < 9) {
+                    <span class="lot-tile-hotkey">Tecla [{{ idx + 1 }}]</span>
+                  }
+                  @if (lot.isPrimary) {
+                    <span class="lot-tile-primary">Principal</span>
+                  }
+                  <span class="lot-tile-count">{{ getPalletCountForLot(lot.lotNumber) }} T</span>
+                </div>
+                <div class="lot-tile-code font-mono">{{ lot.lotNumber }}</div>
+                <div class="lot-tile-footer">
+                  <span>{{ lot.expirationDate ? 'Cad: ' + lot.expirationDate : 'Lote Autorizado' }}</span>
+                  @if (activeScanningLot() === lot.lotNumber) {
+                    <span class="lot-tile-check">✓ ACTIVO</span>
+                  }
+                </div>
+              </button>
+            }
+          </div>
+
+          <div class="lots-drawer-actions">
+            <button
+              type="button"
+              (click)="closeLotsQuickDrawer(); openCustomLotModal()"
+              class="btn-drawer-add-lot">
+              <span class="material-symbols-outlined text-lg">add_circle</span>
+              <span>Registrar Lote Nuevo / No Previsto (+ Lote)</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeLotsQuickDrawer()" class="btn-modal-cancel w-full">
+            <span>Listo / Volver a Cámara</span>
           </button>
         </div>
 

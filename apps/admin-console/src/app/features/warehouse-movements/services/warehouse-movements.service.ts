@@ -2340,6 +2340,25 @@ export class WarehouseMovementsService {
   }
 
   // Mapea un ReceptionResponse o ReceptionSummaryResponse a ReceptionHeader completo
+  
+  setReceptionPriority(receptionId: string, priority: 'NORMAL' | 'URGENT'): Observable<ReceptionHeader> {
+    const target = this.receptions().find((r) => r.id === receptionId || r.folio === receptionId);
+    const recId = target?.id || receptionId;
+    return this.movementsApi.updateReceptionParameters(recId, { priority }).pipe(
+      map((res: any) => {
+        const updated = this.updateReception(recId, { priority }, true);
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          try {
+            const bc = new BroadcastChannel('4guard_wms_events');
+            bc.postMessage({ type: 'RECEPTION_PRIORITY_CHANGED', receptionId: recId, priority });
+            bc.close();
+          } catch (_) {}
+        }
+        return updated || (target as ReceptionHeader) || ({} as ReceptionHeader);
+      })
+    );
+  }
+
   mapReceptionResponseToHeader(r: any): ReceptionHeader {
     if (!r) return {} as ReceptionHeader;
 
@@ -2394,6 +2413,7 @@ export class WarehouseMovementsService {
       id: r.id,
       folio: r.folio || '',
       status: r.status || 'REGISTERED',
+      priority: (r.priority === 'URGENT' || r.priority === 'URGENTE') ? 'URGENT' : 'NORMAL',
       checkIn: {
         carrierLine: r.carrierName || r.carrierLine || r.checkIn?.carrierLine || '',
         carrierLineCode: r.carrierId || r.carrierLineCode || r.checkIn?.carrierLineCode || '',
@@ -2476,6 +2496,11 @@ export class WarehouseMovementsService {
       id: o.id,
       folio: o.folio || o.folioNumber || '',
       status: o.status || 'REGISTERED',
+      priority: (o.priority === 'URGENT' || existing?.priority === 'URGENT') ? 'URGENT' : (o.priority || 'NORMAL'),
+      shiftSessionId: o.shiftSessionId || existing?.shiftSessionId || null,
+      startedAt: o.startedAt || existing?.startedAt,
+      pausedAt: o.pausedAt || existing?.pausedAt,
+      pauseReason: o.pauseReason || existing?.pauseReason,
       clientCode: o.clientId || o.clientCode || '',
       clientName: o.clientName || '',
       destinationId: o.destinationId || '',
@@ -2626,6 +2651,7 @@ export class WarehouseMovementsService {
       rampNumber: formVals.rampNumber || null,
       rampCode: formVals.rampCode || null,
       status: formVals.status || null,
+      priority: formVals.priority || null,
       observations: formVals.observations || '',
     };
 

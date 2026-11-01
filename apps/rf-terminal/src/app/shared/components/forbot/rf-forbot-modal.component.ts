@@ -102,7 +102,7 @@ export class RfForbotModalComponent {
         }
         return [...msgs];
       });
-    });
+    }, { allowSignalWrites: true });
 
   }
 

@@ -811,6 +811,31 @@ export class TransferSubmoduleComponent implements OnInit {
   });
 
   // Modales y Diálogos
+  // Prioridad Urgente Preemptiva (ADR-011, ADR-017, ADR-020)
+  isUrgentTransfer = signal<boolean>(false);
+
+  toggleUrgentTransfer(): void {
+    this.isUrgentTransfer.update((v) => !v);
+  }
+
+  toggleTransferPriority(transfer: WarehouseTransfer): void {
+    if (!transfer.id) return;
+    const newPriority = transfer.priority === 'URGENT' ? 'NORMAL' : 'URGENT';
+    this.movementsApi.updateTransferPriority(transfer.id, newPriority).subscribe({
+      next: () => {
+        transfer.priority = newPriority;
+        this.selectedTransfer.set({ ...transfer });
+        this.toast.success(
+          `Prioridad cambiada a ${newPriority === 'URGENT' ? 'URGENTE 🚨' : 'NORMAL'} para el folio #${transfer.folio}`
+        );
+        this.movementsService.reloadTransfers();
+      },
+      error: (err: any) => {
+        this.toast.error(err.error?.message || 'No se pudo actualizar la prioridad.');
+      },
+    });
+  }
+
   showConfirmModal = signal(false);
   isExecuting = signal(false);
 
@@ -881,6 +906,7 @@ export class TransferSubmoduleComponent implements OnInit {
   // Iniciar Nuevo Traspaso (Modo Captura)
   startNewTransfer(): void {
     this.formMode.set('create');
+    this.isUrgentTransfer.set(false);
     this.selectedTransfer.set(null);
     localStorage.removeItem('4g_active_transfer_folio');
 
@@ -1166,6 +1192,7 @@ export class TransferSubmoduleComponent implements OnInit {
       reasonLabel: reason.label,
       observations: obs,
       transferredBy,
+      priority: this.isUrgentTransfer() ? 'URGENT' : 'NORMAL',
       totalPallets: this.selectedTotalPallets(),
       totalPieces: this.selectedTotalPieces(),
     };

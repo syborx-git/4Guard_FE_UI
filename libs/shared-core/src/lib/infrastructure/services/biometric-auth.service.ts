@@ -157,13 +157,13 @@ export class BiometricAuthService {
     const userIdBytes = new TextEncoder().encode(user.id);
 
     const creationOptions: PublicKeyCredentialCreationOptions = {
-      challenge: challengeBytes,
+      challenge: challengeBytes as unknown as BufferSource,
       rp: {
         name: '4GUARD Terminal RF & Yard WMS',
         id: window.location.hostname || 'localhost'
       },
       user: {
-        id: userIdBytes,
+        id: userIdBytes as unknown as BufferSource,
         name: user.email || user.username || user.id,
         displayName: user.fullName || user.username || 'Operador RF'
       },
@@ -239,12 +239,12 @@ export class BiometricAuthService {
     const challengeBytes = this.generateRandomBytes(32);
 
     const getOptions: PublicKeyCredentialRequestOptions = {
-      challenge: challengeBytes,
+      challenge: challengeBytes as unknown as BufferSource,
       timeout: 60000,
       userVerification: 'required',
       allowCredentials: [
         {
-          id: this.base64UrlToBuffer(credId),
+          id: this.base64UrlToBuffer(credId) as unknown as BufferSource,
           type: 'public-key',
           transports: ['internal']
         }

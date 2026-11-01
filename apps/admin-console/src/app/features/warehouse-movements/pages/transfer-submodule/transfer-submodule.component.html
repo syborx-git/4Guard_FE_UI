@@ -30,23 +30,36 @@
         </div>
       </div>
 
-      <div class="flex items-center">
-        @if (shiftContext.activeShift(); as shift) {
-          <span
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-[11px] font-bold text-slate-700 dark:text-slate-200"
+      <div class="receiving-header__right">
+        @if (shiftContext.isLoading()) {
+          <div class="shift-context-chip shift-context-chip--loading">
+            <span class="material-symbols-outlined">progress_activity</span>
+            <div class="shift-context-chip__copy">
+              <span class="shift-context-chip__label">TURNO</span>
+              <strong class="shift-context-chip__value">Resolviendo turno…</strong>
+            </div>
+          </div>
+        }
+        @if (!shiftContext.isLoading() && shiftContext.activeShift(); as shift) {
+          <div
+            class="shift-context-chip"
+            [class.shift-context-chip--fallback]="!shift.shiftId"
             [title]="shift.branchName + ' · ' + shift.timezone"
           >
-            <span class="material-symbols-outlined text-[16px]">schedule</span>
-            <span>
-              @if (shift.shiftName) {
-                {{ shift.shiftName }} · {{ formatShiftTime(shift.startTime) }}–{{ formatShiftTime(shift.endTime) }}
-              } @else if (shift.configured) {
-                Sin turno vigente
-              } @else {
-                Turno no configurado
-              }
-            </span>
-          </span>
+            <span class="material-symbols-outlined">schedule</span>
+            <div class="shift-context-chip__copy">
+              <span class="shift-context-chip__label">TURNO VIGENTE</span>
+              <strong class="shift-context-chip__value">
+                @if (shift.shiftName) {
+                  {{ shift.shiftName }} · {{ formatShiftTime(shift.startTime) }}–{{ formatShiftTime(shift.endTime) }}
+                } @else if (shift.configured) {
+                  Sin turno vigente
+                } @else {
+                  Turno no configurado
+                }
+              </strong>
+            </div>
+          </div>
         }
       </div>
 
@@ -247,7 +260,7 @@
           <span class="directory-search-kbd">⌘K</span>
         </div>
 
-        <!-- Filter Pills -->
+        <!-- Filter Pills Homologadas -->
         <div class="directory-filter-pills" role="group" aria-label="Filtrar por estado">
           <button
             type="button"
@@ -256,6 +269,36 @@
             [class.filter-pill--active]="isStatusFilterActive('ALL')"
           >
             <span>Todos ({{ kpiTotalTransfers() }})</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleStatusFilter('ASSIGNED')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('ASSIGNED')"
+          >
+            <span class="filter-pill-dot dot--blue"></span>
+            <span>Asignados RF</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleStatusFilter('IN_PROGRESS')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('IN_PROGRESS')"
+          >
+            <span class="filter-pill-dot dot--indigo"></span>
+            <span>En Maniobra</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleStatusFilter('PAUSED')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('PAUSED')"
+          >
+            <span class="filter-pill-dot dot--amber"></span>
+            <span>Pausados</span>
           </button>
 
           <button
@@ -306,9 +349,28 @@
                   class="executive-status-badge"
                   [class.badge--verificado]="transfer.status === 'COMPLETED'"
                   [class.badge--cancelado]="transfer.status === 'CANCELLED'"
+                  [class.badge--asignado]="transfer.status === 'ASSIGNED'"
+                  [class.badge--proceso]="transfer.status === 'IN_PROGRESS'"
+                  [class.badge--pausado]="transfer.status === 'PAUSED'"
                 >
-                  {{ transfer.status === 'COMPLETED' ? 'Completado' : 'Cancelado' }}
+                  {{
+                    transfer.status === 'COMPLETED' ? 'Completado' :
+                    transfer.status === 'CANCELLED' ? 'Cancelado' :
+                    transfer.status === 'ASSIGNED' ? 'Asignado RF' :
+                    transfer.status === 'IN_PROGRESS' ? 'En Maniobra' :
+                    transfer.status === 'PAUSED' ? 'Pausado' : 'Registrado'
+                  }}
                 </span>
+
+                @if (transfer.priority === 'URGENT') {
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/50 animate-pulse shadow-sm"
+                    title="Misión Urgente Preemptiva despachada a Terminal RF"
+                  >
+                    <span class="material-symbols-outlined text-[13px] text-rose-500">bolt</span>
+                    URGENTE
+                  </span>
+                }
 
                 @if (isCarryOver(transfer)) {
                   <span
@@ -404,14 +466,27 @@
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              (click)="resetToIdle()"
-              class="btn-secondary-outline text-xs px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1"
-            >
-              <span class="material-symbols-outlined text-sm">arrow_back</span>
-              <span>Volver a Selección</span>
-            </button>
+            <div class="flex items-center gap-2.5">
+              <button
+                type="button"
+                (click)="toggleUrgentTransfer()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black transition-all cursor-pointer"
+                [ngClass]="isUrgentTransfer() ? 'bg-rose-500/20 text-rose-600 border-rose-500/50 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700'"
+                title="Despacho Preemptivo: alerta acústica y pausa de tareas en tableta RF"
+              >
+                <span class="material-symbols-outlined text-base text-rose-500" [class.animate-pulse]="isUrgentTransfer()">bolt</span>
+                <span>{{ isUrgentTransfer() ? '🚨 PRIORIDAD URGENTE ACTIVA' : 'Prioridad Normal' }}</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="resetToIdle()"
+                class="btn-secondary-outline text-xs px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1"
+              >
+                <span class="material-symbols-outlined text-sm">arrow_back</span>
+                <span>Volver a Selección</span>
+              </button>
+            </div>
           </div>
 
           <!-- ── 1. ASIGNACIÓN DE MONTACARGUISTA CERTIFICADO & ESTATUS ── -->
@@ -1300,6 +1375,18 @@
 
             <!-- BOTONES DE ACCIÓN SUPERIOR -->
             <div class="flex items-center gap-2">
+              @if (selectedTransfer()?.status !== 'CANCELLED' && selectedTransfer()?.status !== 'COMPLETED') {
+                <button
+                  type="button"
+                  (click)="toggleTransferPriority(selectedTransfer()!)"
+                  class="text-xs font-black px-3 py-1.5 rounded-lg flex items-center gap-1.5 border transition-all shadow-sm cursor-pointer"
+                  [ngClass]="selectedTransfer()?.priority === 'URGENT' ? 'bg-rose-500/20 text-rose-600 border-rose-500/50' : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'"
+                  title="Cambiar prioridad para despachar de inmediato a tableta RF"
+                >
+                  <span class="material-symbols-outlined text-sm" [class.animate-pulse]="selectedTransfer()?.priority === 'URGENT'">bolt</span>
+                  <span>{{ selectedTransfer()?.priority === 'URGENT' ? 'URGENTE (Desactivar)' : 'Marcar Urgente' }}</span>
+                </button>
+              }
               @if (selectedTransfer()?.status !== 'CANCELLED') {
                 <button
                   type="button"
