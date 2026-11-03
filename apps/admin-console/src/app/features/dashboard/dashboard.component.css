@@ -885,11 +885,35 @@
 }
 
 .alert-item__meta {
-  display: block;
-  margin-top: 4px;
+  display: inline-block;
   color: var(--text-muted);
   font-size: 0.68rem;
   text-transform: capitalize;
+}
+
+.alert-item__action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-btn, 8px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card-gold, rgba(197, 168, 107, 0.35));
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: all 180ms ease;
+}
+
+.alert-item__action-btn:hover {
+  background: var(--gold-bg);
+  border-color: var(--gold);
+  color: var(--text-gold);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(197, 168, 107, 0.20);
 }
 
 .alert-item__dismiss {

@@ -1191,7 +1191,7 @@
 
 :host-context(.theme-dark) .kpi-header__icon-wrap,
 :host-context(.dark) .kpi-header__icon-wrap {
-  background: linear-gradient(145deg, #1e293b, #0f172a);
+  background: linear-gradient(145deg, #16212f, #1f2d3e);
   border-color: var(--gold-border);
 }
 
@@ -1318,7 +1318,7 @@
 
 :host-context(.theme-dark) .kpi-tab-btn.tab-active,
 :host-context(.dark) .kpi-tab-btn.tab-active {
-  background: linear-gradient(145deg, #1e293b, #0f172a);
+  background: linear-gradient(145deg, #16212f, #1f2d3e);
   border-color: var(--gold-border);
   color: #f8fafc;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
@@ -3126,30 +3126,8 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   DARK MODE
+   DARK MODE OVERRIDES (Alineado con Tokens Institucionales SDD v3.0)
    ───────────────────────────────────────────────────────────── */
-
-:host-context(.theme-dark) {
-  --bg-page: #0e1117;
-  --bg-card: rgba(22, 27, 38, 0.92);
-  --border-card: rgba(255, 255, 255, 0.08);
-  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-
-  --text-primary: #e8eaf0;
-  --text-secondary: #9ca3b0;
-  --text-muted: #6b7280;
-  --text-gold: #e0c87a;
-
-  --gold-bg: rgba(197, 168, 107, 0.12);
-  --gold-border: rgba(197, 168, 107, 0.20);
-
-  --c-success-bg: rgba(32, 132, 87, 0.14);
-  --c-success-bdr: rgba(32, 132, 87, 0.30);
-  --c-warning-bg: rgba(213, 145, 39, 0.14);
-  --c-warning-bdr: rgba(213, 145, 39, 0.30);
-  --c-danger-bg: rgba(200, 73, 73, 0.14);
-  --c-danger-bdr: rgba(200, 73, 73, 0.30);
-}
 
 :host-context(.theme-dark) .kpi-search__input,
 :host-context(.theme-dark) .kpi-filter-select,
@@ -5831,4 +5809,18 @@
   .kpi-executive-card:hover {
     transform: none;
   }
+}
+
+.kpi-filter-select option,
+.kpi-field__select option {
+  background: #ffffff;
+  color: #1c2940;
+}
+
+:host-context(.theme-dark) .kpi-filter-select option,
+:host-context(.theme-dark) .kpi-field__select option,
+:host-context(.dark) .kpi-filter-select option,
+:host-context(.dark) .kpi-field__select option {
+  background: #111a26;
+  color: #edf1f5;
 }

@@ -67,7 +67,7 @@ export class WarehouseMovementsApiService {
       if (userStr) {
         const user = JSON.parse(userStr);
         if (user?.organizationId) {
-          return { organizationId: user.organizationId, branchId: user.branchId || DEFAULT_BRANCH_ID };
+          return { organizationId: user.organizationId, branchId: user.branchId || '' };
         }
       }
       const sessionStr = localStorage.getItem('session');
@@ -76,14 +76,14 @@ export class WarehouseMovementsApiService {
         if (session?.user?.organizationId) {
           return {
             organizationId: session.user.organizationId,
-            branchId: session.user.branchId || DEFAULT_BRANCH_ID,
+            branchId: session.user.branchId || '',
           };
         }
       }
     } catch {
       // Fallback
     }
-    return { organizationId: DEFAULT_ORG_ID, branchId: DEFAULT_BRANCH_ID };
+    return { organizationId: '', branchId: '' };
   }
 
   getSessionOrgId(): string {
@@ -390,15 +390,11 @@ export class WarehouseMovementsApiService {
   }
 
   purgeAllTestData(): Observable<any> {
+    // Seguridad: Bloqueado llamado externo a endpoints no autorizados de purga
     this.clearAllLocalOperationalData();
     const purgeTime = Date.now();
     this.broadcastEvent('PURGE_ALL', { timestamp: purgeTime });
-
-    // Intenta notificar al backend/proxy para reset general si el endpoint existe
-    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/api/v1/dev/purge-all`, {}).pipe(
-      map((res) => res?.data || { success: true }),
-      catchError(() => of({ success: true }))
-    );
+    return of({ success: true, message: 'Operación local completada' });
   }
 
   createCheckIn(body: any): Observable<any> {

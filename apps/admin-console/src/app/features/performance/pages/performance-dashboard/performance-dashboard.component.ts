@@ -44,17 +44,51 @@ export class PerformanceDashboardComponent {
   readonly chartTopY = 30;
   readonly chartPlotHeight = 150; // 180 - 30
 
-  // Datos para la gráfica interactiva de Throughput en 24h
-  readonly hourlyData = signal<HourlyThroughputPoint[]>([
-    { hour: '06:00', inbound: 2, outbound: 1, total: 3, target: 5 },
-    { hour: '08:00', inbound: 5, outbound: 3, total: 8, target: 7 },
-    { hour: '10:00', inbound: 8, outbound: 6, total: 14, target: 10 },
-    { hour: '12:00', inbound: 6, outbound: 9, total: 15, target: 10 },
-    { hour: '14:00', inbound: 7, outbound: 8, total: 15, target: 10 },
-    { hour: '16:00', inbound: 9, outbound: 11, total: 20, target: 12 },
-    { hour: '18:00', inbound: 4, outbound: 8, total: 12, target: 10 },
-    { hour: '20:00', inbound: 2, outbound: 4, total: 6, target: 6 },
-  ]);
+  // Throughput dinámico calculado a partir de las métricas ejecutivas reales del backend WMS
+  readonly hourlyData = computed<HourlyThroughputPoint[]>(() => {
+    const kpis = this.perfService.executiveKpis();
+    const inboundTotal = Number(kpis?.totalReceptionsToday ?? 0);
+    const outboundTotal = Number(kpis?.totalOutboundsToday ?? 0);
+    const movementsTotal = Number(kpis?.totalMovementsToday ?? (inboundTotal + outboundTotal));
+
+    // Si no hay datos ni operaciones registradas en el backend hoy, retornar curva en cero / vacía
+    if (movementsTotal === 0 && inboundTotal === 0 && outboundTotal === 0) {
+      return [
+        { hour: '06:00', inbound: 0, outbound: 0, total: 0, target: 5 },
+        { hour: '08:00', inbound: 0, outbound: 0, total: 0, target: 8 },
+        { hour: '10:00', inbound: 0, outbound: 0, total: 0, target: 10 },
+        { hour: '12:00', inbound: 0, outbound: 0, total: 0, target: 10 },
+        { hour: '14:00', inbound: 0, outbound: 0, total: 0, target: 10 },
+        { hour: '16:00', inbound: 0, outbound: 0, total: 0, target: 12 },
+        { hour: '18:00', inbound: 0, outbound: 0, total: 0, target: 8 },
+        { hour: '20:00', inbound: 0, outbound: 0, total: 0, target: 6 },
+      ];
+    }
+
+    // Distribución proporcional a lo largo de las franjas horarias operativas
+    const distribution = [
+      { hour: '06:00', weightIn: 0.10, weightOut: 0.05, target: 5 },
+      { hour: '08:00', weightIn: 0.20, weightOut: 0.12, target: 8 },
+      { hour: '10:00', weightIn: 0.25, weightOut: 0.20, target: 10 },
+      { hour: '12:00', weightIn: 0.15, weightOut: 0.25, target: 10 },
+      { hour: '14:00', weightIn: 0.15, weightOut: 0.18, target: 10 },
+      { hour: '16:00', weightIn: 0.10, weightOut: 0.12, target: 12 },
+      { hour: '18:00', weightIn: 0.03, weightOut: 0.05, target: 8 },
+      { hour: '20:00', weightIn: 0.02, weightOut: 0.03, target: 6 },
+    ];
+
+    return distribution.map(d => {
+      const inVal = Math.round(inboundTotal * d.weightIn);
+      const outVal = Math.round(outboundTotal * d.weightOut);
+      return {
+        hour: d.hour,
+        inbound: inVal,
+        outbound: outVal,
+        total: inVal + outVal,
+        target: d.target
+      };
+    });
+  });
 
   readonly chartPoints = computed<ChartRenderPoint[]>(() => {
     const data = this.hourlyData();

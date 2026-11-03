@@ -327,7 +327,7 @@ export class SupplierService {
         }
       }
     } catch {}
-    return 'a53f0907-9fa5-4bdf-87db-2eb5e7683935'; // Fallback por defecto (4GUARD)
+    return '';
   }
 
   // ─── Manejo de Errores ──────────────────────────────────────────────────────

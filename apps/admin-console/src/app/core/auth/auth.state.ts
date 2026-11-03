@@ -198,7 +198,8 @@ export class AuthState {
    * Conmuta atómicamente la señal del usuario/operador activo mediante PIN de 4 dígitos.
    */
   switchOperator(newOperator: AuthenticatedUser, pin: string): boolean {
-    const expectedPin = newOperator.pinCode || '1234';
+    const expectedPin = newOperator.pinCode;
+    if (!expectedPin) return false;
     if (pin.trim() !== expectedPin) {
       return false;
     }
@@ -213,12 +214,7 @@ export class AuthState {
       session.user = updatedUser;
       this.sessionStorageService.saveSession(session);
     } else {
-      this.sessionStorageService.saveSession({
-        accessToken: 'dev-switch-token',
-        refreshToken: 'dev-refresh-token',
-        expiresAt: new Date(Date.now() + 86400000).toISOString(),
-        user: updatedUser
-      });
+      return false; // Requiere sesion autenticada previa
     }
 
     this._currentUser.set(updatedUser);
@@ -344,9 +340,9 @@ export class AuthState {
       case 'shipping':
         return permissions.includes('SHIPPING_READ') || permissions.includes('SHIPPING_CREATE');
       case 'carriers':
-        return true; // Acceso total habilitado para desarrollo y testing
+        return permissions.includes('CARRIERS_READ') || permissions.includes('CARRIERS_CREATE');
       case 'suppliers':
-        return true; // Acceso total habilitado para desarrollo y testing
+        return permissions.includes('SUPPLIERS_READ') || permissions.includes('SUPPLIERS_CREATE');
       case 'warehouse-movements':
         return true;
       case 'catalogs':
@@ -354,13 +350,13 @@ export class AuthState {
       case 'inventory-query':
         return true;
       case 'performance':
-        return true; // Acceso total habilitado para desarrollo y testing
+        return permissions.includes('PERFORMANCE_READ') || permissions.includes('REPORTS_READ');
       case 'shifts':
-        return true; // Acceso total habilitado para desarrollo y testing (HU-140)
+        return permissions.includes('SHIFTS_READ') || permissions.includes('SHIFTS_WRITE');
       case 'business-rules':
-        return true; // Acceso total habilitado para evaluación (HU-131)
+        return permissions.includes('BUSINESS_RULES_READ') || permissions.includes('BUSINESS_RULES_WRITE');
       case 'alerts-config':
-        return true; // Acceso total habilitado para evaluación (HU-134)
+        return permissions.includes('ALERTS_READ') || permissions.includes('ALERTS_WRITE');
       case 'security':
         return true; // Acceso total al nuevo módulo autónomo de Seguridad (Caseta)
       case 'user-activity':

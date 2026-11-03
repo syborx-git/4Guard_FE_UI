@@ -5199,20 +5199,33 @@ input[type="number"] {
 /* ═══════════════════════════════════════════════════════════════
    DIRECTORIO EJECUTIVO - ESTILO OFICIAL 4GUARD / SYNEXIA (PIXEL-PERFECT)
    ═══════════════════════════════════════════════════════════════ */
+/* CARD CONTENEDOR PRINCIPAL SYNEXIA (PIXEL-PERFECT) */
+.synexia-card {
+  position: relative;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(16px);
+}
+
 .executive-directory-card {
-  background: var(--bg-card, #ffffff);
-  border: 1px solid var(--border-card, #e2e8f0);
-  border-radius: 20px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.25rem 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
   margin-top: 0;
 }
 
 :host-context(.theme-dark) .executive-directory-card,
 :host-context(.dark) .executive-directory-card {
-  background: rgba(15, 23, 42, 0.75);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  background: var(--bg-card-exec, var(--bg-card));
+  border-color: var(--border-card-gold, var(--gold-border));
+  border-top-color: var(--gold);
+  box-shadow: var(--shadow-card);
 }
 
 /* Header Row */
@@ -5440,11 +5453,12 @@ input[type="number"] {
 
 /* ── EXECUTIVE CARDS GRID & ITEM ── */
 .executive-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.25rem 1.35rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -5455,20 +5469,15 @@ input[type="number"] {
 
 .executive-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(245, 158, 11, 0.5);
-  box-shadow: 0 10px 24px rgba(245, 158, 11, 0.12), 0 4px 8px rgba(0, 0, 0, 0.03);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 :host-context(.theme-dark) .executive-card,
 :host-context(.dark) .executive-card {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(255, 255, 255, 0.07);
-}
-
-:host-context(.theme-dark) .executive-card:hover,
-:host-context(.dark) .executive-card:hover {
-  border-color: rgba(245, 158, 11, 0.5);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4), 0 0 16px rgba(245, 158, 11, 0.15);
+  background: var(--bg-card-exec, var(--bg-card));
+  border-color: var(--border-card-gold, var(--gold-border));
+  border-top-color: var(--gold);
 }
 
 /* Card Head */

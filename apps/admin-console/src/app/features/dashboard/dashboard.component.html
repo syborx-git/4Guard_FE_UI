@@ -205,8 +205,27 @@
             aria-hidden="true">
           </div>
           <div class="alert-item__body">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-bold text-xs uppercase tracking-wider" [class.text-red-500]="alert.severity === 'CRITICAL'" [class.text-amber-500]="alert.severity === 'WARNING'">
+                {{ alert.title }}
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold" style="background: var(--bg-card); border: 1px solid var(--border-card);">
+                {{ alert.moduleLabel }}
+              </span>
+            </div>
             <p class="alert-item__msg">{{ alert.message }}</p>
-            <span class="alert-item__meta">{{ alert.module }} · {{ formatSince(alert.since) }}</span>
+            <div class="flex items-center justify-between gap-3 mt-2 flex-wrap">
+              <span class="alert-item__meta">{{ formatSince(alert.since) }}</span>
+              <button
+                type="button"
+                class="alert-item__action-btn"
+                (click)="handleAlertAction(alert)"
+              >
+                <span class="material-symbols-outlined text-sm">{{ alert.actionIcon }}</span>
+                <span>{{ alert.actionLabel }}</span>
+                <span class="material-symbols-outlined text-xs">arrow_forward</span>
+              </button>
+            </div>
           </div>
           <button class="alert-item__dismiss" (click)="dismissAlert(alert.id)"
             [attr.aria-label]="'Descartar alerta: ' + alert.message">
@@ -216,7 +235,7 @@
         } @empty {
         <div class="alerts-empty">
           <span aria-hidden="true">✅</span>
-          <span>Sin alertas activas. Todo en orden.</span>
+          <span>Sin alertas críticas activas. Operación dentro de parámetros nominales.</span>
         </div>
         }
       </div>

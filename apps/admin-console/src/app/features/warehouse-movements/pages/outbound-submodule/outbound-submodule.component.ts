@@ -123,7 +123,7 @@ export class OutboundSubmoduleComponent implements OnInit {
   formMode = signal<'idle' | 'create' | 'detail'>('idle');
   selectedOutbound = signal<WarehouseOutbound | null>(null);
   searchQuery = signal('');
-  statusFilter = signal<string>('ALL');
+  statusFilter = signal<string>('REGISTERED');
   auditEntries = signal<MovementAuditEntry[]>([]);
 
   // KPIs Homologados (acotados al turno vigente de la sucursal)
@@ -2682,7 +2682,7 @@ export class OutboundSubmoduleComponent implements OnInit {
 
 
   // Filtros Multi-Estado Píldoras
-  activeStatusFilters = signal<string[]>([]);
+  activeStatusFilters = signal<string[]>(['REGISTERED']);
 
   toggleStatusFilter(status: string): void {
     if (status === 'ALL') {
