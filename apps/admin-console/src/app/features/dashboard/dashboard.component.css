@@ -477,6 +477,7 @@
   font-size: 14px !important;
 }
 
+.dash-card--gauge:hover .dash-card__link-hint,
 .dash-card--saturation:hover .dash-card__link-hint {
   color: var(--gold-light);
 }

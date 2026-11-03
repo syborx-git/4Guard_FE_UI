@@ -27,6 +27,8 @@ interface PickLine {
   lot: string;
   expiresAt: string;
   status: 'PENDING' | 'IN_PROGRESS' | 'DONE';
+  isManualOverride?: boolean;
+  commercialAgreementFolio?: string;
 }
 
 @Component({
@@ -44,6 +46,16 @@ export class PickingListComponent implements AfterViewInit {
   protected readonly violationSSCC = signal('');
   protected readonly successFlash  = signal(false);
   protected readonly currentLineIdx = signal(0);
+
+  // Regla de Despacho (FEFO Automático vs Selección Manual por Acuerdo Comercial)
+  protected readonly dispatchRule = signal<'FEFO_AUTO' | 'MANUAL_OVERRIDE'>('FEFO_AUTO');
+  protected readonly commercialOverrideReason = signal<string>('Convenio comercial con cliente (Lote específico autorizado)');
+  protected readonly commercialAgreementFolio = signal<string>('AC-2026-NSP-04');
+
+  protected toggleDispatchRule(): void {
+    const next = this.dispatchRule() === 'FEFO_AUTO' ? 'MANUAL_OVERRIDE' : 'FEFO_AUTO';
+    this.dispatchRule.set(next);
+  }
 
   // Orden de picking FEFO (ordenado por fecha de vencimiento — más antiguo primero)
   protected readonly pickLines = signal<PickLine[]>([
@@ -100,6 +112,12 @@ export class PickingListComponent implements AfterViewInit {
     this.completedCount() === this.totalCount()
   );
 
+  // Paso 4: Pre-certificación de Carga y Estiba en Andén (HU-072 / F03)
+  protected readonly stagingChecklistPassed = signal<boolean>(false);
+  protected toggleStagingChecklist(): void {
+    this.stagingChecklistPassed.update((v) => !v);
+  }
+
   // Web Audio API — chicharra
   private audioCtx: AudioContext | null = null;
 
@@ -126,17 +144,60 @@ export class PickingListComponent implements AfterViewInit {
   }
 
   protected simulateWrongScan(): void {
-    // Simula escaneo del 2do SSCC cuando corresponde el 1ro (viola FEFO)
+    // Simula escaneo del 2do SSCC cuando corresponde el 1ro
     const wrongSSCC = 'SSCC-0002';
     this.validateScan(wrongSSCC);
   }
 
   private validateScan(sscc: string): void {
-    const line = this.currentLine();
-    if (!line) return;
+    const lines = this.pickLines();
+    const current = this.currentLine();
+    if (!current) return;
 
-    // ─ Validación FEFO ─────────────────────────────────────
-    if (sscc !== line.sscc) {
+    // ─ Modo Acuerdo Comercial (MANUAL_OVERRIDE) ────────────────
+    if (this.dispatchRule() === 'MANUAL_OVERRIDE') {
+      const matchIdx = lines.findIndex(l => l.sscc === sscc && l.status !== 'DONE');
+      if (matchIdx !== -1) {
+        // Escaneo de tarima autorizada por acuerdo comercial sin chicharra
+        this.pickLines.update(items =>
+          items.map((l, i) => {
+            if (i === matchIdx) {
+              return {
+                ...l,
+                qtyDone: l.qty,
+                status: 'DONE' as const,
+                isManualOverride: true,
+                commercialAgreementFolio: this.commercialAgreementFolio(),
+              };
+            }
+            return l;
+          })
+        );
+
+        this.successFlash.set(true);
+        setTimeout(() => {
+          this.successFlash.set(false);
+          const nextIdx = this.pickLines().findIndex(l => l.status !== 'DONE');
+          if (nextIdx !== -1) {
+            this.currentLineIdx.set(nextIdx);
+          }
+        }, 800);
+        return;
+      } else {
+        // El SSCC escaneado no pertenece a ninguna línea de la orden
+        this.fefoViolation.set(true);
+        this.violationSSCC.set(sscc);
+        this.playBuzzer();
+        setTimeout(() => {
+          this.fefoViolation.set(false);
+          this.violationSSCC.set('');
+        }, 3000);
+        return;
+      }
+    }
+
+    // ─ Validación FEFO Estricta ─────────────────────────────
+    if (sscc !== current.sscc) {
       // ¡VIOLACIÓN FEFO! Pantalla roja + chicharra
       this.fefoViolation.set(true);
       this.violationSSCC.set(sscc);
@@ -150,9 +211,9 @@ export class PickingListComponent implements AfterViewInit {
       return;
     }
 
-    // ─ Escaneo correcto ─────────────────────────────────────
-    this.pickLines.update(lines =>
-      lines.map((l, i) => {
+    // ─ Escaneo correcto FEFO ─────────────────────────────────
+    this.pickLines.update(items =>
+      items.map((l, i) => {
         if (i === this.currentLineIdx()) {
           return { ...l, qtyDone: l.qty, status: 'DONE' as const };
         }

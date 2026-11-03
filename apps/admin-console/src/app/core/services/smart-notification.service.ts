@@ -16,7 +16,7 @@ import { AuthState } from '../auth/auth.state';
 import { ToastService } from './toast.service';
 
 export type NotificationCategory = 'SECURITY' | 'RECEIVING' | 'QUALITY' | 'OUTBOUND' | 'SYSTEM';
-export type NotificationSeverity = 'INFO' | 'SUCCESS' | 'WARNING' | 'CRITICAL';
+export type NotificationSeverity = 'INFO' | 'SUCCESS' | 'WARNING' | 'CRITICAL' | 'ERROR';
 
 export interface SmartNotification {
   id: string;
@@ -371,7 +371,7 @@ export class SmartNotificationService {
       if (ctx.state === 'suspended') ctx.resume();
       const now = ctx.currentTime;
 
-      if (severity === 'CRITICAL' || severity === 'WARNING') {
+      if (severity === 'CRITICAL' || severity === 'WARNING' || severity === 'ERROR') {
         // Tono de Alerta / Advertencia: F#4 -> C5
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
