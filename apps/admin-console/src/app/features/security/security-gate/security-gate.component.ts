@@ -18,6 +18,7 @@ import { WarehouseMovementsService } from '../../warehouse-movements/services/wa
 import {
   CheckInCasetaData,
   RampItem,
+  RampOccupancyStatus,
   CarrierLineItem,
   ClientItem,
   STANDARD_WAREHOUSE_RAMPS,
@@ -38,6 +39,7 @@ import {
 } from '../components/print-gate-qr-poster-layout/print-gate-qr-poster-layout.component';
 import { AuthState } from '../../../core/auth/auth.state';
 import { environment } from '../../../../environments/environment';
+import { TrackingExcelExportService, ExportRangeType, TrackingExportItem } from './tracking-excel-export.service';
 
 export type SecurityGateTab = 'REGISTRATION' | 'IN_YARD' | 'HISTORY';
 
@@ -57,6 +59,42 @@ export type SecurityGateTab = 'REGISTRATION' | 'IN_YARD' | 'HISTORY';
 export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly authState = inject(AuthState);
   private readonly fb = inject(FormBuilder);
+  private readonly excelExport = inject(TrackingExcelExportService);
+
+  // ── Modal de Exportación Excel F02 ──
+  protected readonly showF02Modal = signal<boolean>(false);
+  protected readonly f02RangeType = signal<ExportRangeType>('TODAY');
+  protected readonly isExportingF02 = signal<boolean>(false);
+
+  protected openF02ExportModal(): void {
+    this.showF02Modal.set(true);
+  }
+
+  protected closeF02ExportModal(): void {
+    this.showF02Modal.set(false);
+  }
+
+  protected setF02Range(range: ExportRangeType): void {
+    this.f02RangeType.set(range);
+  }
+
+  protected executeF02Export(): void {
+    this.isExportingF02.set(true);
+    try {
+      const allTrackingItems: TrackingExportItem[] = [
+        ...this.historyPasses(),
+        ...this.inYardPasses()
+      ];
+      this.excelExport.exportTrackingReport(allTrackingItems, this.f02RangeType());
+      this.toast.success('¡Formato Oficial F02-PO-CP-7.1.3-03 exportado con éxito!');
+      this.closeF02ExportModal();
+    } catch (err) {
+      console.error('Error exportando Excel F02:', err);
+      this.toast.error('Ocurrió un error al generar el archivo Excel.');
+    } finally {
+      this.isExportingF02.set(false);
+    }
+  }
   private readonly movementsService = inject(WarehouseMovementsService);
   protected readonly smartNotification = inject(SmartNotificationService);
   protected readonly pendingRampAssignments = this.smartNotification.pendingRampAssignments;
@@ -193,6 +231,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly ramps             = this.movementsService.ramps;
   protected readonly forkliftOperators = this.movementsService.forkliftOperators;
   protected readonly rampOccupancy     = this.movementsService.rampOccupancyStatus;
+  protected readonly STANDARD_WAREHOUSE_RAMPS = STANDARD_WAREHOUSE_RAMPS;
 
   // ── Signals de Estado Local ────────────────────────────────────────────────
   protected readonly sealList           = signal<string[]>([]);
@@ -302,7 +341,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             cancellationReason: r.cancellationReason || existing.cancellationReason,
             cancelledBy: r.cancelledBy || existing.cancelledBy,
             rampNumber: r.checkIn?.rampNumber ?? existing.rampNumber,
-            rampCode: this.getFormattedRampLabel(r.checkIn?.rampCode ?? existing.rampCode, r.checkIn?.rampNumber ?? existing.rampNumber)
+            rampCode: this.getFormattedRampLabel(r.checkIn?.rampCode ?? existing.rampCode, r.checkIn?.rampNumber ?? existing.rampNumber),
+            stagingBay: r.checkIn?.stagingBay ?? existing.stagingBay
           });
         }
         continue;
@@ -345,8 +385,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           docDate: r.checkIn?.docDate || r.createdAt,
           receptionTime: timeVal,
           horaEntrada: timeVal,
-          rampNumber: r.checkIn?.rampNumber || 1,
-          rampCode: this.getFormattedRampLabel(r.checkIn?.rampCode, r.checkIn?.rampNumber),
+          rampNumber: r.checkIn?.rampNumber != null ? Number(r.checkIn.rampNumber) : null,
+          rampCode: r.checkIn?.rampNumber ? this.getFormattedRampLabel(r.checkIn?.rampCode, r.checkIn?.rampNumber) : null,
           observations: r.observations || r.checkIn?.observations || '',
           driverSignature: r.checkIn?.driverSignature || (r as any).driverSignature || (r as any).preCheckin?.driverSignature,
           driverSignedAt: r.checkIn?.driverSignedAt || (r as any).driverSignedAt || (r as any).preCheckin?.driverSignedAt,
@@ -414,8 +454,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           docDate: o.dispatchedAt || this.getCurrentDateString(),
           receptionTime: timeVal,
           horaEntrada: timeVal,
-          rampNumber: o.rampNumber || 1,
-          rampCode: this.getFormattedRampLabel(o.rampCode, o.rampNumber),
+          rampNumber: o.rampNumber != null ? Number(o.rampNumber) : null,
+          rampCode: o.rampNumber ? this.getFormattedRampLabel(o.rampCode, o.rampNumber) : null,
           observations: o.observations || '',
           driverSignature: o.driverSignature || (o as any).preCheckin?.driverSignature,
           driverSignedAt: o.driverSignedAt || (o as any).preCheckin?.driverSignedAt,
@@ -432,6 +472,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly activeToken           = signal<string | null>(null);
   protected readonly activeDriverSignature = signal<string | null>(null);
   protected readonly activeDriverSignedAt  = signal<string | null>(null);
+  protected readonly hasRealDriverSignature = computed(() => {
+    const sig = this.activeDriverSignature();
+    return !!sig && sig.startsWith('data:image/') && sig.length > 300;
+  });
   protected readonly qrModalToken          = signal<string>('PORTAL-DIRECTO');
   protected readonly qrModalUrl         = signal<string>('');
   protected readonly isGeneratingPass   = signal<boolean>(false);
@@ -742,6 +786,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     carrierLineCustom: [''],
     nombreOperador: ['', Validators.required],
     driverPhone: [''],
+    assignmentType: ['RAMP'],
     rampCode: [''],
     rampNumber: [null as number | null],
     placasTracto: ['', Validators.required],
@@ -891,7 +936,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   });
 
   protected readonly completedShiftExitsCount = computed(() => {
-    return this.historyPasses().length;
+    const today = new Date().toISOString().slice(0, 10);
+    return this.historyPasses().filter(p => {
+      const d = p.completedAt || p.departureTime || p.rawCreatedAt || p.createdAt || p.fecha || p.date;
+      if (!d) return true;
+      const str = String(d).slice(0, 10);
+      return str === today;
+    }).length;
   });
 
   protected calculateDuration(inTime: any, outTime: any): string {
@@ -919,11 +970,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       return true;
     }
     const code = String(item.rampCode || item.ramp || item.rampName || item.rampId || '').trim();
-    return !!code && code !== '0' && code !== 'null' && code !== 'undefined';
+    return !!code && code !== '0' && code !== 'null' && code !== 'undefined' && !code.toUpperCase().includes('PATIO');
   }
 
   protected formatRampDisplay(item: any): string {
-    if (!item) return 'Por Asignar';
+    if (!item) return 'En Patio';
 
     // 1. Si viene rampNumber numérico explícito y válido (1 a 50)
     if (item.rampNumber != null && Number(item.rampNumber) > 0 && Number(item.rampNumber) <= 50) {
@@ -934,7 +985,6 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     // 2. Extraer cualquier código o ID disponible
     const code = String(item.rampCode || item.ramp || item.rampName || item.rampId || '').trim();
     if (code && code !== '0' && code !== 'null' && code !== 'undefined') {
-      // Si es un código con prefijo conocido o formato legible (LOC-RAMP-06, RAMPA-02, R-03)
       if (code.toUpperCase().includes('RAMP') || code.toUpperCase().startsWith('R-') || code.toUpperCase().startsWith('LOC-RAMP-') || code.toLowerCase().startsWith('rampa')) {
         const digitMatch = code.match(/(\d+)/);
         if (digitMatch) {
@@ -947,25 +997,22 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
       // Si es un UUID (36 caracteres con guiones)
       if (/^[0-9a-fA-F-]{36}$/.test(code)) {
-        // Buscar coincidencia en catálogo activo de rampas
         const found = this.ramps().find(r => r.id === code || r.code === code);
         if (found) {
           return found.name || `R-${String(found.rampNumber).padStart(2, '0')}`;
         }
-        // Buscar en catálogo estándar de rampas
         const std = STANDARD_WAREHOUSE_RAMPS.find(r => r.id === code || r.code === code);
         if (std) {
           return `R-${String(std.rampNumber).padStart(2, '0')}`;
         }
       }
 
-      // Si es un texto corto libre legible
       if (code.length <= 15 && !code.includes('-')) {
         return code;
       }
     }
 
-    return 'Por Asignar';
+    return 'En Patio';
   }
 
   protected readonly filteredInYardPasses = computed(() => {
@@ -1488,6 +1535,19 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         const chofer = p.driverName || p.nombreOperador || 'Transportista';
         const unidad = p.tractorPlates || p.placasTracto || p.placasUnidad || 'Unidad';
         this.toast.success(`🔔 ¡Registro recibido en Caseta! ${chofer} (${unidad}) completó el Pase #${p.token}.`);
+
+        // Si el formulario principal está limpio o no hay otro pase activo seleccionado, auto-cargar este pase para agilidad total
+        if (!this.activeToken() && (!this.checkInForm.dirty || !this.checkInForm.get('nombreOperador')?.value)) {
+          this.loadDriverSubmission(p);
+        }
+      }
+    }
+
+    // Hidratación inicial automática: si la pantalla cargó con formulario vacío y hay un pase SUBMITTED, precargarlo
+    if (!this.activeToken() && (!this.checkInForm.dirty || !this.checkInForm.get('nombreOperador')?.value)) {
+      const pendingSubmitted = cleanList.find(p => p.status === 'SUBMITTED');
+      if (pendingSubmitted) {
+        this.loadDriverSubmission(pendingSubmitted);
       }
     }
   }
@@ -1654,8 +1714,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const boxPlatesVal      = passData.boxPlates      || passData.placasCaja      || passData.trailerPlates  || '';
     const boxDimensionsVal  = passData.boxDimensions  || passData.medidasCaja     || passData.boxSize        || '53 Pies';
     const transportTypeVal  = passData.transportType  || passData.tipoTransporte  || passData.vehicleType    || 'Tráiler';
-    const ecoNumberVal      = passData.noEcoTractor || '';
-    const boxEcoVal         = passData.noEcoCaja || '';
+    const ecoNumberVal      = passData.noEcoTractor || passData.ecoTractor || passData.noEco || passData.placasTracto || 'S/N';
+    const boxEcoVal         = passData.noEcoCaja || passData.ecoCaja || 'S/N';
     const docNumberVal      = passData.docNumber      || passData.remision        || passData.noCartaPorte   || '';
     const isSubmitted       = passData.status === 'SUBMITTED';
 
@@ -1810,8 +1870,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       // Responsable Vigilancia
       responsableVigilanciaNombre: this.checkInForm.get('responsableVigilanciaNombre')?.value || this.getLoggedGuardName(),
       responsableVigilanciaFirma: true,
-      rampCode:            '',
-      rampNumber:          null
+      assignmentType:      passData.rampNumber ? 'RAMP' : 'PATIO',
+      rampCode:            passData.rampCode || '',
+      rampNumber:          passData.rampNumber ? Number(passData.rampNumber) : null,
+      observaciones:       passData.observations || '',
     });
 
     if (docNumberVal) {
@@ -1834,15 +1896,18 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     if (opVal === 'CARGA') {
       this.sealList.set(['PENDIENTE_ANDEN']);
       this.checkInForm.patchValue({ noSello: 'PENDIENTE_ANDEN' });
-    } else if (passData.sealNumbers && Array.isArray(passData.sealNumbers) && passData.sealNumbers.length > 0 && !passData.sealNumbers[0].includes('N/A')) {
-      this.sealList.set(passData.sealNumbers);
-      this.checkInForm.patchValue({ noSello: passData.sealNumbers[0] });
+    } else if (passData.sealNumbers && Array.isArray(passData.sealNumbers) && passData.sealNumbers.length > 0) {
+      const cleanSeals = passData.sealNumbers.filter((s: string) => s && s.trim() !== '' && !s.includes('N/A'));
+      this.sealList.set(cleanSeals.length > 0 ? cleanSeals : []);
+      this.checkInForm.patchValue({ noSello: cleanSeals.length > 0 ? cleanSeals[0] : '' });
     } else if (passData.sealNumber || passData.noSello) {
-      const s = passData.sealNumber || passData.noSello;
-      this.sealList.set([s]);
-      this.checkInForm.patchValue({ noSello: s });
+      const s = String(passData.sealNumber || passData.noSello).trim();
+      const cleanSeals = (s && !s.includes('N/A')) ? [s] : [];
+      this.sealList.set(cleanSeals);
+      this.checkInForm.patchValue({ noSello: cleanSeals[0] || '' });
     } else {
       this.sealList.set([]);
+      this.checkInForm.patchValue({ noSello: '' });
     }
 
     // 10. Toast de confirmación y cerrar panel
@@ -2287,6 +2352,49 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     return `Rampa ${rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber} (Ocupada - Salida #${occ.operationFolio})`;
   }
 
+  // ── MÉTODOS DE ASIGNACIÓN DE RAMPA FÍSICA O ESPERA EN PATIO ────────────────
+  protected setAssignmentType(type: 'RAMP' | 'PATIO'): void {
+    this.checkInForm.patchValue({ assignmentType: type });
+    if (type === 'PATIO') {
+      this.checkInForm.patchValue({
+        rampCode: '',
+        rampNumber: null
+      });
+    }
+  }
+
+  protected selectRamp(rm: RampItem): void {
+    this.checkInForm.patchValue({
+      assignmentType: 'RAMP',
+      rampNumber: rm.rampNumber,
+      rampCode: rm.code
+    });
+
+    const occ = this.getRampOccupancyInfo(rm.rampNumber);
+    if (occ && occ.status !== 'AVAILABLE') {
+      this.toast.warning(
+        `⚠️ Rampa ${rm.rampNumber} actualmente ocupada por Folio #${occ.operationFolio || 'S/N'}. La unidad esperará turno si se asigna.`,
+        4000
+      );
+    } else {
+      this.toast.info(`✅ Rampa R-${String(rm.rampNumber).padStart(2, '0')} asignada para acceso directo.`, 2500);
+    }
+  }
+
+  protected isRampSelected(rampNumber: number): boolean {
+    return this.checkInForm.get('assignmentType')?.value === 'RAMP' &&
+           Number(this.checkInForm.get('rampNumber')?.value) === rampNumber;
+  }
+
+  protected getRampOccupancyInfo(rampNumber: number): RampOccupancyStatus | undefined {
+    return this.rampOccupancy().find((r) => r.rampNumber === rampNumber);
+  }
+
+  protected isRampAvailable(rampNumber: number): boolean {
+    const occ = this.getRampOccupancyInfo(rampNumber);
+    return !occ || occ.status === 'AVAILABLE';
+  }
+
   // ── SUBMIT FORMULARIO (CHECK-IN REAL DE CASETA) ─────────────────────────────
   protected submitCheckIn(): void {
     if (this.tempSealInput().trim()) {
@@ -2353,9 +2461,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       `Chofer: ${formVal.transportistaNombre || formVal.nombreOperador} (Tel: ${formVal.driverPhone || 'No registrado'}) | Vigilancia: ${formVal.responsableVigilanciaNombre || this.getLoggedGuardName()}`
     ].join(' | ');
 
-    const rCode = formVal.rampCode || null;
-    const rNum = formVal.rampNumber ? Number(formVal.rampNumber) : null;
-    const rDisplay = rCode || (rNum ? `R-${rNum}` : 'Pendiente en Almacén');
+    const assignType = formVal.assignmentType || (formVal.rampNumber ? 'RAMP' : 'PATIO');
+    const rNum = assignType === 'RAMP' && formVal.rampNumber ? Number(formVal.rampNumber) : null;
+    const rCode = assignType === 'RAMP' ? (formVal.rampCode || (rNum ? `LOC-RAMP-${String(rNum).padStart(2, '0')}` : null)) : null;
+
+    const rDisplay = assignType === 'RAMP' && rNum
+      ? `Rampa R-${String(rNum).padStart(2, '0')}`
+      : 'En Espera en Patio';
 
     const checkInData: CheckInCasetaData = {
       carrierLineCode: formVal.carrierLineCode,
@@ -2392,7 +2504,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.assignedRampLabel.set(rDisplay);
 
           if (currentPassToken) {
-            this.movementsService.movementsApi.deletePass(currentPassToken).subscribe();
+            this.movementsService.movementsApi.completePassCheckin(currentPassToken, {
+              status: 'AUTHORIZED',
+              assignedRamp: rDisplay,
+              rampCode: rCode,
+              rampNumber: rNum,
+              receptionFolio: outbound.folio,
+              authorizedAt: new Date().toISOString()
+            }).subscribe();
           }
 
           const printSnapshot = {
@@ -2402,6 +2521,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             generatedFolio: outbound.folio,
             folio: outbound.folio,
             rampCode: rDisplay,
+            rampNumber: rNum,
             driverSignature: this.activeDriverSignature() || undefined,
             driverSignedAt: this.activeDriverSignedAt() || undefined
           };
@@ -2409,7 +2529,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.resetForm();
 
           // Notificación flotante del sistema y scroll al menú superior
-          this.toast.success(`¡Carga / Salida corroborada y enviada a Operaciones! Folio #${outbound.folio}`, 4500);
+          this.toast.success(`¡Acceso a Planta Autorizado para Carga! Folio #${outbound.folio} · ${rDisplay}`, 4500);
           this.scrollToTop();
 
           this.reloadAllData();
@@ -2417,7 +2537,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isSaving.set(false);
-          const msg = err?.error?.message || err?.message || 'Error al enviar la información a Operaciones';
+          const msg = err?.error?.message || err?.message || 'Error al autorizar el ingreso en Caseta';
           this.errorMessage.set(msg);
           this.toast.error(msg, 4500);
           this.scrollToTop();
@@ -2431,7 +2551,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.assignedRampLabel.set(rDisplay);
 
           if (currentPassToken) {
-            this.movementsService.movementsApi.deletePass(currentPassToken).subscribe();
+            this.movementsService.movementsApi.completePassCheckin(currentPassToken, {
+              status: 'AUTHORIZED',
+              assignedRamp: rDisplay,
+              rampCode: rCode,
+              rampNumber: rNum,
+              receptionFolio: header.folio,
+              authorizedAt: new Date().toISOString()
+            }).subscribe();
           }
 
           const printSnapshot = {
@@ -2441,6 +2568,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             generatedFolio: header.folio,
             folio: header.folio,
             rampCode: rDisplay,
+            rampNumber: rNum,
             driverSignature: this.activeDriverSignature() || undefined,
             driverSignedAt: this.activeDriverSignedAt() || undefined
           };
@@ -2448,7 +2576,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.resetForm();
 
           // Notificación flotante del sistema y scroll al menú superior
-          this.toast.success(`¡Información corroborada y enviada a Operaciones! Folio #${header.folio}`, 4500);
+          this.toast.success(`¡Acceso a Planta Autorizado para Descarga! Folio #${header.folio} · ${rDisplay}`, 4500);
           this.scrollToTop();
 
           this.reloadAllData();
@@ -2456,7 +2584,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isSaving.set(false);
-          const msg = err?.error?.message || err?.message || 'Error al enviar la información a Operaciones';
+          const msg = err?.error?.message || err?.message || 'Error al autorizar el ingreso en Caseta';
           this.errorMessage.set(msg);
           this.toast.error(msg, 4500);
           this.scrollToTop();
@@ -2486,8 +2614,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       carrierLineCustom: '',
       nombreOperador: '',
       driverPhone: '',
+      assignmentType: 'RAMP',
       rampCode: '',
-      rampNumber: 0,
+      rampNumber: null,
       placasTracto: '',
       noEcoTractor: '',
       placasCaja: '',

@@ -243,28 +243,19 @@ export class AuthState {
 
     const normRole = String(rawRole).trim().toUpperCase();
 
-    // 0. Director General / Administradores: Acceso total e irrestricto a todos los modulos
+    // 0. Director General / Administradores / Gerentes de Operaciones: Acceso total e irrestricto a todos los modulos
     if (
       normRole === 'SUPER_ADMIN' ||
       normRole === 'ROLE_SUPER_ADMIN' ||
       normRole === 'ROLE_ADMIN' ||
       normRole === 'ADMIN' ||
       normRole === 'CEO' ||
-      normRole === 'ROLE_CEO'
-    ) {
-      return true;
-    }
-
-    // 1. Gerente de Operaciones: Acceso total operativo WMS EXCLUYENDO Seguridad y Calidad
-    if (
+      normRole === 'ROLE_CEO' ||
       normRole === 'OPERATIONS_MANAGER' ||
       normRole === 'ROLE_OPERATIONS_MANAGER' ||
       normRole === 'WAREHOUSE_MANAGER' ||
       normRole === 'ROLE_WAREHOUSE_MANAGER'
     ) {
-      if (module === 'security' || module === 'quality') {
-        return false;
-      }
       return true;
     }
 

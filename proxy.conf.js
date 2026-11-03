@@ -10,7 +10,7 @@
 const path = require('path');
 const fs = require('fs');
 
-const target = process.env.BACKEND_URL || 'http://localhost:8080';
+const target = process.env.BACKEND_URL || 'https://fourguard-be-huzh.onrender.com';
 const SHARED_STATE_FILE = path.join(__dirname, '.proxy-shared-state.json');
 
 function loadState() {
@@ -42,7 +42,9 @@ function saveState(state) {
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*'
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-organization-id, x-branch-id'
   });
   res.end(JSON.stringify(payload));
 }
@@ -54,9 +56,19 @@ const PROXY_CONFIG = {
     "changeOrigin": true,
     "logLevel": "info",
     "bypass": function(req, res, proxyOptions) {
-      // 100% DIRECTO AL BACKEND LOCAL (SPRING BOOT + POSTGRESQL)
-      // No interceptar: pasar todo sin mocks al backend real
-      return undefined;
+      const url = req.url || '';
+      const cleanUrl = url.split('?')[0];
+
+      // Manejar preflight CORS
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204, {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-organization-id, x-branch-id'
+        });
+        res.end();
+        return true;
+      }
 
       // 1.1 POST /api/v1/warehouse-receptions/check-in
       if (req.method === 'POST' && url.includes('/warehouse-receptions/check-in')) {
@@ -322,8 +334,39 @@ const PROXY_CONFIG = {
       }
 
       // ─── 3. INTERCEPTAR PASES DE CASETA (CHOFERES QR Y CONTROL DE PATIO) ──────
+      // 3.0a GET catálogos públicos para auto-registro móvil: /api/v1/security-gate/public/catalogs
+      if (req.method === 'GET' && cleanUrl.includes('/security-gate/public/catalogs')) {
+        sendJson(res, 200, {
+          success: true,
+          data: {
+            clients: [
+              { id: '87c07cb2-61c3-4006-a88c-265bd1eee2df', code: '87c07cb2-61c3-4006-a88c-265bd1eee2df', name: 'MARCAS NESTLE S.A. DE C.V.' },
+              { id: 'c083251b-e210-494e-80f3-38814eaba992', code: 'c083251b-e210-494e-80f3-38814eaba992', name: 'NESTLE MEXICO S.A. DE C.V.' },
+              { id: 'edc885c6-0216-405a-84cc-841f47f30f48', code: 'edc885c6-0216-405a-84cc-841f47f30f48', name: 'QUALAMEX S.A. DE C.V.' }
+            ],
+            carriers: [
+              { id: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', code: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', name: 'TRANSPORTE GOLA', tradeName: 'TRANSPORTE GOLA' },
+              { id: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', code: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', name: 'TRANSPORTE DIAZ', tradeName: 'TRANSPORTE DIAZ' },
+              { id: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', code: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', name: 'TRANSPORTE TUM', tradeName: 'TRANSPORTE TUM' },
+              { id: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', code: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', name: 'TRANSPORTE EBEN EZER', tradeName: 'TRANSPORTE EBEN EZER' },
+              { id: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', code: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', name: 'TRANSPORTE MONCHO', tradeName: 'TRANSPORTE MONCHO' }
+            ],
+            carrierLines: [
+              { id: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', code: 'b811e3c8-ec2f-43b0-9bea-70acbcfc15af', name: 'TRANSPORTE GOLA', tradeName: 'TRANSPORTE GOLA' },
+              { id: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', code: '0142ab81-1d79-4c2b-a513-b5454b7f38f0', name: 'TRANSPORTE DIAZ', tradeName: 'TRANSPORTE DIAZ' },
+              { id: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', code: '9be19da3-a0fe-475a-9ddb-a19e98c4324f', name: 'TRANSPORTE TUM', tradeName: 'TRANSPORTE TUM' },
+              { id: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', code: '3df5cf16-8fc1-428f-bfe5-e24c3e7efff4', name: 'TRANSPORTE EBEN EZER', tradeName: 'TRANSPORTE EBEN EZER' },
+              { id: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', code: '57135442-04c1-42b5-9ecb-e6b2b1289a7b', name: 'TRANSPORTE MONCHO', tradeName: 'TRANSPORTE MONCHO' }
+            ],
+            transportTypes: ['Tortón', 'Tráiler', 'Camioneta', 'Otro (Especificar)'],
+            boxDimensions: ['53 Pies', '48 Pies', '40 Pies', '20 Pies', 'Tortón', 'Rabón', '3.5 Toneladas', 'N/A - Plataforma', 'Otra Medida']
+          }
+        });
+        return true;
+      }
+
       // 3.0 POST /api/v1/security-gate/passes/generate
-      if (req.method === 'POST' && url.includes('/security-gate/passes/generate')) {
+      if (req.method === 'POST' && cleanUrl.includes('/security-gate/passes/generate')) {
         let body = '';
         req.on('data', chunk => { body += chunk; });
         req.on('end', () => {
@@ -350,41 +393,52 @@ const PROXY_CONFIG = {
       }
 
       // 3.1 POST auto-registro del chofer: /api/v1/security-gate/public/passes/:token/submit
-      if (req.method === 'POST' && url.includes('/public/passes/') && url.endsWith('/submit')) {
-        const parts = url.split('/');
-        const token = parts[parts.length - 2];
+      if (req.method === 'POST' && cleanUrl.includes('/public/passes/') && cleanUrl.endsWith('/submit')) {
+        const parts = cleanUrl.split('/');
+        const submitIdx = parts.indexOf('submit');
+        const token = submitIdx > 0 ? parts[submitIdx - 1] : parts[parts.length - 2];
         let body = '';
         req.on('data', chunk => { body += chunk; });
         req.on('end', () => {
           try {
             const data = JSON.parse(body || '{}');
             const state = loadState();
+            const existing = state.passes[token] || {};
             const passObj = {
               id: token,
               token: token,
               generatedFolio: token,
-              status: 'SUBMITTED',
-              createdAt: new Date().toISOString(),
+              status: data.status || 'SUBMITTED',
+              createdAt: existing.createdAt || new Date().toISOString(),
               submittedAt: new Date().toISOString(),
-              driverName: data.driverName || data.nombreOperador || 'Transportista',
-              nombreOperador: data.driverName || data.nombreOperador || 'Transportista',
-              carrierLine: data.carrierLine || 'Transporte General',
-              clientName: data.clientName || 'General',
-              tractorPlates: data.tractorPlates || data.placasTracto || '',
-              placasTracto: data.tractorPlates || data.placasTracto || '',
-              boxPlates: data.boxPlates || data.placasCaja || '',
-              placasCaja: data.boxPlates || data.placasCaja || '',
-              docNumber: data.docNumber || data.remision || data.noCartaPorte || '',
-              remision: data.remision || '',
-              noCartaPorte: data.noCartaPorte || '',
-              operationType: data.operationType || data.operacion || 'DESCARGA',
-              driverPhone: data.driverPhone || '',
+              driverName: (data.driverName || data.nombreOperador || 'Transportista').trim().toUpperCase(),
+              nombreOperador: (data.driverName || data.nombreOperador || 'Transportista').trim().toUpperCase(),
+              carrierLine: (data.carrierLine || 'Transporte General').trim().toUpperCase(),
+              carrierLineCode: data.carrierLineCode || '',
+              clientName: (data.clientName || 'General').trim().toUpperCase(),
+              clientCode: data.clientCode || '',
+              tractorPlates: (data.tractorPlates || data.placasTracto || '').trim().toUpperCase(),
+              placasTracto: (data.tractorPlates || data.placasTracto || '').trim().toUpperCase(),
+              noEcoTractor: (data.noEcoTractor || data.tractorPlates || data.placasTracto || 'S/N').trim().toUpperCase(),
+              boxPlates: (data.boxPlates || data.placasCaja || '').trim().toUpperCase(),
+              placasCaja: (data.boxPlates || data.placasCaja || '').trim().toUpperCase(),
+              noEcoCaja: (data.noEcoCaja || 'S/N').trim().toUpperCase(),
+              docNumber: (data.docNumber || data.remision || data.noCartaPorte || '').trim().toUpperCase(),
+              remision: (data.remision || data.docNumber || '').trim().toUpperCase(),
+              noCartaPorte: (data.noCartaPorte || '').trim().toUpperCase(),
+              operationType: (data.operationType || data.operacion || 'DESCARGA').trim().toUpperCase(),
+              operacion: (data.operationType || data.operacion || 'DESCARGA').trim().toUpperCase(),
+              driverPhone: (data.driverPhone || '').trim(),
               driverSignature: data.driverSignature || '',
-              sealNumbers: data.sealNumbers || [],
-              observations: data.observations || '',
-              boxDimensions: data.boxDimensions || '53 Pies',
-              transportType: data.transportType || 'Tráiler',
-              ...data
+              sealNumbers: Array.isArray(data.sealNumbers) ? data.sealNumbers : (data.sealNumber ? [data.sealNumber] : []),
+              observations: (data.observations || 'REGISTRO COMPLETADO POR CHOFER VÍA SMARTPHONE').trim().toUpperCase(),
+              boxDimensions: (data.boxDimensions || data.medidasCaja || '53 Pies').trim(),
+              medidasCaja: (data.boxDimensions || data.medidasCaja || '53 Pies').trim(),
+              transportType: (data.transportType || data.tipoTransporte || 'Tráiler').trim(),
+              tipoTransporte: (data.transportType || data.tipoTransporte || 'Tráiler').trim(),
+              ...data,
+              // Asegurar que el status sea el correcto
+              status: data.status || 'SUBMITTED'
             };
             state.passes[token] = passObj;
             saveState(state);
@@ -397,22 +451,33 @@ const PROXY_CONFIG = {
       }
 
       // 3.2 GET de pase público: /api/v1/security-gate/public/passes/:token
-      if (req.method === 'GET' && url.includes('/public/passes/')) {
-        const parts = url.split('/');
+      if (req.method === 'GET' && cleanUrl.includes('/public/passes/')) {
+        const parts = cleanUrl.split('/');
         const token = parts[parts.length - 1].split('?')[0];
         const state = loadState();
-        const pass = state.passes[token] || {
-          id: token,
-          token: token,
-          status: 'PENDING_DRIVER',
-          createdAt: new Date().toISOString()
-        };
+        let pass = state.passes[token];
+        if (!pass) {
+          for (const item of Object.values(state.passes || {})) {
+            if (item.token === token || item.id === token || item.generatedFolio === token) {
+              pass = item;
+              break;
+            }
+          }
+        }
+        if (!pass) {
+          pass = {
+            id: token,
+            token: token,
+            status: 'PENDING_DRIVER',
+            createdAt: new Date().toISOString()
+          };
+        }
         sendJson(res, 200, { success: true, data: pass });
         return true;
       }
 
       // 3.3 GET de pases activos para Caseta: /api/v1/security-gate/passes/active
-      if (req.method === 'GET' && url.includes('/security-gate/passes/active')) {
+      if (req.method === 'GET' && cleanUrl.includes('/security-gate/passes/active')) {
         const state = loadState();
         const localList = Object.values(state.passes || {}).filter(p => p.status === 'SUBMITTED' || p.status === 'PENDING_DRIVER');
         sendJson(res, 200, {
@@ -552,18 +617,44 @@ const PROXY_CONFIG = {
       }
 
       // 3.7 POST complete de pases: /api/v1/security-gate/passes/:token/complete
-      if (req.method === 'POST' && url.includes('/security-gate/passes/') && url.endsWith('/complete')) {
-        const parts = url.split('/');
-        const token = parts[parts.length - 2];
-        const state = loadState();
-        delete state.passes[token];
-        for (const [k, v] of Object.entries(state.passes || {})) {
-          if (v.id === token || v.token === token) {
-            delete state.passes[k];
+      if (req.method === 'POST' && cleanUrl.includes('/security-gate/passes/') && cleanUrl.endsWith('/complete')) {
+        const parts = cleanUrl.split('/');
+        const compIdx = parts.indexOf('complete');
+        const token = compIdx > 0 ? parts[compIdx - 1] : parts[parts.length - 2];
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body || '{}');
+            const state = loadState();
+            let targetPass = state.passes[token];
+            if (!targetPass) {
+              for (const [k, v] of Object.entries(state.passes || {})) {
+                if (v.id === token || v.token === token || v.generatedFolio === token) {
+                  targetPass = v;
+                  break;
+                }
+              }
+            }
+            const updated = {
+              ...(targetPass || { id: token, token }),
+              status: 'AUTHORIZED',
+              assignedRamp: data.assignedRamp || data.rampCode || (data.rampNumber ? `RAMPA ${data.rampNumber}` : 'ASIGNADA'),
+              rampCode: data.rampCode || data.assignedRamp || '',
+              rampNumber: data.rampNumber || null,
+              receptionFolio: data.receptionFolio || '',
+              authorizedAt: data.authorizedAt || new Date().toISOString()
+            };
+            state.passes[token] = updated;
+            if (targetPass && targetPass.token && targetPass.token !== token) {
+              state.passes[targetPass.token] = updated;
+            }
+            saveState(state);
+            sendJson(res, 200, { success: true, message: 'Pase autorizado con rampa', data: updated });
+          } catch (e) {
+            sendJson(res, 400, { success: false, message: 'Error procesando pase completado' });
           }
-        }
-        saveState(state);
-        sendJson(res, 200, { success: true, message: 'Pase completado', data: { folio: token, token } });
+        });
         return true;
       }
 

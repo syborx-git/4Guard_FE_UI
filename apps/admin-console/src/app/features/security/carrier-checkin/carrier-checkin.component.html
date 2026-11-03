@@ -78,89 +78,174 @@
   <!-- Main Content Area -->
   <main class="driver-portal__main">
     @if (submitSuccess()) {
-      <!-- SUCCESS SCREEN CON PASE DIGITAL QR OFICIAL PARA MOSTRAR A CASETA -->
-      <div class="success-card animate-fade-in">
-        <div class="success-icon-wrap">
-          <span class="success-check">✓</span>
-        </div>
-        <h2 class="success-title">¡Pase Digital de Acceso Listo!</h2>
-        <p class="success-subtitle">
-          Muestre este <strong>Código QR</strong> al oficial de seguridad en la caseta de acceso a planta.
-        </p>
+      @if (passStatus() === 'AUTHORIZED') {
+        <!-- ═══════════════════════════════════════════════════════════════════
+             VISTA 1: ¡ACCESO A PLANTA AUTORIZADO CON RAMPA ASIGNADA!
+             ═══════════════════════════════════════════════════════════════════ -->
+        <div class="success-card animate-fade-in" style="border-color: #10b981; box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.25);">
+          <div class="success-icon-wrap" style="background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981;">
+            <span class="success-check" style="color: #10b981;">✓</span>
+          </div>
+          <span class="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 inline-block mb-1">
+            ✓ INGRESO A PLANTA AUTORIZADO
+          </span>
+          <h2 class="success-title text-emerald-400">¡Acceso Autorizado por Caseta!</h2>
+          <p class="success-subtitle">
+            El oficial de seguridad ha autorizado su ingreso y asignado su posición de maniobra:
+          </p>
 
-        <!-- Contenedor Destacado del Código QR para Escaneo en Caseta -->
-        <div class="my-4 p-4 bg-white rounded-2xl shadow-lg border-2 border-amber-400 inline-block mx-auto text-center">
-          <div class="relative inline-flex items-center justify-center p-2 bg-white rounded-xl">
-            <img 
-              [src]="getQrCodeUrl()" 
-              alt="Código QR del Pase de Acceso" 
-              class="w-52 h-52 sm:w-60 sm:h-60 object-contain rounded-lg" />
-          </div>
-          <div class="mt-2 font-mono font-black text-sm text-slate-900 bg-amber-50 py-1 px-3 rounded-lg border border-amber-200">
-            FOLIO: {{ token() }}
-          </div>
-        </div>
-
-        <!-- Botones de Acción: WhatsApp & Editar Formulario -->
-        <div class="actions-grid mb-4" style="display: flex; flex-direction: column; gap: 0.65rem; width: 100%;">
-          <button 
-            type="button" 
-            (click)="sharePassViaWhatsApp()"
-            class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-md transition-all w-full cursor-pointer"
-            style="background: #059669; border: none; font-size: 0.9rem; font-weight: 800; padding: 0.85rem 1rem; border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);">
-            <span style="font-size: 1.2rem;">💬</span>
-            <span>Compartir Pase por WhatsApp</span>
-          </button>
-
-          <button 
-            type="button" 
-            (click)="switchToFormView()"
-            class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-amber-300 font-bold text-xs transition-all w-full cursor-pointer"
-            style="background: rgba(208, 175, 103, 0.15); border: 1px solid rgba(208, 175, 103, 0.4); font-size: 0.8rem; font-weight: 700; padding: 0.65rem 1rem; border-radius: 10px; color: #e1c47c; display: flex; align-items: center; justify-content: center; gap: 0.4rem; cursor: pointer;">
-            <span>✏️ Modificar Datos / Volver al Formulario</span>
-          </button>
-        </div>
-
-        <div class="success-info-box">
-          <div class="info-row">
-            <span class="label">Operación:</span>
-            <span class="value font-bold text-accent">{{ checkInForm.get('operacion')?.value }}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Documento:</span>
-            <span class="value font-mono font-bold">{{ checkInForm.get('operacion')?.value === 'CARGA' ? (checkInForm.get('noCartaPorte')?.value || 'N/A') : (checkInForm.get('remision')?.value || 'N/A') }}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Chofer:</span>
-            <span class="value font-bold">{{ checkInForm.get('nombreOperador')?.value || 'Transportista' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Transportista:</span>
-            <span class="value">{{ checkInForm.get('carrierLine')?.value || '-' }}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Tracto / Caja:</span>
-            <span class="value font-mono font-bold">{{ checkInForm.get('placasTracto')?.value || '-' }}{{ checkInForm.get('noEcoTractor')?.value ? ' (' + checkInForm.get('noEcoTractor')?.value + ')' : '' }} / {{ checkInForm.get('placasCaja')?.value || '-' }}{{ checkInForm.get('noEcoCaja')?.value ? ' (' + checkInForm.get('noEcoCaja')?.value + ')' : '' }}</span>
-          </div>
-          @if (checkInForm.get('driverPhone')?.value) {
-            <div class="info-row">
-              <span class="label">WhatsApp Chofer:</span>
-              <span class="value font-mono">{{ checkInForm.get('driverPhone')?.value }}</span>
+          <!-- TARJETA DESTACADA GIGANTE DEL DESTINO / RAMPA -->
+          <div class="my-4 p-5 rounded-2xl text-center shadow-lg border-2 transition-all"
+               [style.background]="assignedRamp()?.includes('Patio') ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.18)'"
+               [style.borderColor]="assignedRamp()?.includes('Patio') ? '#f59e0b' : '#10b981'">
+            <span class="text-xs font-black tracking-widest uppercase block mb-1"
+                  [style.color]="assignedRamp()?.includes('Patio') ? '#fbbf24' : '#34d399'">
+              {{ assignedRamp()?.includes('Patio') ? '📍 ZONA DE ESPERA ASIGNADA' : '🚛 ANDÉN / RAMPA ASIGNADA' }}
+            </span>
+            <div class="text-3xl sm:text-4xl font-mono font-black tracking-tight my-2 text-white">
+              {{ assignedRamp() || 'Rampa de Andén' }}
             </div>
-          }
-          @if (sealList().length > 0) {
-            <div class="info-row">
-              <span class="label">Sellos de Seguridad:</span>
-              <span class="value font-mono" style="color: #34d399; font-weight: bold;">{{ sealList().join(', ') }}</span>
-            </div>
-          }
-        </div>
+            <p class="text-xs text-slate-200 mt-2 font-medium leading-relaxed">
+              {{ assignedRamp()?.includes('Patio') 
+                ? 'Avance con su unidad al patio de maniobras y permanezca atento a las indicaciones del personal de patio.' 
+                : 'Avance con precaución hacia el andén indicado y presente su unidad para maniobra de ' + (checkInForm.get('operacion')?.value || 'Descarga') + '.' }}
+            </p>
+          </div>
 
-        <div class="success-instruction">
-          <span class="alert-icon">⚠️</span>
-          <span>Por favor <strong>permanezca en su unidad</strong> en el carril de acceso. El guardia escaneará su código QR desde su terminal para autorizar su ingreso e inspección F01.</span>
+          <!-- Pase QR de Validación para el Andén -->
+          <div class="my-3 p-3 bg-white rounded-2xl shadow-md border-2 border-emerald-400 inline-block mx-auto text-center">
+            <img [src]="getQrCodeUrl()" alt="Código QR del Pase" class="w-40 h-40 object-contain mx-auto rounded-lg" />
+            <div class="mt-1 font-mono font-black text-xs text-slate-900 bg-emerald-50 py-1 px-3 rounded-lg border border-emerald-200">
+              FOLIO: {{ token() }}
+            </div>
+          </div>
+
+          <!-- Botones de Acción -->
+          <div class="actions-grid mb-4" style="display: flex; flex-direction: column; gap: 0.65rem; width: 100%;">
+            <button 
+              type="button" 
+              (click)="sharePassViaWhatsApp()"
+              class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-md transition-all w-full cursor-pointer"
+              style="background: #059669; border: none; font-size: 0.9rem; font-weight: 800; padding: 0.85rem 1rem; border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer;">
+              <span style="font-size: 1.2rem;">💬</span>
+              <span>Compartir Pase por WhatsApp</span>
+            </button>
+          </div>
+
+          <!-- Resumen de Datos -->
+          <div class="success-info-box">
+            <div class="info-row">
+              <span class="label">Operación:</span>
+              <span class="value font-bold text-accent">{{ checkInForm.get('operacion')?.value }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Documento:</span>
+              <span class="value font-mono font-bold">{{ checkInForm.get('operacion')?.value === 'CARGA' ? (checkInForm.get('noCartaPorte')?.value || 'N/A') : (checkInForm.get('remision')?.value || 'N/A') }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Chofer:</span>
+              <span class="value font-bold">{{ checkInForm.get('nombreOperador')?.value || 'Transportista' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Transportista:</span>
+              <span class="value">{{ checkInForm.get('carrierLine')?.value || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Tracto / Caja:</span>
+              <span class="value font-mono font-bold">{{ checkInForm.get('placasTracto')?.value || '-' }} / {{ checkInForm.get('placasCaja')?.value || '-' }}</span>
+            </div>
+            @if (sealList().length > 0) {
+              <div class="info-row">
+                <span class="label">Sellos Validados:</span>
+                <span class="value font-mono" style="color: #34d399; font-weight: bold;">{{ sealList().join(', ') }}</span>
+              </div>
+            }
+          </div>
         </div>
-      </div>
+      } @else {
+        <!-- ═══════════════════════════════════════════════════════════════════
+             VISTA 2: REGISTRO ENVIADO — EN ESPERA DE ASIGNACIÓN DE RAMPA
+             ═══════════════════════════════════════════════════════════════════ -->
+        <div class="success-card animate-fade-in" style="border-color: #f59e0b; box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.2);">
+          <!-- Icono Reloj de Arena Animado -->
+          <div class="relative inline-flex items-center justify-center w-20 h-20 mb-3 mx-auto">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-20 animate-ping"></span>
+            <div class="relative inline-flex rounded-full h-16 w-16 bg-amber-500/20 border-2 border-amber-400 items-center justify-center text-3xl">
+              ⏳
+            </div>
+          </div>
+
+          <span class="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-block mb-1">
+            Pase #{{ token() }} · Transmitido a Caseta
+          </span>
+
+          <h2 class="success-title text-white">¡Registro Recibido en Caseta!</h2>
+          <p class="success-subtitle text-slate-300">
+            Su información fue recibida con éxito por el oficial de seguridad.
+          </p>
+
+          <!-- Banner de Espera Activa y Sincronización en Vivo -->
+          <div class="my-4 p-4 rounded-xl text-center bg-amber-500/10 border border-amber-500/30">
+            <div class="flex items-center justify-center gap-2 mb-2 font-black text-amber-300 text-sm">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+              <span>En Espera de Asignación de Rampa...</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Por favor <strong>permanezca en su unidad</strong> en el carril de acceso. En cuanto el oficial de seguridad autorice su ingreso, <strong>esta pantalla le mostrará automáticamente la rampa asignada</strong>.
+            </p>
+          </div>
+
+          <!-- Botones de Acción -->
+          <div class="actions-grid mb-4" style="display: flex; flex-direction: column; gap: 0.65rem; width: 100%;">
+            <button 
+              type="button" 
+              (click)="sharePassViaWhatsApp()"
+              class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-md transition-all w-full cursor-pointer"
+              style="background: #059669; border: none; font-size: 0.9rem; font-weight: 800; padding: 0.85rem 1rem; border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer;">
+              <span style="font-size: 1.2rem;">💬</span>
+              <span>Guardar Pase por WhatsApp</span>
+            </button>
+
+            <button 
+              type="button" 
+              (click)="switchToFormView()"
+              class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-amber-300 font-bold text-xs transition-all w-full cursor-pointer"
+              style="background: rgba(208, 175, 103, 0.15); border: 1px solid rgba(208, 175, 103, 0.4); font-size: 0.8rem; font-weight: 700; padding: 0.65rem 1rem; border-radius: 10px; color: #e1c47c; display: flex; align-items: center; justify-content: center; gap: 0.4rem; cursor: pointer;">
+              <span>✏️ Modificar Datos / Volver al Formulario</span>
+            </button>
+          </div>
+
+          <!-- Resumen de Datos Capturados -->
+          <div class="success-info-box">
+            <div class="info-row">
+              <span class="label">Operación:</span>
+              <span class="value font-bold text-accent">{{ checkInForm.get('operacion')?.value }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Documento:</span>
+              <span class="value font-mono font-bold">{{ checkInForm.get('operacion')?.value === 'CARGA' ? (checkInForm.get('noCartaPorte')?.value || 'N/A') : (checkInForm.get('remision')?.value || 'N/A') }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Chofer:</span>
+              <span class="value font-bold">{{ checkInForm.get('nombreOperador')?.value || 'Transportista' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Transportista:</span>
+              <span class="value">{{ checkInForm.get('carrierLine')?.value || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Tracto / Caja:</span>
+              <span class="value font-mono font-bold">{{ checkInForm.get('placasTracto')?.value || '-' }} / {{ checkInForm.get('placasCaja')?.value || '-' }}</span>
+            </div>
+            @if (sealList().length > 0) {
+              <div class="info-row">
+                <span class="label">Sellos Declarados:</span>
+                <span class="value font-mono" style="color: #34d399; font-weight: bold;">{{ sealList().join(', ') }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
     } @else {
       <!-- FORM WIZARD -->
       <form [formGroup]="checkInForm" (ngSubmit)="submitDriverForm()" class="checkin-form">
