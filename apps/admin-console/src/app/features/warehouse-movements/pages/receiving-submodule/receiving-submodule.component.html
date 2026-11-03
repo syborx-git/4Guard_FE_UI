@@ -556,6 +556,18 @@
 
             <!-- BOTONES DE ACCIÓN SUPERIOR -->
             <div class="flex items-center gap-2">
+              @if (rec.status === 'DISCHARGED') {
+                <button
+                  type="button"
+                  [disabled]="isCompleting() || isSavingDraft()"
+                  (click)="initiateCompleteReception()"
+                  class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                  title="Autorizar visto bueno, colocar en inventario (100%) y mandar imprimir formato F01"
+                >
+                  <span class="material-symbols-outlined text-sm">print</span>
+                  <span>🖨️ Aprobar e Imprimir F01</span>
+                </button>
+              }
               @if (rec.status !== 'CANCELLED') {
                 <button
                   type="button"
@@ -1097,7 +1109,14 @@
                 <!-- Rampa de Recepción: 3 columnas (Diseño Homologado con Autocomplete y Badges) -->
                 <div class="fg-field relative col-span-1 sm:col-span-1 lg:col-span-3">
                   <div class="flex items-center justify-between">
-                    <label class="fg-label fg-label--required">Rampa de Recepción</label>
+                    <label class="fg-label fg-label--required flex items-center gap-1.5 flex-wrap">
+                      <span>Rampa de Recepción</span>
+                      @if (rec.checkIn?.rampNumber) {
+                        <span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold flex items-center gap-0.5" title="Rampa fijada por Caseta de Seguridad">
+                          <span class="material-symbols-outlined text-[11px]">lock</span> Asignada en Caseta
+                        </span>
+                      }
+                    </label>
                     <button
                       type="button"
                       (click)="showDockMapModal.set(true)"
@@ -1681,104 +1700,329 @@
                 </div>
               }
 
-              <!-- Escáner Activo de Tarimas con Selector de Lote Activo -->
-              <div class="scan-bar p-3.5 rounded-xl border border-gold/40 bg-gold-subtle flex flex-col gap-3">
-                <div class="flex items-center justify-between flex-wrap gap-2 text-gold font-bold text-xs">
-                  <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-lg">barcode_scanner</span>
-                    <span>ESCANEAR UA (TARIMA):</span>
-                  </div>
-                  @if (lotsList().length > 0) {
-                    <div class="flex items-center gap-2">
-                      <span class="text-[11px] text-slate-600 dark:text-slate-300 font-bold">Lote para nuevas UAs:</span>
-                      <select
-                        [ngModel]="selectedScanningLot()"
-                        (ngModelChange)="selectLotForScanning($event)"
-                        class="text-xs font-mono font-bold bg-white dark:bg-slate-900 border border-amber-500/40 rounded-lg px-2.5 py-1 text-slate-900 dark:text-slate-100"
-                      >
-                        @for (lt of lotsList(); track lt.lotNumber) {
-                          <option [value]="lt.lotNumber">{{ lt.lotNumber }} (Cad: {{ lt.expirationDate || 'N/A' }})</option>
-                        }
-                      </select>
-                      <button
-                        type="button"
-                        (click)="openAddLotModal()"
-                        class="text-[11px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5"
-                        title="Agregar otro lote a la sesión"
-                      >
-                        <span class="material-symbols-outlined text-xs">add</span>
-                        <span>Otro Lote</span>
-                      </button>
+              <!-- ESTACIÓN DE ESCANEO ACTIVA: CONSOLA DE ANDÉN Y DESCARGA DINÁMICA -->
+              <div class="dock-station-card rounded-2xl border-2 border-amber-500/30 bg-white dark:bg-slate-900 shadow-md transition-all flex flex-col">
+                
+                <!-- 1. ENCABEZADO DE LA ESTACIÓN CON INDICADOR EN VIVO -->
+                <div class="px-4 py-2.5 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border-b border-amber-500/20 flex flex-wrap items-center justify-between gap-3 rounded-t-2xl">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-sm">
+                      <span class="material-symbols-outlined text-lg">barcode_reader</span>
                     </div>
-                  }
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-slate-100">
+                          Estación de Escaneo y Descarga en Andén
+                        </span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          <span>Lector Láser Activo</span>
+                        </span>
+                      </div>
+                      <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                        Dispara con la pistola escáner a la etiqueta GS1 o utiliza los controles rápidos de simulación.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2.5 text-xs">
+                    <div class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
+                      <span class="material-symbols-outlined text-sm text-amber-600">warehouse</span>
+                      <span>Rampa: <strong class="text-amber-700 dark:text-amber-400 font-mono">{{ rec.checkIn?.rampNumber || '01' }}</strong></span>
+                    </div>
+                    <div class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
+                      <span class="material-symbols-outlined text-sm text-amber-600">description</span>
+                      <span>Remisión: <strong class="text-slate-900 dark:text-slate-100 font-mono">#{{ rec.folio }}</strong></span>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="flex flex-col sm:flex-row items-center gap-3">
-                  <div class="relative w-full">
-                    <input
-                      #uaInput
-                      type="text"
-                      [ngModel]="uaCodeInput()"
-                      (ngModelChange)="uaCodeInput.set($event)"
-                      (keyup.enter)="onUaEnter($event)"
-                      placeholder="Código de Barras / UA / SSCC-18 (Vacío = Auto GS1)"
-                      class="fg-input font-mono text-xs w-full border-gold focus:ring-2 focus:ring-gold pr-24"
-                    />
-                    <button
-                      type="button"
-                      (click)="generateAndSetUaCode()"
-                      class="absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] font-bold rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 border border-amber-500/30 transition-all flex items-center gap-1"
-                      title="Generar UA única GS1 SSCC-18 automática"
-                    >
-                      <span class="material-symbols-outlined text-xs">auto_awesome</span>
-                      <span>Auto SSCC</span>
-                    </button>
+                <!-- 2. CUERPO DE LA CONSOLA -->
+                <div class="p-4 space-y-3.5">
+                  
+                  <!-- PANEL A: Parámetros Dinámicos del Producto en Maniobra (Modificables al Vuelo) -->
+                  <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60">
+                    <div class="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-xs">tune</span>
+                      <span>Parámetros Activos de la Tarima en Curso (Modificables al Vuelo sin Recargar):</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+                      
+                      <!-- 1. Producto / SKU Activo (5 cols) -->
+                      <div class="lg:col-span-5 flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                          <span class="material-symbols-outlined text-xs text-amber-600">inventory_2</span>
+                          <span>Producto (SKU) Activo:</span>
+                        </label>
+                        <div class="relative flex items-center w-full z-30">
+                          <input
+                            type="text"
+                            [value]="skuSearchQuery()"
+                            (input)="onSkuInput($any($event.target).value)"
+                            (focus)="isSkuDropdownOpen.set(true)"
+                            (click)="isSkuDropdownOpen.set(true)"
+                            placeholder="Seleccionar o buscar SKU..."
+                            class="w-full text-xs font-bold rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 pr-8 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs cursor-pointer"
+                            autocomplete="off"
+                          />
+                          <button
+                            type="button"
+                            (click)="toggleSkuDropdown(); $event.stopPropagation()"
+                            class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded cursor-pointer absolute right-2"
+                            title="Ver catálogo de SKUs"
+                          >
+                            <span class="material-symbols-outlined text-base">expand_more</span>
+                          </button>
+
+                          @if (isSkuDropdownOpen()) {
+                            <div class="fixed inset-0 z-40" (click)="isSkuDropdownOpen.set(false)"></div>
+                            <div class="sku-autocomplete-dropdown z-50">
+                              <div class="sku-autocomplete-header flex items-center justify-between">
+                                <div class="flex items-center gap-1.5">
+                                  <span class="material-symbols-outlined text-sm text-amber-600">inventory_2</span>
+                                  <span>Catálogo SKU ({{ filteredProducts().length }})</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  (click)="isSkuDropdownOpen.set(false); $event.stopPropagation()"
+                                  class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs px-1 cursor-pointer"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                              @for (p of filteredProducts(); track (p.code || p.id)) {
+                                <button
+                                  type="button"
+                                  (click)="selectProductSku(p); $event.stopPropagation()"
+                                  class="sku-autocomplete-item !py-2 !px-2.5 w-full text-left flex items-center gap-2 cursor-pointer"
+                                  [class.sku-autocomplete-item--selected]="altaForm.get('productId')?.value === p.code || altaForm.get('productId')?.value === p.id"
+                                >
+                                  <span class="sku-autocomplete-badge text-[10px]">{{ p.code }}</span>
+                                  <span class="font-bold text-xs truncate text-slate-900 dark:text-slate-100 flex-1">{{ p.name }}</span>
+                                  @if (p.defaultPieces) {
+                                    <span class="text-[10px] text-amber-700 dark:text-amber-400 font-mono font-bold shrink-0">({{ p.defaultPieces }} pzas)</span>
+                                  }
+                                </button>
+                              } @empty {
+                                <div class="p-3 text-center text-xs text-slate-500">
+                                  No hay productos que coincidan.
+                                </div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      </div>
+
+                      <!-- 2. Piezas por Tarima (2 cols) - Ajustable para estándar 135 o picos 121 / 37 -->
+                      <div class="lg:col-span-2 flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between" title="Piezas de cada tarima. Cámbialo aquí cuando sea tarima pico.">
+                          <span class="flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs text-amber-600">pin</span>
+                            <span>Pzas x Tarima:</span>
+                          </span>
+                        </label>
+                        <input
+                          type="number"
+                          [value]="altaForm.get('piecesPerPallet')?.value || 135"
+                          (input)="altaForm.patchValue({ piecesPerPallet: $any($event.target).value })"
+                          class="w-full text-xs font-mono font-black text-center rounded-xl px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-amber-700 dark:text-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs"
+                          placeholder="135"
+                        />
+                      </div>
+
+                      <!-- 3. Tipo de Tarima (3 cols) con chevron visible -->
+                      <div class="lg:col-span-3 flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                          <span class="material-symbols-outlined text-xs text-amber-600">pallet</span>
+                          <span>Tipo Tarima:</span>
+                        </label>
+                        <div class="relative flex items-center w-full">
+                          <select
+                            [ngModel]="altaForm.get('selectedPalletType')?.value || 'MADERA_ESTANDAR'"
+                            (ngModelChange)="altaForm.patchValue({ selectedPalletType: $event }); palletTypeSearchQuery.set(getPalletTypeLabel($event))"
+                            class="w-full text-xs font-bold rounded-xl px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs appearance-none cursor-pointer"
+                          >
+                            <option value="MADERA_ESTANDAR">Madera Estándar</option>
+                            <option value="TARIMA_CHEP_NACIONAL">Tarima CHEP</option>
+                            <option value="TARIMA_OWENS_CORNING">Madera Owens</option>
+                            <option value="TARIMA_PLASTICA_HIGIENICA">Tarima Plástica</option>
+                            <option value="SIN_TARIMA">Sin Tarima / A Granel</option>
+                          </select>
+                          <span class="material-symbols-outlined text-base text-slate-400 pointer-events-none absolute right-2.5">expand_more</span>
+                        </div>
+                      </div>
+
+                      <!-- 4. Lote Activo (2 cols) con botón +Lote y chevron visible -->
+                      <div class="lg:col-span-2 flex flex-col gap-1">
+                        <div class="flex items-center justify-between">
+                          <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs text-amber-600">layers</span>
+                            <span>Lote Activo:</span>
+                          </label>
+                          <button
+                            type="button"
+                            (click)="openAddLotModal()"
+                            class="text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                            title="Registrar Lote B u otro lote en esta misma remisión"
+                          >
+                            <span class="material-symbols-outlined text-xs">add</span>
+                            <span>Lote</span>
+                          </button>
+                        </div>
+                        <div class="relative flex items-center w-full">
+                          <select
+                            [ngModel]="selectedScanningLot()"
+                            (ngModelChange)="selectLotForScanning($event)"
+                            class="w-full text-xs font-mono font-bold rounded-xl px-2.5 py-2 pr-7 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs appearance-none cursor-pointer"
+                          >
+                            @for (lt of lotsList(); track lt.lotNumber) {
+                              <option [value]="lt.lotNumber">{{ lt.lotNumber }}</option>
+                            }
+                          </select>
+                          <span class="material-symbols-outlined text-base text-slate-400 pointer-events-none absolute right-2">expand_more</span>
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    [ngModel]="uaObsInput()"
-                    (ngModelChange)="uaObsInput.set($event)"
-                    placeholder="Observación (opcional)"
-                    class="fg-input text-xs w-full sm:w-56"
-                  />
-                  <button
-                    type="button"
-                    (click)="onUaEnter()"
-                    class="btn-primary-gold flex items-center justify-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl whitespace-nowrap w-full sm:w-auto text-slate-900 shadow-sm"
-                  >
-                    <span class="material-symbols-outlined text-sm">add</span>
-                    <span>Agregar Tarima</span>
-                  </button>
+
+                  <!-- PANEL B: Línea de Escáner Láser & Botonera de Acción y Simulación -->
+                  <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+                    
+                    <!-- Lado Izquierdo: Captura de Escáner + Obs + Agregar (7 cols) -->
+                    <div class="lg:col-span-7 flex flex-col sm:flex-row items-center gap-2">
+                      
+                      <!-- Input Código UA con Auto SSCC integrado de forma segura -->
+                      <div class="relative flex-1 w-full min-w-[260px]">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-amber-600 text-lg pointer-events-none">qr_code_scanner</span>
+                        <input
+                          #uaInput
+                          type="text"
+                          [ngModel]="uaCodeInput()"
+                          (ngModelChange)="uaCodeInput.set($event)"
+                          (keyup.enter)="onUaEnter($event)"
+                          placeholder="Pistolear código UA (o clic en 'Auto SSCC')..."
+                          class="w-full pl-9 pr-24 py-2.5 text-xs font-mono font-bold rounded-xl bg-white dark:bg-slate-900 border-2 border-amber-500/40 text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:ring-2 focus:ring-amber-400/20 shadow-xs"
+                        />
+                        <button
+                          type="button"
+                          (click)="generateAndSetUaCode()"
+                          class="absolute right-1.5 top-1.5 bottom-1.5 px-2.5 text-[10px] font-bold rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                          title="Generar UA única GS1 SSCC-18 automática"
+                        >
+                          <span class="material-symbols-outlined text-xs text-amber-600">auto_awesome</span>
+                          <span>Auto SSCC</span>
+                        </button>
+                      </div>
+
+                      <!-- Input Observación Opcional -->
+                      <div class="w-full sm:w-44 shrink-0">
+                        <input
+                          type="text"
+                          [ngModel]="uaObsInput()"
+                          (ngModelChange)="uaObsInput.set($event)"
+                          placeholder="Obs (ej. Tarima pico...)"
+                          class="w-full text-xs rounded-xl px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-amber-500 shadow-xs"
+                        />
+                      </div>
+
+                      <!-- Botón Agregar Tarima Manual -->
+                      <button
+                        type="button"
+                        (click)="onUaEnter()"
+                        class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02] shrink-0"
+                        title="Registrar tarima escaneada o con código actual"
+                      >
+                        <span class="material-symbols-outlined text-sm">add</span>
+                        <span>Agregar</span>
+                      </button>
+                    </div>
+
+                    <!-- Lado Derecho: Zona de Simulación y Pruebas Rápidas (5 cols) -->
+                    <div class="lg:col-span-5 flex items-center justify-end gap-2 p-1.5 rounded-xl bg-slate-100/80 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden xl:inline-block pl-2">
+                        Pruebas:
+                      </span>
+                      
+                      <!-- Botón Simular Tarima Estándar -->
+                      <button
+                        type="button"
+                        (click)="simulateTestPallet(false)"
+                        class="flex-1 sm:flex-none px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02]"
+                        title="Añadir una tarima estándar automáticamente sin necesidad de escáner físico"
+                      >
+                        <span class="material-symbols-outlined text-sm">bolt</span>
+                        <span>Simular Tarima</span>
+                      </button>
+
+                      <!-- Botón Simular Tarima Pico -->
+                      <button
+                        type="button"
+                        (click)="simulateTestPallet(true)"
+                        class="flex-1 sm:flex-none px-3 py-2 rounded-xl border border-amber-500/50 hover:bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-all"
+                        title="Simular una tarima con piezas incompletas/pico (ej. 121 o 37 piezas)"
+                      >
+                        <span class="material-symbols-outlined text-xs">trending_down</span>
+                        <span>Simular Pico</span>
+                      </button>
+                    </div>
+
+                  </div>
+
                 </div>
               </div>
             </div>
           } @else if (rec.status === 'DISCHARGED') {
             <!-- FASE 4: DESCARGA CONCLUIDA POR MONTACARGUISTA — AUDITORÍA ADMINISTRATIVA -->
             <div class="space-y-4 pt-1">
-              <div class="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-500/40 shrink-0">
-                    <span class="material-symbols-outlined text-2xl">assignment_turned_in</span>
+              <div class="p-5 rounded-2xl bg-gradient-to-r from-purple-500/15 via-purple-500/10 to-amber-500/10 border-2 border-purple-500/40 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                  <div class="w-12 h-12 rounded-2xl bg-purple-500 text-white flex items-center justify-center font-bold shadow-md shrink-0">
+                    <span class="material-symbols-outlined text-3xl">task_alt</span>
                   </div>
                   <div>
-                    <h3 class="font-bold text-xs text-purple-900 dark:text-purple-200 uppercase tracking-wide flex items-center gap-1.5">
-                      <span>Descarga Física Concluida · Auditoría Administrativa</span>
-                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-700 dark:text-purple-300">Visto Bueno Pendiente</span>
-                    </h3>
-                    <p class="text-[11px] text-purple-700 dark:text-purple-300 font-medium">
-                      El montacarguista <strong>{{ rec.checkIn.forkliftOperator }}</strong> finalizó la descarga de <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong>. Verifica el detalle consolidado abajo antes de aprobar.
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-xs font-black uppercase tracking-wider text-purple-950 dark:text-purple-200">
+                        Paso Final: Auditoría Administrativa &amp; Visto Bueno
+                      </span>
+                      <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/40 font-mono">
+                        Fase 4 de 5 (80%) · Pendiente de Aprobación
+                      </span>
+                    </div>
+                    <p class="text-xs text-purple-900 dark:text-purple-200 mt-0.5 font-medium">
+                      El montacarguista <strong>{{ rec.checkIn.forkliftOperator }}</strong> finalizó la descarga de <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong> con destino inicial a <strong class="text-amber-800 dark:text-amber-300 font-mono">{{ selectedBayName() || 'STAGING-R01' }}</strong>.
                     </p>
                   </div>
                 </div>
-                <div class="flex items-center gap-2 shrink-0">
+
+                <div class="flex items-center gap-2.5 shrink-0 flex-wrap w-full md:w-auto justify-end">
+                  <!-- Botón Secundario: Solo Previsualizar Borrador -->
                   <button
                     type="button"
                     (click)="openPrintPreview(rec)"
-                    class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl text-slate-900 shadow-sm whitespace-nowrap cursor-pointer hover:scale-[1.02] transition-transform"
-                    title="Previsualizar o descargar formato F01 con el detalle de las tarimas recibidas"
+                    class="px-3.5 py-2.5 rounded-xl border border-purple-500/40 hover:bg-purple-500/10 text-purple-800 dark:text-purple-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+                    title="Previsualizar borrador del formato F01 sin cerrar el proceso"
                   >
-                    <span class="material-symbols-outlined text-sm">print</span>
-                    <span>Descargar / Ver Formato F01</span>
+                    <span class="material-symbols-outlined text-sm">visibility</span>
+                    <span>Previsualizar Borrador</span>
+                  </button>
+
+                  <!-- BOTÓN PRINCIPAL UNIFICADO: ALTA VISIBILIDAD -->
+                  <button
+                    type="button"
+                    [disabled]="isCompleting() || isSavingDraft()"
+                    (click)="initiateCompleteReception()"
+                    class="px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/30 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                    title="Autorizar visto bueno, colocar en inventario (100%) y mandar imprimir formato F01"
+                  >
+                    @if (isCompleting()) {
+                      <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                      <span>Ingresando a Inventario...</span>
+                    } @else {
+                      <span class="material-symbols-outlined text-lg">print</span>
+                      <span>🖨️ Aprobar, Ingresar a Stock e Imprimir F01</span>
+                    }
                   </button>
                 </div>
               </div>
@@ -1980,8 +2224,19 @@
                 </tr>
               </thead>
               <tbody>
-                @for (pallet of palletStream(); track pallet.id) {
-                  <tr>
+                @for (pallet of palletStream(); track pallet.id; let i = $index) {
+                  <!-- Separador Visual Dinámico cuando cambia el Producto en la misma remisión -->
+                  @if (i > 0 && pallet.productId !== palletStream()[i - 1].productId) {
+                    <tr class="bg-amber-500/10 border-t-2 border-b border-amber-500/40">
+                      <td colspan="11" class="py-2 px-4 text-xs font-black text-amber-900 dark:text-amber-200">
+                        <div class="flex items-center gap-2">
+                          <span class="material-symbols-outlined text-sm text-amber-600">inventory_2</span>
+                          <span>Cambio de Producto en Manifiesto: {{ pallet.productId }} — {{ pallet.description }}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                  <tr [ngClass]="{ 'bg-rose-500/10 border-l-4 border-l-rose-500': pallet.status === 'QUARANTINED' }">
                     <td class="tarimas-cell-num">{{ pallet.palletNumber || ($index + 1) }}</td>
                     <td class="tarimas-cell-code font-mono font-bold">{{ pallet.palletCode }}</td>
                     <td class="tarimas-cell-lot">
@@ -1989,7 +2244,8 @@
                         <select
                           [ngModel]="pallet.lotNumber || selectedScanningLot() || altaForm.value.lotNumber"
                           (ngModelChange)="assignLotToPallet(pallet.id, $event)"
-                          class="text-[11px] font-mono font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 rounded px-1.5 py-0.5"
+                          class="text-[11px] font-mono font-bold rounded px-2 py-0.5 border"
+                          [ngClass]="getLotBadgeClass(pallet.lotNumber)"
                           title="Cambiar lote asignado a esta UA"
                         >
                           @for (lt of lotsList(); track lt.lotNumber) {
@@ -1997,7 +2253,7 @@
                           }
                         </select>
                       } @else {
-                        <span class="font-mono text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                        <span class="font-mono text-xs font-bold px-2 py-0.5 rounded border" [ngClass]="getLotBadgeClass(pallet.lotNumber)">
                           {{ pallet.lotNumber || altaForm.value.lotNumber || 'N/A' }}
                         </span>
                       }
@@ -2005,36 +2261,56 @@
                     <td class="tarimas-cell-exp font-mono text-xs text-slate-600 dark:text-slate-300">
                       {{ pallet.expirationDate || altaForm.value.expirationDate || '-' }}
                     </td>
-                    <td class="tarimas-cell-sku">{{ pallet.productId }}</td>
-                    <td class="tarimas-cell-desc">{{ pallet.description }}</td>
+                    <td class="tarimas-cell-sku">
+                      <span class="px-1.5 py-0.5 rounded font-mono font-bold text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                        {{ pallet.productId }}
+                      </span>
+                    </td>
+                    <td class="tarimas-cell-desc font-bold text-slate-900 dark:text-slate-100">{{ pallet.description }}</td>
                     <td class="tarimas-cell-supplier">{{ pallet.supplierName || '-' }}</td>
                     <td class="tarimas-cell-type">{{ pallet.palletTypeLabel }}</td>
-                    <td class="tarimas-cell-pieces">{{ pallet.pieces }} PZAS</td>
-                    <td class="tarimas-cell-obs">{{ pallet.observations || '-' }}</td>
+                    <td class="tarimas-cell-pieces">
+                      <span class="font-black font-mono text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                        {{ pallet.pieces }} PZAS
+                      </span>
+                    </td>
+                    <td class="tarimas-cell-obs">
+                      @if (pallet.status === 'QUARANTINED') {
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30">
+                            <span class="material-symbols-outlined text-xs">warning</span>
+                            <span>PNC RETENIDA</span>
+                          </span>
+                          <span class="text-xs text-slate-600 dark:text-slate-300">{{ pallet.observations || 'Enviada a Calidad' }}</span>
+                        </div>
+                      } @else {
+                        <span>{{ pallet.observations || '-' }}</span>
+                      }
+                    </td>
                     @if (rec.status === 'REGISTERED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED') {
                       <td class="text-center">
-                        <div class="flex items-center justify-center gap-1">
+                        <div class="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
                             (click)="reportPalletToQuality(pallet)"
-                            class="text-amber-500 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-200 p-1.5 rounded-lg transition-colors hover:bg-amber-500/10"
-                            title="Reportar esta tarima a Calidad (PNC)"
+                            class="p-1.5 rounded-lg text-amber-600 dark:text-amber-400 hover:text-amber-700 hover:bg-amber-500/15 border border-amber-500/30 transition-all cursor-pointer shadow-xs"
+                            title="Reportar esta tarima a Calidad (PNC / Bloquear)"
                           >
                             <span class="material-symbols-outlined text-base">warning</span>
                           </button>
                           <button
                             type="button"
                             (click)="openEditPalletModal(pallet)"
-                            class="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 p-1.5 rounded-lg transition-colors hover:bg-amber-500/10"
-                            title="Editar Tarima (Admin)"
+                            class="p-1.5 rounded-lg text-sky-600 dark:text-sky-400 hover:text-sky-700 hover:bg-sky-500/15 border border-sky-500/30 transition-all cursor-pointer shadow-xs"
+                            title="Editar parámetros de esta tarima (Admin)"
                           >
                             <span class="material-symbols-outlined text-base">edit</span>
                           </button>
                           <button
                             type="button"
                             (click)="removePalletFromStream(pallet.id)"
-                            class="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg transition-colors hover:bg-rose-500/10"
-                            title="Eliminar Tarima"
+                            class="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-500/15 border border-rose-500/30 transition-all cursor-pointer shadow-xs"
+                            title="Eliminar tarima leída por error"
                           >
                             <span class="material-symbols-outlined text-base">delete</span>
                           </button>
@@ -2079,14 +2355,14 @@
                 type="button"
                 [disabled]="isAssigning() || isSavingDraft()"
                 (click)="assignToForklift()"
-                class="btn-save flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-xs shadow-md w-full sm:w-auto justify-center text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="btn-save flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-xs shadow-md w-full sm:w-auto justify-center text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 @if (isAssigning()) {
                   <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                  <span>Enviando Asignación a Caseta...</span>
+                  <span>{{ rec.checkIn?.rampNumber ? 'Asignando Montacarguista...' : 'Enviando Asignación a Caseta...' }}</span>
                 } @else {
-                  <span class="material-symbols-outlined text-base">forward_to_inbox</span>
-                  <span>Mandar Asignación de Rampa a Caseta de Seguridad</span>
+                  <span class="material-symbols-outlined text-base">{{ rec.checkIn?.rampNumber ? 'forklift' : 'forward_to_inbox' }}</span>
+                  <span>{{ rec.checkIn?.rampNumber ? 'Asignar Montacarguista y Proceder a Descarga' : 'Mandar Asignación de Rampa a Caseta de Seguridad' }}</span>
                 }
               </button>
             </div>
@@ -2111,14 +2387,14 @@
                 type="button"
                 [disabled]="isCompleting() || isSavingDraft()"
                 (click)="initiateCompleteReception()"
-                class="btn-save flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-xs shadow-md w-full sm:w-auto justify-center text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
               >
                 @if (isCompleting()) {
                   <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                  <span>Autorizando en Servidor...</span>
+                  <span>Ingresando a Inventario...</span>
                 } @else {
-                  <span class="material-symbols-outlined text-base">verified</span>
-                  <span>Aprobar Recepción y Finalizar Ciclo (F01)</span>
+                  <span class="material-symbols-outlined text-base">print</span>
+                  <span>🖨️ Aprobar, Ingresar a Stock e Imprimir F01 (100%)</span>
                 }
               </button>
             </div>
@@ -2463,6 +2739,22 @@
               <div>
                 <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">FECHA CADUCIDAD:</label>
                 <input type="date" formControlName="expirationDate" class="fg-input font-mono w-full font-bold" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">CONDICIÓN / ESTADO FÍSICO:</label>
+                <select formControlName="status" class="fg-input w-full font-bold">
+                  <option value="SCANNED">Conforme / Estándar</option>
+                  <option value="PICO">Tarima Pico (Incompleta)</option>
+                  <option value="QUARANTINED">Retenida en Cuarentena (PNC)</option>
+                  <option value="DAMAGED">Daño en Emplaye / Cajas</option>
+                </select>
+              </div>
+              <div>
+                <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">BAHÍA / UBICACIÓN:</label>
+                <input type="text" formControlName="locationCode" class="fg-input font-mono uppercase w-full font-bold" placeholder="Ej. STAGING-R01" />
               </div>
             </div>
 
@@ -3288,7 +3580,7 @@
 
   @if (showPrintModal() && selectedPrintReception(); as printRec) {
     <div class="modal-overlay p-2 sm:p-4">
-      <div class="modal-card max-w-3xl w-full p-2.5 sm:p-3 space-y-2 max-h-[76vh] flex flex-col overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+      <div class="modal-card max-w-4xl w-full p-2.5 sm:p-3 space-y-2 max-h-[88vh] flex flex-col overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
         
         <!-- Header en UNA SOLA FILA limpia sin salto -->
         <div class="flex items-center justify-between gap-3 no-print border-b border-slate-300 dark:border-slate-800 pb-2 flex-shrink-0">
@@ -3300,6 +3592,17 @@
           </div>
 
           <div class="flex items-center gap-2 shrink-0">
+            @if (selectedReception()?.status === 'DISCHARGED') {
+              <button
+                type="button"
+                (click)="closePrintModal(); initiateCompleteReception()"
+                class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center gap-1 shadow-sm whitespace-nowrap cursor-pointer transition-all hover:scale-[1.02]"
+                title="Aprobar visto bueno e ingresar inmediatamente a inventario (100%)"
+              >
+                <span class="material-symbols-outlined text-sm">verified</span>
+                <span>Aprobar y Concluir (100%)</span>
+              </button>
+            }
             <button
               type="button"
               (click)="downloadDirectPdf()"

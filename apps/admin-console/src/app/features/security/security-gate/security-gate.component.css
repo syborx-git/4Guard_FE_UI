@@ -874,6 +874,52 @@
   border: 1px solid var(--gold-border);
 }
 
+/* ── Selector de Modo de Asignación (Rampa Física vs Patio) ── */
+.assignment-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.95rem;
+  border-radius: 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: 1px solid transparent;
+  color: #64748b;
+  background: transparent;
+}
+
+:host-context(.dark) .assignment-mode-btn,
+:host-context(.theme-dark) .assignment-mode-btn {
+  color: #94a3b8;
+}
+
+.assignment-mode-btn:hover {
+  color: #1e293b;
+}
+
+:host-context(.dark) .assignment-mode-btn:hover,
+:host-context(.theme-dark) .assignment-mode-btn:hover {
+  color: #f1f5f9;
+}
+
+.assignment-mode-btn--active-gold {
+  background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%) !important;
+  color: #0b1119 !important;
+  font-weight: 900 !important;
+  border-color: #b8860b !important;
+  box-shadow: 0 3px 12px rgba(184, 134, 11, 0.35) !important;
+}
+
+.assignment-mode-btn--active-patio {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border-color: #334155 !important;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.25) !important;
+}
+
 .form-floating-footer {
   position: sticky;
   bottom: 1rem;
@@ -1391,6 +1437,21 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(16, 185, 129, 0.25);
   color: #34d399;
   border-color: rgba(16, 185, 129, 0.6);
+}
+
+.cell-ramp-badge--staging {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+  border-color: rgba(59, 130, 246, 0.45);
+  font-weight: 800;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+}
+
+:host-context(.dark) .cell-ramp-badge--staging,
+:host-context(.theme-dark) .cell-ramp-badge--staging {
+  background: rgba(59, 130, 246, 0.25);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.6);
 }
 
 .cell-ramp-badge--pending {

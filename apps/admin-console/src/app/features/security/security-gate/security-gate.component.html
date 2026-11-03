@@ -71,6 +71,17 @@
         <span>Actualizar</span>
       </button>
 
+      <!-- Exportar Bitácora Oficial Excel F02 -->
+      <button
+        type="button"
+        (click)="openF02ExportModal()"
+        class="btn-secondary-outline flex items-center gap-1.5 border-emerald-500/40 hover:border-emerald-500 hover:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-bold"
+        title="Exportar Formato Oficial F02-PO-CP-7.1.3-03 Tracking de Unidades en Excel (.xlsx)"
+      >
+        <span class="material-symbols-outlined text-base text-emerald-600 dark:text-emerald-400">table_chart</span>
+        <span>Exportar F02 Excel</span>
+      </button>
+
       <div class="security-status-badge">
         <span class="security-status-badge__dot"></span>
         <span>CASETA EN SERVICIO</span>
@@ -776,14 +787,160 @@
                 <input type="time" formControlName="horaEntrada" class="form-input text-xs font-mono" />
               </div>
 
-              <!-- Rampa / Andén (Asignación en Almacén) -->
+              <!-- Destino / Rampa Asignada (Resumen rápido) -->
               <div>
-                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Andén / Rampa</label>
-                <div class="security-ramp-locked-badge" title="La rampa es asignada automáticamente por el personal de Recepción / Almacén">
-                  <span class="material-symbols-outlined text-sm text-amber-500">lock_clock</span>
-                  <span class="truncate text-[11px]">Pendiente de asignación por Almacén</span>
+                <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Destino / Posicionamiento
+                </label>
+                <div
+                  class="p-2 rounded-xl border flex items-center justify-between text-xs"
+                  [ngClass]="{
+                    'border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold': checkInForm.get('assignmentType')?.value === 'RAMP' && checkInForm.get('rampNumber')?.value,
+                    'border-slate-300 dark:border-slate-700 bg-slate-100/60 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400': checkInForm.get('assignmentType')?.value === 'PATIO' || !checkInForm.get('rampNumber')?.value
+                  }"
+                >
+                  <div class="flex items-center gap-1.5 truncate">
+                    @if (checkInForm.get('assignmentType')?.value === 'RAMP' && checkInForm.get('rampNumber')?.value) {
+                      <span class="material-symbols-outlined text-sm text-amber-500">dock</span>
+                      <span class="truncate">Rampa R-{{ checkInForm.get('rampNumber')?.value < 10 ? '0' + checkInForm.get('rampNumber')?.value : checkInForm.get('rampNumber')?.value }}</span>
+                    } @else {
+                      <span class="material-symbols-outlined text-sm text-slate-400">local_parking</span>
+                      <span class="truncate">En Espera en Patio</span>
+                    }
+                  </div>
+                  <span class="text-[10px] font-semibold text-slate-400 font-mono">
+                    {{ checkInForm.get('assignmentType')?.value === 'RAMP' && checkInForm.get('rampNumber')?.value ? 'Andén Directo' : 'Patio' }}
+                  </span>
                 </div>
               </div>
+            </div>
+
+            <!-- ── SELECTOR INTERACTIVO: RAMPA FÍSICA O ESPERA EN PATIO ── -->
+            <div class="mt-4 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/60 backdrop-blur-sm space-y-3.5 shadow-sm">
+              <div class="flex items-center justify-between flex-wrap gap-2.5">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-amber-500 text-lg">dock</span>
+                  <div>
+                    <h3 class="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                      Asignación de Andén en Caseta
+                    </h3>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                      Asigne la rampa física para atraque directo o ingrese la unidad a patio si los andenes están ocupados.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Selector de Modo de Asignación (Pill Toggle) -->
+                <div class="inline-flex p-1 rounded-xl bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-xs font-bold">
+                  <button
+                    type="button"
+                    (click)="setAssignmentType('RAMP')"
+                    class="assignment-mode-btn"
+                    [class.assignment-mode-btn--active-gold]="checkInForm.get('assignmentType')?.value === 'RAMP'"
+                  >
+                    <span class="material-symbols-outlined text-sm">dock</span>
+                    <span>Rampa Física (1-12)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    (click)="setAssignmentType('PATIO')"
+                    class="assignment-mode-btn"
+                    [class.assignment-mode-btn--active-patio]="checkInForm.get('assignmentType')?.value === 'PATIO'"
+                  >
+                    <span class="material-symbols-outlined text-sm">local_parking</span>
+                    <span>En Espera en Patio</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- CONTENIDO CONDICIONAL: 1. MODO RAMPA FÍSICA (1-12) -->
+              @if (checkInForm.get('assignmentType')?.value === 'RAMP') {
+                <div class="space-y-3 animate-fade-in">
+                  <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                    <span class="font-semibold">Seleccione el andén físico asignado (Monitoreo de ocupación en vivo):</span>
+                    <div class="flex items-center gap-3 text-[10px]">
+                      <span class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Libre
+                      </span>
+                      <span class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span> Ocupada
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                    @for (rm of STANDARD_WAREHOUSE_RAMPS; track rm.rampNumber) {
+                      <button
+                        type="button"
+                        (click)="selectRamp(rm)"
+                        class="p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[68px]"
+                        [ngClass]="{
+                          'border-[#b8860b] bg-[#d4af37]/15 ring-2 ring-[#b8860b] shadow-md': isRampSelected(rm.rampNumber),
+                          'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/60 hover:bg-emerald-500/10': !isRampSelected(rm.rampNumber) && isRampAvailable(rm.rampNumber),
+                          'border-slate-300 dark:border-slate-700 bg-slate-100/60 dark:bg-slate-800/40 hover:border-[#b8860b]/50': !isRampSelected(rm.rampNumber) && !isRampAvailable(rm.rampNumber)
+                        }"
+                        [title]="getRampOccupancyInfo(rm.rampNumber) ? (getRampOccupancyInfo(rm.rampNumber)?.statusLabel + ' - Folio #' + (getRampOccupancyInfo(rm.rampNumber)?.operationFolio || 'S/N')) : 'Rampa Libre'"
+                      >
+                        <div class="flex items-center justify-between w-full">
+                          <span class="font-mono font-black text-xs sm:text-sm text-slate-900 dark:text-slate-100">
+                            R-{{ rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber }}
+                          </span>
+                          @if (isRampSelected(rm.rampNumber)) {
+                            <span class="material-symbols-outlined text-sm text-[#b8860b]">check_circle</span>
+                          } @else if (!isRampAvailable(rm.rampNumber)) {
+                            <span class="material-symbols-outlined text-xs text-amber-600 dark:text-amber-400" title="Rampa ocupada">lock</span>
+                          } @else {
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          }
+                        </div>
+
+                        <div class="mt-1">
+                          @if (!isRampAvailable(rm.rampNumber)) {
+                            <span class="text-[10px] font-mono text-amber-600 dark:text-amber-400 block truncate font-bold">
+                              #{{ getRampOccupancyInfo(rm.rampNumber)?.operationFolio || 'Ocupada' }}
+                            </span>
+                          } @else {
+                            <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block">
+                              Disponible
+                            </span>
+                          }
+                        </div>
+                      </button>
+                    }
+                  </div>
+
+                  @if (checkInForm.get('rampNumber')?.value) {
+                    <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base text-amber-500">check_circle</span>
+                        <span>
+                          Unidad asignada directamente a <strong>Rampa R-{{ checkInForm.get('rampNumber')?.value < 10 ? '0' + checkInForm.get('rampNumber')?.value : checkInForm.get('rampNumber')?.value }}</strong>.
+                          La orden operativa se vinculará directamente a este andén.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        (click)="setAssignmentType('PATIO')"
+                        class="text-[11px] underline font-bold hover:text-amber-600 cursor-pointer"
+                      >
+                        Cambiar a Espera en Patio
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- CONTENIDO CONDICIONAL: 2. MODO EN ESPERA EN PATIO -->
+              @if (checkInForm.get('assignmentType')?.value === 'PATIO') {
+                <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-100/50 dark:bg-slate-800/30 flex items-center gap-3 animate-fade-in">
+                  <span class="material-symbols-outlined text-slate-500 text-2xl">local_parking</span>
+                  <div class="text-xs text-slate-600 dark:text-slate-400">
+                    <strong class="text-slate-800 dark:text-slate-200">Ingreso a Estacionamiento / Patio de Maniobras:</strong>
+                    La unidad ingresará al patio en espera de que se desocupe una rampa física. Podrá asignarse andén en cualquier momento desde el listado de unidades en planta.
+                  </div>
+                </div>
+              }
             </div>
           </div>
 
@@ -1224,6 +1381,39 @@
                   <input type="checkbox" formControlName="transportistaFirma" class="rounded text-amber-500" />
                   <span>Transportista Acepta y Firma de Conformidad</span>
                 </label>
+                <!-- Firma Digital / Sello QR del Transportista -->
+                @if (activeToken() || activeDriverSignature()) {
+                  <div class="mt-2.5 p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">qr_code_scanner</span>
+                        <div class="flex flex-col">
+                          <span class="text-[11px] font-bold text-amber-900 dark:text-amber-200">
+                            Firma Electrónica y Sello Digital QR
+                          </span>
+                          <span class="text-[10px] font-mono font-semibold text-amber-700 dark:text-amber-300">
+                            Folio QR: #{{ activeToken() || 'PASS-DIGITAL' }}
+                          </span>
+                        </div>
+                      </div>
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                        <span class="material-symbols-outlined text-xs">verified</span>
+                        Verificado
+                      </span>
+                    </div>
+
+                    @if (hasRealDriverSignature()) {
+                      <div class="mt-1 pt-2 border-t border-amber-200/60 dark:border-amber-800/40 flex items-center justify-between gap-3">
+                        <span class="text-[10px] text-slate-600 dark:text-slate-400 font-medium">Trazo manuscrito capturado:</span>
+                        <img [src]="activeDriverSignature()" alt="Firma Chofer" class="h-12 max-w-[180px] object-contain rounded bg-white p-1 border border-slate-200 dark:border-slate-700 shadow-sm" />
+                      </div>
+                    } @else {
+                      <p class="text-[10px] text-slate-600 dark:text-slate-400 leading-tight">
+                        Acreditado y firmado digitalmente mediante escaneo de Pase Digital QR en Caseta.
+                      </p>
+                    }
+                  </div>
+                }
               </div>
             </div>
           </div>
@@ -1231,11 +1421,11 @@
           <!-- Botonera de Acción Principal Flotante (Sticky Footer Bar) -->
           <div class="form-floating-footer">
             <div class="flex items-center gap-2.5">
-              <span class="material-symbols-outlined text-amber-500 text-xl">verified_user</span>
+              <span class="material-symbols-outlined text-emerald-500 text-xl">verified_user</span>
               <div class="flex flex-col">
-                <span class="form-floating-footer__title">Autorización y Envío de Formato F01</span>
+                <span class="form-floating-footer__title">Autorización y Control de Acceso</span>
                 <span class="form-floating-footer__subtitle font-mono">
-                  {{ activeToken() ? 'Pase vinculado: #' + activeToken() : 'Listo para enviar a Operaciones (Asignación de Rampa)' }}
+                  {{ activeToken() ? 'Pase vinculado: #' + activeToken() : 'Check-In Inmediato Caseta de Seguridad' }}
                 </span>
               </div>
             </div>
@@ -1253,8 +1443,8 @@
                 [disabled]="isSaving()"
                 class="btn-primary-gold px-6 py-2.5 text-sm shadow-md hover:shadow-lg transition-all"
               >
-                <span class="material-symbols-outlined text-base">forward_to_inbox</span>
-                <span>{{ isSaving() ? 'Enviando a Operaciones...' : 'Mandar Información Corroborada a Operaciones' }}</span>
+                <span class="material-symbols-outlined text-base">check_circle</span>
+                <span>{{ isSaving() ? 'Autorizando Ingreso...' : 'Autorizar Ingreso a Planta' }}</span>
               </button>
             </div>
           </div>
@@ -1407,12 +1597,12 @@
                   </td>
                   <td>
                     @if (hasRampAssigned(item)) {
-                      <span class="cell-ramp-badge cell-ramp-badge--assigned animate-pulse" title="Rampa asignada en almacén. Notificar verbalmente al transportista.">
+                      <span class="cell-ramp-badge cell-ramp-badge--assigned animate-pulse" title="Rampa física asignada. Indicar al transportista posicionarse en la rampa.">
                         🔔 {{ formatRampDisplay(item) }}
                       </span>
                     } @else {
-                      <span class="cell-ramp-badge cell-ramp-badge--pending" title="En espera de asignación de rampa en almacén">
-                        ⏳ Por Asignar
+                      <span class="cell-ramp-badge cell-ramp-badge--pending" title="Unidad estacionada en patio en espera de rampa">
+                        🅿️ En Patio (En Espera)
                       </span>
                     }
                   </td>
@@ -2091,7 +2281,7 @@
         <div class="checkout-chip checkout-chip--ramp">
           <span class="checkout-chip-label text-amber-700 dark:text-amber-400">
             <span class="material-symbols-outlined text-[13px]">warehouse</span>
-            Rampa
+            {{ hasStagingAssigned(selectedCheckOutPass()) && !hasRampAssigned(selectedCheckOutPass()) ? 'Bahía' : 'Rampa' }}
           </span>
           <span class="checkout-chip-val font-mono font-bold text-amber-800 dark:text-amber-300">
             {{ formatRampDisplay(selectedCheckOutPass()) }}
@@ -2455,7 +2645,151 @@
         </button>
       </div>
     </div>
-  </div>
+  
+  <!-- ── MODAL DE EXPORTACIÓN OFICIAL F02-PO-CP-7.1.3-03 (EXCEL) ── -->
+  @if (showF02Modal()) {
+    <div class="modal-backdrop animate-fade-in" (click)="closeF02ExportModal()">
+      <div class="modal-card max-w-lg w-full p-6 space-y-5 animate-scale-in" (click)="$event.stopPropagation()">
+        <!-- Header del Modal -->
+        <div class="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <span class="material-symbols-outlined text-xl">table_chart</span>
+            </div>
+            <div>
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                Exportar Formato F02 Oficial
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-mono font-bold">.xlsx</span>
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                F02-PO-CP-7.1.3-03 · Tracking de Unidades (Seguridad Patrimonial)
+              </p>
+            </div>
+          </div>
+          <button type="button" (click)="closeF02ExportModal()" class="modal-close-btn">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <!-- Cuerpo del Modal: Selector de Rango -->
+        <div class="space-y-3">
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+            Seleccione el período a exportar:
+          </label>
+          <div class="grid grid-cols-2 gap-2.5">
+            <!-- Opción: Hoy -->
+            <button
+              type="button"
+              (click)="setF02Range('TODAY')"
+              class="p-3 rounded-xl border text-left transition-all flex flex-col gap-1"
+              [ngClass]="f02RangeType() === 'TODAY'
+                ? 'border-emerald-500 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 shadow-sm'
+                : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold">📅 Día en Curso</span>
+                @if (f02RangeType() === 'TODAY') {
+                  <span class="material-symbols-outlined text-sm text-emerald-600 dark:text-emerald-400">check_circle</span>
+                }
+              </div>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400">Hoy (00:00 a 23:59 hrs)</span>
+            </button>
+
+            <!-- Opción: Ayer -->
+            <button
+              type="button"
+              (click)="setF02Range('YESTERDAY')"
+              class="p-3 rounded-xl border text-left transition-all flex flex-col gap-1"
+              [ngClass]="f02RangeType() === 'YESTERDAY'
+                ? 'border-emerald-500 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 shadow-sm'
+                : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold">⏪ Día de Ayer</span>
+                @if (f02RangeType() === 'YESTERDAY') {
+                  <span class="material-symbols-outlined text-sm text-emerald-600 dark:text-emerald-400">check_circle</span>
+                }
+              </div>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400">Día anterior completo</span>
+            </button>
+
+            <!-- Opción: Mes Actual -->
+            <button
+              type="button"
+              (click)="setF02Range('CURRENT_MONTH')"
+              class="p-3 rounded-xl border text-left transition-all flex flex-col gap-1"
+              [ngClass]="f02RangeType() === 'CURRENT_MONTH'
+                ? 'border-emerald-500 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 shadow-sm'
+                : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold">📆 Mes Completo</span>
+                @if (f02RangeType() === 'CURRENT_MONTH') {
+                  <span class="material-symbols-outlined text-sm text-emerald-600 dark:text-emerald-400">check_circle</span>
+                }
+              </div>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400">Mes en curso acumulado</span>
+            </button>
+
+            <!-- Opción: Todo el Histórico -->
+            <button
+              type="button"
+              (click)="setF02Range('ALL')"
+              class="p-3 rounded-xl border text-left transition-all flex flex-col gap-1"
+              [ngClass]="f02RangeType() === 'ALL'
+                ? 'border-emerald-500 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 shadow-sm'
+                : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-700 dark:text-slate-300'"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold">🗄️ Historial Total</span>
+                @if (f02RangeType() === 'ALL') {
+                  <span class="material-symbols-outlined text-sm text-emerald-600 dark:text-emerald-400">check_circle</span>
+                }
+              </div>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400">Todas las unidades registradas</span>
+            </button>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+            <p class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-xs text-amber-500">info</span>
+              Estructura Oficial F02:
+            </p>
+            <p>
+              Exporta automáticamente las 18 columnas oficiales: Fecha, Turno, Grupo, Rampa, No. Económico, C/D, Transportista, Horas de entrega, asignación y salida, Tiempos calculados, Documentos y firmas.
+            </p>
+          </div>
+        </div>
+
+        <!-- Footer / Botones de Acción -->
+        <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-800">
+          <button
+            type="button"
+            (click)="closeF02ExportModal()"
+            class="btn-secondary-outline text-xs px-4 py-2"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="executeF02Export()"
+            [disabled]="isExportingF02()"
+            class="px-5 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md flex items-center gap-2 transition-all disabled:opacity-50"
+          >
+            @if (isExportingF02()) {
+              <span class="material-symbols-outlined text-base animate-spin">refresh</span>
+              <span>Generando Excel...</span>
+            } @else {
+              <span class="material-symbols-outlined text-base">download</span>
+              <span>Descargar Archivo Excel (.xlsx)</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>
 }
 
 

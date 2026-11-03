@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, OnInit, inject, signal, ElementRef, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -11,7 +11,7 @@ import { WarehouseMovementsApiService } from '../../warehouse-movements/services
   templateUrl: './carrier-checkin.component.html',
   styleUrl: './carrier-checkin.component.css'
 })
-export class CarrierCheckinComponent implements OnInit, AfterViewInit {
+export class CarrierCheckinComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(WarehouseMovementsApiService);
@@ -29,6 +29,12 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
   protected readonly submitStatusMessage = signal<string>('Enviando registro a Caseta de Vigilancia...');
   protected readonly submitSuccess = signal<boolean>(false);
   protected readonly submitError = signal<string | null>(null);
+
+  // Estatus en vivo de autorización y rampa asignada por Caseta
+  protected readonly passStatus = signal<'PENDING_DRIVER' | 'SUBMITTED' | 'AUTHORIZED'>('PENDING_DRIVER');
+  protected readonly assignedRamp = signal<string | null>(null);
+  protected readonly assignedFolio = signal<string | null>(null);
+  private pollInterval: any = null;
 
   protected readonly organizationId = signal<string>('a53f0907-9fa5-4bdf-87db-2eb5e7683935');
   protected readonly branchId = signal<string>('b73f0907-9fa5-4bdf-87db-2eb5e7683936');
@@ -150,13 +156,14 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
     this.loadCatalogs();
     this.setupUppercaseTransform();
 
+    const pathToken = this.route.snapshot.paramMap.get('token');
     this.route.queryParams.subscribe((params) => {
       const orgParam = params['org'] || params['organizationId'];
       if (orgParam) this.organizationId.set(orgParam);
       const branchParam = params['branch'] || params['branchId'];
       if (branchParam) this.branchId.set(branchParam);
 
-      const qToken = params['token'] || params['pass'];
+      const qToken = params['token'] || params['pass'] || pathToken;
       if (qToken) {
         this.token.set(qToken.trim().toUpperCase());
         this.loadPassData(this.token());
@@ -381,8 +388,16 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
         if (pass) {
           this.applyPassDataToForm(pass);
           const st = String(pass.status || '').toUpperCase();
-          if (st === 'SUBMITTED' || st === 'ACTIVE' || st === 'IN_YARD' || st === 'IN_DOCK' || st === 'CALL_TO_DOCK' || st === 'COMPLETED' || pass.submittedAt) {
+          if (st === 'AUTHORIZED' || st === 'IN_YARD' || pass.assignedRamp || pass.rampNumber || pass.rampCode) {
             this.submitSuccess.set(true);
+            this.passStatus.set('AUTHORIZED');
+            const ramp = pass.assignedRamp || (pass.rampNumber ? `Rampa R-${String(pass.rampNumber).padStart(2, '0')}` : pass.rampCode) || 'En Espera en Patio';
+            this.assignedRamp.set(ramp);
+            this.assignedFolio.set(pass.receptionFolio || pass.folio || pass.generatedFolio || tokenStr);
+          } else if (st === 'SUBMITTED' || st === 'ACTIVE' || pass.submittedAt) {
+            this.submitSuccess.set(true);
+            this.passStatus.set('SUBMITTED');
+            this.startLiveStatusPolling();
           }
         }
       },
@@ -531,7 +546,7 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
           this.addSeal();
         }
         if (this.sealList().length === 0) {
-          this.sealList.set(['S/N']);
+          missing.push('Número de Sello / Cincho de Seguridad (Obligatorio en Descarga)');
         }
       }
       if (!f.carrierLine || !f.carrierLine.trim()) missing.push('Línea Transportista / Fletera');
@@ -585,8 +600,11 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       return; // Bloqueado en Carga
     }
     const val = this.tempSealInput().trim().toUpperCase();
-    if (val && !this.sealList().includes(val)) {
-      this.sealList.update((list) => [...list, val]);
+    if (val) {
+      this.sealList.update((list) => {
+        const withoutSn = list.filter(s => s !== 'S/N');
+        return withoutSn.includes(val) ? withoutSn : [...withoutSn, val];
+      });
       this.tempSealInput.set('');
     }
   }
@@ -751,6 +769,8 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       next: () => {
         this.isSubmitting.set(false);
         this.submitSuccess.set(true);
+        this.passStatus.set('SUBMITTED');
+        this.startLiveStatusPolling();
       },
       error: (err) => {
         this.isSubmitting.set(false);
@@ -780,5 +800,41 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit {
       `Presenta este pase QR en la caseta de vigilancia para acceso inmediato.`;
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
+  }
+
+  protected startLiveStatusPolling(): void {
+    if (this.pollInterval) clearInterval(this.pollInterval);
+    const token = this.token();
+    if (!token) return;
+
+    this.pollInterval = setInterval(() => {
+      this.api.getPublicPass(token).subscribe({
+        next: (pass: any) => {
+          if (!pass) return;
+          const status = String(pass.status || '').toUpperCase();
+          if (status === 'AUTHORIZED' || status === 'IN_YARD' || pass.assignedRamp || pass.rampNumber || pass.rampCode) {
+            this.passStatus.set('AUTHORIZED');
+            const ramp = pass.assignedRamp || (pass.rampNumber ? `Rampa R-${String(pass.rampNumber).padStart(2, '0')}` : pass.rampCode) || 'En Espera en Patio';
+            this.assignedRamp.set(ramp);
+            this.assignedFolio.set(pass.receptionFolio || pass.folio || pass.generatedFolio || token);
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              try { navigator.vibrate([150, 100, 150]); } catch {}
+            }
+            if (this.pollInterval) {
+              clearInterval(this.pollInterval);
+              this.pollInterval = null;
+            }
+          }
+        },
+        error: () => {}
+      });
+    }, 2500);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
   }
 }

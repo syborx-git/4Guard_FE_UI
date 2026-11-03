@@ -41,7 +41,7 @@ export type { Location, Coordinates2D, Coordinates3D } from './lib/domain/models
 export {
   ReceiptStatus,
 } from './lib/domain/models/receipt.model';
-export type { Receipt, ReceiptLine } from './lib/domain/models/receipt.model';
+export type { Receipt, ReceiptLine, ReceiptPallet } from './lib/domain/models/receipt.model';
 
 export {
   TransferOrderType,

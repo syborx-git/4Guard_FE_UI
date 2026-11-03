@@ -121,6 +121,8 @@ export interface ProductSkuItem {
 }
 
 export const STANDARD_PRODUCTS: ProductSkuItem[] = [
+  { id: 'prod-009', code: '8505641', name: 'ABUELITA TABLETA 24X540G MX', defaultPieces: 135 },
+  { id: 'prod-010', code: '8501911', name: 'LA LECHERA CONDENSADA LECHE BOLSA 11KG MX', defaultPieces: 9 },
   { id: 'prod-001', code: '8500297', name: 'NESCAFE CLASICO FCO 200G', defaultPieces: 48 },
   { id: 'prod-002', code: '8500300', name: 'LECHE CONDENSADA LA LECHERA 384G', defaultPieces: 60 },
   { id: 'prod-003', code: '8500412', name: 'CHOCOLATE CARLOS V 20G C/24', defaultPieces: 72 },
@@ -134,6 +136,7 @@ export const STANDARD_PRODUCTS: ProductSkuItem[] = [
 export interface CheckInCasetaData {
   carrierLineCode?: string; // Código Línea Transportadora (ej. TR-01)
   carrierLine: string;      // Línea Transportadora Descripción
+  stagingBay?: string | null; // Bahía de espera/patio asignada desde Caseta (opcional)
   receptionTime: string;    // Hora Recepción (ej. 09:15)
   docNumber: string;        // Doc. No. (Remisión/Factura)
   elaborationDate?: string; // F. Elaboración
@@ -257,6 +260,8 @@ export interface ReceptionHeader {
   originalPalletType?: PalletType;
   observations?: string;
   pallets: ReceptionPalletItem[];
+  totalPallets?: number;
+  totalPieces?: number;
   lots?: ReceptionLot[];
   requiresOpsAuthorization?: boolean;
   authorizedByOpsManager?: string;

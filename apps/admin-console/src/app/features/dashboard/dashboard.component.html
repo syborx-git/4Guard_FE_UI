@@ -46,17 +46,24 @@
   <!-- ── Grid principal ─────────────────────────────────────── -->
   <div class="dashboard__grid">
 
-    <!-- ─ 1. Risk Gauge ───────────────────────────── -->
-    <div class="dash-card dash-card--gauge" id="risk-gauge-card" fgStarBorder fgSpecularGlow>
+    <!-- ─ 1. Ocupación de Andenes (Smart Docks) ─────────────────────── -->
+    <div class="dash-card dash-card--gauge" id="risk-gauge-card" (click)="navigateToDocks()" role="button" tabindex="0"
+      (keydown.enter)="navigateToDocks()" aria-label="Ver andenes de recepción y salida" fgStarBorder fgSpecularGlow>
       <div class="dash-card__header">
         <span class="material-symbols-outlined dash-card__icon" aria-hidden="true">
-          crisis_alert
+          dock
         </span>
-        <span class="dash-card__label">Riesgo Global</span>
+        <span class="dash-card__label">Ocupación de Andenes</span>
+        <span class="dash-card__link-hint">
+          Ver andenes
+          <span class="material-symbols-outlined dash-card__link-icon">
+            north_east
+          </span>
+        </span>
       </div>
 
       <div class="gauge-wrap" role="img"
-        [attr.aria-label]="'Riesgo: ' + riskScore() + ' de 100, nivel ' + gaugeLabel()">
+        [attr.aria-label]="'Ocupación de andenes: ' + dockOccupancyPct() + '%, nivel ' + gaugeLabel()">
         <svg class="gauge-svg" viewBox="0 0 120 120" aria-hidden="true">
           <circle class="gauge-track" cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.07)"
             stroke-width="10" stroke-linecap="round" />
@@ -66,14 +73,13 @@
             style="transition: stroke-dashoffset 800ms ease, stroke 400ms ease" />
         </svg>
         <div class="gauge-center">
-          <span class="gauge-value">{{ riskScore() }}</span>
+          <span class="gauge-value">{{ dockOccupancyPct() }}%</span>
           <span class="gauge-label" [style.color]="gaugeColor()">{{ gaugeLabel() }}</span>
         </div>
       </div>
 
       <p class="dash-card__footer-text">
-        {{ riskScore() < 30 ? 'Operaciones estables' : riskScore() < 60 ? 'Monitoreo recomendado'
-          : 'Acción inmediata requerida' }}
+        {{ dockFooterText() }}
       </p>
     </div>
 

@@ -191,6 +191,8 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
       filter((e): e is NavigationEnd => e instanceof NavigationEnd)
     ).subscribe((e) => {
       this.currentUrl.set(e.urlAfterRedirects || e.url);
+      // Cerrar dropdown al cambiar de pestaña o navegar para que no estorbe
+      this.closeDropdown();
     });
   }
 
@@ -217,13 +219,14 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     }
 
     if (this.autoCloseTimeoutId) clearTimeout(this.autoCloseTimeoutId);
+    // Duración breve de 2.5 segundos para no interrumpir al usuario
     this.autoCloseTimeoutId = setTimeout(() => {
       this.isOpen.set(false);
       this.hasNewUnseenPreReception.set(false);
       this.hasNewUnseenOutbound.set(false);
       this.smartNotification.hasNewDriverSubmission.set(false);
       this.smartNotification.hasNewRampAssignment.set(false);
-    }, 12000);
+    }, 2500);
   }
 
   // ── Control de Apertura y Cierre ──

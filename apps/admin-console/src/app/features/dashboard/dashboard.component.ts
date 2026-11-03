@@ -20,6 +20,8 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { InventoryState, InventoryStatus, INVENTORY_STATUS_LABELS } from '@4guard/shared-core';
+import { WarehouseMovementsService } from '../warehouse-movements/services/warehouse-movements.service';
+import { WarehouseLayoutService } from '../catalogs/services/warehouse-layout.service';
 import { SpecularGlowDirective } from '../../shared/directives/specular-glow.directive';
 import { StarBorderDirective } from '../../shared/directives/star-border.directive';
 import { WarehouseLayoutService } from '../catalogs/services/warehouse-layout.service';
@@ -84,6 +86,7 @@ export interface FunctionalAlert {
 export class DashboardComponent implements OnInit, OnDestroy {
   protected readonly inventoryState         = inject(InventoryState);
   protected readonly warehouseLayoutService = inject(WarehouseLayoutService);
+  protected readonly layoutService          = this.warehouseLayoutService;
   protected readonly movementsService       = inject(WarehouseMovementsService);
   protected readonly qualityAdapter         = inject(HttpQualityAdapter);
   protected readonly router                 = inject(Router);
@@ -205,15 +208,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.maneuverRisks().length > 0
   );
 
+  // ── 1. Ocupación de Andenes (Smart Docks / Rampas en Vivo) ─────────────
+  protected readonly totalRamps = computed(() => {
+    const list = this.movementsService.rampOccupancyStatus();
+    return list.length > 0 ? list.length : 12;
+  });
+
+  protected readonly occupiedRamps = computed(() => {
+    return this.movementsService.totalBusyRampsCount();
+  });
+
+  protected readonly freeRamps = computed(() => {
+    return this.movementsService.totalFreeRampsCount();
+  });
+
+  protected readonly dockOccupancyPct = computed(() => {
+    const total = this.totalRamps();
+    if (total === 0) return 0;
+    return Math.round((this.occupiedRamps() / total) * 100);
+  });
+
   // ── Cálculo Ponderado de Riesgo Operativo Global ───────────────────────
   protected readonly riskScore = computed(() => {
     const occ = this.occupancy();
-    const rampRatio = this.totalRampsCount() > 0 ? (this.occupiedRampsCount() / this.totalRampsCount()) : 0;
+    const rampRatio = this.totalRamps() > 0 ? (this.occupiedRamps() / this.totalRamps()) : 0;
     const qmScore = Math.min(this.qmBlockedCount(), 5) * 6; // hasta 30 pts por bloqueos de calidad
     const casetaScore = Math.min(this.pendingCasetaCount(), 5) * 4; // hasta 20 pts por cola en caseta
     const satScore = occ * 0.35; // hasta 35 pts por ocupación de nave
     const rampScore = rampRatio * 25; // hasta 25 pts por andenes saturados
-
     const raw = Math.round(satScore + rampScore + qmScore + casetaScore);
     return Math.max(5, Math.min(100, raw));
   });
@@ -364,11 +386,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ── Temporizador de Actualización en Segundo Plano ─────────────────────
   private refreshTimer: any = null;
 
-  // ── Risk Gauge SVG helpers ─────────────────────────────────────────────
+  // ── Gauge SVG helpers ────────────────────────────────────────────────
   protected readonly gaugeCircumference = 2 * Math.PI * 54;
 
   protected readonly gaugeDashOffset = computed(() => {
-    const pct = Math.min(Math.max(this.riskScore(), 0), 100) / 100;
+    const pct = Math.min(Math.max(this.dockOccupancyPct(), 0), 100) / 100;
     return this.gaugeCircumference * (1 - pct);
   });
 
@@ -380,15 +402,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
   });
 
   protected readonly gaugeLabel = computed(() => {
-    const score = this.riskScore();
-    if (score < 30) return 'Bajo';
-    if (score < 60) return 'Moderado';
-    return 'Alto';
+    const pct = this.dockOccupancyPct();
+    if (pct < 60) return 'Flujo Normal';
+    if (pct < 85) return 'Atención';
+    return 'Saturado';
+  });
+
+  protected readonly dockFooterText = computed(() => {
+    const free = this.freeRamps();
+    const busy = this.occupiedRamps();
+    return `${free} rampa${free === 1 ? '' : 's'} libre${free === 1 ? '' : 's'} · ${busy} en maniobra activa`;
   });
 
   ngOnInit(): void {
     // 1. Cargar inventario desde Backend
     this.inventoryState.loadItems().subscribe();
+    this.movementsService.loadInitialBackendData();
+    this.layoutService.loadTopology();
+    this.layoutService.loadAllPositions();
 
     // 2. Cargar topología CAD y bahías reales
     this.warehouseLayoutService.loadTopology();
@@ -423,6 +454,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.qmBlocks.set([]);
       }
     });
+  }
+
+  protected navigateToDocks(): void {
+    this.router.navigate(['/movements/receiving']);
   }
 
   protected navigateToMap(): void {

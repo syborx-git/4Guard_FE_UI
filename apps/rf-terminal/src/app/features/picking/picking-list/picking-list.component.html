@@ -45,8 +45,21 @@
     <!-- Header con progreso -->
     <div class="picking__header">
       <div>
-        <h1 class="picking__title">📦 Picking FEFO</h1>
-        <p class="picking__order">Orden: ORD-001 · Cliente: Nespresso</p>
+        <h1 class="picking__title">
+          @if (dispatchRule() === 'MANUAL_OVERRIDE') {
+            📦 Picking Comercial
+          } @else {
+            📦 Picking FEFO
+          }
+        </h1>
+        <p class="picking__order">
+          <span>Orden: ORD-001 · Cliente: Nespresso</span>
+          @if (dispatchRule() === 'MANUAL_OVERRIDE') {
+            <span class="picking__commercial-pill" [title]="commercialOverrideReason()">
+              ⚖️ Acuerdo Comercial
+            </span>
+          }
+        </p>
       </div>
       <div class="picking__progress-ring" role="progressbar"
         [attr.aria-valuenow]="progressPct()"
@@ -67,10 +80,27 @@
       </div>
     </div>
 
+    <!-- Banner de Acuerdo Comercial si está activo -->
+    @if (dispatchRule() === 'MANUAL_OVERRIDE') {
+      <div class="picking__override-notice">
+        <span class="picking__override-icon">⚖️</span>
+        <div class="picking__override-text">
+          <strong>Modo Acuerdo Comercial Activo</strong>
+          <span>Selección manual de tarimas autorizada (Sin alarma FEFO para SSCCs de la orden).</span>
+        </div>
+      </div>
+    }
+
     <!-- Línea actual (instrucción principal) -->
     @if (currentLine() && !isComplete()) {
       <div class="pick-current" role="region" aria-label="Línea actual a recoger">
-        <div class="pick-current__badge">SIGUIENTE →</div>
+        <div class="pick-current__badge">
+          @if (dispatchRule() === 'MANUAL_OVERRIDE') {
+            SUGERIDA →
+          } @else {
+            SIGUIENTE →
+          }
+        </div>
         <div class="pick-current__location">
           <span class="pick-current__loc-icon" aria-hidden="true">📍</span>
           <span class="pick-current__loc-code">{{ currentLine()!.location }}</span>
@@ -99,7 +129,15 @@
             class="pick-action-btn pick-action-btn--wrong"
             (click)="simulateWrongScan(); $event.stopPropagation()"
             aria-label="Simular violación FEFO">
-            ✗ Simular FEFO incorrecto
+            ✗ Simular SSCC no prioritario (SSCC-0002)
+          </button>
+          <button
+            id="pick-toggle-rule-btn"
+            type="button"
+            class="pick-action-btn pick-action-btn--toggle"
+            (click)="toggleDispatchRule(); $event.stopPropagation()"
+            [title]="dispatchRule() === 'FEFO_AUTO' ? 'Cambiar a modo Acuerdo Comercial' : 'Volver a modo FEFO Estricto'">
+            {{ dispatchRule() === 'FEFO_AUTO' ? '⚖️ Simular Acuerdo Comercial' : '⚡ Restablecer FEFO Estricto' }}
           </button>
         </div>
       </div>
@@ -110,7 +148,37 @@
       <div class="pick-complete" role="status" aria-live="polite">
         <span class="pick-complete__check" aria-hidden="true">✓</span>
         <h2 class="pick-complete__title">¡Picking Completado!</h2>
-        <p class="pick-complete__desc">Todas las líneas fueron recolectadas correctamente (FEFO).</p>
+        <p class="pick-complete__desc">
+          @if (dispatchRule() === 'MANUAL_OVERRIDE') {
+            Todas las líneas recolectadas conforme al Acuerdo Comercial autorizado.
+          } @else {
+            Todas las líneas fueron recolectadas correctamente (FEFO).
+          }
+        </p>
+
+        <!-- Paso 4: Pre-certificación de Carga y Estiba en Andén -->
+        <div class="pick-staging-audit" style="margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 8px; background: rgba(147, 51, 234, 0.08); border: 1px solid rgba(147, 51, 234, 0.3); text-align: left;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem;">
+            <span style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #9333ea; letter-spacing: 0.05em;">
+              📋 Fase 4 · Auditoría de Carga Requerida
+            </span>
+            <span style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px;"
+                  [style.background]="stagingChecklistPassed() ? '#10b981' : '#f59e0b'"
+                  [style.color]="'#ffffff'">
+              {{ stagingChecklistPassed() ? 'Pre-Checklist OK' : 'Pendiente de Andén' }}
+            </span>
+          </div>
+          <p style="font-size: 0.72rem; color: #64748b; margin: 0 0 0.5rem 0; line-height: 1.3;">
+            El remolque debe someterse a la auditoría ciega de estiba (5 puntos físicos y concordancia de tarimas) antes de autorizar el despacho oficial F03.
+          </p>
+          <button
+            type="button"
+            (click)="toggleStagingChecklist()"
+            style="width: 100%; font-size: 0.72rem; font-weight: 800; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1px solid #9333ea; background: #ffffff; color: #9333ea; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.35rem;"
+          >
+            <span>{{ stagingChecklistPassed() ? '✓ Estiba Física en Andén Verificada' : 'Confirmar Pre-Revisión Física en Andén' }}</span>
+          </button>
+        </div>
       </div>
     }
 
@@ -127,7 +195,12 @@
           <div class="pick-line__info">
             <span class="pick-line__sku">{{ line.sku }}</span>
             <span class="pick-line__desc">{{ line.description }}</span>
-            <span class="pick-line__loc">{{ line.location }} · {{ line.lot }}</span>
+            <span class="pick-line__loc">
+              {{ line.location }} · {{ line.lot }}
+              @if (line.isManualOverride) {
+                <span class="pick-line__manual-tag">⚖️ Excepción</span>
+              }
+            </span>
           </div>
           <div class="pick-line__qty">
             <span class="pick-line__qty-done">{{ line.qtyDone }}</span>

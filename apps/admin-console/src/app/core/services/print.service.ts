@@ -36,7 +36,7 @@ export class PrintService {
       logging: false
     });
 
-    const isLandscape = options?.orientation === 'landscape' || (canvas.width > canvas.height * 1.15);
+    const isLandscape = options?.orientation ? (options.orientation === 'landscape') : false;
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({
       orientation: isLandscape ? 'landscape' : 'portrait',
@@ -46,7 +46,7 @@ export class PrintService {
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = options?.margin !== undefined ? options.margin : (isLandscape ? 0 : 8);
+    const margin = options?.margin !== undefined ? options.margin : 10;
     const maxUsableWidth = pageWidth - (margin * 2);
     const maxUsableHeight = pageHeight - (margin * 2);
 
