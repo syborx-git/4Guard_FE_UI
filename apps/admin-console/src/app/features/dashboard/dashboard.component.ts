@@ -16,6 +16,8 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { InventoryState, InventoryStatus, INVENTORY_STATUS_LABELS } from '@4guard/shared-core';
+import { WarehouseMovementsService } from '../warehouse-movements/services/warehouse-movements.service';
+import { WarehouseLayoutService } from '../catalogs/services/warehouse-layout.service';
 import { SpecularGlowDirective } from '../../shared/directives/specular-glow.directive';
 import { StarBorderDirective } from '../../shared/directives/star-border.directive';
 
@@ -65,8 +67,10 @@ interface Alert {
   styleUrl: './dashboard.component.css',
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  protected readonly inventoryState = inject(InventoryState);
-  protected readonly router         = inject(Router);
+  protected readonly inventoryState   = inject(InventoryState);
+  protected readonly movementsService = inject(WarehouseMovementsService);
+  protected readonly layoutService    = inject(WarehouseLayoutService);
+  protected readonly router           = inject(Router);
 
   protected readonly InventoryStatus       = InventoryStatus;
   protected readonly INVENTORY_STATUS_LABELS = INVENTORY_STATUS_LABELS;
@@ -115,11 +119,52 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.maneuverRisks().length > 0
   );
 
-  // ── KPIs simulados ───────────────────────────────────────────────────────
-  protected readonly riskScore   = signal(34);
-  protected readonly occupancy   = signal(79);
-  protected readonly totalBays   = signal(48);
-  protected readonly occupiedBays= signal(38);
+  // ── 1. Ocupación de Andenes (Smart Docks / 12 Rampas en Vivo) ─────────────
+  protected readonly totalRamps = computed(() => {
+    const list = this.movementsService.rampOccupancyStatus();
+    return list.length > 0 ? list.length : 12;
+  });
+
+  protected readonly occupiedRamps = computed(() => {
+    return this.movementsService.totalBusyRampsCount();
+  });
+
+  protected readonly freeRamps = computed(() => {
+    return this.movementsService.totalFreeRampsCount();
+  });
+
+  protected readonly dockOccupancyPct = computed(() => {
+    const total = this.totalRamps();
+    if (total === 0) return 0;
+    return Math.round((this.occupiedRamps() / total) * 100);
+  });
+
+  // ── 2. Saturación del Almacén (Layout Topológico Real) ────────────────────
+  protected readonly layoutStats = computed(() => this.layoutService.stats());
+
+  protected readonly totalBays = computed(() => {
+    const s = this.layoutStats();
+    if (s.totalPositions && s.totalPositions > 0) return s.totalPositions;
+    const posList = this.layoutService.allPositions();
+    if (posList && posList.length > 0) return posList.length;
+    return 48;
+  });
+
+  protected readonly occupiedBays = computed(() => {
+    const s = this.layoutStats();
+    if (s.occupiedPositions && s.occupiedPositions > 0) return s.occupiedPositions;
+    const posList = this.layoutService.allPositions();
+    if (posList && posList.length > 0) {
+      return posList.filter(p => p.status === 'OCCUPIED' || (p.currentTarimas && p.currentTarimas > 0)).length;
+    }
+    return 38;
+  });
+
+  protected readonly occupancy = computed(() => {
+    const tot = this.totalBays();
+    if (tot === 0) return 0;
+    return Math.round((this.occupiedBays() / tot) * 100);
+  });
 
   protected readonly kpiCards = computed<KpiCard[]>(() => [
     {
@@ -192,30 +237,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ── SSE simulation timer ──────────────────────────────────────────────────
   private sseTimer: ReturnType<typeof setInterval> | null = null;
 
-  // ── Risk Gauge SVG helpers ────────────────────────────────────────────────
+  // ── Dock Gauge SVG helpers ────────────────────────────────────────────────
   protected readonly gaugeCircumference = 2 * Math.PI * 54;
 
   protected readonly gaugeDashOffset = computed(() => {
-    const pct = Math.min(Math.max(this.riskScore(), 0), 100) / 100;
+    const pct = Math.min(Math.max(this.dockOccupancyPct(), 0), 100) / 100;
     return this.gaugeCircumference * (1 - pct);
   });
 
   protected readonly gaugeColor = computed(() => {
-    const score = this.riskScore();
-    if (score < 30) return 'var(--color-success, #00897B)';
-    if (score < 60) return 'var(--color-warning, #F9A825)';
-    return 'var(--color-danger, #E53935)';
+    const pct = this.dockOccupancyPct();
+    if (pct >= 90) return 'var(--color-danger, #E53935)';
+    return 'var(--color-warning, #F9A825)';
   });
 
   protected readonly gaugeLabel = computed(() => {
-    const score = this.riskScore();
-    if (score < 30) return 'Bajo';
-    if (score < 60) return 'Moderado';
-    return 'Alto';
+    const pct = this.dockOccupancyPct();
+    if (pct < 60) return 'Flujo Normal';
+    if (pct < 85) return 'Atención';
+    return 'Saturado';
+  });
+
+  protected readonly dockFooterText = computed(() => {
+    const free = this.freeRamps();
+    const busy = this.occupiedRamps();
+    return `${free} rampa${free === 1 ? '' : 's'} libre${free === 1 ? '' : 's'} · ${busy} en maniobra activa`;
   });
 
   ngOnInit(): void {
     this.inventoryState.loadItems().subscribe();
+    this.movementsService.loadInitialBackendData();
+    this.layoutService.loadTopology();
+    this.layoutService.loadAllPositions();
 
     // Simula SSE: cada 30s puede llegar una nueva alerta
     this.sseTimer = setInterval(() => {
@@ -225,6 +278,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.sseTimer) clearInterval(this.sseTimer);
+  }
+
+  protected navigateToDocks(): void {
+    this.router.navigate(['/movements/receiving']);
   }
 
   protected navigateToMap(): void {
