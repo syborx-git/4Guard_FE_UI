@@ -24,8 +24,6 @@ import { WarehouseMovementsService } from '../warehouse-movements/services/wareh
 import { WarehouseLayoutService } from '../catalogs/services/warehouse-layout.service';
 import { SpecularGlowDirective } from '../../shared/directives/specular-glow.directive';
 import { StarBorderDirective } from '../../shared/directives/star-border.directive';
-import { WarehouseLayoutService } from '../catalogs/services/warehouse-layout.service';
-import { WarehouseMovementsService } from '../warehouse-movements/services/warehouse-movements.service';
 import { HttpQualityAdapter } from '../quality/services/http-quality.adapter';
 import { QualityBlockItem } from '../quality/models/quality.models';
 
