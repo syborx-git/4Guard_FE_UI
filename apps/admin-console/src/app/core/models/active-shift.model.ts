@@ -1,7 +1,6 @@
 /**
  * @file active-shift.model.ts
- * @description Contrato del turno operativo vigente resuelto por el backend.
- * Fase 2: sessionId es null (resolución de solo lectura).
+ * @description Contrato del turno operativo vigente resuelto por el backend con horario de comida y pausa.
  */
 
 export interface ActiveShiftResponse {
@@ -13,6 +12,12 @@ export interface ActiveShiftResponse {
   endTime: string | null;
   isOvernight: boolean | null;
   toleranceMinutes: number | null;
+  mealStartTime?: string | null;
+  mealEndTime?: string | null;
+  mealEarlyPauseMinutes?: number | null;
+  hasMealBreak?: boolean | null;
+  isMealActive?: boolean | null;
+  canPauseForMeal?: boolean | null;
   businessDate: string;
   branchId: string;
   branchName: string;

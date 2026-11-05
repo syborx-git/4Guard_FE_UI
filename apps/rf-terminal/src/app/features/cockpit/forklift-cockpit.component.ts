@@ -762,6 +762,25 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
     this.justCompletedMission.set(null);
   }
 
+  // ─── 12. Pausa Táctica por Horario de Comida / Colación ──────────────────
+  onPauseForMeal(): void {
+    const status = this.shiftStatus();
+    if (!status.canPauseForMeal) {
+      const early = status.mealEarlyPauseMinutes || 10;
+      this.toast.warning(
+        `El horario de comida es a las ${status.mealStartTime || '--:--'}. Podrás pausar con hasta ${early} min de anticipación.`,
+        'FUERA DE VENTANA DE COMIDA'
+      );
+      this.audioService.playWarning();
+      return;
+    }
+    const success = this.missionService.pauseForMeal();
+    if (success) {
+      this.closeScanningModal();
+      this.closeMissionDetail();
+    }
+  }
+
   // ─── 11. Sincronización con Base de Datos y Menú ────────────────────────
   refreshMissions(): void {
     this.stopCamera();

@@ -55,8 +55,35 @@ export class ForbotChatDrawerComponent {
     { label: '🪵 Reparación vs Traspaleo', query: '¿Cuántas tablas rotas en una tarima obligan a traspaleo?' }
   ];
 
-  /** Píldoras de Sugerencia Rápida para Modo Tutor (Limpio y enfocado a aprendizaje) */
-  private readonly tutorPills = [
+  /** Píldoras de Tutor para Guardia de Caseta de Seguridad */
+  private readonly securityTutorPills = [
+    { label: '🚀 Tour Caseta', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '📱 Pases QR & Choferes', query: '¿Cómo validar pases QR y registrar choferes sin cita?' },
+    { label: '📋 Inspección F01', query: '¿Cuál es el checklist oficial de inspección física F01?' },
+    { label: '🚛 Rampa vs Patio', query: '¿Cuándo enviar un transporte a rampa o a patio de espera?' },
+    { label: '🚪 Salida Check-Out', query: '¿Cómo realizar el check-out de salida de un camión?' }
+  ];
+
+  /** Píldoras de Tutor para Gerente de Operaciones */
+  private readonly operationsManagerTutorPills = [
+    { label: '🚀 Tour Ejecutivo', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '📈 Throughput & Andenes', query: '¿Cómo interpretar el throughput y cuellos de botella en andenes?' },
+    { label: '🗺️ Topología 2D', query: '¿Cómo supervisar la topología 2D y saturación de bodegas?' },
+    { label: '⏱️ Horas Trabajadas', query: '¿Cómo auditar las horas trabajadas de montacarguistas por turno?' },
+    { label: '⏳ Regla de Pablo', query: '¿Cómo funciona la Regla Crítica de Pablo y la semaforización?' }
+  ];
+
+  /** Píldoras de Tutor para Mesa de Control */
+  private readonly controlDeskTutorPills = [
+    { label: '🚀 Tour Operativo', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '⏳ Vida Útil ≥ 365 días', query: '¿Cómo aplicar la regla de vida útil mínima de 365 días en recepción?' },
+    { label: '⚡ Asignar Misiones a RF', query: '¿Cómo asignar misiones a montacarguistas y marcar prioridad urgente?' },
+    { label: '📦 Despachos FEFO', query: '¿Cómo funciona el criterio FEFO en órdenes de salida?' },
+    { label: '📘 Inducción FSM (8 Estados)', query: 'Explícame el ciclo de vida del producto en los 8 estados del FSM' }
+  ];
+
+  /** Píldoras de Sugerencia Rápida para Modo Tutor General (Default) */
+  private readonly defaultTutorPills = [
     { label: '🚀 Iniciar Tour', query: 'Iniciar tour guiado de la interfaz' },
     { label: '📘 Inducción FSM (8 Estados)', query: 'Explícame el ciclo de vida del producto en los 8 estados del FSM' },
     { label: '⏳ Regla de Pablo', query: '¿Cómo funciona la Regla Crítica de Pablo y la semaforización?' },
@@ -65,12 +92,17 @@ export class ForbotChatDrawerComponent {
 
   /** Píldoras reactivas según el modo actual y contexto de ruta / rol */
   protected readonly activePills = computed(() => {
+    const rawRole = this.authState.role() || '';
+    const role = rawRole.replace(/^ROLE_/, '').toUpperCase();
+
     if (this.forbotEngine.currentMode() === 'tutor') {
-      return this.tutorPills;
+      if (role === 'SECURITY_GUARD') return this.securityTutorPills;
+      if (role === 'OPERATIONS_MANAGER') return this.operationsManagerTutorPills;
+      if (role === 'CONTROL_DESK') return this.controlDeskTutorPills;
+      return this.defaultTutorPills;
     }
 
     const currentUrl = this.router.url;
-    const role = this.authState.role() || '';
     const isQualityContext = currentUrl.includes('/quality') ||
       ['QM_INSPECTOR', 'ROLE_QM_INSPECTOR', 'AUDITOR', 'ROLE_AUDITOR'].includes(role);
 

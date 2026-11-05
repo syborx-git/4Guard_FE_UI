@@ -1605,7 +1605,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected reloadActivePasses(): void {
     const session = this.movementsService.movementsApi.getSessionOrg();
     const role = (this.authState.role() || '').toUpperCase();
-    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO') || role.includes('CONTROL_DESK') || role.includes('MESA');
     const branchToQuery = isAdminOrManager ? undefined : session.branchId;
 
     this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: branchToQuery }).subscribe({
@@ -1676,7 +1676,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
     const session = this.movementsService.movementsApi.getSessionOrg();
     const role = (this.authState.role() || '').toUpperCase();
-    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO') || role.includes('CONTROL_DESK') || role.includes('MESA');
     const branchToQuery = isAdminOrManager ? undefined : session.branchId;
 
     this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: branchToQuery }).subscribe({
@@ -1725,7 +1725,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
     const session = this.movementsService.movementsApi.getSessionOrg();
     const role = (this.authState.role() || '').toUpperCase();
-    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO') || role.includes('CONTROL_DESK') || role.includes('MESA');
     const branchToQuery = isAdminOrManager ? undefined : session.branchId;
     const isGlobal = this.isGlobalHistoryMode();
 

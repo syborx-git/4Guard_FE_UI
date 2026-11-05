@@ -1087,7 +1087,7 @@ export class WarehouseMovementsService {
             referenceFolio: newlyArrived.folio,
             route: '/warehouse-movements/receiving',
             queryParams: { folio: newlyArrived.folio },
-            targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER'],
+            targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER'],
             targetRoutes: ['/warehouse-movements', '/receiving'],
             severity: 'INFO',
             data: newlyArrived
@@ -2061,7 +2061,7 @@ export class WarehouseMovementsService {
           referenceFolio: header.folio,
           route: '/warehouse-movements/receiving',
           queryParams: { folio: header.folio },
-          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER'],
+          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER'],
           targetRoutes: ['/warehouse-movements', '/receiving'],
           severity: 'INFO',
           data: header
@@ -2081,7 +2081,7 @@ export class WarehouseMovementsService {
           referenceFolio: localHeader.folio,
           route: '/warehouse-movements/receiving',
           queryParams: { folio: localHeader.folio },
-          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER'],
+          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER'],
           targetRoutes: ['/warehouse-movements', '/receiving'],
           severity: 'INFO',
           data: localHeader
@@ -2237,7 +2237,7 @@ export class WarehouseMovementsService {
           referenceFolio: outbound.folio,
           route: '/warehouse-movements/outbound',
           queryParams: { folio: outbound.folio },
-          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER'],
+          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER'],
           targetRoutes: ['/warehouse-movements', '/outbound'],
           severity: 'INFO',
           data: outbound
@@ -2287,7 +2287,7 @@ export class WarehouseMovementsService {
           referenceFolio: localOutbound.folio,
           route: '/warehouse-movements/outbound',
           queryParams: { folio: localOutbound.folio },
-          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER'],
+          targetRoles: ['ADMIN', 'WAREHOUSE_OPERATOR', 'DOCK_SUPERVISOR', 'WAREHOUSE_MANAGER', 'OPERATIONS_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER'],
           targetRoutes: ['/warehouse-movements', '/outbound'],
           severity: 'INFO',
           data: localOutbound

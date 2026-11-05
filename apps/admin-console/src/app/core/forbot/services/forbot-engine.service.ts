@@ -11,7 +11,8 @@ import {
   ForbotChatMessage,
   ForbotIntentType,
   ForbotWidgetData,
-  ForbotMode
+  ForbotMode,
+  ForbotWidgetItem
 } from '../models/forbot.models';
 import { InventoryQueryService } from '../../../features/inventory-query/services/inventory-query.service';
 import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
@@ -96,6 +97,43 @@ export class ForbotEngineService {
   public setMode(mode: ForbotMode): void {
     this.currentMode.set(mode);
     if (mode === 'tutor') {
+      const rawRole = this.authState.role() || '';
+      const role = rawRole.replace(/^ROLE_/, '').toUpperCase();
+
+      let welcomeText = '🎓 **Modo Tutor Activado**\nBienvenido al centro de inducción interactivo de 4GUARD WMS. Puedes iniciar el **Tour de Pantalla** o consultarme dudas sobre el ciclo de estados FSM o la Regla de Pablo.';
+      let title = 'Inducción de Interfaz 4GUARD';
+      let items: ForbotWidgetItem[] = [
+        { label: 'Navegación & Menú', value: 'Módulo 1', badgeColor: 'blue' },
+        { label: 'Filtros & Búsqueda', value: 'Módulo 2', badgeColor: 'amber' },
+        { label: 'FSM & Trazabilidad', value: 'Módulo 3', badgeColor: 'emerald' }
+      ];
+
+      if (role === 'SECURITY_GUARD') {
+        welcomeText = '🎓 **Modo Tutor: Caseta de Seguridad**\nBienvenido al centro de inducción de vigilancia patrimonial. Puedes iniciar el **Tour de Caseta** o consultarme sobre el escaneo de pases QR, checklist F01 y control de patio.';
+        title = 'Inducción Caseta de Seguridad (F01)';
+        items = [
+          { label: 'Pases QR & Choferes', value: 'Paso 1', badgeColor: 'blue' },
+          { label: 'Inspección F01 & Plagas', value: 'Paso 2', badgeColor: 'amber' },
+          { label: 'Rampa & Check-out', value: 'Paso 3', badgeColor: 'emerald' }
+        ];
+      } else if (role === 'OPERATIONS_MANAGER') {
+        welcomeText = '🎓 **Modo Tutor: Gerencia de Operaciones**\nBienvenido al centro de inducción ejecutiva. Puedes iniciar el **Tour de Rendimiento** o consultarme sobre KPIs de Throughput, Topología 2D y auditoría de horas trabajadas.';
+        title = 'Inducción Ejecutiva & Rendimiento';
+        items = [
+          { label: 'Throughput & Rendimiento', value: 'Métrica 1', badgeColor: 'blue' },
+          { label: 'Topología 2D en Vivo', value: 'Métrica 2', badgeColor: 'amber' },
+          { label: 'Horas Montacarguistas', value: 'Métrica 3', badgeColor: 'emerald' }
+        ];
+      } else if (role === 'CONTROL_DESK') {
+        welcomeText = '🎓 **Modo Tutor: Mesa de Control**\nBienvenido al centro de inducción operativa. Puedes iniciar el **Tour Operativo** o consultarme sobre validación de vida útil (≥ 365 días), asignación de misiones a RF y despachos FEFO.';
+        title = 'Inducción Mesa de Control';
+        items = [
+          { label: 'Recepción & Vida Útil', value: 'Control 1', badgeColor: 'blue' },
+          { label: 'Asignación a RF', value: 'Control 2', badgeColor: 'amber' },
+          { label: 'Despachos FEFO', value: 'Control 3', badgeColor: 'emerald' }
+        ];
+      }
+
       this.chatHistory.update((msgs) => [
         ...msgs,
         {
@@ -103,15 +141,11 @@ export class ForbotEngineService {
           sender: 'bot',
           intent: 'GENERAL_HELP',
           timestamp: this.getCurrentTimestamp(),
-          text: '🎓 **Modo Tutor Activado**\nBienvenido al centro de inducción interactivo de 4GUARD WMS. Puedes iniciar el **Tour de Pantalla** o preguntarme sobre el **ciclo de 8 estados (FSM)** o la **Regla de Pablo**.',
+          text: welcomeText,
           widgetData: {
             type: 'tutorial-card',
-            title: 'Inducción de Interfaz 4GUARD',
-            items: [
-              { label: 'Navegación & Menú', value: 'Módulo 1', badgeColor: 'blue' },
-              { label: 'Filtros & Búsqueda', value: 'Módulo 2', badgeColor: 'amber' },
-              { label: 'FSM & Trazabilidad', value: 'Módulo 3', badgeColor: 'emerald' }
-            ],
+            title,
+            items,
             actionLabel: 'Iniciar Tour'
           }
         }
@@ -121,7 +155,8 @@ export class ForbotEngineService {
 
   public startDriverTour(): void {
     this.isDrawerOpen.set(false);
-    this.tourService.startInterfaceTour(() => {
+    const role = this.authState.role() || '';
+    this.tourService.startTourForRole(role, () => {
       this.isDrawerOpen.set(true);
       this.chatHistory.update((msgs) => [
         ...msgs,
@@ -130,7 +165,7 @@ export class ForbotEngineService {
           sender: 'bot',
           intent: 'TOUR_DRIVER_JS',
           timestamp: this.getCurrentTimestamp(),
-          text: '🎉 **¡Felicidades!** Has completado el recorrido guiado por la interfaz de 4GUARD WMS. Ahora puedes consultar cualquier duda operativa o volver al **Modo Operativo**.'
+          text: '🎉 **¡Felicidades!** Has completado el recorrido guiado correspondiente a tu perfil en 4GUARD WMS. Ahora puedes consultar cualquier duda operativa o volver al **Modo Operativo**.'
         }
       ]);
     });

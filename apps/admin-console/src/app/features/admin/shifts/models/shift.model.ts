@@ -1,7 +1,7 @@
 /**
  * @file shift.model.ts
  * @description Modelos de dominio e interfaces DTO para la Gestión de Turnos y Horarios (HU-140).
- * Alineado 100% con el Contrato API REST (docs/api/modules/shifts.md).
+ * Alineado 100% con el Contrato API REST (docs/api/modules/shifts.md) y soporte de horario de comida (V58).
  */
 
 export type OperatingDay =
@@ -48,6 +48,10 @@ export interface Shift {
   status: ShiftStatus;
   restBreakMinutes?: number;
   toleranceMinutes?: number;
+  mealStartTime?: string | null;
+  mealEndTime?: string | null;
+  mealEarlyPauseMinutes?: number;
+  hasMealBreak?: boolean;
   isOvernight?: boolean;
   netDurationMinutes?: number;
   branchId?: string;
@@ -71,6 +75,10 @@ export interface CreateShiftRequest {
   status?: ShiftStatus;
   restBreakMinutes?: number;
   toleranceMinutes?: number;
+  mealStartTime?: string | null;
+  mealEndTime?: string | null;
+  mealEarlyPauseMinutes?: number;
+  hasMealBreak?: boolean;
   scopeType?: ScopeType;
   branchId?: string | null;
   warehouseSectionId?: string | null;
@@ -99,6 +107,10 @@ export interface ShiftSummaryResponse {
   branchId?: string | null;
   branchName?: string | null;
   operatingDays: OperatingDay[];
+  mealStartTime?: string | null;
+  mealEndTime?: string | null;
+  mealEarlyPauseMinutes?: number;
+  hasMealBreak?: boolean;
 }
 
 export interface ShiftAuditLogDetail {
@@ -128,6 +140,25 @@ export interface ShiftDurationCalculation {
   hours: number;
   isOvernight: boolean;
   formattedDuration: string;
+}
+
+/**
+ * Calcula la duración de la comida en minutos manejando cruce de medianoche.
+ */
+export function calculateMealDurationMinutes(
+  mealStartTime?: string,
+  mealEndTime?: string
+): number {
+  if (!mealStartTime || !mealEndTime) return 0;
+  const [sH, sM] = mealStartTime.split(':').map(Number);
+  const [eH, eM] = mealEndTime.split(':').map(Number);
+  if (isNaN(sH) || isNaN(sM) || isNaN(eH) || isNaN(eM)) return 0;
+  let sTotal = sH * 60 + sM;
+  let eTotal = eH * 60 + eM;
+  if (eTotal <= sTotal) {
+    eTotal += 24 * 60;
+  }
+  return eTotal - sTotal;
 }
 
 /**

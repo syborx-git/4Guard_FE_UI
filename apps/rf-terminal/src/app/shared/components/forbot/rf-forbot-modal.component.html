@@ -33,7 +33,7 @@
       @for (pill of warehousePills; track pill.label) {
         <button
           type="button"
-          class="pill-btn"
+          class="pill-btn" [class.pill-btn--tour]="pill.query === 'INICIAR_TOUR_RF'"
           (click)="sendPillQuery(pill.query)">
           <span>{{ pill.label }}</span>
         </button>

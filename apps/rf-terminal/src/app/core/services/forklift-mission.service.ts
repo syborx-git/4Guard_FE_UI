@@ -35,6 +35,12 @@ export interface ShiftScheduleInfo {
   warningThresholdMinutes: number; // 15 minutos preventivos
   isFromBackend?: boolean;
   isOvernight?: boolean;
+  mealStartTime?: string | null;
+  mealEndTime?: string | null;
+  mealEarlyPauseMinutes?: number | null;
+  hasMealBreak?: boolean | null;
+  isMealActive?: boolean | null;
+  canPauseForMeal?: boolean | null;
 }
 
 export interface LotBreakdownItem {
@@ -240,6 +246,18 @@ export class ForkliftMissionService {
 
   public isMissionAssignedToCurrentUser(recOrOut: any): boolean {
     if (!recOrOut) return false;
+    const user = (this.authState.user() as any) || {};
+    const rawRole = String(user.role || '').toUpperCase();
+    if (
+      rawRole.includes('ADMIN') ||
+      rawRole.includes('CEO') ||
+      rawRole.includes('MANAGER') ||
+      rawRole.includes('SUPERVISOR') ||
+      rawRole.includes('CONTROL_DESK') ||
+      rawRole.includes('SHIFT_LEADER')
+    ) {
+      return true;
+    }
     const { operatorId, code, fullName } = this.getCurrentOperatorIdentity();
     if (!operatorId && !code && !fullName) return false;
 
@@ -1208,6 +1226,12 @@ export class ForkliftMissionService {
           warningThresholdMinutes: Number(data.toleranceMinutes) || 15,
           isOvernight: Boolean(data.isOvernight),
           isFromBackend: true,
+          mealStartTime: data.mealStartTime ? String(data.mealStartTime).slice(0, 5) : null,
+          mealEndTime: data.mealEndTime ? String(data.mealEndTime).slice(0, 5) : null,
+          mealEarlyPauseMinutes: Number(data.mealEarlyPauseMinutes) || 10,
+          hasMealBreak: Boolean(data.hasMealBreak),
+          isMealActive: Boolean(data.isMealActive),
+          canPauseForMeal: Boolean(data.canPauseForMeal),
         });
         this.recomputeShiftRemainingMinutes();
       } else {
@@ -1239,6 +1263,10 @@ export class ForkliftMissionService {
               warningThresholdMinutes: Number(found.toleranceMinutes) || 15,
               isOvernight: Boolean(found.isOvernight),
               isFromBackend: true,
+              mealStartTime: found.mealStartTime ? String(found.mealStartTime).slice(0, 5) : null,
+              mealEndTime: found.mealEndTime ? String(found.mealEndTime).slice(0, 5) : null,
+              mealEarlyPauseMinutes: Number(found.mealEarlyPauseMinutes) || 10,
+              hasMealBreak: Boolean(found.hasMealBreak),
             });
           } else if (!this.currentShift().isFromBackend) {
             this.currentShift.set(this.resolveCurrentShiftByClock());
@@ -1280,11 +1308,37 @@ export class ForkliftMissionService {
   readonly shiftStatus = computed(() => {
     const shift = this.currentShift();
     const remaining = this.shiftMinutesRemaining();
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    let canPause = false;
+    let isMealActive = false;
+
+    if (shift.hasMealBreak && shift.mealStartTime && shift.mealEndTime) {
+      const [sH, sM] = shift.mealStartTime.split(':').map(Number);
+      const [eH, eM] = shift.mealEndTime.split(':').map(Number);
+      const mealStartMin = sH * 60 + sM;
+      let mealEndMin = eH * 60 + eM;
+      if (mealEndMin <= mealStartMin) {
+        mealEndMin += 24 * 60;
+      }
+      const earlyWindowMin = mealStartMin - (shift.mealEarlyPauseMinutes || 10);
+
+      let adjustedNowMin = nowMin;
+      if (mealEndMin >= 24 * 60 && nowMin < mealStartMin) {
+        adjustedNowMin += 24 * 60;
+      }
+      canPause = adjustedNowMin >= earlyWindowMin && adjustedNowMin <= mealEndMin;
+      isMealActive = adjustedNowMin >= mealStartMin && adjustedNowMin < mealEndMin;
+    }
+
     return {
       ...shift,
       remainingMinutes: remaining,
       isNearShiftEnd: remaining > 0 && remaining <= shift.warningThresholdMinutes,
       isShiftEnded: remaining <= 0,
+      canPauseForMeal: canPause,
+      isMealActive: isMealActive,
     };
   });
 
@@ -2240,6 +2294,57 @@ export class ForkliftMissionService {
    * Reanudar la misión previamente interrumpida por urgencia
    * Restaura el contexto exacto de descarga y el contador de tarimas correlativo
    */
+  /**
+   * Pausa táctica de la misión activa para el horario de comida / colación.
+   * Resguarda el estado exacto de tarimas escaneadas y notifica al backend.
+   */
+  pauseForMeal(): boolean {
+    const current = this.activeMission();
+    if (!current) {
+      this.toast.warning('No tienes ninguna misión activa para pausar.', 'SIN MISIÓN ACTIVA');
+      return false;
+    }
+    const nowStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    const scannedCount = current.pallets?.length || 0;
+    const pausedMission: ForkliftMission = {
+      ...current,
+      status: 'PAUSED',
+      statusLabel: `Pausada por Comida (${scannedCount} tarimas resguardadas)`,
+      notes: `${current.notes || ''} [Pausada a las ${nowStr} por horario de comida]`.trim(),
+    };
+
+    const updatedList = this.rawMissions().map((m) => (m.id === current.id ? pausedMission : m));
+    this.pausedMissionId.set(current.id);
+    this.savePausedMissionId(current.id);
+    this.activeMissionId.set(null);
+    this.saveActiveMissionId(null);
+    this.rawMissions.set(updatedList);
+    this.saveBufferMissions(updatedList);
+
+    // Notificar al backend de forma segura
+    if (this.isUuid(current.id) && current.type === 'INBOUND_UNLOAD') {
+      this.http
+        .put(`/api/v1/warehouse-receptions/${current.id}/parameters`, {
+          observations: pausedMission.notes,
+        })
+        .pipe(catchError(() => of(null)))
+        .subscribe();
+    } else if (this.isUuid(current.id) && current.type === 'OUTBOUND_DISPATCH') {
+      this.http
+        .put(`/api/v1/warehouse-outbounds/${current.id}`, {
+          status: 'PAUSED',
+          observations: pausedMission.notes,
+          pauseReason: 'Horario de Comida / Colación',
+        })
+        .pipe(catchError(() => of(null)))
+        .subscribe();
+    }
+
+    this.audioService.playWarning();
+    this.toast.info('Misión pausada por horario de comida. Resguarda tu unidad con uñas a piso.', 'PAUSA POR COMIDA');
+    return true;
+  }
+
   resumePausedMission(): void {
     const pausedId = this.pausedMissionId();
     if (!pausedId) return;

@@ -271,6 +271,33 @@
     </div>
   }
 
+  <!-- ── 2.6 BANNER INFORMATIVO / ACTIVO DE COMIDA ── -->
+  @if (shiftStatus().hasMealBreak && (shiftStatus().canPauseForMeal || shiftStatus().isMealActive)) {
+    <div class="meal-window-banner" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.25)); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="material-symbols-outlined text-amber-400 text-3xl animate-pulse">restaurant</span>
+        <div>
+          <div style="font-weight: 800; font-size: 0.95rem; color: #fbbf24;">
+            {{ shiftStatus().isMealActive ? '🍽️ EN PERIODO DE COMIDA' : '🍽️ VENTANA DE PAUSA POR COMIDA AUTORIZADA' }}
+          </div>
+          <div style="font-size: 0.8rem; color: #fde68a;">
+            Horario: {{ shiftStatus().mealStartTime }} a {{ shiftStatus().mealEndTime }} 
+            (Anticipación permitida: {{ shiftStatus().mealEarlyPauseMinutes || 10 }} min). Resguarda tu montacargas.
+          </div>
+        </div>
+      </div>
+      @if (activeMission()) {
+        <button
+          type="button"
+          (click)="onPauseForMeal()"
+          style="background: #f59e0b; color: #000; font-weight: 800; padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+          <span class="material-symbols-outlined text-lg">pause_circle</span>
+          <span>Pausar Misión Ahora</span>
+        </button>
+      }
+    </div>
+  }
+
   <!-- ── 3. HERO: TARJETA EJECUTIVA DE MISIÓN ACTIVA (FOCO INMEDIATO Y COMPACTO) ── -->
   @if (activeMission(); as mission) {
     <section
@@ -484,6 +511,20 @@
             <span class="material-symbols-outlined text-sm">warning</span>
             <span>Reportar Daño</span>
           </button>
+
+          @if (shiftStatus().hasMealBreak) {
+            <button
+              type="button"
+              (click)="onPauseForMeal()"
+              class="btn-hero-tool"
+              [style.background]="shiftStatus().canPauseForMeal ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)'"
+              [style.border-color]="shiftStatus().canPauseForMeal ? '#f59e0b' : 'rgba(255, 255, 255, 0.1)'"
+              [style.color]="shiftStatus().canPauseForMeal ? '#fbbf24' : '#94a3b8'"
+              [title]="shiftStatus().canPauseForMeal ? 'Pausar misión para tomar comida/colación' : ('Comida programada: ' + shiftStatus().mealStartTime)">
+              <span class="material-symbols-outlined text-sm" [class.animate-bounce]="shiftStatus().canPauseForMeal">restaurant</span>
+              <span>{{ shiftStatus().canPauseForMeal ? 'Pausar por Comida' : ('Comida ' + (shiftStatus().mealStartTime || '')) }}</span>
+            </button>
+          }
 
           <button
             type="button"

@@ -20,6 +20,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { RfTourService } from '../../../core/services/rf-tour.service';
 import {
   AuthState,
   SyncState,
@@ -47,8 +48,51 @@ export class RfForbotModalComponent {
   protected readonly zoneLease = inject(ZoneLeaseService);
   protected readonly voiceService = inject(ForbotVoiceService);
   private readonly router = inject(Router);
+  private readonly rfTour = inject(RfTourService);
+
+  /** Modo actual: 'operativo' (default) o 'tutor' (inducción interactiva) */
+  public readonly currentMode = signal<'operativo' | 'tutor'>('operativo');
 
   protected userQueryText = signal<string>('');
+
+  /** Píldoras de inducción táctil para Modo Tutor */
+  protected readonly tutorPills = [
+    { label: '🚀 Iniciar Tour RF', query: 'INICIAR_TOUR_RF' },
+    { label: '📦 ¿Cómo hacer un Putaway?', query: '¿Cómo escanear y confirmar un Putaway en rack?' },
+    { label: '⚠️ ¿Reportar tarima rota?', query: '¿Cuándo se debe rechazar una tarima por daño o inclinación?' },
+    { label: '⏸️ ¿Pausar por comida/batería?', query: '¿Cómo pausar mi turno para colación o recarga?' },
+    { label: '📶 ¿Modo sin conexión?', query: '¿Cómo funciona la terminal en modo offline?' }
+  ];
+
+  /** Píldoras activas según el modo seleccionado */
+  protected readonly activePills = computed(() => {
+    return this.currentMode() === 'tutor' ? this.tutorPills : this.warehousePills;
+  });
+
+  public setMode(mode: 'operativo' | 'tutor'): void {
+    this.currentMode.set(mode);
+    if (mode === 'tutor') {
+      this.chatMessages.update(msgs => [
+        ...msgs,
+        {
+          id: `rf-tutor-welcome-${Date.now()}`,
+          sender: 'bot',
+          text: '🎓 **Modo Tutor Táctil Activado**\nBienvenido a la inducción para Montacarguistas. Puedes iniciar el **Tour de la Terminal RF** para recorrer la pantalla paso a paso, o tocar cualquiera de las dudas frecuentes sobre escaneo, estiba y pausas de turno.',
+          timestamp: this.getCurrentTime(),
+          widgetData: {
+            type: 'tutorial-card',
+            title: 'Inducción de Terminal RF',
+            items: [
+              { label: 'Escaneo SSCC', value: 'Paso 1', badgeColor: 'blue' },
+              { label: 'Confirmación Rack', value: 'Paso 2', badgeColor: 'emerald' },
+              { label: 'Bloqueo Daños QM', value: 'Paso 3', badgeColor: 'amber' }
+            ],
+            actionLabel: 'Iniciar Tour Táctico'
+          }
+        }
+      ]);
+    }
+  }
 
   /** Píldoras de consulta rápida para operarios de almacén */
   protected readonly warehousePills = [
@@ -169,6 +213,38 @@ export class RfForbotModalComponent {
   /** Procesa consultas operativas de campo en la terminal RF */
   private processOperationalQuery(query: string): ForbotChatMessage {
     const q = query.toLowerCase();
+
+    // Tour táctico por texto
+    if (q.includes('tour') || q.includes('recorrido') || q.includes('guiado') || q.includes('iniciar tour')) {
+      setTimeout(() => {
+        this.onClose();
+        this.rfTour.startForkliftCockpitTour();
+      }, 300);
+      return {
+        id: `bot-${Date.now()}`,
+        sender: 'bot',
+        text: '🚀 **Iniciando Tour de la Terminal RF**\nCerrando el asistente para resaltar los elementos del Cockpit de Montacarguistas...',
+        timestamp: this.getCurrentTime()
+      };
+    }
+
+    // Pausas operativas (Comida, Batería, Relevo)
+    if (q.includes('pausar') || q.includes('comida') || q.includes('bateria') || q.includes('batería') || q.includes('relevo') || q.includes('descanso')) {
+      return {
+        id: `bot-${Date.now()}`,
+        sender: 'bot',
+        text: '⏸️ **Pausas Operativas de Turno:**\n1. En la barra superior, toca el botón de pausa o tu avatar de operador.\n2. Selecciona el motivo: **Colación (Comida)**, **Recarga de Batería** o **Relevo de Turno**.\n3. Si tienes una misión tomada, el sistema la resguarda en estado pausado sin penalizar tus métricas de tiempo de ciclo.',
+        timestamp: this.getCurrentTime(),
+        widgetData: {
+          type: 'action-card',
+          title: 'Gestión de Pausa de Montacargas',
+          items: [
+            { label: 'Tipos de Pausa', value: 'Comida / Batería / Relevo', badgeColor: 'blue' },
+            { label: 'Resguardo de Misión', value: 'Garantizado', badgeColor: 'emerald' }
+          ]
+        }
+      };
+    }
 
     // 1. Rampas y Andenes
     if (q.includes('rampa') || q.includes('anden') || q.includes('andén') || q.includes('descarga')) {
