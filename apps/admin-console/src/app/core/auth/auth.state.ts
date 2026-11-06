@@ -251,20 +251,17 @@ export class AuthState {
       return true;
     }
 
-    // 1. Gerente de Operaciones: Acceso total operativo WMS EXCLUYENDO Seguridad y Calidad
+    // 1. Gerente de Operaciones y Almacén: Acceso total operativo (incluyendo Caseta de Seguridad y Calidad)
     if (
       normRole === 'OPERATIONS_MANAGER' ||
       normRole === 'ROLE_OPERATIONS_MANAGER' ||
       normRole === 'WAREHOUSE_MANAGER' ||
       normRole === 'ROLE_WAREHOUSE_MANAGER'
     ) {
-      if (module === 'security' || module === 'quality') {
-        return false;
-      }
       return true;
     }
 
-    // 2. Coordinadores y Supervisores de Operaciones
+    // 2. Coordinadores y Supervisores de Operaciones: Acceso total operativo
     if (
       normRole === 'OPERATIONS_COORDINATOR' ||
       normRole === 'ROLE_OPERATIONS_COORDINATOR' ||
@@ -273,9 +270,6 @@ export class AuthState {
       normRole === 'WAREHOUSE_SUPERVISOR' ||
       normRole === 'ROLE_WAREHOUSE_SUPERVISOR'
     ) {
-      if (module === 'security' || module === 'quality') {
-        return false;
-      }
       return true;
     }
 
