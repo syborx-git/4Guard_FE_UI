@@ -29,6 +29,7 @@ import {
 import { PrintService } from '../../../core/services/print.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { SmartNotificationService } from '../../../core/services/smart-notification.service';
+import { ShiftContextService } from '../../../core/services/shift-context.service';
 import {
   PrintTransportChecklistLayoutComponent,
   TransportChecklistPrintData
@@ -97,6 +98,24 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
   private readonly movementsService = inject(WarehouseMovementsService);
   protected readonly smartNotification = inject(SmartNotificationService);
+  protected readonly shiftContext = inject(ShiftContextService);
+
+  // ── Modos de Historial: Turno Activo vs Consulta Histórica General ──
+  protected readonly isGlobalHistoryMode = signal<boolean>(false);
+  protected readonly historyDatePreset = signal<'TODAY' | 'WEEK' | 'MONTH' | 'ALL' | 'CUSTOM'>('TODAY');
+  protected readonly historyCustomFrom = signal<string>('');
+  protected readonly historyCustomTo = signal<string>('');
+  protected readonly currentShiftExits = signal<any[]>([]);
+
+  protected readonly currentShiftInfo = computed(() => {
+    const s = this.shiftContext.activeShift();
+    if (!s) return null;
+    return {
+      name: s.shiftName || 'Turno Activo',
+      startTime: s.startTime,
+      sessionId: s.sessionId
+    };
+  });
   protected readonly pendingRampAssignments = this.smartNotification.pendingRampAssignments;
   protected readonly pendingRampAssignmentsCount = this.smartNotification.pendingRampAssignmentsCount;
   private readonly printService = inject(PrintService);
@@ -285,6 +304,59 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly activePasses       = signal<any[]>([]);
   protected readonly backendInYardPasses = signal<any[]>([]);
   protected readonly historyPasses      = signal<any[]>([]);
+  protected readonly discardedYardFolios = signal<Set<string>>(this.loadDiscardedYardFolios());
+
+  private loadDiscardedYardFolios(): Set<string> {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem('4g_discarded_yard_folios');
+        if (raw) return new Set(JSON.parse(raw));
+      }
+    } catch {}
+    return new Set<string>();
+  }
+
+  private addDiscardedYardFolio(key: string): void {
+    if (!key) return;
+    const clean = key.trim().toUpperCase();
+    this.discardedYardFolios.update(s => {
+      const copy = new Set(s);
+      copy.add(clean);
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('4g_discarded_yard_folios', JSON.stringify(Array.from(copy)));
+        }
+      } catch {}
+      return copy;
+    });
+  }
+
+  protected readonly processedPassTokens = signal<Set<string>>(this.loadProcessedPassTokens());
+
+  private loadProcessedPassTokens(): Set<string> {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem('4g_processed_pass_tokens');
+        if (raw) return new Set(JSON.parse(raw));
+      }
+    } catch {}
+    return new Set<string>();
+  }
+
+  private addProcessedPassToken(key: string): void {
+    if (!key) return;
+    const clean = key.trim().toUpperCase();
+    this.processedPassTokens.update(s => {
+      const copy = new Set(s);
+      copy.add(clean);
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('4g_processed_pass_tokens', JSON.stringify(Array.from(copy)));
+        }
+      } catch {}
+      return copy;
+    });
+  }
   protected readonly historySearch      = signal<string>('');
   protected readonly isLoadingHistory   = signal<boolean>(false);
   protected readonly isLoadingInYard    = signal<boolean>(false);
@@ -298,11 +370,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const mergedMap = new Map<string, any>();
     const exitTokensOrFolios = new Set<string>();
 
-    // 1. Folios que ya salieron de la planta (desde historial en memoria)
+    // 1. Folios que ya salieron de la planta (desde historial en memoria) o descartados
     for (const h of this.historyPasses()) {
       if (h.token) exitTokensOrFolios.add(h.token.trim().toUpperCase());
       if (h.generatedFolio) exitTokensOrFolios.add(h.generatedFolio.trim().toUpperCase());
       if (h.id) exitTokensOrFolios.add(h.id.trim().toUpperCase());
+    }
+    for (const d of this.discardedYardFolios()) {
+      exitTokensOrFolios.add(d);
     }
 
     // 2. Pases devueltos por el backend como en patio (In-Yard)
@@ -391,8 +466,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           docDate: r.checkIn?.docDate || r.createdAt,
           receptionTime: timeVal,
           horaEntrada: timeVal,
-          rampNumber: r.checkIn?.rampNumber != null ? Number(r.checkIn.rampNumber) : null,
-          rampCode: r.checkIn?.rampNumber ? this.getFormattedRampLabel(r.checkIn?.rampCode, r.checkIn?.rampNumber) : null,
+          rampNumber: (r.checkIn?.rampNumber != null && Number(r.checkIn.rampNumber) > 0) ? Number(r.checkIn.rampNumber) : null,
+          rampCode: r.checkIn?.rampCode ? this.getFormattedRampLabel(r.checkIn?.rampCode, r.checkIn?.rampNumber) : (r.checkIn?.rampNumber ? `Andén R-${r.checkIn.rampNumber}` : 'Pendiente de Asignación'),
           observations: r.observations || r.checkIn?.observations || '',
           driverSignature: r.checkIn?.driverSignature || (r as any).driverSignature || (r as any).preCheckin?.driverSignature,
           driverSignedAt: r.checkIn?.driverSignedAt || (r as any).driverSignedAt || (r as any).preCheckin?.driverSignedAt,
@@ -460,8 +535,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           docDate: o.dispatchedAt || this.getCurrentDateString(),
           receptionTime: timeVal,
           horaEntrada: timeVal,
-          rampNumber: o.rampNumber != null ? Number(o.rampNumber) : null,
-          rampCode: o.rampNumber ? this.getFormattedRampLabel(o.rampCode, o.rampNumber) : null,
+          rampNumber: (o.rampNumber != null && Number(o.rampNumber) > 0) ? Number(o.rampNumber) : null,
+          rampCode: o.rampCode ? this.getFormattedRampLabel(o.rampCode, o.rampNumber) : (o.rampNumber ? `Andén R-${o.rampNumber}` : 'Pendiente de Asignación'),
           observations: o.observations || '',
           driverSignature: o.driverSignature || (o as any).preCheckin?.driverSignature,
           driverSignedAt: o.driverSignedAt || (o as any).preCheckin?.driverSignedAt,
@@ -491,6 +566,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   });
 
   protected readonly activeToken           = signal<string | null>(null);
+  protected readonly activePassId          = signal<string | null>(null);
   protected readonly activeDriverSignature = signal<string | null>(null);
   protected readonly activeDriverSignedAt  = signal<string | null>(null);
   protected readonly hasRealDriverSignature = computed(() => {
@@ -684,6 +760,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.isPurging.set(false);
         this.closePurgeConfirmModal();
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem('4g_discarded_yard_folios');
+            localStorage.removeItem('4g_processed_pass_tokens');
+          }
+        } catch {}
+        this.discardedYardFolios.set(new Set());
+        this.processedPassTokens.set(new Set());
         this.backendInYardPasses.set([]);
         this.activePasses.set([]);
         this.historyPasses.set([]);
@@ -707,20 +791,42 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected discardInYardPass(pass: any, event?: Event): void {
     if (event) event.stopPropagation();
     if (!pass) return;
-    const folioOrToken = pass.token || pass.generatedFolio || pass.id;
+    const folioOrToken = (pass.token || pass.generatedFolio || pass.id || '').trim();
+    if (!folioOrToken) return;
     if (!confirm(`¿Eliminar la unidad con folio/token #${folioOrToken} del patio de planta?`)) return;
 
-    this.movementsService.movementsApi.deletePass(folioOrToken, pass.token).subscribe({
+    const keysToDiscard = [
+      folioOrToken,
+      pass.token,
+      pass.generatedFolio,
+      pass.id ? String(pass.id) : null
+    ].filter(Boolean) as string[];
+
+    keysToDiscard.forEach(k => this.addDiscardedYardFolio(k));
+
+    this.backendInYardPasses.update(list => list.filter(p => {
+      const pKey1 = (p.token || '').trim().toUpperCase();
+      const pKey2 = (p.generatedFolio || '').trim().toUpperCase();
+      const pKey3 = (p.id ? String(p.id) : '').trim().toUpperCase();
+      return !keysToDiscard.some(k => {
+        const upper = k.trim().toUpperCase();
+        return upper === pKey1 || upper === pKey2 || upper === pKey3;
+      });
+    }));
+
+    keysToDiscard.forEach(k => {
+      this.movementsService.removeReception(k);
+      this.movementsService.removeOutbound(k);
+    });
+
+    const paramToSend = pass.generatedFolio || pass.token || pass.id;
+    this.movementsService.movementsApi.deletePass(paramToSend, pass.token).subscribe({
       next: () => {
-        this.backendInYardPasses.update(list => list.filter(p => p.token !== folioOrToken && p.generatedFolio !== folioOrToken && p.id !== folioOrToken));
-        this.movementsService.removeReception(folioOrToken);
         this.toast.info(`Unidad #${folioOrToken} eliminada del patio.`);
         this.reloadInYardPasses(true);
       },
       error: () => {
-        this.backendInYardPasses.update(list => list.filter(p => p.token !== folioOrToken && p.generatedFolio !== folioOrToken && p.id !== folioOrToken));
-        this.movementsService.removeReception(folioOrToken);
-        this.toast.info(`Unidad #${folioOrToken} eliminada localmente.`);
+        this.toast.info(`Unidad #${folioOrToken} eliminada del patio.`);
         this.reloadInYardPasses(true);
       }
     });
@@ -957,6 +1063,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   });
 
   protected readonly completedShiftExitsCount = computed(() => {
+    if (this.currentShiftExits().length > 0) {
+      return this.currentShiftExits().length;
+    }
     const today = new Date().toISOString().slice(0, 10);
     return this.historyPasses().filter(p => {
       const d = p.completedAt || p.departureTime || p.rawCreatedAt || p.createdAt || p.fecha || p.date;
@@ -1179,6 +1288,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
     }
 
+    this.shiftContext.loadActiveShift();
     this.movementsService.loadInitialBackendData();
     this.loadPublicCatalogs();
     this.reloadAllData();
@@ -1538,7 +1648,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected reloadActivePasses(): void {
     const session = this.movementsService.movementsApi.getSessionOrg();
     const role = (this.authState.role() || '').toUpperCase();
-    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO') || role.includes('CONTROL_DESK') || role.includes('MESA');
     const branchToQuery = isAdminOrManager ? undefined : session.branchId;
 
     this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: branchToQuery }).subscribe({
@@ -1556,6 +1666,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const purgedAt = purgedAtStr ? Number(purgedAtStr) : 0;
 
     let cleanList = backendPasses || [];
+    const processed = this.processedPassTokens();
+    if (processed.size > 0) {
+      cleanList = cleanList.filter(p => {
+        const t1 = (p.token || '').trim().toUpperCase();
+        const t2 = (p.id ? String(p.id) : '').trim().toUpperCase();
+        return !processed.has(t1) && !processed.has(t2);
+      });
+    }
     if (purgedAt > 0) {
       cleanList = cleanList.filter(p => {
         const raw = p.createdAt || p.submittedAt;
@@ -1601,7 +1719,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
     const session = this.movementsService.movementsApi.getSessionOrg();
     const role = (this.authState.role() || '').toUpperCase();
-    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO') || role.includes('CONTROL_DESK') || role.includes('MESA');
     const branchToQuery = isAdminOrManager ? undefined : session.branchId;
 
     this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: branchToQuery }).subscribe({
@@ -1627,19 +1745,65 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     });
   }
 
+  protected setHistoryMode(isGlobal: boolean): void {
+    if (this.isGlobalHistoryMode() === isGlobal) return;
+    this.isGlobalHistoryMode.set(isGlobal);
+    this.reloadHistoryPasses(false);
+  }
+
+  protected setHistoryDatePreset(preset: 'TODAY' | 'WEEK' | 'MONTH' | 'ALL' | 'CUSTOM'): void {
+    this.historyDatePreset.set(preset);
+    this.reloadHistoryPasses(false);
+  }
+
+  protected applyCustomHistoryDates(): void {
+    if (this.historyDatePreset() === 'CUSTOM') {
+      this.reloadHistoryPasses(false);
+    }
+  }
+
   protected reloadHistoryPasses(silent: boolean = false): void {
     if (!silent && this.historyPasses().length === 0) {
       this.isLoadingHistory.set(true);
     }
     const session = this.movementsService.movementsApi.getSessionOrg();
     const role = (this.authState.role() || '').toUpperCase();
-    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO');
+    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO') || role.includes('CONTROL_DESK') || role.includes('MESA');
     const branchToQuery = isAdminOrManager ? undefined : session.branchId;
+    const isGlobal = this.isGlobalHistoryMode();
+
+    let from: string | undefined;
+    let to: string | undefined;
+
+    if (isGlobal) {
+      const preset = this.historyDatePreset();
+      const now = new Date();
+      if (preset === 'TODAY') {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        from = start.toISOString();
+      } else if (preset === 'WEEK') {
+        const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        from = start.toISOString();
+      } else if (preset === 'MONTH') {
+        const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        from = start.toISOString();
+      } else if (preset === 'CUSTOM') {
+        if (this.historyCustomFrom()) from = new Date(this.historyCustomFrom() + 'T00:00:00').toISOString();
+        if (this.historyCustomTo()) to = new Date(this.historyCustomTo() + 'T23:59:59').toISOString();
+      }
+    }
+
+    const currentShiftOnly = !isGlobal;
+    const shiftSessionId = currentShiftOnly ? (this.shiftContext.activeShift()?.sessionId || undefined) : undefined;
 
     this.movementsService.movementsApi.getPassHistory({
       organizationId: session.organizationId,
       branchId: branchToQuery,
-      search: this.historySearch()
+      search: this.historySearch(),
+      currentShiftOnly,
+      shiftSessionId,
+      from,
+      to
     }).subscribe({
       next: (passes) => {
         this.isLoadingHistory.set(false);
@@ -1655,6 +1819,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           });
         }
         this.historyPasses.set(exitOnly);
+        if (currentShiftOnly) {
+          this.currentShiftExits.set(exitOnly);
+        }
       },
       error: () => {
         this.isLoadingHistory.set(false);
@@ -1743,7 +1910,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     // Limpiar formulario previo
     this.resetFormFieldsOnly();
-    this.activeToken.set(passData.token || passData.id);
+    this.activeToken.set(passData.token ? String(passData.token).trim() : null);
+    this.activePassId.set(passData.id ? String(passData.id).trim() : null);
     this.activeDriverSignature.set(passData.driverSignature || null);
     this.activeDriverSignedAt.set(passData.driverSignedAt ? String(passData.driverSignedAt) : null);
 
@@ -2099,6 +2267,20 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.isCheckingOut.set(false);
         this.closeCheckOutModal();
+
+        // Liberar inmediatamente el andén y patio registrando en el set de descartados
+        const folioOrToken = (pass.token || pass.generatedFolio || pass.id || pass.docNumber || pass.folio || '').trim();
+        const keysToDiscard = [
+          pass.token,
+          pass.generatedFolio,
+          pass.id ? String(pass.id) : null,
+          pass.folio ? String(pass.folio) : null,
+          pass.docNumber ? String(pass.docNumber) : null,
+          (pass as any).remision ? String((pass as any).remision) : null,
+          folioOrToken
+        ].filter(Boolean) as string[];
+        keysToDiscard.forEach(k => this.addDiscardedYardFolio(k));
+
         this.reloadAllData();
         this.toast.success(`¡Salida de unidad (${pass.tractorPlates || pass.driverName}) registrada con éxito a las ${payload.departureTime}!`);
         this.scrollToTop();
@@ -2139,7 +2321,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const eco = item.noEcoTractor || formVal.noEcoTractor || '-';
     const dimensions = item.medidasCaja || item.boxDimensions || formVal.medidasCaja || '53 Pies';
     const transType = item.tipoTransporte || item.transportType || formVal.tipoTransporte || 'Caja Seca';
-    const ramp = item.rampCode || (item.rampNumber ? `R-${item.rampNumber}` : (formVal.rampCode || (formVal.rampNumber ? `R-${formVal.rampNumber}` : 'R-01')));
+    const ramp = item.rampCode || (item.rampNumber ? `R-${item.rampNumber}` : (formVal.rampCode || (formVal.rampNumber ? `R-${formVal.rampNumber}` : 'Sin Andén')));
     const dateVal = item.fecha || item.docDate ? String(item.fecha || item.docDate) : this.getCurrentDateString();
     const inTime = this.formatTimeString(item.horaEntrada || item.receptionTime || this.getCurrentTimeString());
     const outTime = this.formatTimeString(item.horaSalida || item.departureTime || '');
@@ -2512,6 +2694,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       ? `Rampa R-${String(rNum).padStart(2, '0')}`
       : 'En Espera en Patio';
 
+    const currentPassToken = this.activeToken();
+    const currentPassId = this.activePassId();
+
     const checkInData: CheckInCasetaData = {
       carrierLineCode: formVal.carrierLineCode,
       carrierLine: (formVal.carrierLine || '').trim().toUpperCase(),
@@ -2528,6 +2713,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       boxPlates: (formVal.placasCaja || '').trim().toUpperCase(),
       noEcoTractor: (formVal.noEcoTractor || '').trim().toUpperCase(),
       noEcoCaja: (formVal.noEcoCaja || '').trim().toUpperCase(),
+      preCheckinId: currentPassId || undefined,
       transportType: (formVal.tipoTransporte || '').trim().toUpperCase(),
       medidasCaja: (formVal.medidasCaja || '').trim().toUpperCase(),
       noCartaPorte: (formVal.noCartaPorte || '').trim().toUpperCase(),
@@ -2537,7 +2723,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     };
 
     const op = formVal.operacion || 'DESCARGA';
-    const currentPassToken = this.activeToken();
+    const keysToRemove = [currentPassToken, currentPassId].filter((k): k is string => !!k);
 
     if (op === 'CARGA') {
       this.movementsService.createOutboundCheckInBackend(checkInData).subscribe({
@@ -2546,6 +2732,22 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.createdFolio.set(outbound.folio);
           this.assignedRampLabel.set(rDisplay);
 
+          if (keysToRemove.length > 0) {
+            this.activePasses.update(list => list.filter(p => {
+              const pTok = (p.token || '').trim();
+              const pId = (p.id ? String(p.id) : '').trim();
+              return !keysToRemove.some(k => k === pTok || k === pId);
+            }));
+            this.smartNotification.pendingDriverPasses.update(list => list.filter(p => {
+              const pTok = (p.token || '').trim();
+              const pId = (p.id ? String(p.id) : '').trim();
+              return !keysToRemove.some(k => k === pTok || k === pId);
+            }));
+            for (const k of keysToRemove) {
+              this.addProcessedPassToken(k);
+            }
+            this.movementsService.movementsApi.deletePass(currentPassId || currentPassToken!, currentPassToken || undefined).subscribe();
+          }
           if (currentPassToken) {
             this.movementsService.movementsApi.completePassCheckin(currentPassToken, {
               status: 'AUTHORIZED',
@@ -2577,6 +2779,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
           this.reloadAllData();
           this.movementsService.reloadOutbounds();
+          this.setTab('IN_YARD');
         },
         error: (err) => {
           this.isSaving.set(false);
@@ -2593,6 +2796,22 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.createdFolio.set(header.folio);
           this.assignedRampLabel.set(rDisplay);
 
+          if (keysToRemove.length > 0) {
+            this.activePasses.update(list => list.filter(p => {
+              const pTok = (p.token || '').trim();
+              const pId = (p.id ? String(p.id) : '').trim();
+              return !keysToRemove.some(k => k === pTok || k === pId);
+            }));
+            this.smartNotification.pendingDriverPasses.update(list => list.filter(p => {
+              const pTok = (p.token || '').trim();
+              const pId = (p.id ? String(p.id) : '').trim();
+              return !keysToRemove.some(k => k === pTok || k === pId);
+            }));
+            for (const k of keysToRemove) {
+              this.addProcessedPassToken(k);
+            }
+            this.movementsService.movementsApi.deletePass(currentPassId || currentPassToken!, currentPassToken || undefined).subscribe();
+          }
           if (currentPassToken) {
             this.movementsService.movementsApi.completePassCheckin(currentPassToken, {
               status: 'AUTHORIZED',
@@ -2624,6 +2843,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
           this.reloadAllData();
           this.movementsService.reloadReceptions();
+          this.setTab('IN_YARD');
         },
         error: (err) => {
           this.isSaving.set(false);
@@ -2697,6 +2917,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.sealList.set([]);
     this.tempSealInput.set('');
     this.activeToken.set(null);
+    this.activePassId.set(null);
     this.activeDriverSignature.set(null);
     this.activeDriverSignedAt.set(null);
     this.isCustomTransportType.set(false);

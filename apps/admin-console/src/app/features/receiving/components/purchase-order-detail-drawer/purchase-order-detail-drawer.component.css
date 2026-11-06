@@ -70,9 +70,9 @@
   bottom: 0;
   width: min(720px, 92vw);
   max-width: 100vw;
-  background: var(--ac-surface);
-  border-left: 1px solid var(--ac-border-mid);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.45);
+  background: var(--bg-card-exec, var(--bg-card));
+  border-left: 1.5px solid var(--border-card-gold, var(--gold-border));
+  box-shadow: var(--shadow-card);
   z-index: 900;
   display: flex;
   flex-direction: column;
@@ -114,14 +114,14 @@
 .po-doc-drawer__title {
   font-size: 0.9rem;
   font-weight: 800;
-  color: var(--ac-txt-1, #f8fafc);
+  color: var(--text-primary);
   letter-spacing: 0.03em;
   margin: 0;
 }
 
 .po-doc-drawer__subtitle {
   font-size: 0.65rem;
-  color: var(--ac-txt-3, #94a3b8);
+  color: var(--text-secondary);
   margin: 0.1rem 0 0;
 }
 
@@ -309,14 +309,16 @@
    ══════════════════════════════════════════════════════════════════════ */
 
 .po-doc-preview-card {
-  background: var(--ac-surface-2, #1e293b);
-  border: 1px solid rgba(201, 168, 96, 0.35);
-  border-radius: 12px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 14px);
   padding: 1.1rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   animation: po-fade-in 0.2s ease;
+  box-shadow: var(--shadow-card);
 }
 
 .po-doc-preview-head {
@@ -335,7 +337,7 @@
 .po-doc-preview-title {
   font-size: 0.85rem;
   font-weight: 800;
-  color: var(--ac-txt-1, #f8fafc);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -738,13 +740,15 @@
 
 /* CARDS DE DATOS */
 .po-doc-grid-card {
-  background: var(--ac-surface-2, #1e293b);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 14px);
   padding: 0.9rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  box-shadow: var(--shadow-card);
 }
 
 .po-doc-card-title {

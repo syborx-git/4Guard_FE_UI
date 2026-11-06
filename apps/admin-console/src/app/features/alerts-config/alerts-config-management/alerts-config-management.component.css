@@ -8,6 +8,24 @@
 
 /* ── Design Tokens (Light Mode Default — Standard WMS) ──────────────── */
 :host {
+  --gold:           #c5a86b;
+  --gold-light:     #e0c87a;
+  --gold-bg:        rgba(197, 168, 107, 0.10);
+  --gold-border:    rgba(197, 168, 107, 0.28);
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+
+  --bg-page:        #f5f4f0;
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --bg-card:        rgba(255, 255, 255, 0.94);
+  --border-card:    rgba(76, 86, 105, 0.10);
+  --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+
+  --text-primary:   #1c2940;
+  --text-secondary: #5a6477;
+  --text-muted:     #8b94a3;
+  --text-gold:      #9b7626;
+  --radius-xl:      18px;
+
   display: block;
   font-family: 'Inter', system-ui, sans-serif;
 
@@ -61,6 +79,23 @@
 /* ── Dark Mode Override ──────────────────────────────────────────────── */
 :host-context(.theme-dark),
 :host-context(.dark) {
+  --gold:           #d0af67;
+  --gold-light:     #e1c47c;
+  --gold-bg:        rgba(208, 175, 103, 0.12);
+  --gold-border:    rgba(208, 175, 103, 0.25);
+  --border-card-gold: rgba(208, 175, 103, 0.24);
+
+  --bg-page:        #0b1119;
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --bg-card:        rgba(17, 26, 38, 0.94);
+  --border-card:    rgba(255, 255, 255, 0.08);
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --text-primary:   #edf1f5;
+  --text-secondary: #9aa6b4;
+  --text-muted:     #667585;
+  --text-gold:      #d0af67;
+
   --ac-bg:          #0b1119;
   --ac-surface:     rgba(17, 26, 38, 0.94);
   --ac-surface-2:   #16212f;
@@ -196,13 +231,14 @@
   align-items: center;
   gap: 0.9rem;
   padding: 0.95rem 1.1rem;
-  border: 1px solid var(--ac-border);
-  border-radius: 14px;
-  background: var(--ac-surface);
-  box-shadow: var(--ac-sh);
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec, var(--bg-card));
+  box-shadow: var(--shadow-card);
   backdrop-filter: blur(16px);
   overflow: hidden;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
 
 .carriers-kpi-card:hover {
@@ -345,10 +381,11 @@
   min-width: 280px;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--ac-border);
-  border-radius: var(--ac-r-lg);
-  background: var(--ac-surface);
-  box-shadow: var(--ac-sh);
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec, var(--bg-card));
+  box-shadow: var(--shadow-card);
   backdrop-filter: blur(20px);
   overflow: hidden;
   min-height: 520px;
@@ -729,10 +766,11 @@
 .ac-split__right {
   flex: 1;
   min-width: 0;
-  border: 1px solid var(--ac-border);
-  border-radius: var(--ac-r-lg);
-  background: var(--ac-surface);
-  box-shadow: var(--ac-sh);
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec, var(--bg-card));
+  box-shadow: var(--shadow-card);
   backdrop-filter: blur(20px);
   overflow: hidden;
   display: flex;
@@ -1444,10 +1482,11 @@
 }
 
 .ac-modal {
-  background: var(--ac-surface);
-  border: 1px solid var(--ac-border-mid);
-  border-radius: var(--ac-r-lg);
-  box-shadow: var(--ac-sh-lg);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   width: 100%;
   max-width: 420px;
   overflow: hidden;

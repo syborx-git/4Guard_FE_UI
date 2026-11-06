@@ -198,7 +198,8 @@ export class AuthState {
    * Conmuta atómicamente la señal del usuario/operador activo mediante PIN de 4 dígitos.
    */
   switchOperator(newOperator: AuthenticatedUser, pin: string): boolean {
-    const expectedPin = newOperator.pinCode || '1234';
+    const expectedPin = newOperator.pinCode;
+    if (!expectedPin) return false;
     if (pin.trim() !== expectedPin) {
       return false;
     }
@@ -213,12 +214,7 @@ export class AuthState {
       session.user = updatedUser;
       this.sessionStorageService.saveSession(session);
     } else {
-      this.sessionStorageService.saveSession({
-        accessToken: 'dev-switch-token',
-        refreshToken: 'dev-refresh-token',
-        expiresAt: new Date(Date.now() + 86400000).toISOString(),
-        user: updatedUser
-      });
+      return false; // Requiere sesion autenticada previa
     }
 
     this._currentUser.set(updatedUser);
@@ -243,19 +239,28 @@ export class AuthState {
 
     const normRole = String(rawRole).trim().toUpperCase();
 
-    // 0. Director General / Administradores / Gerentes de Operaciones: Acceso total e irrestricto a todos los modulos
+    // 0. Director General / Administradores: Acceso total e irrestricto a todos los modulos
     if (
       normRole === 'SUPER_ADMIN' ||
       normRole === 'ROLE_SUPER_ADMIN' ||
       normRole === 'ROLE_ADMIN' ||
       normRole === 'ADMIN' ||
       normRole === 'CEO' ||
-      normRole === 'ROLE_CEO' ||
+      normRole === 'ROLE_CEO'
+    ) {
+      return true;
+    }
+
+    // 1. Gerente de Operaciones: Acceso total operativo WMS EXCLUYENDO Seguridad y Calidad
+    if (
       normRole === 'OPERATIONS_MANAGER' ||
       normRole === 'ROLE_OPERATIONS_MANAGER' ||
       normRole === 'WAREHOUSE_MANAGER' ||
       normRole === 'ROLE_WAREHOUSE_MANAGER'
     ) {
+      if (module === 'security' || module === 'quality') {
+        return false;
+      }
       return true;
     }
 
@@ -274,19 +279,20 @@ export class AuthState {
       return true;
     }
 
-    // 1. Guardia de Seguridad: acceso EXCLUSIVO a Caseta (security) y Dashboard
+    // 3. Guardia de Seguridad: acceso EXCLUSIVO a Caseta (security) y Dashboard
     if (
       normRole === 'SECURITY_GUARD' ||
       normRole === 'ROLE_SECURITY_GUARD' ||
       normRole === 'GUARD' ||
       normRole === 'ROLE_GUARD' ||
+      normRole.includes('VIGILAN') ||
       normRole.includes('GUARD') ||
       normRole.includes('CASETA')
     ) {
       return module === 'security' || module === 'dashboard';
     }
 
-    // 2. Control de Calidad: acceso EXCLUSIVO a Calidad (quality) y Dashboard
+    // 4. Control de Calidad: acceso EXCLUSIVO a Calidad (quality) y Dashboard
     if (
       normRole === 'QM_INSPECTOR' ||
       normRole === 'ROLE_QM_INSPECTOR' ||
@@ -296,12 +302,36 @@ export class AuthState {
       return module === 'quality' || module === 'dashboard';
     }
 
-    // 3. Mesa de Control y Líder de Turno: Dashboard + Recepción + Almacén/Topología + Inventarios
+    // 5. Mesa de Control: Mismos accesos de módulos que Gerente de Operaciones, quitándole Rendimiento ('performance') y Administrar ('admin')
     if (
       normRole === 'CONTROL_DESK' ||
       normRole === 'ROLE_CONTROL_DESK' ||
+      normRole.includes('CONTROL_DESK') ||
+      normRole.includes('MESA')
+    ) {
+      if (
+        module === 'security' ||
+        module === 'quality' ||
+        module === 'performance' ||
+        module === 'admin' ||
+        module === 'sessions' ||
+        module === 'user-activity' ||
+        module === 'carriers' ||
+        module === 'suppliers' ||
+        module === 'shifts' ||
+        module === 'business-rules' ||
+        module === 'alerts-config'
+      ) {
+        return false;
+      }
+      return true;
+    }
+
+    // 6. Líder de Turno: Dashboard + Recepción + Almacén/Topología + Inventarios
+    if (
       normRole === 'SHIFT_LEADER' ||
-      normRole === 'ROLE_SHIFT_LEADER'
+      normRole === 'ROLE_SHIFT_LEADER' ||
+      normRole.includes('LIDER')
     ) {
       return (
         module === 'dashboard' ||
@@ -310,6 +340,25 @@ export class AuthState {
         module === 'shipping' ||
         module === 'catalogs' ||
         module === 'layout' ||
+        module === 'sections' ||
+        module === 'inventory' ||
+        module === 'inventory-query'
+      );
+    }
+
+    // 7. Montacarguista / Operador de Almacén: Recepción, Movimientos, Inventario y Dashboard
+    if (
+      normRole === 'WAREHOUSE_OPERATOR' ||
+      normRole === 'ROLE_WAREHOUSE_OPERATOR' ||
+      normRole === 'FORKLIFT_OPERATOR' ||
+      normRole === 'ROLE_FORKLIFT_OPERATOR' ||
+      normRole.includes('MONTACARGA')
+    ) {
+      return (
+        module === 'dashboard' ||
+        module === 'warehouse-movements' ||
+        module === 'receiving' ||
+        module === 'shipping' ||
         module === 'inventory' ||
         module === 'inventory-query'
       );
@@ -335,9 +384,9 @@ export class AuthState {
       case 'shipping':
         return permissions.includes('SHIPPING_READ') || permissions.includes('SHIPPING_CREATE');
       case 'carriers':
-        return true; // Acceso total habilitado para desarrollo y testing
+        return permissions.includes('CARRIERS_READ') || permissions.includes('CARRIERS_CREATE');
       case 'suppliers':
-        return true; // Acceso total habilitado para desarrollo y testing
+        return permissions.includes('SUPPLIERS_READ') || permissions.includes('SUPPLIERS_CREATE');
       case 'warehouse-movements':
         return true;
       case 'catalogs':
@@ -345,13 +394,13 @@ export class AuthState {
       case 'inventory-query':
         return true;
       case 'performance':
-        return true; // Acceso total habilitado para desarrollo y testing
+        return permissions.includes('PERFORMANCE_READ') || permissions.includes('REPORTS_READ');
       case 'shifts':
-        return true; // Acceso total habilitado para desarrollo y testing (HU-140)
+        return permissions.includes('SHIFTS_READ') || permissions.includes('SHIFTS_WRITE');
       case 'business-rules':
-        return true; // Acceso total habilitado para evaluación (HU-131)
+        return permissions.includes('BUSINESS_RULES_READ') || permissions.includes('BUSINESS_RULES_WRITE');
       case 'alerts-config':
-        return true; // Acceso total habilitado para evaluación (HU-134)
+        return permissions.includes('ALERTS_READ') || permissions.includes('ALERTS_WRITE');
       case 'security':
         return true; // Acceso total al nuevo módulo autónomo de Seguridad (Caseta)
       case 'user-activity':

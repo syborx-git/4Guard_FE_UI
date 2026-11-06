@@ -3,7 +3,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════
        1. RESUMEN EJECUTIVO DE PRODUCTIVIDAD CON METAS DINÁMICAS
        ════════════════════════════════════════════════════════════════ -->
-  <div class="perf-personnel-kpis">
+  <div class="perf-personnel-kpis" id="perf-personnel-kpis">
     <div class="perf-kpi-pill-card">
       <div class="perf-kpi-pill-icon perf-kpi-pill-icon--primary">
         <span class="material-symbols-outlined">badge</span>
@@ -78,7 +78,7 @@
       </div>
     </div>
 
-    <div class="perf-shifts-grid">
+    <div class="perf-shifts-grid" id="perf-shifts-grid">
       @for (shift of perfService.shiftProductivity(); track shift.shiftId) {
         <article
           class="perf-shift-card"
@@ -172,7 +172,7 @@
     </div>
 
     <!-- Gráfica de Barras Visual de Productividad por Operador -->
-    <div class="perf-operator-bars-grid">
+    <div class="perf-operator-bars-grid" id="perf-operator-bars-grid">
       @for (op of filteredOperators(); track op.operatorId) {
         <div class="perf-op-bar-card">
           <div class="perf-op-bar-top">
@@ -223,7 +223,7 @@
         <button type="button" class="perf-btn-reset" (click)="clearFilters()">Restablecer Filtros</button>
       </div>
     } @else {
-      <div class="perf-table-wrap" style="margin-top: 1rem;">
+      <div class="perf-table-wrap" id="perf-operators-table" style="margin-top: 1rem;">
         <table class="perf-table">
           <thead>
             <tr>

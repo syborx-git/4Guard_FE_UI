@@ -16,6 +16,30 @@
 
 :root {
   /* ──────────────────────────────────────────────────────────
+     ESTILO EJECUTIVO — TERMINAL RF / PRESTIGE GOLD
+     ────────────────────────────────────────────────────────── */
+  --navy:              #172033;
+  --navy-mid:          #25324a;
+  --navy-light:        #344463;
+  --gold:              #c5a86b;
+  --gold-light:        #e0c87a;
+  --gold-bg:           rgba(197, 168, 107, 0.10);
+  --gold-border:       rgba(197, 168, 107, 0.28);
+  --border-card-gold:  rgba(197, 168, 107, 0.32);
+
+  --bg-page:           #f5f4f0;
+  --bg-card-exec:      linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --bg-card:           rgba(255, 255, 255, 0.94);
+  --bg-card-hover:     #ffffff;
+  --border-card:       rgba(76, 86, 105, 0.10);
+  --shadow-card:       0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+
+  --text-primary:      #1c2940;
+  --text-secondary:    #5a6477;
+  --text-muted:        #8b94a3;
+  --text-gold:         #9b7626;
+
+  /* ──────────────────────────────────────────────────────────
      COLOR — Azul Naval (Autoridad / UI Base)
      ────────────────────────────────────────────────────────── */
   --color-primary:         #1B2B4B;
@@ -204,4 +228,31 @@
   --sidebar-collapsed-width: 72px;
   --header-height:           64px;
   --content-max-width:       1440px;
+}
+
+
+.dark,
+.theme-dark,
+[data-theme='dark'] {
+  --bg-page:           #0b1119;
+  --bg-card-exec:      linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --bg-card:           rgba(17, 26, 38, 0.94);
+  --bg-card-hover:     rgba(23, 35, 50, 0.98);
+  --border-card:       rgba(255, 255, 255, 0.08);
+  --border-card-gold:  rgba(208, 175, 103, 0.24);
+  --shadow-card:       0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --text-primary:      #edf1f5;
+  --text-secondary:    #9aa6b4;
+  --text-muted:        #667585;
+  --text-gold:         #d0af67;
+
+  --navy:              #dfe7ef;
+  --navy-mid:          #16212f;
+  --navy-light:        #1f2d3e;
+
+  --gold:              #d0af67;
+  --gold-light:        #e1c47c;
+  --gold-bg:           rgba(208, 175, 103, 0.12);
+  --gold-border:       rgba(208, 175, 103, 0.25);
 }

@@ -4,6 +4,24 @@
    ════════════════════════════════════════════════════════════════ */
 
 :host {
+  --gold:           #c5a86b;
+  --gold-light:     #e0c87a;
+  --gold-bg:        rgba(197, 168, 107, 0.10);
+  --gold-border:    rgba(197, 168, 107, 0.28);
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+
+  --bg-page:        #f5f4f0;
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --bg-card:        rgba(255, 255, 255, 0.94);
+  --border-card:    rgba(76, 86, 105, 0.10);
+  --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+
+  --text-primary:   #1c2940;
+  --text-secondary: #5a6477;
+  --text-muted:     #8b94a3;
+  --text-gold:      #9b7626;
+  --radius-xl:      18px;
+
   display: block;
   width: 100%;
 }
@@ -19,11 +37,12 @@
    ───────────────────────────────────────────────────────────── */
 
 .catalog-card-container {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 20px;
+  background: var(--bg-card-exec, var(--bg-card, #FFFFFF));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border, #E2E8F0));
+  border-top: 3.5px solid var(--gold, #c5a86b);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-card);
   transition: all 200ms ease;
 }
 
@@ -285,14 +304,12 @@
 
 .modal-card {
   width: 100%;
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 20px;
+  background: var(--bg-card-exec, var(--bg-card, #FFFFFF));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border, #E2E8F0));
+  border-top: 3.5px solid var(--gold, #c5a86b);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.5rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+  box-shadow: var(--shadow-card);
 }
 
 .modal-header {
@@ -338,9 +355,10 @@
 
 :host-context(.theme-dark) .catalog-card-container,
 :host-context(.dark) .catalog-card-container {
-  background: rgba(18, 16, 26, 0.88);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
+  background: var(--bg-card-exec, var(--bg-card, rgba(17, 26, 38, 0.94)));
+  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.24));
+  border-top: 3.5px solid var(--gold, #d0af67);
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .catalog-header-row,
@@ -479,8 +497,10 @@
 
 :host-context(.theme-dark) .modal-card,
 :host-context(.dark) .modal-card {
-  background: #0f172a;
-  border-color: rgba(255, 255, 255, 0.12);
+  background: var(--bg-card-exec, var(--bg-card, rgba(17, 26, 38, 0.94)));
+  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.24));
+  border-top: 3.5px solid var(--gold, #d0af67);
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .modal-header,

@@ -36,6 +36,7 @@
           <li class="sidebar__nav-item" [class.sidebar__nav-item--has-children]="item.children && item.children.length > 0">
             @if (!item.children || item.children.length === 0) {
               <a
+                [id]="'tour-nav-' + item.module"
                 [routerLink]="item.route"
                 routerLinkActive="sidebar__nav-link--active"
                 [routerLinkActiveOptions]="{ exact: item.route === '/' }"
@@ -53,6 +54,7 @@
             } @else {
               <!-- Parent Item con Submenú -->
               <div
+                [id]="'tour-nav-' + item.module"
                 class="sidebar__nav-link sidebar__nav-link--parent cursor-pointer"
                 [class.sidebar__nav-link--active]="isItemActive(item)"
                 (click)="onParentNavClick(item)"
@@ -233,7 +235,7 @@
       <div class="shell__header-left">
 
         <!-- Sucursal estática -->
-        <div class="shell__branch-selector shell__branch-selector--static">
+        <div id="tour-branch-selector" class="shell__branch-selector shell__branch-selector--static">
           <span class="material-symbols-outlined shell__branch-icon">location_on</span>
           <span class="shell__branch-prefix">SUCURSAL:</span>
           <span class="shell__branch-value">BR-TOL-01 - Toluca</span>
@@ -371,6 +373,7 @@
 
         <!-- Reloj y actualización en vivo -->
         <div
+          id="tour-live-clock"
           class="shell__live-clock"
           [class.shell__live-clock--refreshing]="isHeaderRefreshing()">
 
@@ -905,7 +908,7 @@
 <!-- Floating Action Button (FAB) ForBot AI — Esquina Inferior Derecha -->
 @if (!forbotEngine.isDrawerOpen()) {
   <div class="fixed bottom-6 right-6 z-40">
-    <fg-forbot-trigger-button></fg-forbot-trigger-button>
+    <fg-forbot-trigger-button id="tour-forbot-trigger"></fg-forbot-trigger-button>
   </div>
 }
 

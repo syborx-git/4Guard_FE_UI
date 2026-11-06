@@ -21,10 +21,14 @@
   /* ── Canvas & Superficies (Light Mode) ── */
   --bg-page:        #f5f4f0;
   --bg-card:        rgba(255, 255, 255, 0.92);
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --bg-card-hover:  #ffffff;
   --border-card:    rgba(76, 86, 105, 0.10);
+  --border-card-gold: rgba(197, 168, 107, 0.35);
   --border-subtle:  rgba(76, 86, 105, 0.08);
   --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --shadow-hover:   0 16px 40px rgba(197, 168, 107, 0.22);
+  --radius-xl:      18px;
   --shadow-sm:      0 2px 8px rgba(0, 0, 0, 0.04);
   --shadow-md:      0 4px 16px rgba(0, 0, 0, 0.06);
 
@@ -75,10 +79,13 @@
 :host-context(.dark) {
   --bg-page:        #0b1119;
   --bg-card:        rgba(17, 26, 38, 0.94);
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --bg-card-hover:  rgba(23, 35, 50, 0.98);
   --border-card:    rgba(255, 255, 255, 0.08);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --border-subtle:  rgba(255, 255, 255, 0.06);
   --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-hover:   0 20px 44px rgba(208, 175, 103, 0.18);
   --shadow-sm:      0 2px 8px rgba(0, 0, 0, 0.20);
   --shadow-md:      0 6px 20px rgba(0, 0, 0, 0.35);
 
@@ -139,9 +146,10 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.35));
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   padding: 1.25rem 1.5rem;
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
@@ -333,13 +341,14 @@
 /* ═════════════════════════════════════════════════════════════════════════════
    2. TARJETAS DE MÉTRICAS KPI (4 COLUMNAS HOMOLOGADAS)
    ═════════════════════════════════════════════════════════════════════════════ */
-/* ── CONTENEDOR DE TARJETAS / SECCIONES DEL MÓDULO CON BORDE ANIMADO ORO LUJO 24K ── */
+/* ── CONTENEDOR DE TARJETAS / SECCIONES DEL MÓDULO HOMOLOGADO RF ── */
 .security-card,
 .module-kpi-card {
   position: relative;
-  background: var(--bg-card);
-  border: 1.5px solid rgba(197, 168, 107, 0.35) !important;
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.35)) !important;
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
   color: var(--text-primary);
@@ -347,57 +356,10 @@
   overflow: hidden;
 }
 
-.security-card::before,
-.module-kpi-card::before {
-  content: '' !important;
-  position: absolute !important;
-  inset: -2px !important;
-  border-radius: inherit !important;
-  padding: 2px !important;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    transparent 120deg,
-    rgba(197, 168, 107, 0.45) 155deg,
-    rgba(224, 200, 122, 0.85) 185deg,
-    rgba(212, 175, 55, 0.95) 215deg,
-    rgba(184, 134, 11, 0.85) 245deg,
-    rgba(197, 168, 107, 0.50) 275deg,
-    transparent 305deg,
-    transparent 360deg
-  ) !important;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-  -webkit-mask-composite: xor !important;
-  mask-composite: exclude !important;
-  pointer-events: none !important;
-  z-index: 10 !important;
-  opacity: 0.65 !important;
-  filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.45)) !important;
-  transition: opacity 300ms ease, filter 300ms ease !important;
-  animation: star-border-spin 6.5s linear infinite !important;
-}
-
-.security-card:hover::before,
-.module-kpi-card:hover::before {
-  opacity: 1.0 !important;
-  animation-duration: 3s !important;
-  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.75)) drop-shadow(0 0 5px rgba(224, 200, 122, 0.65)) !important;
-}
-
 .security-card:hover,
 .module-kpi-card:hover {
   border-color: rgba(212, 175, 55, 0.75) !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12), 0 0 24px rgba(212, 175, 55, 0.35) !important;
-}
-
-@keyframes star-border-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12), 0 0 24px rgba(212, 175, 55, 0.2) !important;
 }
 
 .module-kpi-grid {
@@ -451,7 +413,7 @@
 }
 
 .module-kpi-card--primary .module-kpi-card__icon {
-  background: rgba(37, 99, 235, 0.10); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25);
+  background: var(--gold-bg); color: var(--text-gold); border: 1px solid var(--gold-border);
 }
 .module-kpi-card--warning .module-kpi-card__icon {
   background: var(--c-warning-bg); color: var(--c-warning); border: 1px solid var(--c-warning-bdr);
@@ -792,14 +754,7 @@
 /* ═════════════════════════════════════════════════════════════════════════════
    4. TARJETAS Y CONTENEDORES (SURFACE & LIQUID GLASS)
    ═════════════════════════════════════════════════════════════════════════════ */
-.security-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  backdrop-filter: blur(12px);
-  transition: all 0.25s ease;
-}
+/* .security-card styles unified above with RF Golden standard */
 
 /* ── BARRA FLOTANTE DE PASOS (STEPPER NAVIGATION) & CONTROLES STICKY ── */
 .form-stepper-bar {

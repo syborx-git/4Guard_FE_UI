@@ -167,13 +167,13 @@
   font-size: clamp(1.8rem, 2.4vw, 2.3rem) !important;
   font-weight: 350 !important;
   letter-spacing: -0.045em !important;
-  color: var(--ac-txt-1);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .rc-hero__subtitle {
   font-size: 0.7rem;
-  color: var(--ac-txt-3);
+  color: var(--text-secondary);
   margin: 0.15rem 0 0;
   max-width: 500px;
   line-height: 1.35;
@@ -236,11 +236,12 @@
 }
 
 .rc-active-card {
-  background: linear-gradient(135deg, rgba(201,168,96,.12) 0%, var(--ac-surface) 100%);
-  border: 1px solid var(--ac-gold);
-  border-radius: var(--ac-r-lg);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.1rem 1.4rem;
-  box-shadow: 0 6px 24px rgba(201,168,96,.15);
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
@@ -439,15 +440,16 @@
 }
 
 .rc-kpi-card {
-  background: var(--ac-surface);
-  border: 1px solid var(--ac-border);
-  border-radius: var(--ac-r-lg);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1rem 1.1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
-  box-shadow: var(--ac-sh);
+  box-shadow: var(--shadow-card);
   transition: all var(--ac-ease);
   min-height: 76px;
   outline: none;
@@ -455,9 +457,9 @@
 
 .rc-kpi-card--clickable { cursor: pointer; }
 .rc-kpi-card--clickable:hover {
-  border-color: var(--ac-gold);
+  border-color: var(--gold);
   transform: translateY(-2px);
-  box-shadow: 0 4px 18px rgba(0,0,0,.5);
+  box-shadow: var(--shadow-hover);
 }
 
 .rc-kpi-card--active {
@@ -630,11 +632,12 @@
    ════════════════════════════════════════════════════════════════════════ */
 
 .rc-table-card {
-  background: var(--ac-surface);
-  border: 1px solid var(--ac-border);
-  border-radius: var(--ac-r-lg);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   overflow: hidden;
-  box-shadow: var(--ac-sh);
+  box-shadow: var(--shadow-card);
 }
 
 .rc-table-wrap { overflow-x: auto; }
@@ -945,9 +948,16 @@
 }
 
 .rc-modal {
-  background: var(--ac-surface); border: 1px solid var(--ac-border-mid);
-  border-radius: var(--ac-r-lg); box-shadow: var(--ac-sh-lg);
-  width: 100%; max-width: 440px; overflow: hidden; display: flex; flex-direction: column;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
+  width: 100%;
+  max-width: 440px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .rc-modal--danger { border-color: rgba(239,68,68,.4); }
 
@@ -1055,10 +1065,11 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 1.1rem 1.2rem;
-  background: var(--ac-surface-2);
-  border: 1px solid var(--ac-border-mid);
-  border-radius: var(--ac-r-md);
-  box-shadow: var(--ac-sh);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   flex-wrap: wrap;
 }
 

@@ -7,7 +7,6 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-
     "admin-console": {
       "projectType": "application",
       "schematics": {
@@ -28,17 +27,35 @@
             "outputPath": "dist/admin-console",
             "index": "apps/admin-console/src/index.html",
             "browser": "apps/admin-console/src/main.ts",
-            "polyfills": ["zone.js"],
+            "polyfills": [
+              "zone.js"
+            ],
             "tsConfig": "apps/admin-console/tsconfig.app.json",
             "stylePreprocessorOptions": {
-              "includePaths": ["apps/admin-console/src/styles"]
+              "includePaths": [
+                "apps/admin-console/src/styles"
+              ]
             },
             "assets": [
-              { "glob": "**/*", "input": "apps/admin-console/src/assets", "output": "/assets" },
-              { "glob": "favicon.ico", "input": "apps/admin-console/src", "output": "/" },
-              { "glob": "_redirects", "input": "apps/admin-console/src", "output": "/" }
+              {
+                "glob": "**/*",
+                "input": "apps/admin-console/src/assets",
+                "output": "/assets"
+              },
+              {
+                "glob": "favicon.ico",
+                "input": "apps/admin-console/src",
+                "output": "/"
+              },
+              {
+                "glob": "_redirects",
+                "input": "apps/admin-console/src",
+                "output": "/"
+              }
             ],
-            "styles": ["apps/admin-console/src/styles.scss"],
+            "styles": [
+              "apps/admin-console/src/styles.scss"
+            ],
             "scripts": []
           },
           "configurations": {
@@ -50,11 +67,26 @@
                 }
               ],
               "budgets": [
-                { "type": "initial", "maximumWarning": "500kb", "maximumError": "1mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "120kb", "maximumError": "200kb" }
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "120kb",
+                  "maximumError": "200kb"
+                }
               ],
               "outputHashing": "all",
-              "optimization": true,
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": false
+              },
               "sourceMap": false,
               "namedChunks": false,
               "aot": true,
@@ -90,16 +122,26 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
-            "production": { "buildTarget": "admin-console:build:production" },
-            "development": { "buildTarget": "admin-console:build:development" },
-            "develop": { "buildTarget": "admin-console:build:develop" }
+            "production": {
+              "buildTarget": "admin-console:build:production"
+            },
+            "development": {
+              "buildTarget": "admin-console:build:development"
+            },
+            "develop": {
+              "buildTarget": "admin-console:build:develop"
+            }
           },
           "defaultConfiguration": "development",
           "options": {
             "port": 4200,
             "host": "0.0.0.0",
             "disableHostCheck": true,
-            "allowedHosts": ["all", ".ngrok-free.dev", "faster-treadmill-oppose.ngrok-free.dev"],
+            "allowedHosts": [
+              "all",
+              ".ngrok-free.dev",
+              "faster-treadmill-oppose.ngrok-free.dev"
+            ],
             "proxyConfig": "proxy.conf.js",
             "prebundle": false
           }
@@ -107,28 +149,41 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
-            "polyfills": ["zone.js", "zone.js/testing"],
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
             "tsConfig": "apps/admin-console/tsconfig.spec.json",
             "karmaConfig": "apps/admin-console/karma.conf.js",
             "assets": [
-              { "glob": "**/*", "input": "apps/admin-console/src/assets", "output": "/assets" }
+              {
+                "glob": "**/*",
+                "input": "apps/admin-console/src/assets",
+                "output": "/assets"
+              }
             ],
             "stylePreprocessorOptions": {
-              "includePaths": ["apps/admin-console/src/styles"]
+              "includePaths": [
+                "apps/admin-console/src/styles"
+              ]
             },
-            "styles": ["apps/admin-console/src/styles.scss"],
+            "styles": [
+              "apps/admin-console/src/styles.scss"
+            ],
             "scripts": []
           }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["apps/admin-console/src/**/*.ts", "apps/admin-console/src/**/*.html"]
+            "lintFilePatterns": [
+              "apps/admin-console/src/**/*.ts",
+              "apps/admin-console/src/**/*.html"
+            ]
           }
         }
       }
     },
-
     "rf-terminal": {
       "projectType": "application",
       "schematics": {
@@ -149,19 +204,41 @@
             "outputPath": "dist/rf-terminal",
             "index": "apps/rf-terminal/src/index.html",
             "browser": "apps/rf-terminal/src/main.ts",
-            "polyfills": ["zone.js"],
+            "polyfills": [
+              "zone.js"
+            ],
             "tsConfig": "apps/rf-terminal/tsconfig.app.json",
             "serviceWorker": "apps/rf-terminal/src/ngsw-config.json",
             "stylePreprocessorOptions": {
-              "includePaths": ["apps/rf-terminal/src/styles"]
+              "includePaths": [
+                "apps/rf-terminal/src/styles"
+              ]
             },
             "assets": [
-              { "glob": "**/*", "input": "apps/rf-terminal/src/assets", "output": "/assets" },
-              { "glob": "favicon.ico", "input": "apps/rf-terminal/src", "output": "/" },
-              { "glob": "manifest.webmanifest", "input": "apps/rf-terminal/src", "output": "/" },
-              { "glob": "_redirects", "input": "apps/rf-terminal/src", "output": "/" }
+              {
+                "glob": "**/*",
+                "input": "apps/rf-terminal/src/assets",
+                "output": "/assets"
+              },
+              {
+                "glob": "favicon.ico",
+                "input": "apps/rf-terminal/src",
+                "output": "/"
+              },
+              {
+                "glob": "manifest.webmanifest",
+                "input": "apps/rf-terminal/src",
+                "output": "/"
+              },
+              {
+                "glob": "_redirects",
+                "input": "apps/rf-terminal/src",
+                "output": "/"
+              }
             ],
-            "styles": ["apps/rf-terminal/src/styles.scss"],
+            "styles": [
+              "apps/rf-terminal/src/styles.scss"
+            ],
             "scripts": []
           },
           "configurations": {
@@ -173,11 +250,26 @@
                 }
               ],
               "budgets": [
-                { "type": "initial", "maximumWarning": "1mb", "maximumError": "2mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "120kb", "maximumError": "200kb" }
+                {
+                  "type": "initial",
+                  "maximumWarning": "1mb",
+                  "maximumError": "2mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "120kb",
+                  "maximumError": "200kb"
+                }
               ],
               "outputHashing": "all",
-              "optimization": true,
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": false
+              },
               "sourceMap": false,
               "namedChunks": false,
               "aot": true,
@@ -213,16 +305,26 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
-            "production": { "buildTarget": "rf-terminal:build:production" },
-            "development": { "buildTarget": "rf-terminal:build:development" },
-            "develop": { "buildTarget": "rf-terminal:build:develop" }
+            "production": {
+              "buildTarget": "rf-terminal:build:production"
+            },
+            "development": {
+              "buildTarget": "rf-terminal:build:development"
+            },
+            "develop": {
+              "buildTarget": "rf-terminal:build:develop"
+            }
           },
           "defaultConfiguration": "development",
           "options": {
             "port": 4201,
             "host": "0.0.0.0",
             "disableHostCheck": true,
-            "allowedHosts": ["all", ".ngrok-free.dev", "faster-treadmill-oppose.ngrok-free.dev"],
+            "allowedHosts": [
+              "all",
+              ".ngrok-free.dev",
+              "faster-treadmill-oppose.ngrok-free.dev"
+            ],
             "proxyConfig": "proxy.conf.js",
             "prebundle": false
           }
@@ -230,25 +332,36 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
-            "polyfills": ["zone.js", "zone.js/testing"],
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
             "tsConfig": "apps/rf-terminal/tsconfig.spec.json",
             "karmaConfig": "apps/rf-terminal/karma.conf.js",
             "assets": [
-              { "glob": "**/*", "input": "apps/rf-terminal/src/assets", "output": "/assets" }
+              {
+                "glob": "**/*",
+                "input": "apps/rf-terminal/src/assets",
+                "output": "/assets"
+              }
             ],
-            "styles": ["apps/rf-terminal/src/styles.scss"],
+            "styles": [
+              "apps/rf-terminal/src/styles.scss"
+            ],
             "scripts": []
           }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["apps/rf-terminal/src/**/*.ts", "apps/rf-terminal/src/**/*.html"]
+            "lintFilePatterns": [
+              "apps/rf-terminal/src/**/*.ts",
+              "apps/rf-terminal/src/**/*.html"
+            ]
           }
         }
       }
     },
-
     "shared-core": {
       "projectType": "library",
       "schematics": {
@@ -270,15 +383,22 @@
             "tsConfig": "libs/shared-core/tsconfig.lib.json"
           },
           "configurations": {
-            "production": { "tsConfig": "libs/shared-core/tsconfig.lib.prod.json" },
-            "development": { "tsConfig": "libs/shared-core/tsconfig.lib.json" }
+            "production": {
+              "tsConfig": "libs/shared-core/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "libs/shared-core/tsconfig.lib.json"
+            }
           },
           "defaultConfiguration": "production"
         },
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
-            "polyfills": ["zone.js", "zone.js/testing"],
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
             "tsConfig": "libs/shared-core/tsconfig.spec.json",
             "karmaConfig": "libs/shared-core/karma.conf.js"
           }
@@ -286,11 +406,13 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["libs/shared-core/src/**/*.ts", "libs/shared-core/src/**/*.html"]
+            "lintFilePatterns": [
+              "libs/shared-core/src/**/*.ts",
+              "libs/shared-core/src/**/*.html"
+            ]
           }
         }
       }
     }
-
   }
 }

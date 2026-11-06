@@ -239,6 +239,9 @@ export class SmartNotificationService {
         );
       case 'RECEIVING':
         return (
+          currentRole.includes('CONTROL_DESK') ||
+          currentRole.includes('MESA') ||
+          currentRole.includes('SHIFT_LEADER') ||
           currentRole.includes('WAREHOUSE') ||
           currentRole.includes('DOCK') ||
           currentRole.includes('OPERAT') ||
@@ -257,6 +260,9 @@ export class SmartNotificationService {
         );
       case 'OUTBOUND':
         return (
+          currentRole.includes('CONTROL_DESK') ||
+          currentRole.includes('MESA') ||
+          currentRole.includes('SHIFT_LEADER') ||
           currentRole.includes('WAREHOUSE') ||
           currentRole.includes('DISPATCH') ||
           currentRole.includes('SALIDAS') ||

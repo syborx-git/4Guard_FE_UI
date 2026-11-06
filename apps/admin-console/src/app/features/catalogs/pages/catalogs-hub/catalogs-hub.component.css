@@ -4,6 +4,24 @@
    ════════════════════════════════════════════════════════════════ */
 
 :host {
+  --gold:           #c5a86b;
+  --gold-light:     #e0c87a;
+  --gold-bg:        rgba(197, 168, 107, 0.10);
+  --gold-border:    rgba(197, 168, 107, 0.28);
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+
+  --bg-page:        #f5f4f0;
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --bg-card:        rgba(255, 255, 255, 0.94);
+  --border-card:    rgba(76, 86, 105, 0.10);
+  --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+
+  --text-primary:   #1c2940;
+  --text-secondary: #5a6477;
+  --text-muted:     #8b94a3;
+  --text-gold:      #9b7626;
+  --radius-xl:      18px;
+
   display: block;
   width: 100%;
 }
@@ -182,11 +200,12 @@
   overflow: hidden;
   cursor: pointer;
   outline: none;
-  border: 1px solid rgba(197, 168, 107, 0.22);
-  border-radius: 18px;
-  color: #1E293B;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.85));
-  box-shadow: 0 10px 30px rgba(53, 47, 36, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border: 1.5px solid var(--border-card-gold, var(--gold-border, rgba(197, 168, 107, 0.28)));
+  border-top: 3.5px solid var(--gold, #c5a86b);
+  border-radius: var(--radius-xl, 18px);
+  color: var(--text-primary, #1E293B);
+  background: var(--bg-card-exec, var(--bg-card, #FFFFFF));
+  box-shadow: var(--shadow-card, 0 10px 30px rgba(53, 47, 36, 0.05));
   transition: all 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -311,10 +330,12 @@
 
 :host-context(.theme-dark) .admin-module-card,
 :host-context(.dark) .admin-module-card {
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(8, 14, 24, 0.85));
-  border-color: rgba(255, 255, 255, 0.08);
-  color: #F1F5F9;
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
+  background: var(--bg-card-exec, var(--bg-card, rgba(17, 26, 38, 0.94)));
+  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.24));
+  border-top: 3.5px solid var(--gold, #d0af67);
+  border-radius: var(--radius-xl, 18px);
+  color: var(--text-primary, #F1F5F9);
+  box-shadow: var(--shadow-card, 0 18px 42px rgba(0, 0, 0, 0.35));
 }
 
 :host-context(.theme-dark) .admin-module-card:hover,

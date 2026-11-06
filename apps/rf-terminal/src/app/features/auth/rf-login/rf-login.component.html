@@ -13,7 +13,9 @@
   <!-- ░░ Topbar Técnica: Identidad Corporativa + Telemetría en Vivo ░░ -->
   <header class="rf-topbar">
     <div class="rf-brand">
-      <div class="rf-brand__mark" aria-hidden="true">4G</div>
+      <div class="rf-brand__mark" aria-hidden="true">
+        <img src="assets/logo-4guard.svg" alt="4GUARD" class="rf-brand__logo-img" />
+      </div>
       <div class="rf-brand__text">
         <h1>4GUARD</h1>
         <p>RF Terminal · WMS</p>
@@ -47,7 +49,66 @@
   <main class="rf-main">
     <section class="rf-card" aria-labelledby="rf-login-title">
 
-      @if (mustChangePin()) {
+      @if (showEnrollmentBanner()) {
+      <!-- ═══ MODAL ERGONÓMICO DE ENROLAMIENTO FACE ID ═══ -->
+      <div class="rf-panel animate-fade-in" role="dialog" aria-labelledby="rf-enroll-title">
+        <div class="rf-card__header" style="margin-bottom: 1rem;">
+          <span class="rf-card__eyebrow" style="color: #38bdf8;">Seguridad Biométrica · W3C FIDO2</span>
+          <h2 id="rf-enroll-title">¿Activar Face ID?</h2>
+          <p class="rf-card__subtitle">
+            Hola <strong>{{ pendingEnrollUser()?.fullName || 'Operador' }}</strong>. Este dispositivo cuenta con sensor biométrico nativo.
+            Puedes vincular tu rostro para ingresar a la terminal en <strong>menos de 1 segundo</strong> en tus siguientes turnos.
+          </p>
+        </div>
+
+        <div class="biometric-enroll-preview">
+          <div class="biometric-badge-icon">
+            <span class="material-symbols-outlined text-4xl text-amber-400">face_unlock</span>
+          </div>
+          <div class="biometric-features-list">
+            <div class="biometric-feat">
+              <span class="material-symbols-outlined text-emerald-400 text-sm">check_circle</span>
+              <span>Cero almacenamiento de fotos (Zero Biometric Knowledge).</span>
+            </div>
+            <div class="biometric-feat">
+              <span class="material-symbols-outlined text-emerald-400 text-sm">check_circle</span>
+              <span>Acceso instantáneo sin teclear PIN con guantes en cabina.</span>
+            </div>
+            <div class="biometric-feat">
+              <span class="material-symbols-outlined text-emerald-400 text-sm">check_circle</span>
+              <span>Resiliente fuera de línea en patio y cámaras (ADR-012).</span>
+            </div>
+          </div>
+        </div>
+
+        @if (error()) {
+        <div class="pin-error" role="alert" aria-live="assertive">
+          <span class="material-symbols-outlined text-base">error</span>
+          <span>{{ error() }}</span>
+        </div>
+        }
+
+        <div style="display: flex; gap: 0.75rem; margin-top: 0.75rem;">
+          <button type="button" class="rf-btn"
+            style="flex: 1; background: rgba(148, 163, 184, 0.14); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1;"
+            [disabled]="isLoading()" (click)="dismissEnrollmentBanner()">
+            <span>En otro momento</span>
+          </button>
+          <button id="btn-confirm-enroll" type="button" class="rf-btn rf-btn--primary" style="flex: 2;"
+            [disabled]="isLoading()" (click)="enrollFaceId()">
+            @if (isLoading()) {
+            <span class="material-symbols-outlined text-xl animate-spin" aria-hidden="true">refresh</span>
+            <span>Vinculando sensor…</span>
+            } @else {
+            <span>Vincular Face ID Ahora</span>
+            <span class="material-symbols-outlined text-xl">verified_user</span>
+            }
+          </button>
+        </div>
+      </div>
+      } @else if (mustChangePin()) {
+
+      <!-- ═══ MODAL CAMBIO OBLIGATORIO DE PIN ═══ -->
       <div class="rf-panel animate-fade-in" role="dialog" aria-labelledby="rf-pin-change-title">
         <div class="rf-card__header" style="margin-bottom: 1rem;">
           <span class="rf-card__eyebrow" style="color: #fbbf24;">Seguridad de Operador · Primer Acceso</span>
@@ -135,7 +196,7 @@
         <span class="rf-card__eyebrow">Acceso Seguro al Terminal</span>
         <h2 id="rf-login-title">Iniciar Sesión</h2>
         <p class="rf-card__subtitle">
-          Ingresa tus credenciales autorizadas para operar tareas de patio y almacén.
+          Ingresa tu código de operador y PIN o identifícate con Face ID.
         </p>
       </div>
 
@@ -147,17 +208,11 @@
       </div>
       }
 
-      <!-- Tabs Segmentadas Estilo Fintech Industrial -->
+      <!-- Tabs Segmentadas (PIN Rápido / Face ID) -->
+      @if (isBiometricsSupported()) {
       <div class="rf-tabs" role="tablist" aria-label="Método de acceso"
-        [attr.data-active]="mode() === 'credentials' ? 0 : (mode() === 'pin' ? 1 : 2)">
+        [attr.data-active]="currentTabIndex">
         <span class="rf-tabs__indicator" aria-hidden="true"></span>
-
-        <button type="button" role="tab" id="tab-credentials" class="rf-tabs__btn"
-          [class.is-active]="mode() === 'credentials'" (click)="switchMode('credentials')"
-          [attr.aria-selected]="mode() === 'credentials'">
-          <span class="material-symbols-outlined text-[18px]">badge</span>
-          <span>Credenciales</span>
-        </button>
 
         <button type="button" role="tab" id="tab-pin" class="rf-tabs__btn" [class.is-active]="mode() === 'pin'"
           (click)="switchMode('pin')" [attr.aria-selected]="mode() === 'pin'">
@@ -165,76 +220,16 @@
           <span>PIN Rápido</span>
         </button>
 
-        <button type="button" role="tab" id="tab-scan" class="rf-tabs__btn" [class.is-active]="mode() === 'scan'"
-          (click)="switchMode('scan')" [attr.aria-selected]="mode() === 'scan'">
-          <span class="material-symbols-outlined text-[18px]">qr_code_scanner</span>
-          <span>Escaneo QR</span>
+        <button type="button" role="tab" id="tab-face-id" class="rf-tabs__btn"
+          [class.is-active]="mode() === 'face-id'" (click)="switchMode('face-id')"
+          [attr.aria-selected]="mode() === 'face-id'">
+          <span class="material-symbols-outlined text-[18px]">face</span>
+          <span>Face ID</span>
         </button>
-      </div>
-
-      <!-- ═══ MODO 1: CREDENCIALES WMS ═══ -->
-      @if (mode() === 'credentials') {
-      <div class="rf-panel animate-fade-in" role="tabpanel" aria-labelledby="tab-credentials">
-        <form [formGroup]="loginForm" (ngSubmit)="submitCredentials()" class="rf-form">
-
-          <div class="rf-field">
-            <label for="username" class="rf-field__label">Usuario o Correo Institucional</label>
-            <div class="rf-field__control">
-              <span class="rf-field__icon" aria-hidden="true">
-                <span class="material-symbols-outlined text-lg">alternate_email</span>
-              </span>
-              <input id="username" type="text" formControlName="identifier"
-                placeholder="ej. operator@4guard.mx, guard@4guard.mx" class="rf-field__input" autocomplete="username" />
-            </div>
-          </div>
-
-          <div class="rf-field">
-            <label for="password" class="rf-field__label">Contraseña de Seguridad</label>
-            <div class="rf-field__control">
-              <span class="rf-field__icon" aria-hidden="true">
-                <span class="material-symbols-outlined text-lg">lock</span>
-              </span>
-              <input id="password" [type]="showPassword() ? 'text' : 'password'" formControlName="password"
-                placeholder="Introduce tu contraseña" class="rf-field__input" autocomplete="current-password" />
-              <button type="button" class="rf-field__toggle" (click)="toggleShowPassword()"
-                [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Ver contraseña'">
-                <span class="material-symbols-outlined text-lg">{{ showPassword() ? 'visibility_off' : 'visibility'
-                  }}</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="rf-row">
-            <label class="rf-checkbox">
-              <input type="checkbox" formControlName="remember" />
-              <span class="rf-checkbox__box" aria-hidden="true"></span>
-              <span class="rf-checkbox__text">Recordar en esta terminal</span>
-            </label>
-            <span class="rf-tech-badge">SLA &lt;1.5s</span>
-          </div>
-
-          @if (error()) {
-          <div class="pin-error" role="alert" aria-live="assertive">
-            <span class="material-symbols-outlined text-base">error</span>
-            <span>{{ error() }}</span>
-          </div>
-          }
-
-          <button id="btn-login-credentials" type="submit" class="rf-btn rf-btn--primary"
-            [disabled]="loginForm.invalid || isLoading()" aria-label="Iniciar Sesión en el Terminal">
-            @if (isLoading()) {
-            <span class="material-symbols-outlined text-xl animate-spin" aria-hidden="true">refresh</span>
-            <span>Verificando credenciales…</span>
-            } @else {
-            <span>Ingresar al Terminal</span>
-            <span class="material-symbols-outlined text-xl">arrow_forward</span>
-            }
-          </button>
-        </form>
       </div>
       }
 
-      <!-- ═══ MODO 2: PIN RÁPIDO ═══ -->
+      <!-- ═══ MODO 1: PIN RÁPIDO ═══ -->
       @if (mode() === 'pin') {
       <div class="rf-panel animate-fade-in" role="tabpanel" aria-labelledby="tab-pin">
 
@@ -311,26 +306,65 @@
       </div>
       }
 
-      <!-- ═══ MODO 3: ESCANEO QR / RFID ═══ -->
-      @if (mode() === 'scan') {
-      <div class="rf-panel animate-fade-in" role="tabpanel" aria-labelledby="tab-scan">
-        <p class="rf-scan-hint">
-          Coloca tu gafete de operario o credencial con código QR frente al sensor óptico de la tableta.
-        </p>
+      <!-- ═══ MODO 2: FACE ID / BIOMETRÍA DE PLATAFORMA ═══ -->
+      @if (mode() === 'face-id') {
+      <div class="rf-panel animate-fade-in" role="tabpanel" aria-labelledby="tab-face-id">
+        <div class="biometric-panel-box">
+          <div class="biometric-radar" [class.is-scanning]="biometricPrompting()">
+            <div class="biometric-radar__ring biometric-radar__ring--1"></div>
+            <div class="biometric-radar__ring biometric-radar__ring--2"></div>
+            <div class="biometric-radar__core">
+              <span class="material-symbols-outlined biometric-radar__icon">
+                {{ biometricPrompting() ? 'face' : (isBiometricsEnrolled() ? 'face_unlock' : 'face') }}
+              </span>
+            </div>
+            <div class="biometric-radar__beam"></div>
+          </div>
 
-        <button id="scan-trigger-btn" type="button" class="rf-scan-btn" [class.rf-scan-btn--scanning]="isScanning()"
-          (click)="triggerScan()" [disabled]="isScanning()" aria-label="Activar sensor para escanear QR o RFID">
-          @if (!isScanning()) {
-          <div class="rf-scan-btn__radar"></div>
-          <span class="material-symbols-outlined text-4xl text-amber-400">qr_code_scanner</span>
-          <span class="rf-scan-btn__label">ESCANEAR</span>
-          <span class="rf-scan-btn__sub">Gafete · QR · RFID</span>
-          } @else {
-          <span class="material-symbols-outlined text-4xl text-cyan-400 animate-spin">refresh</span>
-          <span class="rf-scan-btn__label">Leyendo sensor…</span>
-          <span class="rf-scan-btn__sub">Mantén tu credencial estable</span>
+          <div class="biometric-meta">
+            @if (isBiometricsEnrolled() && enrolledUserName()) {
+            <div class="biometric-enrolled-chip">
+              <span class="material-symbols-outlined text-xs text-emerald-400">verified</span>
+              <span>Dispositivo Vinculado: <strong>{{ enrolledUserName() }}</strong></span>
+            </div>
+            }
+            <h3 class="biometric-title">Identificación Biométrica</h3>
+            <p class="biometric-desc">
+              @if (isBiometricsEnrolled()) {
+                Mira hacia el sensor frontal de tu tableta o dispositivo para validar tu turno instantáneamente.
+              } @else {
+                Vincula tu rostro en esta terminal para acceder en menos de 1 segundo sin escribir con guantes.
+              }
+            </p>
+          </div>
+
+          @if (error()) {
+          <div class="pin-error" role="alert" aria-live="assertive">
+            <span class="material-symbols-outlined text-base">error</span>
+            <span>{{ error() }}</span>
+          </div>
           }
-        </button>
+
+          <button id="btn-face-id-auth" type="button" class="rf-btn rf-btn--primary w-full"
+            [disabled]="biometricPrompting() || isLoading()" (click)="authenticateWithFaceId()"
+            aria-label="Validar rostro con sensor de dispositivo">
+            @if (biometricPrompting() || isLoading()) {
+            <span class="material-symbols-outlined text-xl animate-spin" aria-hidden="true">refresh</span>
+            <span>Verificando sensor biométrico…</span>
+            } @else {
+            <span class="material-symbols-outlined text-xl">biometrics</span>
+            <span>{{ isBiometricsEnrolled() ? 'Iniciar Reconocimiento Facial' : 'Identificarme con Face ID' }}</span>
+            }
+          </button>
+
+          <!-- Fallback ergonómico directo a PIN para operadores con mascarilla / careta / lentes -->
+          <div class="biometric-fallback">
+            <button type="button" class="rf-fallback-btn" (click)="switchMode('pin')">
+              <span class="material-symbols-outlined text-sm">dialpad</span>
+              <span>¿Llevas careta o lentes de protección? Ingresar con PIN</span>
+            </button>
+          </div>
+        </div>
       </div>
       }
 

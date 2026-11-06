@@ -32,9 +32,11 @@
   --bg-container:   #0b1119;
   --bg-header:      linear-gradient(180deg, #162230 0%, #101924 100%);
   --bg-card:        #111a26;
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --bg-card-inner:  #0c131d;
   --bg-input:       #080e16;
   --bdr-main:       rgba(255, 255, 255, 0.09);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --bdr-subtle:     rgba(255, 255, 255, 0.05);
   --bdr-focus:      #d0af67;
 
@@ -72,9 +74,11 @@
   --bg-container:   #ffffff;
   --bg-header:      linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
   --bg-card:        #ffffff;
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --bg-card-inner:  #f8fafc;
   --bg-input:       #ffffff;
   --bdr-main:       #cbd5e1;
+  --border-card-gold: rgba(197, 168, 107, 0.35);
   --bdr-subtle:     #e2e8f0;
   --bdr-focus:      #b45309;
 
@@ -407,8 +411,9 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  background: var(--bg-card);
-  border: 1px solid var(--bdr-main);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold-primary);
   border-radius: 18px;
   padding: 1.25rem;
   box-shadow: var(--shadow-card);
@@ -1394,8 +1399,9 @@
 .success-card {
   width: 100%;
   box-sizing: border-box;
-  background: var(--bg-card);
-  border: 1.5px solid var(--emerald-border);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--emerald-border));
+  border-top: 3.5px solid var(--gold-primary);
   border-radius: 20px;
   padding: 2.2rem 1.4rem;
   text-align: center;

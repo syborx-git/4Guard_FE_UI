@@ -8,7 +8,9 @@ RF Shell — Layout Maestro PWA con Header Industrial y Nav Táctil
     <!-- Brand / Title -->
     <div class="rf-header__brand">
       <a routerLink="/menu" class="rf-header__logo" aria-label="Ir al Menú Principal">
-        <span class="logo-badge">4G</span>
+        <div class="logo-mark-wrap">
+          <img src="assets/logo-4guard.svg" alt="4GUARD" class="rf-header__logo-img" />
+        </div>
         <div class="logo-text">
           <span class="logo-title">4GUARD</span>
           <span class="logo-subtitle">Terminal RF</span>
@@ -90,7 +92,7 @@ RF Shell — Layout Maestro PWA con Header Industrial y Nav Táctil
       <!-- Botón ForBot AI — Asistente de Operación y Voz en Andén -->
       <button type="button" class="forbot-rf-header-btn" (click)="openForbotModal()"
         title="Abrir Asistente ForBot AI (Voz & Consultas)">
-        <img src="assets/forbot-avatar.png" alt="ForBot" class="forbot-rf-avatar" />
+        <img src="assets/logo-4guard.svg" alt="ForBot" class="forbot-rf-avatar" />
         <span class="forbot-rf-text">ForBot</span>
       </button>
 

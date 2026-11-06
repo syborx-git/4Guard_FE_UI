@@ -17,353 +17,639 @@
       </div>
 
       <!-- Título Principal & Subtítulo -->
-      <h1 class="hero-header__title">Sesiones Activas</h1>
-      <p class="hero-header__subtitle">Monitoreo en tiempo real de las conexiones autenticadas al sistema 4GUARD WMS.</p>
+      <h1 class="hero-header__title">
+        {{ activeTab() === 'active-sessions' ? 'Sesiones Activas' : 'Control de Jornadas & Horas Trabajadas' }}
+      </h1>
+      <p class="hero-header__subtitle">
+        {{ activeTab() === 'active-sessions' 
+          ? 'Monitoreo en tiempo real de las conexiones autenticadas al sistema 4GUARD WMS.' 
+          : 'Reporte ejecutivo y auditoría de horas efectivas laboradas con deducción automática por inactividad (-15 min).' }}
+      </p>
     </div>
 
     <div class="hero-header__actions">
-      @if (!isLoading() && !errorState()) {
-      <div class="sessions-counter">
-        <span class="sessions-counter__dot"></span>
-        <strong>{{ sessions().length }}</strong>
-        <span>{{ sessions().length === 1 ? 'conexión activa' : 'conexiones activas' }}</span>
-      </div>
-      }
+      @if (activeTab() === 'active-sessions') {
+        @if (!isLoading() && !errorState()) {
+          <div class="sessions-counter">
+            <span class="sessions-counter__dot"></span>
+            <strong>{{ sessions().length }}</strong>
+            <span>{{ sessions().length === 1 ? 'conexión activa' : 'conexiones activas' }}</span>
+          </div>
+        }
 
-      <button type="button" class="btn-refresh" (click)="loadSessions()" [disabled]="isLoading()">
-        <span class="material-symbols-outlined" [class.animate-spin]="isLoading()">sync</span>
-        <span>{{ isLoading() ? 'Actualizando...' : 'Actualizar' }}</span>
-      </button>
+        <button type="button" class="btn-refresh" (click)="loadSessions()" [disabled]="isLoading()">
+          <span class="material-symbols-outlined" [class.animate-spin]="isLoading()">sync</span>
+          <span>{{ isLoading() ? 'Actualizando...' : 'Actualizar' }}</span>
+        </button>
+      } @else {
+        <!-- Acciones en Pestaña de Horas Trabajadas -->
+        <button type="button" class="btn-export-gold" (click)="exportToCsv()" [disabled]="isLoadingWorkHours()">
+          <span class="material-symbols-outlined">download</span>
+          <span>Exportar a Excel (CSV)</span>
+        </button>
+
+        <button type="button" class="btn-refresh" (click)="loadWorkHours()" [disabled]="isLoadingWorkHours()">
+          <span class="material-symbols-outlined" [class.animate-spin]="isLoadingWorkHours()">sync</span>
+          <span>{{ isLoadingWorkHours() ? 'Calculando...' : 'Recalcular' }}</span>
+        </button>
+      }
     </div>
   </header>
 
-  <!-- INFORMACIÓN DEMO -->
-  @if (!isLoading() && !errorState() && errorMessage()) {
-  <section class="demo-info-banner">
-
-    <div class="demo-info-banner__icon">
-      <span class="material-symbols-outlined">
-        info
-      </span>
-    </div>
-
-    <div class="demo-info-banner__content">
-      <strong>Modo de demostración activo</strong>
-      <p>{{ errorMessage() }}</p>
-    </div>
-
-  </section>
-  }
-
-  <!-- ESTADO DE CARGA -->
-  @if (isLoading()) {
-  <section class="state-panel">
-
-    <div class="loading-spinner">
-      <span class="material-symbols-outlined">
-        sync
-      </span>
-    </div>
-
-    <span class="state-panel__eyebrow">
-      Consultando servidor de seguridad
-    </span>
-
-    <h2>Cargando sesiones activas</h2>
-
-    <p>
-      Estamos verificando las conexiones autenticadas y su información de
-      seguridad.
-    </p>
-
-  </section>
-  }
-
-  <!-- ERROR 403 -->
-  @if (errorState() === 'forbidden') {
-  <section class="state-panel">
-
-    <div class="state-panel-icon state-panel-icon--forbidden">
-      <span class="material-symbols-outlined">
-        shield_lock
-      </span>
-    </div>
-
-    <span class="state-panel__eyebrow state-panel__eyebrow--danger">
-      Seguridad y permisos
-    </span>
-
-    <h2>Acceso restringido</h2>
-
-    <p>
-      {{ errorMessage() }}
-    </p>
-
-    <div class="state-panel-http">
-      HTTP 403 · FORBIDDEN
-    </div>
-
-  </section>
-  }
-
-  <!-- ESTADO VACÍO -->
-  @if (!isLoading() && !errorState() && sessions().length === 0) {
-  <section class="state-panel">
-
-    <div class="state-panel-icon state-panel-icon--empty">
-      <span class="material-symbols-outlined">
-        wifi_off
-      </span>
-    </div>
-
-    <span class="state-panel__eyebrow">
-      Nodo sin conexiones
-    </span>
-
-    <h2>Sin sesiones activas</h2>
-
-    <p>
-      No se encontraron conexiones activas en este momento. Las sesiones
-      aparecerán aquí cuando los usuarios inicien sesión.
-    </p>
-
-    <button type="button" class="state-panel__action" (click)="loadSessions()">
-
-      <span class="material-symbols-outlined">
-        refresh
-      </span>
-
-      <span>Volver a consultar</span>
-
-    </button>
-
-  </section>
-  }
-
-  <!-- LISTA DE SESIONES -->
-  @if (!isLoading() && !errorState() && sessions().length > 0) {
-
-  <section class="sessions-content">
-
-    <div class="sessions-content__header">
-
-      <div>
-        <span class="sessions-content__eyebrow">
-          Conexiones autenticadas
-        </span>
-
-        <h2>Monitor de actividad en tiempo real</h2>
-      </div>
-
-      <div class="sessions-content__result">
-        <span class="material-symbols-outlined">
-          group
-        </span>
-
-        <span>
-          {{ sessions().length }}
-          {{ sessions().length === 1 ? 'usuario conectado' : 'usuarios conectados' }}
-        </span>
-      </div>
-
-    </div>
-
-    <div class="sessions-list-container">
-
-      @for (session of sessions(); track session.userId) {
-
-      <article class="session-card">
-
-        <!-- IDENTIDAD -->
-        <div class="session-card__identity">
-
-          <div class="avatar-circle">
-            {{ getInitials(session.fullName) }}
-          </div>
-
-          <div class="identity-details">
-
-            <div class="identity-name-row">
-
-              <h3 class="user-fullname" [title]="session.fullName">
-
-                {{ session.fullName }}
-              </h3>
-
-              <span class="badge-online">
-                <span class="online-dot"></span>
-                Online
-              </span>
-
-            </div>
-
-            <span class="user-role">
-              {{ getRoleLabel(session.role) }}
-            </span>
-
-            <span class="user-email">
-              {{ session.email }}
-            </span>
-
-          </div>
-
-        </div>
-
-        <!-- UBICACIÓN -->
-        <div class="session-detail session-detail--location">
-
-          <div class="session-detail__icon">
-            <span class="material-symbols-outlined">
-              location_on
-            </span>
-          </div>
-
-          <div class="session-detail__content">
-
-            <span class="session-detail__label">
-              Ubicación
-            </span>
-
-            <strong [title]="session.branchName">
-              {{ session.branchName }}
-            </strong>
-
-            <span [title]="session.organizationName">
-              {{ session.organizationName }}
-            </span>
-
-          </div>
-
-        </div>
-
-        <!-- IP / NODO -->
-        <div class="session-detail">
-
-          <div class="session-detail__icon">
-            <span class="material-symbols-outlined">
-              lan
-            </span>
-          </div>
-
-          <div class="session-detail__content">
-
-            <span class="session-detail__label">
-              IP / Nodo
-            </span>
-
-            <strong class="session-detail__mono">
-              {{ session.ipAddress }}
-            </strong>
-
-            <span>
-              Conexión autenticada
-            </span>
-
-          </div>
-
-        </div>
-
-        <!-- DISPOSITIVO -->
-        <div class="session-detail">
-
-          <div class="session-detail__icon">
-            <span class="material-symbols-outlined">
-              devices
-            </span>
-          </div>
-
-          <div class="session-detail__content">
-
-            <span class="session-detail__label">
-              Dispositivo
-            </span>
-
-            <strong [title]="parseUserAgent(session.userAgent)">
-              {{ parseUserAgent(session.userAgent) }}
-            </strong>
-
-            <span>
-              Sesión segura JWT
-            </span>
-
-          </div>
-
-        </div>
-
-        <!-- FECHA Y ACCIÓN -->
-        <div class="session-card__actions">
-
-          <div class="login-timestamp">
-
-            <span class="material-symbols-outlined">
-              schedule
-            </span>
-
-            <div>
-              <span>Última conexión</span>
-
-              <strong>
-                {{ formatDate(session.lastLoginAt) }}
-              </strong>
-            </div>
-
-          </div>
-
-          <button type="button" class="btn-revoke" (click)="revokeSession(session)"
-            [attr.aria-label]="'Revocar sesión de ' + session.fullName">
-
-            <span class="material-symbols-outlined">
-              logout
-            </span>
-
-            <span>Revocar</span>
-
-          </button>
-
-        </div>
-
-      </article>
-
+  <!-- ═══════════════════════════════════════════════════════════════
+       BARRA DE PESTAÑAS EJECUTIVAS SYNEXIA
+       ═══════════════════════════════════════════════════════════════ -->
+  <nav class="executive-tabs-nav" aria-label="Secciones de monitoreo">
+    <div class="executive-tabs-bar">
+      <!-- Pestaña 1: Conexiones en Vivo -->
+      <button
+        type="button"
+        class="executive-tab-btn"
+        [class.executive-tab-btn--active]="activeTab() === 'active-sessions'"
+        (click)="selectTab('active-sessions')"
+      >
+        <span class="material-symbols-outlined">radar</span>
+        <span>Conexiones en Vivo</span>
+        <span class="tab-counter-pill">{{ sessions().length }}</span>
+      </button>
+
+      <!-- Pestaña 2: Reporte de Horas Trabajadas (Exclusivo Dirección General) -->
+      @if (isDirectorGeneral()) {
+        <button
+          type="button"
+          class="executive-tab-btn"
+          [class.executive-tab-btn--active]="activeTab() === 'work-hours'"
+          (click)="selectTab('work-hours')"
+        >
+          <span class="material-symbols-outlined">schedule</span>
+          <span>Horas Trabajadas por Usuario</span>
+          <span class="tab-badge-ceo">DIRECCIÓN GENERAL</span>
+        </button>
       }
-
     </div>
+  </nav>
 
-    <!-- FOOTER TÉCNICO -->
-    <footer class="sessions-footer">
+  <!-- ═══════════════════════════════════════════════════════════════
+       CONTENIDO DE LA PESTAÑA 1: CONEXIONES EN VIVO
+       ═══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'active-sessions') {
 
-      <div class="sessions-footer__status">
+    <!-- INFORMACIÓN DEMO -->
+    @if (!isLoading() && !errorState() && errorMessage()) {
+      <section class="demo-info-banner">
+        <div class="demo-info-banner__icon">
+          <span class="material-symbols-outlined">info</span>
+        </div>
+        <div class="demo-info-banner__content">
+          <strong>Modo de demostración activo</strong>
+          <p>{{ errorMessage() }}</p>
+        </div>
+      </section>
+    }
 
-        <span class="sessions-footer__dot"></span>
+    <!-- ESTADO DE CARGA -->
+    @if (isLoading()) {
+      <section class="state-panel">
+        <div class="loading-spinner">
+          <span class="material-symbols-outlined animate-spin">sync</span>
+        </div>
+        <span class="state-panel__eyebrow">Consultando servidor de seguridad</span>
+        <h2>Cargando sesiones activas</h2>
+        <p>Estamos verificando las conexiones autenticadas y su información de seguridad.</p>
+      </section>
+    }
 
-        <span>Monitoreo activo</span>
+    <!-- ERROR 403 -->
+    @if (errorState() === 'forbidden') {
+      <section class="state-panel">
+        <div class="state-panel-icon state-panel-icon--forbidden">
+          <span class="material-symbols-outlined">shield_lock</span>
+        </div>
+        <span class="state-panel__eyebrow state-panel__eyebrow--danger">Seguridad y permisos</span>
+        <h2>Acceso restringido</h2>
+        <p>{{ errorMessage() }}</p>
+      </section>
+    }
 
-        <span class="sessions-footer__separator">•</span>
+    <!-- SIN SESIONES ACTIVAS -->
+    @if (!isLoading() && !errorState() && sessions().length === 0) {
+      <section class="state-panel">
+        <div class="state-panel-icon">
+          <span class="material-symbols-outlined">person_off</span>
+        </div>
+        <span class="state-panel__eyebrow">Nodo sin conexiones</span>
+        <h2>Sin sesiones activas</h2>
+        <p>No se encontraron conexiones activas en este momento. Las sesiones aparecerán aquí cuando los usuarios inicien sesión.</p>
+        <button type="button" class="state-panel__action" (click)="loadSessions()">
+          <span class="material-symbols-outlined">refresh</span>
+          <span>Volver a consultar</span>
+        </button>
+      </section>
+    }
 
-        <span>Validación JWT habilitada</span>
+    <!-- LISTA DE SESIONES ACTIVAS -->
+    @if (!isLoading() && !errorState() && sessions().length > 0) {
+      <section class="sessions-content">
+        <div class="sessions-content__header">
+          <div>
+            <span class="sessions-content__eyebrow">Conexiones autenticadas</span>
+            <h2>Monitor de actividad en tiempo real</h2>
+          </div>
+          <div class="sessions-content__result">
+            <span class="material-symbols-outlined">group</span>
+            <span>
+              {{ sessions().length }}
+              {{ sessions().length === 1 ? 'usuario conectado' : 'usuarios conectados' }}
+            </span>
+          </div>
+        </div>
 
-      </div>
+        <div class="sessions-list-container">
+          @for (session of sessions(); track session.userId) {
+            <article class="session-card">
+              <!-- IDENTIDAD -->
+              <div class="session-card__identity">
+                <div class="avatar-circle">
+                  {{ getInitials(session.fullName) }}
+                </div>
+                <div class="identity-details">
+                  <div class="identity-name-row">
+                    <h3 class="user-fullname" [title]="session.fullName">
+                      {{ session.fullName }}
+                    </h3>
+                    <span class="badge-online">
+                      <span class="online-dot"></span>
+                      Online
+                    </span>
+                  </div>
+                  <span class="user-role">
+                    {{ getRoleLabel(session.role) }}
+                  </span>
+                  <span class="user-email">
+                    {{ session.email }}
+                  </span>
+                </div>
+              </div>
 
-      <span class="sessions-footer__version">
-        4GUARD WMS · ACTIVE SESSION MONITOR
-      </span>
+              <!-- UBICACIÓN -->
+              <div class="session-detail session-detail--location">
+                <div class="session-detail__icon">
+                  <span class="material-symbols-outlined">location_on</span>
+                </div>
+                <div class="session-detail__content">
+                  <span class="session-detail__label">Ubicación</span>
+                  <strong [title]="session.branchName">{{ session.branchName }}</strong>
+                  <span [title]="session.organizationName">{{ session.organizationName }}</span>
+                </div>
+              </div>
 
-    </footer>
+              <!-- IP / NODO -->
+              <div class="session-detail">
+                <div class="session-detail__icon">
+                  <span class="material-symbols-outlined">lan</span>
+                </div>
+                <div class="session-detail__content">
+                  <span class="session-detail__label">IP / Nodo</span>
+                  <strong class="session-detail__mono">{{ session.ipAddress }}</strong>
+                  <span>Conexión autenticada</span>
+                </div>
+              </div>
 
-  </section>
+              <!-- DISPOSITIVO -->
+              <div class="session-detail">
+                <div class="session-detail__icon">
+                  <span class="material-symbols-outlined">devices</span>
+                </div>
+                <div class="session-detail__content">
+                  <span class="session-detail__label">Dispositivo</span>
+                  <strong [title]="parseUserAgent(session.userAgent)">{{ parseUserAgent(session.userAgent) }}</strong>
+                  <span>Sesión segura JWT</span>
+                </div>
+              </div>
+
+              <!-- FECHA Y ACCIÓN -->
+              <div class="session-card__actions">
+                <div class="login-timestamp">
+                  <span class="material-symbols-outlined">schedule</span>
+                  <div>
+                    <span>Última conexión</span>
+                    <strong>{{ formatDate(session.lastLoginAt) }}</strong>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="btn-revoke"
+                  (click)="revokeSession(session)"
+                  [attr.aria-label]="'Revocar sesión de ' + session.fullName"
+                >
+                  <span class="material-symbols-outlined">logout</span>
+                  <span>Revocar</span>
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+
+        <!-- FOOTER TÉCNICO -->
+        <footer class="sessions-footer">
+          <div class="sessions-footer__status">
+            <span class="sessions-footer__dot"></span>
+            <span>Monitoreo activo</span>
+            <span class="sessions-footer__separator">•</span>
+            <span>Validación JWT habilitada</span>
+          </div>
+          <span class="sessions-footer__brand">4GUARD WMS · Active Session Monitor</span>
+        </footer>
+      </section>
+    }
   }
 
-  <!-- MODAL DE CONFIRMACIÓN DE REVOCACIÓN HOMOLOGADO -->
-  @if (sessionToRevoke(); as session) {
-  <fg-confirm-dialog
-    [title]="'Revocar Sesión Activa'"
-    [message]="'¿Estás seguro de que deseas revocar la sesión activa de ' + session.fullName + '? El usuario será desconectado inmediatamente del sistema.'"
-    [confirmLabel]="'Revocar Sesión'"
-    [icon]="'logout'"
-    [variant]="'danger'"
-    [isLoading]="isRevoking()"
-    (confirmed)="confirmRevoke()"
-    (cancelled)="cancelRevoke()"
-  ></fg-confirm-dialog>
+  <!-- ═══════════════════════════════════════════════════════════════
+       CONTENIDO DE LA PESTAÑA 2: REPORTE DE HORAS TRABAJADAS (CEO / ADMIN)
+       ═══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'work-hours' && isDirectorGeneral()) {
+    <section class="work-hours-container">
+
+      <!-- ── 1. TARJETAS DE KPIS EJECUTIVOS DE JORNADA ── -->
+      <div class="work-hours-kpis-grid">
+        <!-- KPI 1: Total Horas Hombre -->
+        <div class="work-kpi-card work-kpi-card--gold">
+          <div class="work-kpi-card__header">
+            <span class="work-kpi-card__label">TOTAL HORAS HOMBRE</span>
+            <div class="work-kpi-card__icon-box">
+              <span class="material-symbols-outlined">timer</span>
+            </div>
+          </div>
+          <div class="work-kpi-card__value">{{ kpiTotalHoursFormatted() }}</div>
+          <div class="work-kpi-card__footer">
+            <span class="material-symbols-outlined text-xs">verified</span>
+            <span>Tiempo efectivo acumulado hoy</span>
+          </div>
+        </div>
+
+        <!-- KPI 2: Colaboradores Activos -->
+        <div class="work-kpi-card work-kpi-card--emerald">
+          <div class="work-kpi-card__header">
+            <span class="work-kpi-card__label">PERSONAL CON ASISTENCIA</span>
+            <div class="work-kpi-card__icon-box">
+              <span class="material-symbols-outlined">badge</span>
+            </div>
+          </div>
+          <div class="work-kpi-card__value">{{ kpiActiveUsersCount() }} / {{ filteredWorkHours().length }}</div>
+          <div class="work-kpi-card__footer">
+            <span class="work-kpi-dot dot--emerald"></span>
+            <span>Con registro de inicio de sesión</span>
+          </div>
+        </div>
+
+        <!-- KPI 3: Promedio Horas / Usuario -->
+        <div class="work-kpi-card work-kpi-card--blue">
+          <div class="work-kpi-card__header">
+            <span class="work-kpi-card__label">PROMEDIO POR JORNADA</span>
+            <div class="work-kpi-card__icon-box">
+              <span class="material-symbols-outlined">pace</span>
+            </div>
+          </div>
+          <div class="work-kpi-card__value">{{ kpiAvgMinutesPerUser() }}</div>
+          <div class="work-kpi-card__footer">
+            <span class="material-symbols-outlined text-xs">trending_up</span>
+            <span>Meta estándar: 8h 00m</span>
+          </div>
+        </div>
+
+        <!-- KPI 4: Desconexiones por Inactividad (-15m) -->
+        <div class="work-kpi-card work-kpi-card--amber">
+          <div class="work-kpi-card__header">
+            <span class="work-kpi-card__label">EXPULSIONES POR INACTIVIDAD</span>
+            <div class="work-kpi-card__icon-box">
+              <span class="material-symbols-outlined">hourglass_disabled</span>
+            </div>
+          </div>
+          <div class="work-kpi-card__value">{{ kpiTotalTimeouts() }}</div>
+          <div class="work-kpi-card__footer">
+            <span class="work-kpi-dot dot--amber"></span>
+            <span>-15 min deducidos por cada timeout</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 2. BARRA DE FILTROS Y CONTROLES EJECUTIVOS ── -->
+      <div class="work-directory-card">
+        <div class="work-filters-bar">
+          <!-- Selector de Fecha & Presets -->
+          <div class="date-controls-group">
+            <span class="date-controls-label">JORNADA:</span>
+            <button
+              type="button"
+              class="date-preset-btn"
+              [class.date-preset-btn--active]="selectedDate() === todayIso"
+              (click)="setDatePreset('today')"
+            >
+              Hoy
+            </button>
+            <button
+              type="button"
+              class="date-preset-btn"
+              (click)="setDatePreset('yesterday')"
+            >
+              Ayer
+            </button>
+            <div class="date-input-wrapper">
+              <span class="material-symbols-outlined text-xs text-slate-400">calendar_today</span>
+              <input
+                type="date"
+                class="date-native-input"
+                [ngModel]="selectedDate()"
+                (ngModelChange)="onDateChange($event)"
+                aria-label="Seleccionar fecha de reporte"
+              />
+            </div>
+          </div>
+
+          <!-- Buscador con ⌘K -->
+          <div class="search-input-wrapper">
+            <span class="material-symbols-outlined search-icon">search</span>
+            <input
+              id="work-hours-search"
+              type="search"
+              class="search-input"
+              [ngModel]="searchQuery()"
+              (ngModelChange)="searchQuery.set($event)"
+              placeholder="Buscar por colaborador, correo, rol o sucursal..."
+              autocomplete="off"
+            />
+            @if (searchQuery()) {
+              <button
+                type="button"
+                class="search-clear-btn"
+                (click)="searchQuery.set('')"
+                title="Limpiar búsqueda"
+              >
+                <span class="material-symbols-outlined text-xs">close</span>
+              </button>
+            }
+            <span class="search-kbd">⌘K</span>
+          </div>
+        </div>
+
+        <!-- Filtros Pills por Rol -->
+        <div class="role-pills-bar" role="group" aria-label="Filtrar por rol">
+          <button
+            type="button"
+            class="role-pill"
+            [class.role-pill--active]="selectedRole() === 'ALL'"
+            (click)="setRoleFilter('ALL')"
+          >
+            Todos los roles ({{ workHours().length }})
+          </button>
+          <button
+            type="button"
+            class="role-pill"
+            [class.role-pill--active]="selectedRole() === 'OPERATIONS'"
+            (click)="setRoleFilter('OPERATIONS')"
+          >
+            <span class="work-kpi-dot dot--blue"></span>
+            Operaciones / Gerencia
+          </button>
+          <button
+            type="button"
+            class="role-pill"
+            [class.role-pill--active]="selectedRole() === 'CONTROL_DESK'"
+            (click)="setRoleFilter('CONTROL_DESK')"
+          >
+            <span class="work-kpi-dot dot--purple"></span>
+            Mesa de Control
+          </button>
+          <button
+            type="button"
+            class="role-pill"
+            [class.role-pill--active]="selectedRole() === 'FORKLIFT'"
+            (click)="setRoleFilter('FORKLIFT')"
+          >
+            <span class="work-kpi-dot dot--amber"></span>
+            Operadores / Montacargas
+          </button>
+          <button
+            type="button"
+            class="role-pill"
+            [class.role-pill--active]="selectedRole() === 'QUALITY'"
+            (click)="setRoleFilter('QUALITY')"
+          >
+            <span class="work-kpi-dot dot--emerald"></span>
+            Calidad (QM)
+          </button>
+          <button
+            type="button"
+            class="role-pill"
+            [class.role-pill--active]="selectedRole() === 'SECURITY'"
+            (click)="setRoleFilter('SECURITY')"
+          >
+            <span class="work-kpi-dot dot--slate"></span>
+            Caseta & Vigilancia
+          </button>
+        </div>
+
+        <!-- ── 3. LISTADO DE COLABORADORES Y HORAS COMPUTADAS ── -->
+        @if (isLoadingWorkHours()) {
+          <div class="state-panel p-12">
+            <div class="loading-spinner">
+              <span class="material-symbols-outlined animate-spin text-3xl">sync</span>
+            </div>
+            <h2>Calculando intervalos y deducciones...</h2>
+            <p>Procesando bitácora de auditoría, sesiones y tiempo de inactividad.</p>
+          </div>
+        } @else if (filteredWorkHours().length === 0) {
+          <!-- Empty State -->
+          <div class="work-empty-card">
+            <div class="work-empty-icon">
+              <span class="material-symbols-outlined text-3xl">event_busy</span>
+            </div>
+            <h3>No se encontraron registros de jornada</h3>
+            <p>No hay eventos de inicio o cierre de sesión para los filtros seleccionados en la fecha {{ selectedDate() }}.</p>
+            <button type="button" class="btn-refresh mt-2" (click)="searchQuery.set(''); setRoleFilter('ALL')">
+              <span class="material-symbols-outlined text-sm">restart_alt</span>
+              <span>Restablecer Filtros</span>
+            </button>
+          </div>
+        } @else {
+          <div class="work-users-list">
+            @for (user of filteredWorkHours(); track user.userId) {
+              <div class="work-user-card" [class.work-user-card--expanded]="isUserExpanded(user.userId)">
+                
+                <!-- Fila Principal de Resumen del Colaborador -->
+                <div class="work-user-card__main-row" (click)="toggleIntervals(user.userId)">
+                  <!-- 1. Identidad -->
+                  <div class="work-user-identity">
+                    <div class="avatar-circle">
+                      {{ getInitials(user.fullName) }}
+                    </div>
+                    <div class="work-user-info">
+                      <div class="flex items-center gap-2">
+                        <strong class="work-user-name">{{ user.fullName }}</strong>
+                        @if (user.status === 'ONLINE') {
+                          <span class="badge-online">
+                            <span class="online-dot"></span>
+                            En Línea
+                          </span>
+                        } @else {
+                          <span class="badge-offline">Desconectado</span>
+                        }
+                      </div>
+                      <div class="work-user-meta">
+                        <span class="user-role">{{ getRoleLabel(user.roleName) }}</span>
+                        <span class="bullet-dot">•</span>
+                        <span class="user-email">{{ user.email }}</span>
+                        <span class="bullet-dot">•</span>
+                        <span class="user-branch">{{ user.branchName || 'Sucursal Principal' }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 2. Tiempos de Entrada / Salida -->
+                  <div class="work-time-stats">
+                    <div class="time-stat-box">
+                      <span class="time-stat-label">PRIMER INGRESO</span>
+                      <strong class="time-stat-value font-mono">
+                        {{ user.firstLoginAt ? formatTimeOnly(user.firstLoginAt) : '—' }}
+                      </strong>
+                    </div>
+                    <div class="time-stat-divider"></div>
+                    <div class="time-stat-box">
+                      <span class="time-stat-label">ÚLTIMA SALIDA</span>
+                      <strong class="time-stat-value font-mono">
+                        {{ user.status === 'ONLINE' ? 'Activo ahora' : (user.lastLogoutAt ? formatTimeOnly(user.lastLogoutAt) : '—') }}
+                      </strong>
+                    </div>
+                    <div class="time-stat-divider"></div>
+                    <div class="time-stat-box">
+                      <span class="time-stat-label">SESIONES</span>
+                      <strong class="time-stat-value">{{ user.sessionCount }}</strong>
+                    </div>
+                  </div>
+
+                  <!-- 3. Horas Efectivas Trabajadas & Alertas -->
+                  <div class="work-hours-highlight">
+                    <div class="work-hours-badge" [class.work-hours-badge--met]="user.isCurrentShiftMet">
+                      <span class="material-symbols-outlined text-sm font-bold">
+                        {{ user.isCurrentShiftMet ? 'check_circle' : 'timelapse' }}
+                      </span>
+                      <span class="work-hours-number font-mono">{{ user.formattedHours }}</span>
+                    </div>
+
+                    @if (user.timeoutLogoutCount > 0) {
+                      <div class="timeout-alert-pill" title="Se descontaron 15 min de inactividad por cada salida automática">
+                        <span class="material-symbols-outlined text-xs">warning</span>
+                        <span>{{ user.timeoutLogoutCount }} salida(s) inactivo (-15m c/u)</span>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- 4. Botón Toggle Desglose -->
+                  <div class="work-toggle-btn-box">
+                    <button
+                      type="button"
+                      class="btn-toggle-intervals"
+                      [attr.aria-expanded]="isUserExpanded(user.userId)"
+                      title="Ver desglose detallado de intervalos"
+                    >
+                      <span class="material-symbols-outlined transition-transform duration-200"
+                            [class.rotate-180]="isUserExpanded(user.userId)">
+                        expand_more
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- ── Desglose de Intervalos (Timeline Expandible) ── -->
+                @if (isUserExpanded(user.userId)) {
+                  <div class="work-intervals-drawer">
+                    <div class="work-intervals-header">
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-amber-500 text-sm">history_toggle_off</span>
+                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                          Bitácora de Sesiones e Intervalos de Conexión ({{ user.intervals.length }})
+                        </span>
+                      </div>
+                      <span class="text-xs text-slate-500">
+                        Regla de negocio: Toda salida por inactividad descuenta exactamente 15 minutos ociosos.
+                      </span>
+                    </div>
+
+                    <div class="intervals-table-wrapper">
+                      <table class="intervals-table">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Hora Inicio</th>
+                            <th>Hora Término</th>
+                            <th>Tiempo Bruto</th>
+                            <th>Deducción Inactividad</th>
+                            <th>Tiempo Neto Computado</th>
+                            <th>Motivo de Cierre</th>
+                            <th>Nodo / IP</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (interval of user.intervals; track $index) {
+                            <tr [class.tr-active]="interval.closeReason === 'ACTIVE'">
+                              <td class="font-mono text-xs">{{ $index + 1 }}</td>
+                              <td class="font-mono font-bold text-xs">{{ formatTimeOnly(interval.loginAt) }}</td>
+                              <td class="font-mono text-xs">
+                                {{ interval.closeReason === 'ACTIVE' ? 'Sesión en curso' : (interval.logoutAt ? formatTimeOnly(interval.logoutAt) : '—') }}
+                              </td>
+                              <td class="font-mono text-xs text-slate-500">{{ interval.rawDurationMinutes }} min</td>
+                              <td class="font-mono text-xs">
+                                @if (interval.deductedMinutes > 0) {
+                                  <span class="text-amber-600 dark:text-amber-400 font-bold">-{{ interval.deductedMinutes }} min</span>
+                                } @else {
+                                  <span class="text-slate-400">0 min</span>
+                                }
+                              </td>
+                              <td class="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                {{ interval.netDurationMinutes }} min ({{ Math.floor(interval.netDurationMinutes / 60) }}h {{ interval.netDurationMinutes % 60 }}m)
+                              </td>
+                              <td>
+                                @if (interval.closeReason === 'ACTIVE') {
+                                  <span class="reason-pill reason-pill--active">EN LÍNEA</span>
+                                } @else if (interval.closeReason === 'TIMEOUT') {
+                                  <span class="reason-pill reason-pill--timeout" title="Desconectado automáticamente tras 15 minutos sin actividad de teclado o ratón">
+                                    INACTIVIDAD (-15m)
+                                  </span>
+                                } @else if (interval.closeReason === 'REVOKED') {
+                                  <span class="reason-pill reason-pill--revoked">REVOCADO POR ADMIN</span>
+                                } @else {
+                                  <span class="reason-pill reason-pill--logout">LOGOUT MANUAL</span>
+                                }
+                              </td>
+                              <td class="font-mono text-xs text-slate-400">{{ interval.ipAddress || '0:0:0:0:0:0:0:1' }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- MODAL DE CONFIRMACIÓN DE REVOCACIÓN -->
+  @if (sessionToRevoke(); as targetSession) {
+    <fg-confirm-dialog
+      title="¿Revocar sesión de usuario?"
+      [message]="'Esta acción cerrará de inmediato la conexión activa de ' + targetSession.fullName + ' (' + targetSession.email + '). El colaborador será expulsado al login.'"
+      confirmText="Sí, revocar sesión"
+      cancelText="Cancelar"
+      type="danger"
+      [isLoading]="isRevoking()"
+      (confirmed)="confirmRevoke()"
+      (cancelled)="cancelRevoke()"
+    ></fg-confirm-dialog>
   }
 
 </div>

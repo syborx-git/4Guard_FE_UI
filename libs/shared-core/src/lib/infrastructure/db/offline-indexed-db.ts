@@ -178,6 +178,66 @@ export class OfflineIndexedDb {
     }
   }
 
+  // ─── Métodos de Auth Cache (ADR-012) ────────────────────────────────────
+
+  static async saveAuthCache(record: AuthCacheRecord): Promise<void> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('auth_cache', 'readwrite');
+        const store = tx.objectStore('auth_cache');
+        const request = store.put(record);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch {
+      localStorage.setItem('4guard_auth_cache_' + record.userId, JSON.stringify(record));
+    }
+  }
+
+  static async getAuthCache(userId: string): Promise<AuthCacheRecord | null> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('auth_cache', 'readonly');
+        const store = tx.objectStore('auth_cache');
+        const request = store.get(userId);
+
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+      });
+    } catch {
+      const raw = localStorage.getItem('4guard_auth_cache_' + userId);
+      return raw ? JSON.parse(raw) : null;
+    }
+  }
+
+  static async getLatestAuthCache(): Promise<AuthCacheRecord | null> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('auth_cache', 'readonly');
+        const store = tx.objectStore('auth_cache');
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+          const list: AuthCacheRecord[] = request.result || [];
+          if (!list.length) {
+            resolve(null);
+            return;
+          }
+          // Ordenar por el cacheado más reciente
+          list.sort((a, b) => b.cachedAt - a.cachedAt);
+          resolve(list[0]);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    } catch {
+      return null;
+    }
+  }
+
   // ─── Métodos de Zone Lease (HU-155) ───────────────────────────────────────
 
   static async saveZoneLease(lease: ZoneLeaseRecord): Promise<void> {

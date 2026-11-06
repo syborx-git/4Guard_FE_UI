@@ -41,8 +41,8 @@
 
 .bay-modal-card {
   position: relative;
-  background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 0.85rem !important;
   box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.06) !important;
   max-width: min(52rem, 90vw) !important;
@@ -67,6 +67,10 @@
   }
 }
 
+:host(.theme-dark) .bay-modal-card,
+:host(.dark) .bay-modal-card,
+.theme-dark .bay-modal-card,
+.dark .bay-modal-card,
 :host-context(.theme-dark) .bay-modal-card,
 :host-context(.dark) .bay-modal-card {
   background: #0f172a !important;
@@ -1343,3 +1347,305 @@
   text-anchor: middle;
 }
 
+
+
+/* ══════════════════════════════════════════════════════════════
+   CAPA DE BAHÍAS Y RACKS (ESTÁNDAR CAD / CROQUIS DE ALMACÉN)
+   ══════════════════════════════════════════════════════════════ */
+.cad__bays-layer {
+  cursor: pointer;
+}
+
+.cad__bay-slot {
+  fill: rgba(16, 185, 129, 0.25);
+  stroke: rgba(16, 185, 129, 0.7);
+  stroke-width: 0.6;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.cad__bay-slot:hover {
+  stroke: #ffffff;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
+}
+
+/* ⬜ Blanco Técnico Translúcido: Bahía Vacía (0 tarimas, libre para recibir) */
+.cad__bay-slot--heat-vacant {
+  fill: rgba(255, 255, 255, 0.05) !important;
+  stroke: rgba(255, 255, 255, 0.32) !important;
+  stroke-width: 0.6px !important;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--heat-vacant:hover {
+  fill: rgba(255, 255, 255, 0.28) !important;
+  stroke: #ffffff !important;
+  stroke-width: 1.4px !important;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.85)) !important;
+}
+
+/* 🟢 Verde Esmeralda: Libre / Baja Ocupación (1% - 30%) */
+.cad__bay-slot--heat-empty {
+  fill: rgba(16, 185, 129, 0.22) !important;
+  stroke: rgba(16, 185, 129, 0.8) !important;
+  stroke-width: 0.7px !important;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--heat-empty:hover {
+  fill: rgba(16, 185, 129, 0.45) !important;
+  stroke: #34d399 !important;
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.8)) !important;
+}
+
+/* 🟡 Amarillo / Ámbar: Ocupación Media (31% - 80%) */
+.cad__bay-slot--heat-medium {
+  fill: rgba(245, 158, 11, 0.3) !important;
+  stroke: rgba(245, 158, 11, 0.85) !important;
+  stroke-width: 0.7px !important;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--heat-medium:hover {
+  fill: rgba(245, 158, 11, 0.55) !important;
+  stroke: #fbbf24 !important;
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.85)) !important;
+}
+
+/* 🔵 Azul Zafiro: Lleno / Máxima Capacidad (81% - 100%) */
+.cad__bay-slot--heat-full {
+  fill: rgba(59, 130, 246, 0.38) !important;
+  stroke: rgba(96, 165, 250, 0.9) !important;
+  stroke-width: 0.8px !important;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--heat-full:hover {
+  fill: rgba(59, 130, 246, 0.6) !important;
+  stroke: #93c5fd !important;
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 5px rgba(96, 165, 250, 0.9)) !important;
+}
+
+/* 🔴 Rojo Carmesí: Bloqueado QM / Cuarentena / Alerta Crítica */
+.cad__bay-slot--heat-blocked {
+  fill: rgba(239, 68, 68, 0.65) !important;
+  stroke: #ef4444 !important;
+  stroke-width: 1.2px !important;
+  vector-effect: non-scaling-stroke;
+  animation: cad-pulse-red 2.2s infinite ease-in-out;
+}
+.cad__bay-slot--heat-blocked:hover {
+  fill: rgba(239, 68, 68, 0.85) !important;
+  stroke: #ff7878 !important;
+  stroke-width: 1.8px !important;
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.9)) !important;
+}
+
+/* 🟣 Púrpura / Morado: Buffer Temporal Activo con Mercancía */
+.cad__bay-slot--heat-temp {
+  fill: rgba(168, 85, 247, 0.65) !important;
+  stroke: #d8b4fe !important;
+  stroke-width: 1.5px !important;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 6px rgba(192, 132, 252, 0.95)) !important;
+  animation: cad-pulse-temp 2.4s infinite ease-in-out;
+}
+.cad__bay-slot--heat-temp:hover {
+  fill: rgba(168, 85, 247, 0.9) !important;
+  stroke: #ffffff !important;
+  stroke-width: 2px !important;
+  filter: drop-shadow(0 0 10px rgba(192, 132, 252, 1)) !important;
+}
+
+/* Andén de Rampa Vacante (esperando descarga) */
+.cad__bay-slot--ramp-vacant {
+  fill: rgba(30, 41, 59, 0.45) !important;
+  stroke: rgba(234, 195, 73, 0.4) !important;
+  stroke-width: 0.8px !important;
+  stroke-dasharray: 2, 2;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--ramp-vacant:hover {
+  fill: rgba(30, 41, 59, 0.8) !important;
+  stroke: #fbbf24 !important;
+  stroke-width: 1.2px !important;
+  stroke-dasharray: none;
+}
+
+@keyframes cad-pulse-temp {
+  0%, 100% {
+    fill: rgba(168, 85, 247, 0.55) !important;
+    stroke: #c084fc !important;
+  }
+  50% {
+    fill: rgba(168, 85, 247, 0.85) !important;
+    stroke: #f3e8ff !important;
+  }
+}
+
+@keyframes cad-pulse-red {
+  0%, 100% {
+    fill: rgba(239, 68, 68, 0.65) !important;
+    stroke: #ef4444 !important;
+  }
+  50% {
+    fill: rgba(239, 68, 68, 0.9) !important;
+    stroke: #ff9999 !important;
+  }
+}
+
+/* 🟠 Dorado / Ámbar Cobre: Precarga / Staging */
+.cad__bay-slot--heat-preload {
+  fill: rgba(245, 158, 11, 0.35) !important;
+  stroke: #fbbf24 !important;
+  stroke-width: 0.7px !important;
+  vector-effect: non-scaling-stroke;
+}
+.cad__bay-slot--heat-preload:hover {
+  fill: rgba(245, 158, 11, 0.6) !important;
+  stroke: #fef08a !important;
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8)) !important;
+}
+
+/* Bahía Seleccionada con Borde Oro 4Guard */
+.cad__bay-slot--selected {
+  stroke: #c5a86b !important;
+  stroke-width: 2.2px !important;
+  filter: drop-shadow(0 0 8px rgba(197, 168, 107, 0.95)) !important;
+}
+
+/* Bahía Hovered con Resaltado */
+.cad__bay-slot--highlighted {
+  stroke: #ffffff !important;
+  stroke-width: 2px !important;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)) !important;
+}
+
+/* Pasillos y Rutas de Tráfico */
+.cad__feeder-lane {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 0.8;
+  stroke-dasharray: 4, 3;
+  pointer-events: none;
+}
+
+.cad__feeder-junction {
+  stroke: rgba(234, 195, 73, 0.15);
+  stroke-width: 0.6;
+  pointer-events: none;
+}
+
+/* Controles de Capas y Presets en HUD */
+.bay-map-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bay-map-tool-btn:hover {
+  color: #ffffff;
+  border-color: rgba(234, 195, 73, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.bay-map-tool-btn--active {
+  background: rgba(234, 195, 73, 0.18);
+  border-color: #c5a86b;
+  color: #fef08a;
+}
+
+.bay-map-zoom-preset {
+  padding: 0.18rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 9.5px;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.bay-map-zoom-preset:hover {
+  background: rgba(234, 195, 73, 0.25);
+  color: #ffffff;
+  border-color: rgba(234, 195, 73, 0.5);
+}
+
+.bay-map-zoom-preset--active {
+  background: #c5a86b;
+  color: #000000;
+  border-color: #c5a86b;
+}
+
+/* Barra de Zoom Flotante */
+.bay-map-floating-zoom {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(10, 16, 24, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.4rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+
+.bay-zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 0.25rem;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.bay-zoom-btn:hover {
+  background: #c5a86b;
+  color: #000000;
+  border-color: #c5a86b;
+}
+
+.bay-zoom-val {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fbbf24;
+  min-width: 2.2rem;
+  text-align: center;
+}
+
+/* Tooltip HUD Flotante */
+.bay-map-hover-tooltip {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  background: rgba(10, 16, 24, 0.92);
+  border: 1px solid rgba(197, 168, 107, 0.45);
+  border-radius: 0.375rem;
+  padding: 0.4rem 0.65rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+  z-index: 10;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.12s ease-out;
+}

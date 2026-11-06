@@ -21,10 +21,14 @@
   /* ── Canvas & Superficies (Light Mode) ── */
   --bg-page:        #f5f4f0;
   --bg-card:        rgba(255, 255, 255, 0.92);
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --bg-card-hover:  #ffffff;
   --border-card:    rgba(76, 86, 105, 0.10);
+  --border-card-gold: rgba(197, 168, 107, 0.35);
   --border-subtle:  rgba(76, 86, 105, 0.08);
   --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --shadow-hover:   0 16px 40px rgba(197, 168, 107, 0.22);
+  --radius-xl:      18px;
 
   /* ── Textos ── */
   --text-primary:   #1c2940;
@@ -61,10 +65,13 @@
   /* ── Canvas & Superficies (Dark Mode) ── */
   --bg-page:        #0b1119;
   --bg-card:        rgba(17, 26, 38, 0.94);
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --bg-card-hover:  rgba(23, 35, 50, 0.98);
   --border-card:    rgba(255, 255, 255, 0.08);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --border-subtle:  rgba(255, 255, 255, 0.06);
   --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-hover:   0 20px 44px rgba(208, 175, 103, 0.18);
 
   /* ── Textos ── */
   --text-primary:   #edf1f5;
@@ -430,10 +437,10 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  padding: 0.35rem;
-  border-radius: 14px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  padding: 0.45rem;
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
   overflow-x: auto;
