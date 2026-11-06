@@ -11,8 +11,10 @@
   /* ── Tokens Light Mode ── */
   --bg-page:        #f5f4f0;
   --bg-card:        rgba(255, 255, 255, 0.92);
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --bg-card-hover:  #ffffff;
   --border-card:    rgba(76, 86, 105, 0.10);
+  --border-card-gold: rgba(197, 168, 107, 0.35);
   --border-subtle:  rgba(76, 86, 105, 0.08);
   --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
 
@@ -55,8 +57,10 @@
   /* ── Tokens Dark Mode ── */
   --bg-page:        #0b1119;
   --bg-card:        rgba(17, 26, 38, 0.94);
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --bg-card-hover:  rgba(23, 35, 50, 0.98);
   --border-card:    rgba(255, 255, 255, 0.08);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --border-subtle:  rgba(255, 255, 255, 0.06);
   --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
@@ -114,21 +118,23 @@
 }
 
 .perf-kpi-pill-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.15rem 1.25rem;
   display: flex;
   align-items: center;
   gap: 1rem;
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .perf-kpi-pill-card:hover {
   transform: translateY(-2px);
-  border-color: var(--gold-border);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .perf-kpi-pill-icon {
@@ -146,9 +152,9 @@
 }
 
 .perf-kpi-pill-icon--primary {
-  background: rgba(37, 99, 235, 0.1);
-  color: #2563eb;
-  border: 1px solid rgba(37, 99, 235, 0.22);
+  background: var(--gold-bg);
+  color: var(--text-gold);
+  border: 1px solid var(--gold-border);
 }
 
 .perf-kpi-pill-icon--gold {
@@ -237,9 +243,10 @@
 /* ── SECCIÓN GENERAL ── */
 
 .perf-section {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.25rem 1.35rem;
   box-shadow: var(--shadow-card);
   display: flex;
@@ -306,22 +313,24 @@
 }
 
 .perf-shift-card {
-  background: rgba(139, 148, 163, 0.04);
-  border: 1px solid var(--border-card);
-  border-radius: 12px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.15rem;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
   cursor: pointer;
   outline: none;
+  box-shadow: var(--shadow-card);
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .perf-shift-card:hover {
   transform: translateY(-2px);
-  border-color: var(--gold-border);
-  box-shadow: 0 4px 12px rgba(197, 168, 107, 0.15);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .perf-shift-card--selected {
@@ -489,19 +498,22 @@
 }
 
 .perf-op-bar-card {
-  background: rgba(139, 148, 163, 0.04);
-  border: 1px solid var(--border-card);
-  border-radius: 12px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 0.95rem;
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  transition: transform 0.18s ease, border-color 0.18s ease;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .perf-op-bar-card:hover {
   transform: translateY(-2px);
-  border-color: var(--gold-border);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .perf-op-bar-top {

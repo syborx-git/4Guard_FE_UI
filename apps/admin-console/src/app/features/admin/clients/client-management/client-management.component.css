@@ -13,6 +13,13 @@
    ───────────────────────────────────────────────────────────── */
 
 :host {
+  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+  --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --radius-xl:        18px;
+
   --navy:           #172033;
   --navy-mid:       #25324a;
   --gold:           #c5a86b;
@@ -212,13 +219,14 @@
   align-items: center;
   gap: 0.9rem;
   padding: 0.95rem 1.1rem;
-  border: 1px solid var(--border-card);
-  border-radius: 14px;
-  background: var(--bg-card);
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec, var(--bg-card));
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(16px);
   overflow: hidden;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
 
 .clients-kpi-card:hover {

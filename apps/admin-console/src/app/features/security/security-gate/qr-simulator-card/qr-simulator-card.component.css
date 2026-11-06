@@ -15,8 +15,11 @@
 
   /* ── Light Mode Tokens ── */
   --qr-bg:           rgba(255, 255, 255, 0.95);
+  --bg-card-exec:    linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --qr-border:       rgba(76, 86, 105, 0.12);
+  --border-card-gold: rgba(197, 168, 107, 0.35);
   --qr-shadow:       0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --radius-xl:       18px;
   --qr-text-primary: #1c2940;
   --qr-text-muted:   #5a6477;
   --qr-gold:         #c5a86b;
@@ -28,7 +31,9 @@
 :host-context(.theme-dark),
 :host-context(.dark) {
   --qr-bg:           rgba(17, 26, 38, 0.95);
+  --bg-card-exec:    linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --qr-border:       rgba(255, 255, 255, 0.08);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --qr-shadow:       0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --qr-text-primary: #edf1f5;
   --qr-text-muted:   #9aa6b4;
@@ -39,9 +44,10 @@
 }
 
 .qr-card {
-  background: var(--qr-bg);
-  border: 1px solid var(--qr-border);
-  border-radius: 18px;
+  background: var(--bg-card-exec, var(--qr-bg));
+  border: 1.5px solid var(--border-card-gold, var(--qr-border));
+  border-top: 3.5px solid var(--qr-gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.35rem;
   box-shadow: var(--qr-shadow);
   display: flex;
@@ -55,7 +61,8 @@
 }
 
 .qr-card:hover {
-  border-color: rgba(197, 168, 107, 0.35);
+  border-color: var(--qr-gold);
+  box-shadow: 0 16px 40px rgba(197, 168, 107, 0.22);
 }
 
 .qr-card::before {

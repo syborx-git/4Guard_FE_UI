@@ -1,7 +1,7 @@
 <div class="space-y-6">
 
   <!-- ══ TARJETAS RESUMEN DE KPIS EN PARTE SUPERIOR ══════════════════════════════ -->
-  <div class="iq-kpi-grid">
+  <div class="iq-kpi-grid" id="iq-kpi-grid">
     
     <!-- KPI 1: Total Palets Registrados -->
     <div class="iq-kpi-card">
@@ -89,7 +89,7 @@
         (ngModelChange)="onSearchInput($event)"
         (focus)="isSuggestionsOpen.set(searchTerm().trim().length >= 2)"
         placeholder="Buscar por SKU, Frasco, Remisión, Producto, Bodega..."
-        class="iq-search-input"
+        id="iq-search-input" class="iq-search-input"
         aria-label="Buscar inventario"
       />
       @if (searchTerm()) {
@@ -144,7 +144,7 @@
       <button
         type="button"
         (click)="openFilters()"
-        class="iq-btn iq-btn-secondary"
+        id="iq-btn-advanced-filters" class="iq-btn iq-btn-secondary"
       >
         <span class="material-symbols-outlined">tune</span>
         <span>FILTROS AVANZADOS</span>
@@ -181,7 +181,7 @@
       <button
         type="button"
         (click)="onExportExcel()"
-        class="iq-btn iq-btn-emerald"
+        id="iq-btn-export-excel" class="iq-btn iq-btn-emerald"
         [title]="selectedIds().size > 0 ? 'Exportar ' + selectedIds().size + ' tarimas seleccionadas' : 'Exportar todas las tarimas filtradas'"
       >
         <span class="material-symbols-outlined">download_for_offline</span>

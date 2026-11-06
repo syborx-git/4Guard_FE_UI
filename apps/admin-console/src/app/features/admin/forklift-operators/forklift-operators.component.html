@@ -311,20 +311,8 @@
                       {{ op.firstName[0] }}{{ op.lastNamePaternal[0] }}
                     </div>
                     <div class="carrier-item__body">
-                      <div class="carrier-item__name" [title]="op.fullName">
-                        {{ op.fullName }}
-                      </div>
-                      <div class="carrier-item__code">
-                        <span class="font-mono text-emerald-400 font-bold">&#64;{{ op.username || op.code }}</span>
-                      </div>
-                      <div class="carrier-item__rfc">
-                        <span class="carrier-rfc-badge">{{ op.code }}</span>
-                      </div>
-                      <div class="carrier-item__branch-line" [title]="op.branchName || 'Todas las sucursales'">
-                        <span class="material-symbols-outlined carrier-item__branch-icon">location_on</span>
-                        <span>{{ op.branchName ? (op.branchName.replace('CENTRO DE DISTRIBUCION ', 'CEDIS ')) : 'Corporativo' }}</span>
-                      </div>
-                      <div class="carrier-item__footer-info">
+                      <div class="carrier-item__row-top">
+                        <span class="carrier-item__name" [title]="op.fullName">{{ op.fullName }}</span>
                         <span class="carrier-status-badge text-[10px]" [ngClass]="{
                           'carrier-status-badge--active': op.licenseStatus === 'VIGENTE',
                           'carrier-status-badge--suspended': op.licenseStatus === 'POR_VENCER',
@@ -332,6 +320,14 @@
                         }">
                           {{ op.licenseStatus === 'VIGENTE' ? 'DC-3 Vigente' : op.licenseStatus === 'POR_VENCER' ? 'DC-3 Por vencer' : 'DC-3 Vencida' }}
                         </span>
+                      </div>
+                      <div class="carrier-item__row-mid">
+                        <span class="carrier-badge-username">&#64;{{ op.username || op.code }}</span>
+                        <span class="carrier-badge-code">{{ op.code }}</span>
+                      </div>
+                      <div class="carrier-item__branch-line" [title]="op.branchName || 'Todas las sucursales'">
+                        <span class="material-symbols-outlined carrier-item__branch-icon">location_on</span>
+                        <span>{{ op.branchName ? (op.branchName.replace('CENTRO DE DISTRIBUCION ', 'CEDIS ')) : 'Corporativo' }}</span>
                       </div>
                     </div>
                   </li>

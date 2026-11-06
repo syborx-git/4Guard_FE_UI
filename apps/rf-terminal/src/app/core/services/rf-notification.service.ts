@@ -410,7 +410,9 @@ export class RfNotificationService {
       this.fetchActivePassesFromBackend();
       this.fetchInYardPassesFromBackend();
     } else {
-      this.loadPassesFromStorageFallback();
+      // Perfiles operativos (ej. montacarguista) no cargan pases de caseta ni fallbacks sucios
+      this.pendingDriverPasses.set([]);
+      this.readyForExitPasses.set([]);
     }
   }
 
@@ -519,7 +521,7 @@ export class RfNotificationService {
         this.backendFailureCount = 0;
         const rawList = res?.data || res || [];
         if (Array.isArray(rawList)) {
-          const readyList = rawList.filter((p: any) => p && (p.isReadyForExit || p.status === 'DISCHARGE_FINISHED'));
+          const readyList = rawList.filter((p: any) => p && (p.isReadyForExit || p.status === 'DISCHARGE_FINISHED') && p.status !== 'COMPLETED' && p.status !== 'CANCELLED');
           const mapped: ReadyExitPassNotification[] = readyList.map((p: any) => ({
             id: p.id || p.token,
             folio: p.token || p.generatedFolio || 'S/F',
@@ -547,6 +549,7 @@ export class RfNotificationService {
   }
 
   private loadPassesFromStorageFallback(): void {
+    if (!this.isSecurityContext()) return;
     try {
       if (typeof window === 'undefined') return;
       const rawActive = localStorage.getItem('4g_security_active_passes');

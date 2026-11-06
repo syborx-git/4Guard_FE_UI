@@ -14,7 +14,9 @@
 
   --bg-page:        #f5f4f0;
   --bg-card:        rgba(255, 255, 255, 0.95);
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --border-card:    rgba(76, 86, 105, 0.12);
+  --border-card-gold: rgba(197, 168, 107, 0.35);
   --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255,255,255,0.85);
 
   --text-primary:   #1c2940;
@@ -126,8 +128,9 @@
 .qm-modal-dialog {
   position: relative !important;
   z-index: 1000000 !important;
-  background: #ffffff;
-  border: 1.5px solid rgba(197, 168, 107, 0.4) !important;
+  background: var(--bg-card-exec, #ffffff);
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.4)) !important;
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: 24px !important;
   box-shadow: 
     0 25px 60px -10px rgba(15, 23, 42, 0.2), 

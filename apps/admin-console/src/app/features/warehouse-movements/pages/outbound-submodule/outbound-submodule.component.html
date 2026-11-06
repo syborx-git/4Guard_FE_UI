@@ -6,7 +6,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════
        HEADER PRINCIPAL CON EL SLIDE DE PESTAÑAS Y BOTÓN DE ACCIÓN
        ════════════════════════════════════════════════════════════════ -->
-  <header class="outbound-header">
+  <header class="outbound-header" id="out-header">
     <div class="outbound-header__top">
 
       <div class="outbound-header__left">
@@ -30,23 +30,36 @@
         </div>
       </div>
 
-      <div class="flex items-center">
-        @if (shiftContext.activeShift(); as shift) {
-          <span
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-[11px] font-bold text-slate-700 dark:text-slate-200"
+      <div class="receiving-header__right">
+        @if (shiftContext.isLoading()) {
+          <div class="shift-context-chip shift-context-chip--loading">
+            <span class="material-symbols-outlined">progress_activity</span>
+            <div class="shift-context-chip__copy">
+              <span class="shift-context-chip__label">TURNO</span>
+              <strong class="shift-context-chip__value">Resolviendo turno…</strong>
+            </div>
+          </div>
+        }
+        @if (!shiftContext.isLoading() && shiftContext.activeShift(); as shift) {
+          <div
+            class="shift-context-chip"
+            [class.shift-context-chip--fallback]="!shift.shiftId"
             [title]="shift.branchName + ' · ' + shift.timezone"
           >
-            <span class="material-symbols-outlined text-[16px]">schedule</span>
-            <span>
-              @if (shift.shiftName) {
-                {{ shift.shiftName }} · {{ formatShiftTime(shift.startTime) }}–{{ formatShiftTime(shift.endTime) }}
-              } @else if (shift.configured) {
-                Sin turno vigente
-              } @else {
-                Turno no configurado
-              }
-            </span>
-          </span>
+            <span class="material-symbols-outlined">schedule</span>
+            <div class="shift-context-chip__copy">
+              <span class="shift-context-chip__label">TURNO VIGENTE</span>
+              <strong class="shift-context-chip__value">
+                @if (shift.shiftName) {
+                  {{ shift.shiftName }} · {{ formatShiftTime(shift.startTime) }}–{{ formatShiftTime(shift.endTime) }}
+                } @else if (shift.configured) {
+                  Sin turno vigente
+                } @else {
+                  Turno no configurado
+                }
+              </strong>
+            </div>
+          </div>
         }
       </div>
 
@@ -102,6 +115,8 @@
             <span class="dock-summary-badge dock-summary-badge--all-free">Todos Libres (12)</span>
           }
         </button>
+
+
       </div>
     </div>
   </header>
@@ -305,12 +320,42 @@
 
           <button
             type="button"
+            (click)="toggleStatusFilter('PAUSED')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('PAUSED')"
+          >
+            <span class="filter-pill-dot dot--amber"></span>
+            <span>Pausadas ({{ kpiPaused() }})</span>
+          </button>
+
+          <button
+            type="button"
             (click)="toggleStatusFilter('CANCELLED')"
             class="filter-pill"
             [class.filter-pill--active]="isStatusFilterActive('CANCELLED')"
           >
             <span class="filter-pill-dot dot--rose"></span>
             <span>Canceladas ({{ kpiCancelled() }})</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleUrgentFilter()"
+            class="filter-pill"
+            [class.filter-pill--active]="isUrgentFilterActive()"
+          >
+            <span class="material-symbols-outlined text-[14px] text-rose-500 animate-pulse">bolt</span>
+            <span>Urgentes ({{ kpiUrgent() }})</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleCarryOverFilter()"
+            class="filter-pill"
+            [class.filter-pill--active]="isCarryOverFilterActive()"
+          >
+            <span class="material-symbols-outlined text-[14px] text-amber-500">history</span>
+            <span>Arrastre ({{ kpiCarryOver() }})</span>
           </button>
         </div>
       </div>
@@ -351,11 +396,29 @@
 
                 @if (isCarryOver(outbound)) {
                   <span
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40"
-                    title="Pendiente de un turno anterior."
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50"
+                    title="Pendiente de un turno anterior. Requiere atención y relevo operativo."
                   >
                     <span class="material-symbols-outlined text-[12px]">history</span>
-                    ARRASTRE
+                    <span>ARRASTRE TURNO ANTERIOR</span>
+                  </span>
+                }
+                @if (outbound.priority === 'URGENT') {
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/50 animate-pulse"
+                    title="Despacho con Prioridad Urgente (SLA Estricto)"
+                  >
+                    <span class="material-symbols-outlined text-[13px] text-rose-500">bolt</span>
+                    <span>URGENTE</span>
+                  </span>
+                }
+                @if (outbound.status === 'PAUSED') {
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50"
+                    title="Maniobra en Pausa Operativa"
+                  >
+                    <span class="material-symbols-outlined text-[13px]">pause_circle</span>
+                    <span>PAUSADA</span>
                   </span>
                 }
               </div>
@@ -453,13 +516,13 @@
           <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
             <span class="material-symbols-outlined text-3xl">search_off</span>
           </div>
-          <h3 class="text-base font-bold text-slate-900 dark:text-slate-100">No se encontraron salidas</h3>
-          <p class="text-xs text-slate-700 dark:text-slate-300 font-medium max-w-md mx-auto">
-            No hay registros que coincidan con la búsqueda o con los filtros de estado aplicados.
+          <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">No se encontraron salidas</h3>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto">
+            No hay registros que coincidan con el criterio de búsqueda o filtro seleccionado.
           </p>
           <button
             type="button"
-            (click)="searchQuery.set(''); toggleStatusFilter('ALL')"
+            (click)="searchQuery.set(''); activeStatusFilters.set(['REGISTERED']); statusFilter.set('REGISTERED')"
             class="btn-ghost text-xs px-4 py-2 rounded-xl inline-flex items-center gap-1.5"
           >
             <span class="material-symbols-outlined text-sm">restart_alt</span>
@@ -1628,6 +1691,24 @@
             <span class="text-slate-600 dark:text-slate-400 font-bold">›</span>
             <strong class="text-slate-950 dark:text-slate-50 font-black text-sm">{{ selectedOutbound()!.clientName }}</strong>
             <span class="font-mono text-xs font-bold text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/40">FOLIO #{{ selectedOutbound()!.folio }}</span>
+            @if (isCarryOver(selectedOutbound()!)) {
+              <span
+                class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-black bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50"
+                title="Despacho heredado de una jornada anterior"
+              >
+                <span class="material-symbols-outlined text-[14px]">history</span>
+                <span>ARRASTRE TURNO ANTERIOR</span>
+              </span>
+            }
+            @if (selectedOutbound()!.priority === 'URGENT') {
+              <span
+                class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-black bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/50 animate-pulse"
+                title="Despacho con Prioridad Urgente"
+              >
+                <span class="material-symbols-outlined text-[14px] text-rose-500">bolt</span>
+                <span>URGENTE</span>
+              </span>
+            }
             <span style="margin-left:0.5rem;">
               <span
                 class="carrier-status-badge font-bold"
@@ -1648,6 +1729,48 @@
             </span>
           </div>
           <div class="outbound-breadcrumb-bar__actions">
+            @if (selectedOutbound(); as ob) {
+              <!-- Conmutador en caliente de Prioridad Urgente -->
+              @if (ob.status !== 'CANCELLED' && ob.status !== 'COMPLETED') {
+                <button
+                  type="button"
+                  (click)="toggleOutboundPriority(ob)"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all border shadow-sm cursor-pointer"
+                  [ngClass]="ob.priority === 'URGENT' ? 'bg-rose-500 text-white border-rose-600 hover:bg-rose-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-200'"
+                  [title]="ob.priority === 'URGENT' ? 'Degradar a prioridad Normal' : 'Elevar a Prioridad Urgente (Alarma en Terminal RF)'"
+                >
+                  <span class="material-symbols-outlined text-[16px]">bolt</span>
+                  <span>{{ ob.priority === 'URGENT' ? 'Urgente Activo' : 'Marcar Urgente' }}</span>
+                </button>
+              }
+
+              <!-- Botón Pausar Maniobra por Corte de Turno o Urgencia -->
+              @if (ob.status === 'IN_PROGRESS' || ob.status === 'ASSIGNED') {
+                <button
+                  type="button"
+                  (click)="openPauseOutboundModal(ob)"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/40 transition-all cursor-pointer"
+                  title="Pausar maniobra por cambio de turno o urgencia"
+                >
+                  <span class="material-symbols-outlined text-[16px]">pause_circle</span>
+                  <span>Pausar Carga</span>
+                </button>
+              }
+
+              <!-- Botón Reanudar Maniobra Pausada -->
+              @if (ob.status === 'PAUSED') {
+                <button
+                  type="button"
+                  (click)="resumeOutbound(ob)"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold bg-emerald-500 hover:bg-emerald-600 text-white shadow transition-all cursor-pointer"
+                  title="Reanudar maniobra de carga"
+                >
+                  <span class="material-symbols-outlined text-[16px]">play_circle</span>
+                  <span>Reanudar Carga</span>
+                </button>
+              }
+            }
+
             @if (selectedOutbound()?.status !== 'CANCELLED') {
               <button
                 type="button"

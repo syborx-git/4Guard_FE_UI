@@ -1,5 +1,5 @@
 <div class="bay-modal-overlay" (click)="closeModal()">
-  <div class="bay-modal-card" (click)="$event.stopPropagation()">
+  <div class="bay-modal-card" [class.dark]="isDarkMode()" [class.theme-dark]="isDarkMode()" (click)="$event.stopPropagation()">
     
     <!-- ══════════════════════════════════════════════════════
          1. MODAL HEADER & GLOBAL WAREHOUSE CONTEXT (COMPACT)
@@ -255,30 +255,72 @@
 
         @if (activeViewMode() === 'map') {
           <!-- ══════════════════════════════════════════════════════
-               VISTA 0: PLANO ARQUITECTÓNICO 2D DEL COMPLEJO
+               VISTA 0: PLANO ARQUITECTÓNICO 2D DEL COMPLEJO (ESTÁNDAR CAD / ALMACÉN)
                ══════════════════════════════════════════════════════ -->
-          <div class="bay-map-container">
-            <!-- HUD de Estado del Mapa CAD -->
+          <div class="bay-map-container"
+               (mousedown)="onMapMouseDown($event)"
+               (mousemove)="onMapMouseMove($event)"
+               (mouseup)="onMapMouseUp()"
+               (mouseleave)="onMapMouseUp()"
+               (wheel)="onMapWheel($event)">
+
+            <!-- HUD Superior de Telemetría y Controles del Mapa -->
             <div class="bay-map-hud">
-              <div class="bay-map-hud__title truncate">
+              <div class="bay-map-hud__title truncate flex-1 min-w-0">
                 <span class="material-symbols-outlined text-xs text-amber-500 shrink-0">architecture</span>
                 <span class="font-bold text-[11px] text-slate-300 truncate">
-                  @if (hoveredMapZone(); as hZone) {
-                    <span class="text-amber-400 font-extrabold">{{ hZone.name }}</span>
-                    @if (getZoneGroupForCode(hZone.code); as hGrp) {
-                      <span class="text-slate-400 font-normal"> · {{ hGrp.fixedAvailableCount }} libres de {{ hGrp.totalPositions }}</span>
-                    }
+                  @if (hoveredSvgBay(); as hBay) {
+                    <span class="text-amber-400 font-extrabold font-mono">{{ hBay.code }}</span>
+                    <span class="text-slate-400 font-normal"> · {{ hBay.currentTarimas }}/{{ hBay.capacityTarimas }}T</span>
+                    <span class="text-slate-500 font-normal"> ({{ hBay.skuDescription }})</span>
                   } @else {
-                    <span>12 Almacenes (A–L) · Haz clic en cualquier nave para explorar sus bahías</span>
+                    @if (hoveredMapZone(); as hZone) {
+                      <span class="text-amber-400 font-extrabold">{{ hZone.name }}</span>
+                      @if (getZoneGroupForCode(hZone.code); as hGrp) {
+                        <span class="text-slate-400 font-normal"> · {{ hGrp.fixedAvailableCount }} libres de {{ hGrp.totalPositions }}</span>
+                      }
+                    } @else {
+                      <span>Plano Integral CAD · Clic en cualquier bahía para seleccionarla directamente</span>
+                    }
                   }
                 </span>
               </div>
-              <div class="bay-map-hud__hint shrink-0">
-                <span class="material-symbols-outlined text-[12px] text-amber-400">touch_app</span>
-                <span>Clic para ver bahías</span>
+
+              <!-- Controles de Capas y Presets de Zoom -->
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  (click)="toggleBaysVisibility()"
+                  class="bay-map-tool-btn"
+                  [class.bay-map-tool-btn--active]="showBaysInBlueprint()"
+                  title="Mostrar / Ocultar Bahías y Racks en el Croquis"
+                >
+                  <span class="material-symbols-outlined text-xs">grid_view</span>
+                  <span>Racks</span>
+                </button>
+
+                <button
+                  type="button"
+                  (click)="toggleTransitVisibility()"
+                  class="bay-map-tool-btn"
+                  [class.bay-map-tool-btn--active]="showTransitRoutes()"
+                  title="Mostrar / Ocultar Rutas de Tráfico de Montacargas"
+                >
+                  <span class="material-symbols-outlined text-xs">alt_route</span>
+                  <span>Rutas</span>
+                </button>
+
+                <div class="h-3.5 w-px bg-slate-700 mx-1"></div>
+
+                <!-- Presets de Zoom -->
+                <button type="button" (click)="setZoom(0.85)" class="bay-map-zoom-preset" [class.bay-map-zoom-preset--active]="zoomScale() === 0.85">85%</button>
+                <button type="button" (click)="setZoom(1.0)" class="bay-map-zoom-preset" [class.bay-map-zoom-preset--active]="zoomScale() === 1.0">100%</button>
+                <button type="button" (click)="setZoom(1.5)" class="bay-map-zoom-preset" [class.bay-map-zoom-preset--active]="zoomScale() === 1.5">150%</button>
+                <button type="button" (click)="resetZoomAndPan()" class="bay-map-zoom-preset" title="Ajustar plano al visor">Ajustar</button>
               </div>
             </div>
 
+            <!-- Canvas SVG con Soporte Completo de Pan & Zoom Dinámico -->
             <svg viewBox="0 0 1000 888" class="bay-map-svg" aria-label="Plano de distribución arquitectónico oficial del almacén">
               <defs>
                 <!-- Grid de fondo CAD -->
@@ -299,132 +341,247 @@
                 </pattern>
               </defs>
 
-              <!-- Fondo CAD Técnico -->
-              <rect width="1000" height="888" fill="#0a1018"/>
-              <rect width="1000" height="888" fill="url(#cad-grid-fine)"/>
-              <rect width="1000" height="888" fill="url(#cad-grid-coarse)"/>
+              <g [style.transform]="'translate(' + panOffset().x + 'px, ' + panOffset().y + 'px) scale(' + zoomScale() + ')'"
+                 style="transform-origin: 500px 444px; transition: transform 0.04s ease-out;">
 
-              <!-- Capa 1: Plano base DXF arquitectónico oficial del complejo (muros, cortinas, rampas y oficinas) -->
-              <image href="assets/layout_almacen_principal.svg" x="0" y="0" width="1000" height="887.27" preserveAspectRatio="none" class="cad__base-plan" />
+                <!-- Fondo CAD Técnico -->
+                <rect width="1000" height="888" fill="#0a1018"/>
+                <rect width="1000" height="888" fill="url(#cad-grid-fine)"/>
+                <rect width="1000" height="888" fill="url(#cad-grid-coarse)"/>
 
-              <!-- Capa 2: Cartela CAD de Orientación -->
-              <g class="cad__titleblock" transform="translate(40, 800)">
-                <rect width="215" height="42" rx="4" fill="rgba(0,0,0,0.72)" stroke="rgba(234,195,73,0.35)" stroke-width="0.8"/>
-                <text x="10" y="16" fill="rgba(234,195,73,0.95)" font-size="9" font-weight="900" font-family="monospace" letter-spacing="1">DISTRIBUCIÓN 4GUARD</text>
-                <text x="10" y="28" fill="rgba(203,213,225,0.85)" font-size="7.5" font-family="monospace">Layout Almacén Principal · 13 Naves CAD</text>
-                <text x="10" y="37" fill="rgba(148,163,184,0.75)" font-size="6.5" font-family="monospace">12 Rampas · Staging Buffers Activos</text>
-              </g>
+                <!-- Capa 1: Plano base DXF arquitectónico oficial del complejo -->
+                <image href="assets/layout_almacen_principal.svg" x="0" y="0" width="1000" height="887.27" preserveAspectRatio="none" class="cad__base-plan" />
 
-              <!-- Capa 3: Naves Oficiales CAD con polígonos arquitectónicos reales -->
-              @for (sec of displaySections(); track sec.code) {
-                @if (sec.polygonPoints) {
-                  <g
-                    class="cad__zone-group cursor-pointer"
-                    [class.cad__zone-group--dim]="!isSectionMatchingSearch(sec.code)"
-                    [class.cad__zone-group--glow]="isSectionMatchingSearch(sec.code) && searchQuery().length > 0"
-                    (click)="openZoneFromMap(sec)"
-                    (mouseenter)="hoveredMapZone.set(sec)"
-                    (mouseleave)="hoveredMapZone.set(null)"
-                    role="button"
-                    [attr.aria-label]="sec.name"
-                    tabindex="0"
-                  >
-                    <polygon
-                      [attr.points]="sec.polygonPoints"
-                      fill="url(#cad-rack-pat)"
-                      class="cad__rack-fill"
-                    />
-                    <polygon
-                      [attr.points]="sec.polygonPoints"
-                      class="bay-svg-poly"
-                      [class.bay-svg-poly--green]="getZoneGroupForCode(sec.code)?.trafficLight === 'GREEN' || !getZoneGroupForCode(sec.code)"
-                      [class.bay-svg-poly--amber]="getZoneGroupForCode(sec.code)?.trafficLight === 'AMBER'"
-                      [class.bay-svg-poly--red]="getZoneGroupForCode(sec.code)?.trafficLight === 'RED'"
-                      [class.bay-svg-poly--hover]="hoveredMapZone()?.code === sec.code"
-                    />
-                    <!-- Código de la Nave (Letra) -->
-                    <text
-                      [attr.x]="sec.labelPosition.x"
-                      [attr.y]="sec.labelPosition.y"
-                      class="bay-svg-label"
+                <!-- Capa 2: Pasillos de Interconexión y Rutas de Montacargas -->
+                @if (showTransitRoutes()) {
+                  <g class="cad__feeder-layer">
+                    @for (route of sectionAisleRoutes(); track route.aisleCode) {
+                      <line
+                        [attr.x1]="route.x1" [attr.y1]="route.y1"
+                        [attr.x2]="route.x2" [attr.y2]="route.y2"
+                        class="cad__feeder-lane"
+                        vector-effect="non-scaling-stroke"
+                      />
+                      <line
+                        [attr.x1]="route.x2" [attr.y1]="route.y2"
+                        [attr.x2]="route.mainCorridorTarget.x" [attr.y2]="route.mainCorridorTarget.y"
+                        class="cad__feeder-junction"
+                        vector-effect="non-scaling-stroke"
+                      />
+                    }
+                  </g>
+                }
+
+                <!-- Capa 3: Naves Oficiales CAD con polígonos arquitectónicos translúcidos -->
+                @for (sec of displaySections(); track sec.code) {
+                  @if (sec.polygonPoints) {
+                    <g
+                      class="cad__zone-group cursor-pointer"
+                      [class.cad__zone-group--dim]="!isSectionMatchingSearch(sec.code)"
+                      [class.cad__zone-group--glow]="isSectionMatchingSearch(sec.code) && searchQuery().length > 0"
+                      (click)="openZoneFromMap(sec)"
+                      (mouseenter)="hoveredMapZone.set(sec)"
+                      (mouseleave)="hoveredMapZone.set(null)"
+                      role="button"
+                      [attr.aria-label]="sec.name"
+                      tabindex="0"
                     >
-                      {{ sec.code }}
-                    </text>
-                    <!-- Subetiqueta con Métricas en Vivo -->
-                    <text
-                      [attr.x]="sec.labelPosition.x"
-                      [attr.y]="sec.labelPosition.y + 14"
-                      class="bay-svg-sublabel"
-                    >
-                      @if (getZoneGroupForCode(sec.code); as grp) {
-                        @if (mode === 'origin') {
-                          {{ grp.fixedOccupiedPallets + grp.tempOccupiedPallets }} UAs Stock
+                      <polygon
+                        [attr.points]="sec.polygonPoints"
+                        fill="url(#cad-rack-pat)"
+                        class="cad__rack-fill"
+                      />
+                      <polygon
+                        [attr.points]="sec.polygonPoints"
+                        class="bay-svg-poly"
+                        [class.bay-svg-poly--green]="getZoneGroupForCode(sec.code)?.trafficLight === 'GREEN' || !getZoneGroupForCode(sec.code)"
+                        [class.bay-svg-poly--amber]="getZoneGroupForCode(sec.code)?.trafficLight === 'AMBER'"
+                        [class.bay-svg-poly--red]="getZoneGroupForCode(sec.code)?.trafficLight === 'RED'"
+                        [class.bay-svg-poly--hover]="hoveredMapZone()?.code === sec.code"
+                      />
+                      <!-- Código de la Nave (Letra) -->
+                      <text
+                        [attr.x]="sec.labelPosition.x"
+                        [attr.y]="sec.labelPosition.y"
+                        class="bay-svg-label"
+                      >
+                        {{ sec.code }}
+                      </text>
+                      <!-- Subetiqueta con Métricas en Vivo -->
+                      <text
+                        [attr.x]="sec.labelPosition.x"
+                        [attr.y]="sec.labelPosition.y + 14"
+                        class="bay-svg-sublabel"
+                      >
+                        @if (getZoneGroupForCode(sec.code); as grp) {
+                          @if (mode === 'origin') {
+                            {{ grp.fixedOccupiedPallets + grp.tempOccupiedPallets }} UAs
+                          } @else {
+                            {{ grp.fixedAvailableCount }} Libres
+                          }
                         } @else {
-                          {{ grp.fixedAvailableCount }} Libres ({{ grp.totalPositions }} Pos)
+                          {{ sec.posFijas }} Bahías
                         }
-                      } @else {
-                        {{ sec.posFijas }} Bahías
+                      </text>
+                    </g>
+                  }
+                }
+
+                <!-- Capa 4: Bahías Físicas y Racks Conectados dentro del Croquis (SVG BAYS) -->
+                @if (showBaysInBlueprint()) {
+                  <g class="cad__bays-layer">
+                    @for (bay of svgBays(); track bay.id) {
+                      <rect
+                        [attr.x]="bay.x"
+                        [attr.y]="bay.y"
+                        [attr.width]="bay.width"
+                        [attr.height]="bay.height"
+                        rx="1"
+                        class="cad__bay-slot"
+                        [ngClass]="getBayHeatmapClass(bay)"
+                        [class.cad__bay-slot--highlighted]="activeHoveredCode() === bay.code"
+                        [class.cad__bay-slot--selected]="selectedBay()?.code === bay.code"
+                        (mouseenter)="onSvgBayMouseEnter($event, bay)"
+                        (mouseleave)="onSvgBayMouseLeave()"
+                        (click)="onSvgBayClick(bay, $event)"
+                      />
+                      @if (bay.sectionCode === 'SEC-RAMP') {
+                        <text
+                          [attr.x]="bay.x + bay.width / 2"
+                          [attr.y]="bay.y + bay.height / 2 + 1.8"
+                          font-family="monospace"
+                          font-size="4.5"
+                          font-weight="bold"
+                          [attr.fill]="bay.currentTarimas > 0 ? '#ffffff' : 'rgba(234, 195, 73, 0.75)'"
+                          text-anchor="middle"
+                          pointer-events="none"
+                        >{{ bay.code.replace('STAGING-R', 'R') }}</text>
+                        @if (bay.currentTarimas > 0) {
+                          <g pointer-events="none">
+                            <circle
+                              [attr.cx]="bay.x + bay.width - 1.5"
+                              [attr.cy]="bay.y + 1.5"
+                              r="2.2"
+                              fill="#a855f7"
+                              stroke="#ffffff"
+                              stroke-width="0.5"
+                            />
+                            <text
+                              [attr.x]="bay.x + bay.width / 2"
+                              [attr.y]="bay.y + bay.height + 4.5"
+                              font-family="monospace"
+                              font-size="3.8"
+                              font-weight="bold"
+                              fill="#d8b4fe"
+                              text-anchor="middle"
+                            >{{ bay.currentTarimas }}T</text>
+                          </g>
+                        }
                       }
-                    </text>
+                    }
                   </g>
                 }
-              }
 
-              <!-- Capa 4: 12 Rampas de Carga y Descarga (STAGING-R01 .. STAGING-R12) -->
-              <g class="cad__docks-layer">
-                @for (rmp of rampStagingCoords; track rmp.code) {
-                  <g
-                    class="cursor-pointer group"
-                    (click)="selectRampStagingBay(rmp.code)"
-                    (mouseenter)="hoveredRamp.set(rmp.code)"
-                    (mouseleave)="hoveredRamp.set(null)"
-                    [attr.title]="'Clic para asignar rampa ' + rmp.label + ' (' + rmp.code + ')'"
-                  >
-                    <rect
-                      [attr.x]="rmp.x"
-                      [attr.y]="rmp.y"
-                      width="15"
-                      height="13"
-                      rx="2"
-                      [attr.fill]="selectedBay()?.code === rmp.code ? 'rgba(245,158,11,0.5)' : 'url(#cad-dock-hazard)'"
-                      [attr.stroke]="selectedBay()?.code === rmp.code ? '#fbbf24' : (hoveredRamp() === rmp.code ? '#38bdf8' : 'rgba(234,195,73,0.5)')"
-                      [attr.stroke-width]="selectedBay()?.code === rmp.code ? '1.8' : '1'"
-                    />
-                    <text
-                      [attr.x]="rmp.x + 7.5"
-                      [attr.y]="rmp.y + 9"
-                      class="cad__dock-label"
-                      [attr.fill]="selectedBay()?.code === rmp.code ? '#fbbf24' : '#ffffff'"
-                    >{{ rmp.label }}</text>
-                  </g>
-                }
-              </g>
+                <!-- Capa 5: 12 Rampas de Carga y Descarga (STAGING-R01 .. STAGING-R12) -->
+                <g class="cad__docks-layer">
+                  @for (rmp of rampStagingCoords; track rmp.code) {
+                    <g
+                      class="cursor-pointer group"
+                      (click)="selectRampStagingBay(rmp.code)"
+                      (mouseenter)="hoveredRamp.set(rmp.code)"
+                      (mouseleave)="hoveredRamp.set(null)"
+                      [attr.title]="'Clic para asignar rampa ' + rmp.label + ' (' + rmp.code + ')'"
+                    >
+                      <rect
+                        [attr.x]="rmp.x"
+                        [attr.y]="rmp.y"
+                        width="15"
+                        height="13"
+                        rx="2"
+                        [attr.fill]="selectedBay()?.code === rmp.code ? 'rgba(245,158,11,0.5)' : 'url(#cad-dock-hazard)'"
+                        [attr.stroke]="selectedBay()?.code === rmp.code ? '#fbbf24' : (hoveredRamp() === rmp.code ? '#38bdf8' : 'rgba(234,195,73,0.5)')"
+                        [attr.stroke-width]="selectedBay()?.code === rmp.code ? '1.8' : '1'"
+                      />
+                      <text
+                        [attr.x]="rmp.x + 7.5"
+                        [attr.y]="rmp.y + 9"
+                        class="cad__dock-label"
+                        [attr.fill]="selectedBay()?.code === rmp.code ? '#fbbf24' : '#ffffff'"
+                      >{{ rmp.label }}</text>
+                    </g>
+                  }
+                </g>
 
-              <!-- Rosa de los Vientos Oficial CAD -->
-              <g class="cad__compass" transform="translate(60, 520)">
-                <circle r="26" fill="rgba(0,0,0,0.5)" stroke="rgba(197,168,107,0.4)" stroke-width="1"/>
-                <circle r="20" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
-                <polygon points="0,-18 -4,-3 4,-3" fill="rgba(234,195,73,0.85)"/>
-                <polygon points="0,18 -4,3 4,3" fill="rgba(255,255,255,0.25)"/>
-                <text y="-26" class="cad__compass-n">N</text>
-                <text y="34" class="cad__compass-dir">S</text>
-                <text x="30" y="4" class="cad__compass-dir">E</text>
-                <text x="-30" y="4" class="cad__compass-dir">O</text>
-              </g>
+                <!-- Rosa de los Vientos Oficial CAD -->
+                <g class="cad__compass" transform="translate(60, 520)">
+                  <circle r="26" fill="rgba(0,0,0,0.5)" stroke="rgba(197,168,107,0.4)" stroke-width="1"/>
+                  <circle r="20" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+                  <polygon points="0,-18 -4,-3 4,-3" fill="rgba(234,195,73,0.85)"/>
+                  <polygon points="0,18 -4,3 4,3" fill="rgba(255,255,255,0.25)"/>
+                  <text y="-26" class="cad__compass-n">N</text>
+                  <text y="34" class="cad__compass-dir">S</text>
+                  <text x="30" y="4" class="cad__compass-dir">E</text>
+                  <text x="-30" y="4" class="cad__compass-dir">O</text>
+                </g>
 
-              <!-- Leyenda en pie de plano -->
-              <g class="cad__map-legend" transform="translate(30, 845)">
-                <rect width="260" height="24" rx="4" fill="rgba(0,0,0,0.7)" stroke="rgba(255,255,255,0.1)"/>
-                <circle cx="16" cy="12" r="4" fill="#10b981"/>
-                <text x="25" y="15" fill="#e2e8f0" font-size="8" font-family="monospace">Disponible</text>
-                <circle cx="85" cy="12" r="4" fill="#f59e0b"/>
-                <text x="94" y="15" fill="#e2e8f0" font-size="8" font-family="monospace">Con Stock</text>
-                <circle cx="150" cy="12" r="4" fill="#ef4444"/>
-                <text x="159" y="15" fill="#e2e8f0" font-size="8" font-family="monospace">Saturado</text>
-                <rect x="206" y="8" width="8" height="8" rx="1.5" fill="url(#cad-dock-hazard)" stroke="#eab308" stroke-width="0.5"/>
-                <text x="218" y="15" fill="#e2e8f0" font-size="8" font-family="monospace">Andén</text>
+                <!-- Leyenda de Mapa Térmico Oficial WMS -->
+                <g class="cad__map-legend" transform="translate(30, 845)">
+                  <rect width="440" height="24" rx="4" fill="rgba(0,0,0,0.78)" stroke="rgba(255,255,255,0.12)"/>
+                  <!-- Vacante -->
+                  <rect x="10" y="7" width="8" height="10" rx="1" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.5)" stroke-width="0.6"/>
+                  <text x="22" y="15" fill="#94a3b8" font-size="7.5" font-family="monospace">0T Vacante</text>
+                  <!-- Baja 1-30% -->
+                  <rect x="80" y="7" width="8" height="10" rx="1" fill="rgba(16,185,129,0.4)" stroke="#10b981" stroke-width="0.6"/>
+                  <text x="92" y="15" fill="#a7f3d0" font-size="7.5" font-family="monospace">1-30% Libre</text>
+                  <!-- Media 31-80% -->
+                  <rect x="155" y="7" width="8" height="10" rx="1" fill="rgba(245,158,11,0.45)" stroke="#f59e0b" stroke-width="0.6"/>
+                  <text x="167" y="15" fill="#fde68a" font-size="7.5" font-family="monospace">31-80% Media</text>
+                  <!-- Llena 81-100% -->
+                  <rect x="235" y="7" width="8" height="10" rx="1" fill="rgba(59,130,246,0.55)" stroke="#60a5fa" stroke-width="0.6"/>
+                  <text x="247" y="15" fill="#bfdbfe" font-size="7.5" font-family="monospace">81-100% Llena</text>
+                  <!-- Bloqueada QM -->
+                  <rect x="315" y="7" width="8" height="10" rx="1" fill="rgba(239,68,68,0.7)" stroke="#ef4444" stroke-width="0.6"/>
+                  <text x="327" y="15" fill="#fecaca" font-size="7.5" font-family="monospace">Bloqueo QM</text>
+                  <!-- Buffer / Rampa -->
+                  <rect x="385" y="7" width="8" height="10" rx="1" fill="rgba(168,85,247,0.7)" stroke="#c084fc" stroke-width="0.6"/>
+                  <text x="397" y="15" fill="#e9d5ff" font-size="7.5" font-family="monospace">Buffer</text>
+                </g>
+
               </g>
             </svg>
+
+            <!-- Barra de Zoom Flotante (Esquina Inferior Derecha) -->
+            <div class="bay-map-floating-zoom">
+              <button type="button" (click)="zoomOut()" class="bay-zoom-btn" title="Alejar plano">
+                <span class="material-symbols-outlined text-xs">remove</span>
+              </button>
+              <span class="bay-zoom-val font-mono">{{ Math.round(zoomScale() * 100) }}%</span>
+              <button type="button" (click)="zoomIn()" class="bay-zoom-btn" title="Acercar plano">
+                <span class="material-symbols-outlined text-xs">add</span>
+              </button>
+              <button type="button" (click)="resetZoomAndPan()" class="bay-zoom-btn" title="Restablecer vista centrada">
+                <span class="material-symbols-outlined text-xs">restart_alt</span>
+              </button>
+            </div>
+
+            <!-- Tooltip HUD de Bahía Hovered -->
+            @if (hoveredSvgBay(); as hBay) {
+              <div class="bay-map-hover-tooltip">
+                <div class="flex items-center gap-1.5 font-mono font-bold text-amber-400 text-xs">
+                  <span class="w-2 h-2 rounded-full inline-block" [ngClass]="getBayHeatmapClass(hBay)"></span>
+                  <span>{{ hBay.code }}</span>
+                  <span class="text-slate-400 font-sans text-[10px]">· Almacén {{ hBay.sectionCode }}</span>
+                </div>
+                <div class="text-[11px] text-slate-200 mt-0.5">
+                  <span>Ocupación: <strong>{{ hBay.currentTarimas }} / {{ hBay.capacityTarimas }}T</strong></span>
+                  <span class="text-slate-400"> ({{ hBay.capacityTarimas > 0 ? Math.round((hBay.currentTarimas / hBay.capacityTarimas) * 100) : 0 }}%)</span>
+                </div>
+                <div class="text-[10px] text-slate-400 truncate max-w-[220px]">
+                  {{ hBay.skuDescription }}
+                </div>
+              </div>
+            }
+
           </div>
         } @else if (activeViewMode() === 'cards') {
 

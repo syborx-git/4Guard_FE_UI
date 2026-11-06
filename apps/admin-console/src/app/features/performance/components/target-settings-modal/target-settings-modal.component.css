@@ -10,10 +10,14 @@
   /* ── Tokens Light Mode ── */
   --bg-page:        #f5f4f0;
   --bg-card:        rgba(255, 255, 255, 0.98);
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --bg-card-hover:  #ffffff;
   --border-card:    rgba(76, 86, 105, 0.12);
+  --border-card-gold: rgba(197, 168, 107, 0.35);
   --border-subtle:  rgba(76, 86, 105, 0.08);
   --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08);
+  --shadow-hover:   0 16px 40px rgba(197, 168, 107, 0.22);
+  --radius-xl:      18px;
 
   --text-primary:   #1c2940;
   --text-secondary: #5a6477;
@@ -54,10 +58,13 @@
   /* ── Tokens Dark Mode ── */
   --bg-page:        #0b1119;
   --bg-card:        rgba(17, 26, 38, 0.98);
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --bg-card-hover:  rgba(23, 35, 50, 0.98);
   --border-card:    rgba(255, 255, 255, 0.09);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --border-subtle:  rgba(255, 255, 255, 0.06);
   --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40);
+  --shadow-hover:   0 20px 44px rgba(208, 175, 103, 0.18);
 
   --text-primary:   #edf1f5;
   --text-secondary: #9aa6b4;
@@ -99,9 +106,10 @@
 }
 
 .target-modal-panel {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   width: 100%;
   max-width: 760px;
   max-height: 80vh;
@@ -227,9 +235,9 @@
 }
 
 .target-field-card {
-  background: rgba(139, 148, 163, 0.04);
-  border: 1px solid var(--border-card);
-  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card-gold, var(--border-card));
+  border-radius: 12px;
   padding: 0.75rem 0.85rem;
   display: flex;
   flex-direction: column;

@@ -17,10 +17,14 @@
 
   --bg-page:        #f5f4f0;
   --bg-card:        rgba(255, 255, 255, 0.95);
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --bg-subtle:      rgba(23, 32, 51, 0.025);
   --border-subtle:  rgba(76, 86, 105, 0.12);
   --border-card:    rgba(76, 86, 105, 0.12);
+  --border-card-gold: rgba(197, 168, 107, 0.35);
   --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255,255,255,0.85);
+  --shadow-hover:   0 16px 40px rgba(197, 168, 107, 0.22);
+  --radius-xl:      18px;
 
   --text-primary:   #1c2940;
   --text-secondary: #5a6477;
@@ -65,10 +69,13 @@
 
   --bg-page:        #080e18;
   --bg-card:        rgba(15, 23, 42, 0.95);
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --bg-subtle:      rgba(255, 255, 255, 0.04);
   --border-subtle:  rgba(255, 255, 255, 0.08);
   --border-card:    rgba(255, 255, 255, 0.10);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --shadow-card:    0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-hover:   0 20px 44px rgba(208, 175, 103, 0.18);
 
   --text-primary:   #f1f5f9;
   --text-secondary: #94a3b8;
@@ -226,9 +233,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .dest-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   padding: 1.15rem 1.35rem;
   display: flex;
   align-items: flex-start;
@@ -242,8 +250,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .dest-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 36px rgba(36, 44, 58, 0.12);
-  border-color: var(--gold-border);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--gold);
 }
 
 .dest-card.is-selected {
@@ -332,9 +340,10 @@ h1, h2, h3, h4, h5, h6 {
 .card-surface {
   position: relative;
   overflow: hidden;
-  background: var(--bg-card);
-  border: 1.5px solid rgba(197, 168, 107, 0.35) !important;
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.35)) !important;
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -786,9 +795,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .modal-card,
 .modal-card--lg {
-  background: var(--bg-card);
-  border-radius: 16px;
-  border: 1px solid var(--border-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border-radius: var(--radius-xl, 18px);
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
   max-width: 760px;
   width: 100%;
   max-height: 80vh;

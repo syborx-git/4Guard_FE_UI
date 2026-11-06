@@ -89,8 +89,8 @@ export class ForkliftOperatorAdminService {
       // Fallback silencioso
     }
     return {
-      organizationId: DEFAULT_ORG_ID,
-      organizationName: '4GUARD LOGISTICS CORP'
+      organizationId: '',
+      organizationName: ''
     };
   }
 

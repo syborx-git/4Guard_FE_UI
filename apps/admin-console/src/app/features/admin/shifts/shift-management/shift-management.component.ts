@@ -44,6 +44,7 @@ import {
   OPERATING_DAYS_CONFIG,
   SHIFT_STATUS_LABELS,
   calculateShiftDuration,
+  calculateMealDurationMinutes,
   ShiftDurationCalculation,
   ShiftAuditLogResponse,
   ShiftAuditLogDetail,
@@ -168,7 +169,17 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
   });
 
   // Cálculo derivado de duración de jornada en tiempo real
-  protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() => {
+    // Cálculo de duración de comida en minutos
+  protected readonly calculatedMealDuration = computed<number>(() => {
+    const val = this.formValuesSignal();
+    const hasMeal = val?.hasMealBreak ?? this.shiftForm?.get('hasMealBreak')?.value;
+    if (!hasMeal) return 0;
+    const start = val?.mealStartTime || this.shiftForm?.get('mealStartTime')?.value;
+    const end = val?.mealEndTime || this.shiftForm?.get('mealEndTime')?.value;
+    return calculateMealDurationMinutes(start, end);
+  });
+
+protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() => {
     const val = this.formValuesSignal();
     const start = val?.startTime || this.shiftForm?.get('startTime')?.value;
     const end = val?.endTime || this.shiftForm?.get('endTime')?.value;
@@ -222,6 +233,10 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
         status: ['ACTIVE', [Validators.required]],
         restBreakMinutes: [60, [Validators.required, Validators.min(0), Validators.max(300)]],
         toleranceMinutes: [10, [Validators.required, Validators.min(0), Validators.max(120)]],
+        hasMealBreak: [true],
+        mealStartTime: ['13:00', [Validators.pattern(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/)]],
+        mealEndTime: ['14:00', [Validators.pattern(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/)]],
+        mealEarlyPauseMinutes: [10, [Validators.required, Validators.min(0), Validators.max(60)]],
       },
       { validators: [distinctStartEndTimeValidator] }
     );
@@ -410,6 +425,10 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
       status: shift.status,
       restBreakMinutes: shift.restBreakMinutes ?? 0,
       toleranceMinutes: shift.toleranceMinutes ?? 0,
+      hasMealBreak: shift.hasMealBreak ?? true,
+      mealStartTime: formatTimeForInput(shift.mealStartTime) || '13:00',
+      mealEndTime: formatTimeForInput(shift.mealEndTime) || '14:00',
+      mealEarlyPauseMinutes: shift.mealEarlyPauseMinutes ?? 10,
     });
 
     this.formValuesSignal.set(this.shiftForm.value);
@@ -432,6 +451,10 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
       status: 'ACTIVE',
       restBreakMinutes: 60,
       toleranceMinutes: 10,
+      hasMealBreak: true,
+      mealStartTime: '13:00',
+      mealEndTime: '14:00',
+      mealEarlyPauseMinutes: 10,
     });
 
     this.formValuesSignal.set(this.shiftForm.value);
@@ -474,6 +497,10 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
         status: 'ACTIVE',
         restBreakMinutes: val.restBreakMinutes,
         toleranceMinutes: val.toleranceMinutes,
+        hasMealBreak: Boolean(val.hasMealBreak),
+        mealStartTime: val.hasMealBreak ? formatTime(val.mealStartTime) : null,
+        mealEndTime: val.hasMealBreak ? formatTime(val.mealEndTime) : null,
+        mealEarlyPauseMinutes: Number(val.mealEarlyPauseMinutes) || 10,
         scopeType: 'BRANCH',
       };
 
@@ -507,6 +534,10 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
         status: selected.status || 'ACTIVE',
         restBreakMinutes: val.restBreakMinutes,
         toleranceMinutes: val.toleranceMinutes,
+        hasMealBreak: Boolean(val.hasMealBreak),
+        mealStartTime: val.hasMealBreak ? formatTime(val.mealStartTime) : null,
+        mealEndTime: val.hasMealBreak ? formatTime(val.mealEndTime) : null,
+        mealEarlyPauseMinutes: Number(val.mealEarlyPauseMinutes) || 10,
         scopeType: 'BRANCH',
       };
 
