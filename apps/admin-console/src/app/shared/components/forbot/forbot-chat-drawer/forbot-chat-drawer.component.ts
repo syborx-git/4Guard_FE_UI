@@ -57,7 +57,7 @@ export class ForbotChatDrawerComponent {
 
   /** Píldoras de Tutor para Guardia de Caseta de Seguridad */
   private readonly securityTutorPills = [
-    { label: '🚀 Tour Caseta (14 Pasos)', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '🚀 Tour Caseta & Patio (4 Etapas)', query: 'Iniciar tour guiado de la interfaz' },
     { label: '📱 Pases QR & Choferes', query: '¿Cómo validar pases QR y registrar choferes sin cita?' },
     { label: '📋 Inspección F01', query: '¿Cuál es el checklist oficial de inspección física F01?' },
     { label: '🚛 Rampa vs Patio', query: '¿Cuándo enviar un transporte a rampa o a patio de espera?' },
@@ -66,7 +66,7 @@ export class ForbotChatDrawerComponent {
 
   /** Píldoras de Tutor para Gerente de Operaciones */
   private readonly operationsManagerTutorPills = [
-    { label: '🚀 Tour Ejecutivo (19 Pasos)', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '🚀 Tour Multi-Módulo (6 Módulos)', query: 'Iniciar tour guiado de la interfaz' },
     { label: '📈 Throughput & Andenes', query: '¿Cómo interpretar el throughput y cuellos de botella en andenes?' },
     { label: '🗺️ Topología 2D', query: '¿Cómo supervisar la topología 2D y saturación de bodegas?' },
     { label: '⏱️ Horas Trabajadas', query: '¿Cómo auditar las horas trabajadas de montacarguistas por turno?' },
@@ -75,7 +75,7 @@ export class ForbotChatDrawerComponent {
 
   /** Píldoras de Tutor para Mesa de Control */
   private readonly controlDeskTutorPills = [
-    { label: '🚀 Tour Operativo (15 Pasos)', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '🚀 Tour Multi-Módulo (4 Módulos)', query: 'Iniciar tour guiado de la interfaz' },
     { label: '⏳ Vida Útil ≥ 365 días', query: '¿Cómo aplicar la regla de vida útil mínima de 365 días en recepción?' },
     { label: '⚡ Asignar Misiones a RF', query: '¿Cómo asignar misiones a montacarguistas y marcar prioridad urgente?' },
     { label: '📦 Despachos FEFO', query: '¿Cómo funciona el criterio FEFO en órdenes de salida?' },
@@ -84,7 +84,7 @@ export class ForbotChatDrawerComponent {
 
   /** Píldoras de Tutor para Dirección General */
   private readonly generalDirectorTutorPills = [
-    { label: '🚀 Tour Estratégico (19 Pasos)', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '🚀 Tour Ejecutivo (8 Módulos)', query: 'Iniciar tour guiado de la interfaz' },
     { label: '📊 Throughput & SLAs', query: '¿Cómo evaluar el cumplimiento de SLAs de clientes y throughput global?' },
     { label: '📈 Rendimiento de Planta', query: '¿Cómo auditar la productividad y horas trabajadas de cuadrillas?' },
     { label: '⚙️ Gobernanza de Turnos', query: '¿Cómo supervisar la administración de turnos y seguridad PIN?' },

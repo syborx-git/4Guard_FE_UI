@@ -109,7 +109,7 @@ export class ForbotEngineService {
       ];
 
       if (role === 'SECURITY_GUARD' || role === 'GUARD' || role === 'CASETA' || role === 'VIGILANCIA') {
-        welcomeText = '🎓 **Modo Tutor: Caseta de Seguridad**\nBienvenido al centro de inducción de vigilancia patrimonial. Inicia el **Tour de Caseta (14 Pasos)** o consúltame sobre escaneo de pases QR, checklist F01, asignación de rampa y check-out de patio.';
+        welcomeText = '🎓 **Modo Tutor: Caseta de Seguridad**\nBienvenido al centro de inducción de vigilancia patrimonial. Inicia el **Tour de Caseta & Patio (4 Etapas · 13 Pasos)** o consúltame sobre escaneo de pases QR, checklist F01, asignación de rampa y check-out de patio.';
         title = 'Inducción Caseta de Seguridad (F01)';
         items = [
           { label: 'Pases QR & Choferes', value: '14 Pasos', badgeColor: 'blue' },
@@ -117,7 +117,7 @@ export class ForbotEngineService {
           { label: 'Rampa & Check-out', value: 'Control Patio', badgeColor: 'emerald' }
         ];
       } else if (role === 'OPERATIONS_MANAGER' || role === 'WAREHOUSE_MANAGER' || role === 'OPERATIONS_COORDINATOR' || role === 'OPERATIONS_SUPERVISOR') {
-        welcomeText = '🎓 **Modo Tutor: Gerencia de Operaciones**\nBienvenido al centro de inducción ejecutiva. Inicia el **Tour Gerencial Completo (19 Pasos)** para recorrer la Torre de Control, los 6 módulos operativos, métricas de inventario y gobernanza de turnos.';
+        welcomeText = '🎓 **Modo Tutor: Gerencia de Operaciones**\nBienvenido al centro de inducción ejecutiva. Inicia el **Tour Gerencial Multi-Módulo (6 Módulos · 24 Pasos)** para recorrer la Torre de Control, Recepción, Rendimiento, Turnos/Comida, Topología 2D y Consulta de Inventario.';
         title = 'Inducción Ejecutiva Gerencial';
         items = [
           { label: 'Torre de Control & KPIs', value: '11 Indicadores', badgeColor: 'blue' },
@@ -125,7 +125,7 @@ export class ForbotEngineService {
           { label: 'Topología 2D & Rendimiento', value: 'Supervisión', badgeColor: 'emerald' }
         ];
       } else if (role === 'CONTROL_DESK' || role === 'MESA_DE_CONTROL' || role === 'MESA') {
-        welcomeText = '🎓 **Modo Tutor: Mesa de Control**\nBienvenido al centro de inducción de coordinación operativa. Inicia el **Tour de Mesa de Control (15 Pasos)** o consúltame sobre validación de vida útil (≥ 365 días), asignación de misiones prioritarias a Terminal RF y despachos FEFO.';
+        welcomeText = '🎓 **Modo Tutor: Mesa de Control**\nBienvenido al centro de inducción de coordinación operativa. Inicia el **Tour de Mesa de Control Multi-Módulo (4 Módulos · 16 Pasos)** o consúltame sobre validación de vida útil (≥ 365 días), asignación a Terminal RF y despachos FEFO.';
         title = 'Inducción Mesa de Control';
         items = [
           { label: 'Recepción & Vida Útil', value: '15 Pasos', badgeColor: 'blue' },
@@ -140,7 +140,7 @@ export class ForbotEngineService {
         role === 'SUPER_ADMIN' ||
         role === 'DIRECTOR'
       ) {
-        welcomeText = '🎓 **Modo Tutor: Dirección General**\nBienvenido a la inducción ejecutiva de alta dirección. Inicia el **Tour Estratégico (19 Pasos)** para recorrer la Torre de Control Global, los 7 módulos del sistema, auditoría de rendimiento y gobernanza integral del CEDIS.';
+        welcomeText = '🎓 **Modo Tutor: Dirección General**\nBienvenido a la inducción ejecutiva de alta dirección. Inicia el **Tour Ejecutivo Multi-Módulo (8 Módulos · 22 Pasos)** para recorrer la Torre de Control Global, Seguridad, Recepción, Calidad QM, Rendimiento, Turnos, Topología 2D y Consulta de Inventario.';
         title = 'Inducción Dirección General';
         items = [
           { label: 'Torre de Control & SLAs', value: 'Visión Macro', badgeColor: 'blue' },
@@ -176,13 +176,13 @@ export class ForbotEngineService {
     let completionMessage = '🎉 **¡Felicidades!** Has completado el **Tour Guiado** de 4GUARD WMS. Ahora cuentas con dominio total de la interfaz y herramientas. Puedes consultarme cualquier duda operativa o volver al **Modo Operativo**.';
 
     if (role === 'SECURITY_GUARD' || role === 'GUARD' || role === 'CASETA' || role === 'VIGILANCIA') {
-      completionMessage = '🎉 **¡Felicidades!** Has completado el **Tour de Caseta de Seguridad (14 Pasos)** en 4GUARD WMS. Ahora dominas el flujo de transportistas por QR, inspección física F01, asignación de rampa y check-out de salida. Puedes consultarme cualquier duda de vigilancia o volver al **Modo Operativo**.';
+      completionMessage = '🎉 **¡Felicidades!** Has completado el **Tour de Caseta & Patio (4 Etapas · 13 Pasos)** en 4GUARD WMS. Ahora dominas el flujo de transportistas por QR, inspección física F01, asignación de rampa y check-out de salida. Puedes consultarme cualquier duda de vigilancia o volver al **Modo Operativo**.';
     } else if (role === 'CONTROL_DESK' || role === 'MESA_DE_CONTROL' || role === 'MESA') {
-      completionMessage = '🎉 **¡Felicidades!** Has completado el **Tour de Mesa de Control (15 Pasos)** en 4GUARD WMS. Ahora dominas la Torre de Monitoreo, validación de vida útil (≥ 365 días), asignación de misiones urgentes a Terminal RF y despachos FEFO. Puedes consultarme cualquier duda o volver al **Modo Operativo**.';
+      completionMessage = '🎉 **¡Felicidades!** Has completado el **Tour de Mesa de Control Multi-Módulo (4 Módulos · 16 Pasos)** en 4GUARD WMS. Ahora dominas la Torre de Monitoreo, validación de vida útil (≥ 365 días), asignación de misiones urgentes a Terminal RF y despachos FEFO. Puedes consultarme cualquier duda o volver al **Modo Operativo**.';
     } else if (role === 'OPERATIONS_MANAGER' || role === 'WAREHOUSE_MANAGER' || role === 'OPERATIONS_COORDINATOR' || role === 'OPERATIONS_SUPERVISOR') {
-      completionMessage = '🎉 **¡Felicidades!** Has completado el **Tour Gerencial Completo (19 Pasos)** en 4GUARD WMS. Ahora cuentas con dominio total de la Torre de Control, los 6 módulos de supervisión operativa y las herramientas analíticas. Puedes consultarme cualquier duda operativa o volver al **Modo Operativo**.';
+      completionMessage = '🎉 **¡Felicidades!** Has completado el **Tour Gerencial Multi-Módulo (6 Módulos · 24 Pasos)** en 4GUARD WMS. Ahora cuentas con dominio total de la Torre de Control, los 6 módulos de supervisión operativa y las herramientas analíticas. Puedes consultarme cualquier duda operativa o volver al **Modo Operativo**.';
     } else if (role === 'ADMIN' || role === 'CEO' || role === 'DIRECTOR_GENERAL' || role === 'GENERAL_DIRECTOR' || role === 'SUPER_ADMIN' || role === 'DIRECTOR') {
-      completionMessage = '🎉 **¡Felicidades!** Has completado el **Tour Estratégico de Dirección General (19 Pasos)** en 4GUARD WMS. Ahora cuentas con dominio total de la Torre de Control Ejecutiva, los 7 módulos del sistema, auditoría de productividad y gobernanza global. Puedes consultarme cualquier duda estratégica o volver al **Modo Operativo**.';
+      completionMessage = '🎉 **¡Felicidades!** Has completado el **Tour Ejecutivo Multi-Módulo (8 Módulos · 22 Pasos)** en 4GUARD WMS. Ahora cuentas con dominio total de la Torre de Control Ejecutiva, los 7 módulos del sistema, auditoría de productividad y gobernanza global. Puedes consultarme cualquier duda estratégica o volver al **Modo Operativo**.';
     }
 
     this.tourService.startTourForRole(role, () => {

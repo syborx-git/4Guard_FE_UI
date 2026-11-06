@@ -6,7 +6,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════
        HEADER PRINCIPAL CON EL SLIDE DE PESTAÑAS Y BOTÓN DE ACCIÓN
        ════════════════════════════════════════════════════════════════ -->
-  <header class="receiving-header">
+  <header class="receiving-header" id="rec-header">
     <div class="receiving-header__top">
 
       <div class="receiving-header__left">
@@ -67,7 +67,7 @@
 
     <!-- ── BARRA DE PESTAÑAS FLOTANTE (SEGMENTED CONTROL) & ANDENES ── -->
     <div class="movements-toolbar-row">
-      <nav class="movements-tabs-nav" aria-label="Navegación de movimientos de almacén">
+      <nav class="movements-tabs-nav" id="tour-movements-tabs" aria-label="Navegación de movimientos de almacén">
         <a
           routerLink="/warehouse-movements/receiving"
           routerLinkActive="tab-active"
@@ -104,7 +104,7 @@
         <button
           type="button"
           (click)="showDockMapModal.set(true)"
-          class="dock-summary-pill"
+          id="tour-dock-summary-pill" class="dock-summary-pill"
           title="Ver plano interactivo y estado de andenes 1-12"
         >
           <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-sm">domain</span>
@@ -131,7 +131,7 @@
   </header>
 
   <!-- ── 1. KPI CARDS HEADER (CON VISTA COMPACTA COLAPSABLE HOMOLOGADA) ── -->
-  <section aria-label="Métricas Operativas de Recepción" class="mb-0">
+  <section aria-label="Métricas Operativas de Recepción" id="rec-kpi-grid" class="mb-0">
     <div class="flex items-center justify-between mb-1.5">
       <span class="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
         <span class="material-symbols-outlined text-sm text-gold">analytics</span>
@@ -254,7 +254,7 @@
     <!-- ═══════════════════════════════════════════════════════════════
          DIRECTORIO EJECUTIVO DE RECEPCIONES (PIXEL-PERFECT MOCKUP)
          ═══════════════════════════════════════════════════════════════ -->
-    <div class="executive-directory-card" fgStarBorder fgSpecularGlow>
+    <div class="executive-directory-card" id="rec-directory-card-grid" fgStarBorder fgSpecularGlow>
       <!-- Header Row: Dot + Title + Count Pill + Hint + Subtitle -->
       <div class="directory-header-row">
         <div class="directory-header-left">
@@ -277,7 +277,7 @@
           <span class="material-symbols-outlined directory-search-icon">search</span>
           <input
             type="search"
-            class="directory-search-input"
+            id="rec-search-input" class="directory-search-input"
             [ngModel]="searchQuery()"
             (ngModelChange)="searchQuery.set($event)"
             placeholder="Buscar por folio, cliente, rampa, chofer o sello de seguridad..."
@@ -287,7 +287,7 @@
         </div>
 
         <!-- Filter Pills -->
-        <div class="directory-filter-pills" role="group" aria-label="Filtrar por estado">
+        <div class="directory-filter-pills" id="rec-status-filter-pills" role="group" aria-label="Filtrar por estado">
           <button
             type="button"
             (click)="toggleStatusFilter('ALL')"

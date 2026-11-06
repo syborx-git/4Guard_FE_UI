@@ -6,7 +6,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════
        HEADER PRINCIPAL CON EL SLIDE DE PESTAÑAS Y BOTÓN DE ACCIÓN
        ════════════════════════════════════════════════════════════════ -->
-  <header class="transfer-header">
+  <header class="transfer-header" id="trf-header">
     <div class="transfer-header__top">
 
       <div class="transfer-header__left">
@@ -103,6 +103,7 @@
         type="button"
         (click)="startNewTransfer()"
         class="btn-new-reception"
+        id="trf-btn-new-transfer"
         aria-label="Registrar nuevo traspaso"
       >
         <span class="material-symbols-outlined">add</span>
