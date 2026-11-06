@@ -121,12 +121,7 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   protected readonly isSecurityUser = computed(() => {
     const role = (this.authState.role() || '').toUpperCase();
-    // El Gerente de Operaciones y Mesa de Control no tienen asignado el modulo ni las alertas de Caseta de Seguridad
     if (
-      role === 'OPERATIONS_MANAGER' ||
-      role === 'ROLE_OPERATIONS_MANAGER' ||
-      role === 'WAREHOUSE_MANAGER' ||
-      role === 'ROLE_WAREHOUSE_MANAGER' ||
       role === 'CONTROL_DESK' ||
       role === 'ROLE_CONTROL_DESK' ||
       role.includes('MESA')
@@ -138,6 +133,8 @@ export class ShellComponent implements OnInit, OnDestroy {
       role.includes('ADMIN') ||
       role.includes('DIRECTOR') ||
       role.includes('CEO') ||
+      role.includes('MANAGER') ||
+      role.includes('OPERAT') ||
       role.includes('SECURITY') ||
       role.includes('VIGILAN') ||
       role.includes('GUARD') ||
@@ -170,12 +167,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly isQualityUser = computed(() => {
     if (this.isGuardOnly()) return false;
     const role = (this.authState.role() || '').toUpperCase();
-    // El Gerente de Operaciones y Mesa de Control no tienen asignado el modulo ni las alertas de Control de Calidad
     if (
-      role === 'OPERATIONS_MANAGER' ||
-      role === 'ROLE_OPERATIONS_MANAGER' ||
-      role === 'WAREHOUSE_MANAGER' ||
-      role === 'ROLE_WAREHOUSE_MANAGER' ||
       role === 'CONTROL_DESK' ||
       role === 'ROLE_CONTROL_DESK' ||
       role.includes('MESA')
@@ -187,6 +179,8 @@ export class ShellComponent implements OnInit, OnDestroy {
       role.includes('ADMIN') ||
       role.includes('DIRECTOR') ||
       role.includes('CEO') ||
+      role.includes('MANAGER') ||
+      role.includes('OPERAT') ||
       role.includes('QM') ||
       role.includes('QUALIT') ||
       role.includes('CALIDAD') ||
