@@ -3,7 +3,7 @@
 <section class="dashboard page-enter" aria-label="Dashboard Torre de Control">
 
   <!-- ── Header ─────────────────────────────────────────────── -->
-  <div class="dashboard__header">
+  <div class="dashboard__header" id="tour-dashboard-header">
     <div>
       <div class="dashboard__eyebrow">
         <span class="material-symbols-outlined icon-glow">speed</span>
@@ -134,7 +134,7 @@
       <div class="dash-card__action-bar" (click)="$event.stopPropagation()">
         <button
           type="button"
-          class="dash-card__breakdown-btn"
+          id="tour-breakdown-btn" class="dash-card__breakdown-btn"
           (click)="openBreakdownModal()"
         >
           <span class="material-symbols-outlined text-sm">tune</span>

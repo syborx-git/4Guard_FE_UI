@@ -117,12 +117,12 @@ export class ForbotEngineService {
           { label: 'Rampa & Check-out', value: 'Paso 3', badgeColor: 'emerald' }
         ];
       } else if (role === 'OPERATIONS_MANAGER') {
-        welcomeText = '🎓 **Modo Tutor: Gerencia de Operaciones**\nBienvenido al centro de inducción ejecutiva. Puedes iniciar el **Tour de Rendimiento** o consultarme sobre KPIs de Throughput, Topología 2D y auditoría de horas trabajadas.';
-        title = 'Inducción Ejecutiva & Rendimiento';
+        welcomeText = '🎓 **Modo Tutor: Gerencia de Operaciones**\nBienvenido al centro de inducción ejecutiva. Inicia el **Tour Gerencial Completo (19 Pasos)** para recorrer la Torre de Control, los 6 módulos operativos, métricas de inventario y gobernanza de turnos.';
+        title = 'Inducción Ejecutiva Gerencial';
         items = [
-          { label: 'Throughput & Rendimiento', value: 'Métrica 1', badgeColor: 'blue' },
-          { label: 'Topología 2D en Vivo', value: 'Métrica 2', badgeColor: 'amber' },
-          { label: 'Horas Montacarguistas', value: 'Métrica 3', badgeColor: 'emerald' }
+          { label: 'Torre de Control & KPIs', value: '11 Indicadores', badgeColor: 'blue' },
+          { label: '6 Ejes Operativos', value: 'Recepción a Admin', badgeColor: 'amber' },
+          { label: 'Topología 2D & Rendimiento', value: 'Supervisión', badgeColor: 'emerald' }
         ];
       } else if (role === 'CONTROL_DESK') {
         welcomeText = '🎓 **Modo Tutor: Mesa de Control**\nBienvenido al centro de inducción operativa. Puedes iniciar el **Tour Operativo** o consultarme sobre validación de vida útil (≥ 365 días), asignación de misiones a RF y despachos FEFO.';
@@ -165,7 +165,7 @@ export class ForbotEngineService {
           sender: 'bot',
           intent: 'TOUR_DRIVER_JS',
           timestamp: this.getCurrentTimestamp(),
-          text: '🎉 **¡Felicidades!** Has completado el recorrido guiado correspondiente a tu perfil en 4GUARD WMS. Ahora puedes consultar cualquier duda operativa o volver al **Modo Operativo**.'
+          text: '🎉 **¡Felicidades!** Has completado el **Tour Gerencial Completo (19 Pasos)** en 4GUARD WMS. Ahora cuentas con dominio total de la Torre de Control, los módulos de supervisión operativa y las herramientas analíticas. Puedes consultarme cualquier duda operativa o volver al **Modo Operativo**.'
         }
       ]);
     });
