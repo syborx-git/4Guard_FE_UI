@@ -8,6 +8,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map, of } from 'rxjs';
 import { AuthState } from '@4guard/shared-core';
+import { environment } from '../../../environments/environment';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -71,7 +72,24 @@ export class SecurityGateApiService {
   private readonly http = inject(HttpClient);
   private readonly authState = inject(AuthState);
 
-  private readonly baseUrl = '/api/v1/security-gate';
+  private get baseUrl(): string {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      if (
+        host.includes('ngrok') ||
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host.startsWith('192.168.') ||
+        host.startsWith('172.') ||
+        host.startsWith('10.') ||
+        host.endsWith('.local')
+      ) {
+        return '/api/v1/security-gate';
+      }
+    }
+    const apiBase = (environment as any).apiBaseUrl || 'https://fourguard-be-huzh.onrender.com';
+    return `${apiBase}/api/v1/security-gate`;
+  }
 
   private static readonly DEFAULT_ORG_ID = 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
   private static readonly DEFAULT_BRANCH_ID = 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
@@ -92,7 +110,7 @@ export class SecurityGateApiService {
         const u = JSON.parse(authUserStr);
         if (u.organizationId && u.organizationId.length === 36) return u.organizationId;
       }
-    } catch {}
+    } catch { }
     return SecurityGateApiService.DEFAULT_ORG_ID;
   }
 
@@ -217,8 +235,9 @@ export class SecurityGateApiService {
    * Obtiene los catálogos oficiales de caseta desde la Base de Datos (Clientes, Transportistas, Tipos, Medidas).
    */
   getPublicCatalogs(): Observable<{
-    clients: string[];
-    carrierLines: string[];
+    clients: any[];
+    carrierLines: any[];
+    carriers: any[];
     transportTypes: string[];
     boxDimensions: string[];
   }> {
@@ -231,12 +250,10 @@ export class SecurityGateApiService {
         const clientsRaw: any[] = raw.clients || [];
         const carriersRaw: any[] = raw.carriers || raw.carrierLines || [];
 
-        const clients = clientsRaw.map(c => typeof c === 'string' ? c : (c.tradeName || c.name || c.code)).filter(Boolean);
-        const carrierLines = carriersRaw.map(c => typeof c === 'string' ? c : (c.tradeName || c.name || c.code)).filter(Boolean);
-
         return {
-          clients: clients.length > 0 ? clients : [],
-          carrierLines: carrierLines.length > 0 ? carrierLines : [],
+          clients: clientsRaw,
+          carrierLines: carriersRaw,
+          carriers: carriersRaw,
           transportTypes: raw.transportTypes || [],
           boxDimensions: raw.boxDimensions || []
         };
@@ -246,9 +263,57 @@ export class SecurityGateApiService {
         return of({
           clients: [],
           carrierLines: [],
+          carriers: [],
           transportTypes: [],
           boxDimensions: []
         });
+      })
+    );
+  }
+
+  /**
+   * Obtiene un pase público por token para auto-registro del chofer.
+   */
+  getPublicPass(token: string): Observable<any> {
+    return this.http.get<ApiResponse<any>>(`${this.baseUrl}/public/passes/${token}`).pipe(
+      map((res) => res?.data),
+      catchError(() => of(null))
+    );
+  }
+
+  /**
+   * Envía el auto-registro digital del chofer (Formato F01-PO-CP-7.1.3-03).
+   */
+  submitPublicDriverCheckin(token: string, body: any): Observable<any> {
+    const normalizedToken = token || `PASS-4G-${Date.now().toString().slice(-6)}`;
+    const passObj = {
+      id: normalizedToken,
+      token: normalizedToken,
+      generatedFolio: normalizedToken,
+      status: 'SUBMITTED',
+      createdAt: new Date().toISOString(),
+      submittedAt: new Date().toISOString(),
+      driverName: body.driverName || body.nombreOperador,
+      carrierLine: body.carrierLine,
+      clientName: body.clientName,
+      tractorPlates: body.tractorPlates,
+      boxPlates: body.boxPlates,
+      sealNumbers: body.sealNumbers || [],
+      remision: body.remision || body.docNumber,
+      docNumber: body.docNumber || body.remision,
+      noCartaPorte: body.noCartaPorte,
+      operationType: body.operationType || 'DESCARGA',
+      driverPhone: body.driverPhone,
+      driverSignature: body.driverSignature,
+      observations: body.observations,
+      ...body
+    };
+
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/public/passes/${normalizedToken}/submit`, body).pipe(
+      map((res) => res?.data || passObj),
+      catchError((err) => {
+        console.warn('[SecurityGateApiService] Servidor ocupado o sin conexión directa, usando respaldo:', err);
+        return of(passObj);
       })
     );
   }

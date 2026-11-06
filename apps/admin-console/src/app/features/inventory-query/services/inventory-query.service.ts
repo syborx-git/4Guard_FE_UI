@@ -28,6 +28,21 @@ export class InventoryQueryService {
   public readonly rawInventory = this._rawInventory.asReadonly();
   public readonly activeFilters = this._activeFilters.asReadonly();
 
+  constructor() {
+    this.refreshInventory();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', (e) => {
+        if (e.key === '4guard_receptions_cache' || e.key === '4guard_simulated_positions') {
+          this.refreshInventory();
+        }
+      });
+    }
+  }
+
+  public refreshInventory(): void {
+    this._rawInventory.set(this.buildMockInventory());
+  }
+
   /**
    * Computed Signal: Registros filtrados multicriterio + Regla de Caducidad de Pablo
    */

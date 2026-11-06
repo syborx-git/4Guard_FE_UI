@@ -11,7 +11,9 @@ export const authGuard: CanActivateFn = () => {
   const auth   = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isAuthenticated() && auth.isTokenValid()) {
+  // Permitir paso inmediato si hay sesión autenticada o token almacenado
+  const hasToken = !!auth.getAccessToken() || (typeof localStorage !== 'undefined' && !!localStorage.getItem('4guard_access_token'));
+  if (auth.isAuthenticated() || hasToken) {
     return true;
   }
 

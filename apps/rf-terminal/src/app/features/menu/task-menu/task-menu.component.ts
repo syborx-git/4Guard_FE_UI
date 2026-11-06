@@ -71,7 +71,7 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
       route: '/cockpit',
       bannerTheme: 'inbound',
     },
-    allowedModuleIds: ['mod-cockpit', 'mod-counting', 'mod-print'],
+    allowedModuleIds: ['mod-receiving', 'mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
   },
 
   [UserRole.SECURITY_GUARD]: {
@@ -140,7 +140,7 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
       route: '/cockpit',
       bannerTheme: 'supervisor',
     },
-    allowedModuleIds: ['mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
+    allowedModuleIds: ['mod-receiving', 'mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
   },
 
   [UserRole.SHIFT_LEADER]: {
@@ -163,7 +163,7 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
       route: '/cockpit',
       bannerTheme: 'supervisor',
     },
-    allowedModuleIds: ['mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
+    allowedModuleIds: ['mod-receiving', 'mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
   },
 
   [UserRole.OPERATIONS_SUPERVISOR]: {
@@ -186,7 +186,7 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
       route: '/cockpit',
       bannerTheme: 'supervisor',
     },
-    allowedModuleIds: ['mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
+    allowedModuleIds: ['mod-receiving', 'mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
   },
 
   [UserRole.OPERATIONS_COORDINATOR]: {
@@ -209,7 +209,7 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
       route: '/cockpit',
       bannerTheme: 'supervisor',
     },
-    allowedModuleIds: ['mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
+    allowedModuleIds: ['mod-receiving', 'mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
   },
 
   [UserRole.OPERATIONS_MANAGER]: {
@@ -232,7 +232,7 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
       route: '/cockpit',
       bannerTheme: 'supervisor',
     },
-    allowedModuleIds: ['mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
+    allowedModuleIds: ['mod-receiving', 'mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
   },
 
   [UserRole.ADMIN]: {
@@ -255,7 +255,7 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
       route: '/cockpit',
       bannerTheme: 'supervisor',
     },
-    allowedModuleIds: ['mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
+    allowedModuleIds: ['mod-receiving', 'mod-cockpit', 'mod-security', 'mod-quality', 'mod-counting', 'mod-print'],
   },
 };
 
@@ -280,6 +280,16 @@ export class TaskMenuComponent {
 
   // ─── Catálogo Maestro de Módulos Operativos ──────────────────────────────────
   protected readonly allModules: RfOperationalModule[] = [
+    {
+      id: 'mod-receiving',
+      icon: 'move_to_inbox',
+      title: 'Recepción y Descarga en Andén',
+      description: 'Lectura de tarimas con cámara/láser, parámetros activos de SKU y lotes, y conclusión de descarga física F01.',
+      badgeText: 'Andén en Vivo',
+      badgeType: 'amber',
+      actionLabel: 'Abrir Descarga',
+      route: '/receiving',
+    },
     {
       id: 'mod-cockpit',
       icon: 'forklift',

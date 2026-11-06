@@ -452,6 +452,19 @@
                 </div>
               }
 
+              <!-- Botón de Asignación Rápida de Andén 1-12 cuando la unidad está en Caseta / Patio -->
+              @if (rec.status === 'REGISTERED') {
+                <button
+                  type="button"
+                  (click)="openQuickRampModal(rec); $event.stopPropagation()"
+                  class="mt-2.5 mb-1.5 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
+                  title="Asignar andén 1-12 en 1 clic y autorizar acceso en caseta"
+                >
+                  <span class="material-symbols-outlined text-base">dock</span>
+                  <span>Asignar Rampa (1 Clic) ➔</span>
+                </button>
+              }
+
               <!-- Card Footer -->
               <div class="executive-card-footer">
                 <div class="executive-verif-badge">
@@ -824,6 +837,88 @@
               </div>
             </div>
           </div>
+
+          <!-- 2.5 ASIGNACIÓN DE ANDÉN EN RECEPCIÓN (PANTALLA OPERATIVA DE PABLO) -->
+          @if (rec.status === 'REGISTERED') {
+            <div class="p-4 sm:p-5 rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-500/10 via-slate-900/90 to-slate-950 shadow-xl my-4 animate-fade-in">
+              <div class="flex items-center justify-between flex-wrap gap-2.5 mb-3.5">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-2xl">dock</span>
+                  </div>
+                  <div>
+                    <h3 class="text-xs sm:text-sm font-black text-slate-100 uppercase tracking-wide m-0 flex items-center gap-2">
+                      <span>Asignación de Andén en Recepción (1 Clic)</span>
+                      @if (rec.checkIn?.rampNumber) {
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                          Rampa {{ rec.checkIn.rampNumber }} Asignada
+                        </span>
+                      } @else {
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+                          Unidad en Espera en Patio
+                        </span>
+                      }
+                    </h3>
+                    <p class="text-[11px] text-slate-400 m-0 mt-0.5">
+                      Seleccione la rampa libre para enviar la orden inmediata a <strong>Caseta (Levantar Pluma)</strong> y a la <strong>Tablet del Montacarguista</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3 text-[10px]">
+                  <span class="inline-flex items-center gap-1 text-emerald-400 font-bold">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Libre
+                  </span>
+                  <span class="inline-flex items-center gap-1 text-amber-400 font-bold">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> Ocupada
+                  </span>
+                </div>
+              </div>
+
+              <!-- Grid 1-12 de Rampas (Estilo Homologado Idéntico a Caseta) -->
+              <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
+                @for (rm of STANDARD_WAREHOUSE_RAMPS; track rm.rampNumber) {
+                  <button
+                    type="button"
+                    (click)="quickAssignRamp(rm, rec)"
+                    [disabled]="isAssigning()"
+                    class="p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] relative group"
+                    [ngClass]="{
+                      'border-[#b8860b] bg-[#d4af37]/20 ring-2 ring-[#b8860b] shadow-lg shadow-amber-500/10': isRampSelectedInAlta(rm.rampNumber, rec),
+                      'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-400 hover:bg-emerald-500/15 hover:scale-[1.02]': !isRampSelectedInAlta(rm.rampNumber, rec) && isRampAvailable(rm.rampNumber),
+                      'border-slate-700 bg-slate-800/40 opacity-75 hover:border-amber-500/50': !isRampSelectedInAlta(rm.rampNumber, rec) && !isRampAvailable(rm.rampNumber)
+                    }"
+                    [title]="getRampOccupancy(rm.rampNumber) ? (getRampOccupancy(rm.rampNumber)?.statusLabel + ' - Folio #' + (getRampOccupancy(rm.rampNumber)?.operationFolio || 'S/N')) : 'Clic para asignar rampa inmediata'"
+                  >
+                    <div class="flex items-center justify-between w-full">
+                      <span class="font-mono font-black text-xs sm:text-sm text-slate-100">
+                        R-{{ rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber }}
+                      </span>
+                      @if (isRampSelectedInAlta(rm.rampNumber, rec)) {
+                        <span class="material-symbols-outlined text-sm text-[#b8860b]">check_circle</span>
+                      } @else if (!isRampAvailable(rm.rampNumber)) {
+                        <span class="material-symbols-outlined text-xs text-amber-400" title="Rampa ocupada">lock</span>
+                      } @else {
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      }
+                    </div>
+
+                    <div class="mt-1">
+                      @if (!isRampAvailable(rm.rampNumber)) {
+                        <span class="text-[10px] font-mono text-amber-400 block truncate font-bold">
+                          #{{ getRampOccupancy(rm.rampNumber)?.operationFolio || 'Ocupada' }}
+                        </span>
+                      } @else {
+                        <span class="text-[10px] font-bold text-emerald-400 block group-hover:underline">
+                          {{ isRampSelectedInAlta(rm.rampNumber, rec) ? 'Asignada' : 'Disponible ➔' }}
+                        </span>
+                      }
+                    </div>
+                  </button>
+                }
+              </div>
+            </div>
+          }
 
           <!-- 3. SECCIÓN 2: PARÁMETROS DE LA RECEPCIÓN Y CONTROL DE LOTES -->
           @if (rec.status === 'REGISTERED') {
@@ -4391,6 +4486,104 @@
           <span class="text-slate-400 text-xs">{{ remissionTreeLogs().length }} evento(s) inmutable(s)</span>
           <button (click)="closeRemissionTreeModal()" class="btn-primary-gold text-xs px-4 py-2 rounded-xl font-bold">
             Entendido
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL: ASIGNACIÓN RÁPIDA DE RAMPA 1-12 (DIRECTO DESDE EL DIRECTORIO)
+       ═══════════════════════════════════════════════════════════════════════ -->
+  @if (showQuickRampModal() && quickRampModalRec(); as qRec) {
+    <div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fade-in" role="dialog" aria-modal="true" (click)="closeQuickRampModal()">
+      <div class="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl space-y-4" (click)="$event.stopPropagation()">
+        <!-- Header -->
+        <div class="flex items-start justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-xl">dock</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm sm:text-base font-black text-slate-100 uppercase tracking-wide m-0">
+                  Asignar Andén a Unidad en Patio
+                </h3>
+                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  Folio #{{ qRec.folio }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5 m-0">
+                {{ qRec.checkIn.client || 'Cliente' }} · Chofer: {{ qRec.checkIn.driverName || 'S/N' }} · Placas: {{ qRec.checkIn.tractorPlates || 'S/P' }}
+              </p>
+            </div>
+          </div>
+          <button (click)="closeQuickRampModal()" class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <!-- Instrucción -->
+        <div class="flex items-center justify-between text-xs text-slate-400">
+          <span>Seleccione el andén físico asignado:</span>
+          <div class="flex items-center gap-3 text-[10px]">
+            <span class="inline-flex items-center gap-1 text-emerald-400 font-bold">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Libre
+            </span>
+            <span class="inline-flex items-center gap-1 text-amber-400 font-bold">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Ocupada
+            </span>
+          </div>
+        </div>
+
+        <!-- Grid 1-12 -->
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
+          @for (rm of STANDARD_WAREHOUSE_RAMPS; track rm.rampNumber) {
+            <button
+              type="button"
+              (click)="quickAssignRamp(rm, qRec)"
+              [disabled]="isAssigning()"
+              class="p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[74px] relative group"
+              [ngClass]="{
+                'border-[#b8860b] bg-[#d4af37]/20 ring-2 ring-[#b8860b] shadow-md': isRampSelectedInAlta(rm.rampNumber, qRec),
+                'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-400 hover:bg-emerald-500/15 hover:scale-[1.02]': !isRampSelectedInAlta(rm.rampNumber, qRec) && isRampAvailable(rm.rampNumber),
+                'border-slate-700 bg-slate-800/40 opacity-70 hover:border-amber-500/50': !isRampSelectedInAlta(rm.rampNumber, qRec) && !isRampAvailable(rm.rampNumber)
+              }"
+              [title]="getRampOccupancy(rm.rampNumber) ? (getRampOccupancy(rm.rampNumber)?.statusLabel + ' - Folio #' + (getRampOccupancy(rm.rampNumber)?.operationFolio || 'S/N')) : 'Asignar rampa'"
+            >
+              <div class="flex items-center justify-between w-full">
+                <span class="font-mono font-black text-sm text-slate-100">
+                  R-{{ rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber }}
+                </span>
+                @if (isRampSelectedInAlta(rm.rampNumber, qRec)) {
+                  <span class="material-symbols-outlined text-sm text-[#b8860b]">check_circle</span>
+                } @else if (!isRampAvailable(rm.rampNumber)) {
+                  <span class="material-symbols-outlined text-xs text-amber-400" title="Rampa ocupada">lock</span>
+                } @else {
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                }
+              </div>
+
+              <div class="mt-1">
+                @if (!isRampAvailable(rm.rampNumber)) {
+                  <span class="text-[10px] font-mono text-amber-400 block truncate font-bold">
+                    #{{ getRampOccupancy(rm.rampNumber)?.operationFolio || 'Ocupada' }}
+                  </span>
+                } @else {
+                  <span class="text-[10px] font-bold text-emerald-400 block group-hover:underline">
+                    {{ isRampSelectedInAlta(rm.rampNumber, qRec) ? 'Asignada' : 'Disponible ➔' }}
+                  </span>
+                }
+              </div>
+            </button>
+          }
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+          <span class="text-slate-500">Al hacer clic en una rampa disponible, se notificará a Caseta y Montacarguista.</span>
+          <button type="button" (click)="closeQuickRampModal()" class="px-3.5 py-1.5 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 cursor-pointer">
+            Cerrar
           </button>
         </div>
       </div>

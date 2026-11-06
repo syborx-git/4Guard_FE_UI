@@ -47,7 +47,7 @@ export class WarehouseMovementsApiService {
         return '';
       }
     }
-    return environment.apiBaseUrl;
+    return environment.apiBaseUrl || 'https://fourguard-be-huzh.onrender.com';
   }
 
   private get receptionsUrl(): string { return `${this.baseUrl}/api/v1/warehouse-receptions`; }
@@ -137,9 +137,9 @@ export class WarehouseMovementsApiService {
       params = params.set('branchId', options.branchId);
     }
 
-    return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/active`, { params }).pipe(
-      map((res) => {
-        const backendList = res?.data || [];
+    return this.http.get<any>(`${this.securityGateUrl}/passes/active`, { params }).pipe(
+      map((res: any) => {
+        const backendList = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
         const localList = this.getLocalSubmittedPasses();
         const mergedMap = new Map<string, any>();
         for (const item of localList) {
@@ -163,9 +163,12 @@ export class WarehouseMovementsApiService {
       params = params.set('branchId', options.branchId);
     }
 
-    return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/in-yard`, { params }).pipe(
-      timeout(8000),
-      map((res) => (res.data || []).filter((p: any) => p.status !== 'COMPLETED_EXIT')),
+    return this.http.get<any>(`${this.securityGateUrl}/passes/in-yard`, { params }).pipe(
+      timeout(15000),
+      map((res: any) => {
+        const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        return list.filter((p: any) => p.status !== 'COMPLETED_EXIT');
+      }),
       catchError(() => of([]))
     );
   }
@@ -178,9 +181,9 @@ export class WarehouseMovementsApiService {
     }
     if (options?.search) params = params.set('search', options.search);
 
-    return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/history`, { params }).pipe(
-      timeout(8000),
-      map((res) => res.data || []),
+    return this.http.get<any>(`${this.securityGateUrl}/passes/history`, { params }).pipe(
+      timeout(15000),
+      map((res: any) => Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : [])),
       catchError(() => of([]))
     );
   }
@@ -442,18 +445,30 @@ export class WarehouseMovementsApiService {
     if (options?.status && options.status !== 'ALL') params = params.set('status', options.status);
     if (options?.search) params = params.set('search', options.search);
 
-    return this.http.get<ApiResponse<any[]>>(this.receptionsUrl, { params }).pipe(
-      map((res) => {
-        const backendList = res?.data || [];
+    return this.http.get<any>(this.receptionsUrl, { params }).pipe(
+      timeout(15000),
+      map((res: any) => {
+        const backendList = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
         const localList = this.getLocalReceptions();
         const mergedMap = new Map<string, any>();
         for (const item of localList) {
-          const key = (item.id || item.folio || '').trim();
+          const key = (item.folio || item.docNumber || item.id || '').trim().toUpperCase();
           if (key) mergedMap.set(key, item);
         }
         for (const item of backendList) {
-          const key = (item.id || item.folio || '').trim();
-          if (key) mergedMap.set(key, item);
+          const key = (item.folio || item.docNumber || item.id || '').trim().toUpperCase();
+          if (key) {
+            const existing = mergedMap.get(key);
+            if (existing) {
+              if (item.status === 'DISCHARGED' || item.status === 'COMPLETED' || (item.pallets && item.pallets.length > (existing.pallets?.length || 0))) {
+                mergedMap.set(key, { ...existing, ...item });
+              } else {
+                mergedMap.set(key, { ...item, ...existing });
+              }
+            } else {
+              mergedMap.set(key, item);
+            }
+          }
         }
         const merged = Array.from(mergedMap.values());
         this.saveAllLocalReceptions(merged);
@@ -688,9 +703,10 @@ export class WarehouseMovementsApiService {
     if (options?.status && options.status !== 'ALL') params = params.set('status', options.status);
     if (options?.search) params = params.set('search', options.search);
 
-    return this.http.get<ApiResponse<any[]>>(this.outboundsUrl, { params }).pipe(
-      map((res) => {
-        const backendList = res?.data || [];
+    return this.http.get<any>(this.outboundsUrl, { params }).pipe(
+      timeout(15000),
+      map((res: any) => {
+        const backendList = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
         const localList = this.getLocalOutbounds();
         const mergedMap = new Map<string, any>();
         for (const item of localList) {

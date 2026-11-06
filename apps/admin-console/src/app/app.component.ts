@@ -7,6 +7,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { InactivityService } from './core/services/inactivity.service';
+import { BackendKeepAliveService } from './core/services/backend-keep-alive.service';
 import { ToastContainerComponent } from './shared/components/toast-container/toast-container.component';
 import { InactivityModalComponent } from './shared/components/inactivity-modal/inactivity-modal.component';
 
@@ -22,4 +23,6 @@ export class AppComponent {
 
   // Inyectar el servicio para activar el tracking de inactividad global
   protected readonly inactivityService = inject(InactivityService);
+  // Mantener despierto el backend en la nube en todo momento
+  protected readonly keepAliveService = inject(BackendKeepAliveService);
 }

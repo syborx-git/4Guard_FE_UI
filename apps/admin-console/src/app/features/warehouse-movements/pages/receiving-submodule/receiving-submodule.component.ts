@@ -1,6 +1,6 @@
-import { Component, ElementRef, ViewChild, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, ElementRef, ViewChild, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { debounceTime, distinctUntilChanged, timer, Subscription } from 'rxjs';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthState } from '../../../../core/auth/auth.state';
@@ -22,6 +22,7 @@ import {
   PatioUnitMonitor,
   RampOccupancyStatus,
   RampItem,
+  STANDARD_WAREHOUSE_RAMPS,
   ReturnDetectionResponse,
   ExpectedReturnPalletDto,
   VerifyPalletResponse,
@@ -72,7 +73,7 @@ export interface ShelfLifeEvaluation {
   templateUrl: './receiving-submodule.component.html',
   styleUrl: './receiving-submodule.component.css',
 })
-export class ReceivingSubmoduleComponent implements OnInit {
+export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   protected readonly authState = inject(AuthState);
   protected readonly Math      = Math;
   private readonly movementsService = inject(WarehouseMovementsService);
@@ -86,6 +87,118 @@ export class ReceivingSubmoduleComponent implements OnInit {
   private readonly printService = inject(PrintService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+
+  // ── MODO OPERATIVO TABLET / MONTACARGAS ──
+  isTabletModeActive = signal<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('4g_tablet_receiving_mode') !== 'false' : true);
+  private tabletPollingSub?: Subscription;
+
+  toggleTabletTestMode(): void {
+    const next = !this.isTabletModeActive();
+    this.isTabletModeActive.set(next);
+    try {
+      localStorage.setItem('4g_tablet_receiving_mode', String(next));
+    } catch (_) {}
+    if (next) {
+      this.toast.success('📱 Modo Tablet Montacarguista ACTIVADO: Las descargas son capturadas por el operador en la tablet RF y llegan listas para visto bueno y F01.');
+    } else {
+      this.toast.info('Modo Operativo Estándar (Manual en Consola) seleccionado.');
+    }
+  }
+
+  simulateTabletDischargeForTesting(rec: ReceptionHeader): void {
+    if (!rec) return;
+    const op = 'Alex Gabriel Pérez Garduño';
+    const prodId = rec.productId || rec.skuCode || '8505641';
+    const prodName = rec.productName || 'ABUELITA TABLETA 24X540G MX';
+    const lot = rec.lotNumber || 'LOT-2026-01';
+    const exp = rec.expirationDate || '2027-11-03';
+    const pzas = 135;
+
+    const simulatedPallets: ReceptionPalletItem[] = [
+      {
+        id: `pal-tab-${Date.now()}-1`,
+        palletNumber: 1,
+        palletCode: `07501000${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+        productId: prodId,
+        description: prodName,
+        pieces: pzas,
+        palletTypeId: 'MADERA_ESTANDAR',
+        palletTypeLabel: 'Madera Estándar',
+        lotNumber: lot,
+        expirationDate: exp,
+        observations: 'Tarima Completa - Descarga Tablet RF',
+        supplierName: rec.checkIn.client || 'QUALAMEX S.A. DE C.V.',
+        status: 'SCANNED',
+        docNumber: rec.checkIn.docNumber || rec.folio
+      },
+      {
+        id: `pal-tab-${Date.now()}-2`,
+        palletNumber: 2,
+        palletCode: `07501000${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+        productId: prodId,
+        description: prodName,
+        pieces: pzas,
+        palletTypeId: 'MADERA_ESTANDAR',
+        palletTypeLabel: 'Madera Estándar',
+        lotNumber: lot,
+        expirationDate: exp,
+        observations: 'Tarima Completa - Descarga Tablet RF',
+        supplierName: rec.checkIn.client || 'QUALAMEX S.A. DE C.V.',
+        status: 'SCANNED',
+        docNumber: rec.checkIn.docNumber || rec.folio
+      },
+      {
+        id: `pal-tab-${Date.now()}-3`,
+        palletNumber: 3,
+        palletCode: `07501000${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+        productId: prodId,
+        description: prodName,
+        pieces: 48,
+        palletTypeId: 'MADERA_ESTANDAR',
+        palletTypeLabel: 'Madera Estándar',
+        lotNumber: lot,
+        expirationDate: exp,
+        observations: 'Tarima Pico (48 pzas) - Descarga Tablet RF',
+        supplierName: rec.checkIn.client || 'QUALAMEX S.A. DE C.V.',
+        status: 'SCANNED',
+        docNumber: rec.checkIn.docNumber || rec.folio
+      }
+    ];
+
+    const totalPzas = 135 + 135 + 48;
+    const payload = {
+      status: 'DISCHARGED',
+      forkliftOperator: op,
+      forkliftOperatorName: op,
+      totalPallets: simulatedPallets.length,
+      totalPieces: totalPzas,
+      pallets: simulatedPallets,
+      observations: `Descarga física concluida en andén desde Terminal RF por ${op}. Turnado a Mesa de Control para Pauta F01.`,
+    };
+
+    const targetId = rec.id || rec.folio;
+    this.movementsApi.updateReceptionParameters(targetId, payload).subscribe({
+      next: () => {
+        this.toast.success(`🚜 Descarga de ${op} recibida: ${simulatedPallets.length} tarimas (${totalPzas} pzas) listas para visto bueno.`);
+        rec.status = 'DISCHARGED';
+        rec.checkIn.forkliftOperator = op;
+        rec.pallets = simulatedPallets;
+        this.selectedReception.set({ ...rec });
+        this.palletStream.set(simulatedPallets);
+        this.patchAltaFormWithReception(rec);
+        this.movementsService.reloadReceptions();
+      },
+      error: () => {
+        rec.status = 'DISCHARGED';
+        rec.checkIn.forkliftOperator = op;
+        rec.pallets = simulatedPallets;
+        this.selectedReception.set({ ...rec });
+        this.palletStream.set(simulatedPallets);
+        this.patchAltaFormWithReception(rec);
+        this.toast.success(`🚜 Simulación local activa: ${simulatedPallets.length} tarimas listas para visto bueno.`);
+      }
+    });
+  }
 
   goToManageCarriers(): void {
     this.router.navigate(['/admin/carriers']);
@@ -438,6 +551,115 @@ export class ReceivingSubmoduleComponent implements OnInit {
       return `${rm.name} (Ocupada - Folio #${occ.operationFolio})`;
     }
     return `${rm.name} (Ocupada - Salida #${occ.operationFolio})`;
+  }
+
+  // ── REINGENIERÍA: ASIGNACIÓN RÁPIDA DE ANDÉN 1-12 (MESA DE CONTROL / PABLO) ──
+  protected readonly STANDARD_WAREHOUSE_RAMPS = STANDARD_WAREHOUSE_RAMPS;
+  protected readonly showQuickRampModal = signal<boolean>(false);
+  protected readonly quickRampModalRec = signal<ReceptionHeader | null>(null);
+
+  openQuickRampModal(rec: ReceptionHeader): void {
+    this.quickRampModalRec.set(rec);
+    this.showQuickRampModal.set(true);
+  }
+
+  closeQuickRampModal(): void {
+    this.showQuickRampModal.set(false);
+    this.quickRampModalRec.set(null);
+  }
+
+  isRampSelectedInAlta(rampNumber: number, targetRec?: ReceptionHeader | null): boolean {
+    const rec = targetRec || this.quickRampModalRec() || this.selectedReception();
+    if (!rec) return false;
+    const currentRamp = rec.checkIn?.rampNumber || this.altaForm.get('rampNumber')?.value;
+    return Number(currentRamp) === rampNumber;
+  }
+
+  isRampAvailable(rampNumber: number): boolean {
+    const occ = this.getRampOccupancy(rampNumber);
+    return !occ || occ.status === 'AVAILABLE';
+  }
+
+  quickAssignRamp(rm: RampItem, targetRec?: ReceptionHeader | null): void {
+    const current = targetRec || this.quickRampModalRec() || this.selectedReception();
+    if (!current) {
+      this.toast.warning('Seleccione una recepción para asignarle andén.');
+      return;
+    }
+
+    const rNum = rm.rampNumber;
+    const rCode = rm.code || `LOC-RAMP-${String(rNum).padStart(2, '0')}`;
+    const rName = rm.name || `Rampa ${String(rNum).padStart(2, '0')}`;
+
+    // Validar si la rampa está ocupada por otra operación
+    const occ = this.getRampOccupancy(rNum);
+    if (occ && occ.status !== 'AVAILABLE' && String(occ.operationFolio) !== String(current.folio)) {
+      this.toast.warning(`⚠️ La ${rName} se encuentra actualmente ocupada por Folio #${occ.operationFolio || 'S/N'}.`);
+      return;
+    }
+
+    const recId = current.id || current.folio;
+    const adminUser = this.authState.userFullName() || this.authState.currentUser()?.email || 'Mesa de Control (Pablo)';
+    const operator = current.checkIn?.forkliftOperator || this.altaForm.get('forkliftOperator')?.value || 'Alex Gabriel Perez Garduño';
+
+    const formVals = {
+      rampNumber: rNum,
+      rampCode: rCode,
+      forkliftOperator: operator,
+      storageLocation: `STAGING-R${String(rNum).padStart(2, '0')}`,
+      clientCode: current.checkIn.clientCode || 'GENERIC',
+      supplierName: current.supplierName || current.checkIn.client || 'Cliente General',
+      productId: current.productId || this.products()[0]?.id || 'PROD-001',
+      productName: current.productName || this.products()[0]?.name || 'Mercancía General',
+      lotNumber: this.getActiveLot()?.lotNumber || current.lotNumber || 'LOT-2026-01',
+      expirationDate: this.getActiveLot()?.expirationDate || new Date(Date.now() + 31536000000).toISOString().slice(0, 10),
+      piecesPerPallet: current.piecesPerPallet || 135,
+      selectedPalletType: (current as any).palletType || 'Madera Estándar'
+    };
+
+    this.isAssigning.set(true);
+    this.movementsService
+      .assignReception(recId, formVals, this.products(), this.suppliers(), adminUser)
+      .subscribe({
+        next: (updated) => {
+          this.isAssigning.set(false);
+          this.selectedReception.set(updated);
+          this.patchAltaFormWithReception(updated);
+          this.closeQuickRampModal();
+
+          this.toast.success(`¡Folio #${updated.folio} asignado a ${rName}! Orden enviada a Caseta y Montacarguista.`);
+
+          // Despachar alerta inmediata a Caseta de Seguridad (DAR ACCESO A LA UNIDAD)
+          const alertTitle = `🟢 DAR ACCESO A LA UNIDAD · PASAR A ${rName.toUpperCase()}`;
+          const alertMessage = `${rName} asignada para Folio #${updated.folio} (${updated.checkIn.client || 'Cliente'}) — Eco: ${updated.checkIn.noEcoTractor || 'S/N'} | Chofer: ${updated.checkIn.driverName || 'Transportista'} (Placas: ${updated.checkIn.tractorPlates || 'S/P'}). Indique al operador avanzar de inmediato a ${rName}.`;
+
+          this.smartNotification.dispatch({
+            category: 'SECURITY',
+            title: alertTitle,
+            message: alertMessage,
+            referenceFolio: updated.folio,
+            route: '/security',
+            targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+            targetRoutes: ['/security'],
+            severity: 'SUCCESS',
+            data: {
+              ...updated,
+              rampNumber: rNum,
+              rampCode: rCode,
+              tractorPlates: updated.checkIn.tractorPlates,
+              driverName: updated.checkIn.driverName,
+              carrierLine: updated.checkIn.carrierLine,
+              client: updated.checkIn.client,
+              noEcoTractor: updated.checkIn.noEcoTractor
+            }
+          });
+        },
+        error: (err) => {
+          this.isAssigning.set(false);
+          const msg = err?.error?.message || err?.message || 'Error al asignar la rampa';
+          this.toast.error(msg);
+        }
+      });
   }
 
   // Banner colapsable / expandible de la cola de notificaciones
@@ -859,7 +1081,8 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   kpiTotal = computed(() => this.boardReceptions().length);
   kpiRegistered = computed(() => this.boardReceptions().filter((r) => r.status === 'REGISTERED').length);
-  kpiInProcess = computed(() => this.boardReceptions().filter((r) => r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED').length);
+  kpiInProcess = computed(() => this.boardReceptions().filter((r) => r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS').length);
+  kpiDischarged = computed(() => this.boardReceptions().filter((r) => r.status === 'DISCHARGED').length);
   kpiCompleted = computed(() => {
     const today = new Date().toISOString().slice(0, 10);
     return this.boardReceptions().filter((r) => r.status === 'COMPLETED' && (r.checkIn?.docDate === today || (r as any).docDate === today || (r as any).completedAt?.startsWith(today) || (r as any).createdAt?.startsWith(today))).length;
@@ -945,14 +1168,20 @@ export class ReceivingSubmoduleComponent implements OnInit {
       if (multi.length > 0) {
         matchStatus = multi.some((m) => {
           if (m === 'REENTRY') return r.operationType === 'REENTRY' || !!r.sourceOutboundFolio;
+          if (m === 'DISCHARGED') return r.status === 'DISCHARGED';
           if (m === 'IN_PROGRESS') return r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED';
+          if (m === 'REGISTERED' && this.isTabletModeActive() && r.status === 'DISCHARGED') return true;
           return r.status === m;
         });
       } else if (st !== 'ALL') {
         if (st === 'REENTRY') {
           matchStatus = r.operationType === 'REENTRY' || !!r.sourceOutboundFolio;
+        } else if (st === 'DISCHARGED') {
+          matchStatus = r.status === 'DISCHARGED';
         } else if (st === 'IN_PROGRESS') {
           matchStatus = r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED';
+        } else if (st === 'REGISTERED' && this.isTabletModeActive() && r.status === 'DISCHARGED') {
+          matchStatus = true;
         } else {
           matchStatus = r.status === st;
         }
@@ -984,6 +1213,28 @@ export class ReceivingSubmoduleComponent implements OnInit {
     // Estado inicial: Siempre iniciar en Sin selección (Empty State WMS)
     this.formMode.set('idle');
     this.selectedReception.set(null);
+
+    // Sincronización reactiva en tiempo real con descargas concluidas desde la Tablet RF
+    effect(() => {
+      const allRecs = this.movementsService.receptions();
+      const current = this.selectedReception();
+      if (!current) return;
+      const key = (current.folio || current.id || '').trim().toUpperCase();
+      const match = allRecs.find(
+        (r) => (r.folio && r.folio.trim().toUpperCase() === key) || (r.id && r.id.trim().toUpperCase() === key)
+      );
+      if (match) {
+        const curPallets = this.palletStream().length;
+        const newPallets = match.pallets?.length || 0;
+        if (match.status !== current.status || newPallets > curPallets) {
+          this.selectedReception.set(match);
+          if (newPallets > 0) {
+            this.palletStream.set([...(match.pallets || [])]);
+          }
+          this.patchAltaFormWithReception(match);
+        }
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -1133,6 +1384,36 @@ export class ReceivingSubmoduleComponent implements OnInit {
         this.toast.error(msg);
       }
     });
+
+    // Polling inteligente cada 3.5 segundos para sincronizar con la Tablet RF del Montacarguista
+    this.tabletPollingSub = timer(2000, 3500).subscribe(() => {
+      this.movementsService.reloadReceptions();
+      const current = this.selectedReception();
+      if (current && current.id && this.formMode() === 'detail') {
+        this.movementsApi.getReceptionById(current.id).subscribe({
+          next: (fullData) => {
+            if (!fullData) return;
+            const mapped = this.movementsService.mapReceptionResponseToHeader(fullData);
+            const streamCount = this.palletStream().length;
+            const newCount = mapped.pallets ? mapped.pallets.length : 0;
+            if (mapped.status !== current.status || newCount !== streamCount) {
+              this.selectedReception.set(mapped);
+              if (mapped.pallets && mapped.pallets.length > 0) {
+                this.palletStream.set([...mapped.pallets]);
+              }
+              this.patchAltaFormWithReception(mapped);
+            }
+          },
+          error: () => {}
+        });
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.tabletPollingSub) {
+      this.tabletPollingSub.unsubscribe();
+    }
   }
 
   openRemissionTreeModal(folio: string): void {
@@ -1240,6 +1521,16 @@ export class ReceivingSubmoduleComponent implements OnInit {
   // ── OPERACIONES DEL WORKBENCH ──
 
   selectReception(rec: ReceptionHeader): void {
+    // Si la recepción recibida no trae tarimas, verificar si el servicio reactivo ya las tiene cargadas
+    if (!rec.pallets || rec.pallets.length === 0) {
+      const matchInService = this.movementsService.receptions().find(
+        (r) => (r.folio && r.folio.trim().toUpperCase() === rec.folio?.trim().toUpperCase()) || (r.id && r.id === rec.id)
+      );
+      if (matchInService?.pallets && matchInService.pallets.length > 0) {
+        rec = { ...rec, pallets: matchInService.pallets, status: matchInService.status || rec.status };
+      }
+    }
+
     this.formMode.set('detail');
     this.selectedReception.set(rec);
     localStorage.setItem('4g_active_reception_folio', rec.folio);

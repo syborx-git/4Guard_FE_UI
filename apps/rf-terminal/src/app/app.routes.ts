@@ -11,6 +11,28 @@ import { offlineGuard } from './core/guards/offline.guard';
 import { rfRoleGuard }  from './core/guards/role.guard';
 
 export const rfRoutes: Routes = [
+  // Portal Público Móvil de Auto-Registro del Chofer en Caseta (Formato F01-PO-CP-7.1.3-03)
+  {
+    path: 'carrier-checkin',
+    loadComponent: () =>
+      import('./features/security/carrier-checkin/carrier-checkin.component').then(
+        (m) => m.CarrierCheckinComponent
+      ),
+    title: '4GUARD WMS - Auto-Registro de Transporte (Caseta)',
+  },
+  {
+    path: 'carrier-checkin/:token',
+    loadComponent: () =>
+      import('./features/security/carrier-checkin/carrier-checkin.component').then(
+        (m) => m.CarrierCheckinComponent
+      ),
+    title: '4GUARD WMS - Auto-Registro de Transporte (Caseta)',
+  },
+  { path: 'public/checkin', redirectTo: 'carrier-checkin', pathMatch: 'full' },
+  { path: 'public/checkin/:token', redirectTo: 'carrier-checkin/:token' },
+  { path: 'driver-checkin', redirectTo: 'carrier-checkin', pathMatch: 'full' },
+  { path: 'security/check-in', redirectTo: 'carrier-checkin', pathMatch: 'full' },
+
   // Login
   {
     path: 'login',

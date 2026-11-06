@@ -171,6 +171,15 @@ export class ShellComponent implements OnInit, OnDestroy {
     );
   });
 
+  // Notificador Inteligente de Patio (Unidades en Caseta sin Andén)
+  protected readonly pendingPatioReceptionsCount = computed(() => {
+    return this.movementsService.receptions().filter(r => r.status === 'REGISTERED' && !r.checkIn?.rampNumber).length;
+  });
+
+  protected navigateToPatioWaiting(): void {
+    this.router.navigate(['/warehouse-movements/receiving'], { queryParams: { filter: 'REGISTERED' } });
+  }
+
   constructor() {
     effect(() => {
       const arrived = this.movementsService.latestArrivedReception();

@@ -159,51 +159,56 @@
     </div>
   </header>
 
-  <!-- ── 2.5 BANNER EN VIVO: RAMPAS ASIGNADAS POR ALMACÉN (RECEPCIÓN / SALIDA) ── -->
+  <!-- ── 2.5 BANNER EN VIVO: RAMPAS ASIGNADAS POR ALMACÉN (DAR ACCESO A UNIDAD) ── -->
   @if (pendingRampAssignments().length > 0) {
     <section class="security-ramp-alerts-container mb-4 space-y-2 animate-fade-in" aria-label="Avisos de Rampas Asignadas por Almacén">
       @for (ramp of pendingRampAssignments(); track ramp.folio) {
-        <div class="security-ramp-alert-card flex items-center justify-between gap-3 p-3.5 rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 shadow-lg">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shrink-0 animate-bounce">
-              <span class="material-symbols-outlined text-2xl">dock</span>
+        <div class="security-ramp-alert-card flex items-center justify-between gap-3 p-4 rounded-2xl border-2 border-emerald-500 bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-950 shadow-2xl shadow-emerald-500/20">
+          <div class="flex items-center gap-3.5 min-w-0">
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 flex items-center justify-center shrink-0 animate-bounce">
+              <span class="material-symbols-outlined text-3xl">meeting_room</span>
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 uppercase tracking-wide">
-                  🎯 Rampa Asignada por Almacén
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-500 text-slate-950 uppercase tracking-wider shadow-sm flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-slate-950 animate-ping"></span>
+                  🟢 DAR ACCESO A LA UNIDAD · PASAR A RAMPA {{ ramp.rampNumber }}
                 </span>
-                <span class="font-mono font-bold text-xs text-amber-400">Folio #{{ ramp.folio }}</span>
+                <span class="font-mono font-bold text-xs text-amber-300">Folio #{{ ramp.folio }}</span>
                 <span class="text-[11px] text-slate-400 font-mono">{{ ramp.time }}</span>
               </div>
-              <h3 class="text-xs sm:text-sm font-bold text-slate-100 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                <span>Rampa <strong>R-{{ ramp.rampNumber }}</strong> asignada a</span>
-                <span class="text-emerald-300">{{ ramp.carrierLine || 'Transportista' }}</span>
+              <h3 class="text-xs sm:text-sm font-black text-slate-100 mt-1 flex items-center gap-1.5 flex-wrap">
+                <span class="text-white">Unidad:</span>
+                <span class="text-amber-300">{{ ramp.client || ramp.carrierLine || 'Transportista' }}</span>
+                @if (ramp.noEcoTractor && ramp.noEcoTractor !== 'S/N') {
+                  <span class="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] border border-amber-500/30">Eco: {{ ramp.noEcoTractor }}</span>
+                }
+                <span class="px-1.5 py-0.2 rounded bg-slate-800 text-emerald-300 font-mono text-[10px] border border-emerald-500/40">Placas: {{ ramp.tractorPlates }}</span>
                 <span class="text-slate-400">· Chofer:</span>
-                <span class="text-slate-200">{{ ramp.driverName }}</span>
-                <span class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono text-[10px] border border-slate-700">Placas: {{ ramp.tractorPlates }}</span>
+                <span class="text-slate-100">{{ ramp.driverName }}</span>
               </h3>
-              <p class="text-[11px] text-emerald-400/90 font-medium">
-                Indique verbalmente al operador transportista avanzar de inmediato a la <strong>Rampa {{ ramp.rampNumber }}</strong>.
+              <p class="text-xs text-emerald-300 font-bold mt-0.5 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                <span>Levante la pluma vehicular e indique al operador atracar de inmediato en la <strong>Rampa {{ ramp.rampNumber }}</strong>.</span>
               </p>
             </div>
           </div>
 
-          <div class="flex items-center gap-2 shrink-0">
+          <div class="flex items-center gap-2.5 shrink-0">
             <button
               type="button"
               (click)="attendRampAssignment(ramp)"
-              class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all cursor-pointer"
-              title="Localizar unidad en el listado de patio"
+              class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/25 transition-all cursor-pointer active:scale-95"
+              title="Confirmar acceso concedido y ver unidad en patio"
             >
-              <span class="material-symbols-outlined text-sm">local_shipping</span>
-              <span>Ver en Patio</span>
+              <span class="material-symbols-outlined text-base">check_circle</span>
+              <span>Dar Acceso (Levantar Pluma)</span>
             </button>
             <button
               type="button"
               (click)="dismissRampNotice(ramp.folio, $event)"
-              class="w-7 h-7 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-all cursor-pointer"
-              title="Descartar aviso de rampa"
+              class="w-8 h-8 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-all cursor-pointer"
+              title="Descartar aviso"
             >
               <span class="material-symbols-outlined text-sm">close</span>
             </button>
@@ -1598,12 +1603,12 @@
                   </td>
                   <td>
                     @if (hasRampAssigned(item)) {
-                      <span class="cell-ramp-badge cell-ramp-badge--assigned animate-pulse" title="Rampa física asignada. Indicar al transportista posicionarse en la rampa.">
-                        🔔 {{ formatRampDisplay(item) }}
+                      <span class="cell-ramp-badge cell-ramp-badge--assigned animate-pulse !bg-emerald-500/25 !text-emerald-300 !border-emerald-500/50 font-bold" title="Rampa física asignada por Almacén. Indique al chofer atracar en este andén.">
+                        🟢 DAR ACCESO · {{ formatRampDisplay(item) }}
                       </span>
                     } @else {
-                      <span class="cell-ramp-badge cell-ramp-badge--pending" title="Unidad estacionada en patio en espera de rampa">
-                        🅿️ En Patio (En Espera)
+                      <span class="cell-ramp-badge cell-ramp-badge--pending" title="Unidad estacionada en patio en espera de asignación de andén por Mesa de Control">
+                        🅿️ En Espera de Andén
                       </span>
                     }
                   </td>

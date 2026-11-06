@@ -336,6 +336,22 @@
 
       }
 
+      
+      <!-- ░░ Acceso Directo de Alta Velocidad (Tablet / Móvil / Montacargas) ░░ -->
+      <div class="rf-quick-access-box" style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px dashed rgba(245, 158, 11, 0.25); display: flex; flex-direction: column; gap: 0.75rem;">
+        <button id="btn-quick-operator" type="button" (click)="quickLogin('operator')" class="rf-btn"
+          style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #020617; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.04em; border: none; padding: 0.9rem 1.25rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; box-shadow: 0 4px 18px rgba(245, 158, 11, 0.45); transition: transform 0.15s ease;">
+          <span class="material-symbols-outlined text-2xl">forklift</span>
+          <span>⚡ ACCESO RÁPIDO MONTACARGUISTA (1 TAP)</span>
+        </button>
+
+        <button id="btn-quick-admin" type="button" (click)="quickLogin('admin')" class="rf-btn"
+          style="background: rgba(30, 41, 59, 0.7); color: #94a3b8; font-weight: 600; font-size: 0.8rem; border: 1px solid rgba(148, 163, 184, 0.2); padding: 0.55rem 1rem; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+          <span class="material-symbols-outlined text-base">admin_panel_settings</span>
+          <span>Acceso Rápido Administrador / Auditor</span>
+        </button>
+      </div>
+
       <p class="rf-card__legal">
         Terminal Operativo 4GUARD Security &amp; Yard Management. Sesión cifrada sujeta a bitácora y auditoría
         institucional.

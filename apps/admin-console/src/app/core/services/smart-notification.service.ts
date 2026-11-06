@@ -92,6 +92,8 @@ export class SmartNotificationService {
     this.isDropdownOpenRequested.set(false);
   }
 
+  private broadcastChannel: BroadcastChannel | null = null;
+
   public requestLoadDriverPass(pass: any): void {
     this.requestedPassToLoad.set(pass);
   }
@@ -100,16 +102,43 @@ export class SmartNotificationService {
     this.requestedPassToLoad.set(null);
   }
 
+  private handleIncomingRampAlert(notification: SmartNotification): void {
+    const titleUpper = (notification.title || '').toUpperCase();
+    if (notification.category === 'SECURITY' && (titleUpper.includes('RAMPA') || titleUpper.includes('ACCESO')) && notification.data) {
+      const d = notification.data;
+      const checkIn = d.checkIn || {};
+      const rampNum = checkIn.rampNumber || d.rampNumber || '';
+      if (rampNum) {
+        const rampAlert = {
+          id: notification.id,
+          folio: String(d.folio || notification.referenceFolio || 'S/F'),
+          rampNumber: rampNum,
+          client: checkIn.client || d.client || 'Cliente',
+          driverName: checkIn.driverName || d.driverName || 'Chofer Transportista',
+          tractorPlates: checkIn.tractorPlates || d.tractorPlates || 'S/P',
+          docNumber: checkIn.docNumber || d.docNumber || '',
+          carrierLine: checkIn.carrierLine || d.carrierLine || '',
+          noEcoTractor: checkIn.noEcoTractor || d.noEcoTractor || 'S/N',
+          time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+          timestamp: new Date()
+        };
+        this.pendingRampAssignments.update(list => [rampAlert, ...list.filter(item => item.folio !== rampAlert.folio)]);
+        this.hasNewRampAssignment.set(true);
+      }
+    }
+  }
+
   constructor() {
     if (typeof window !== 'undefined') {
       if ('BroadcastChannel' in window) {
         try {
-          const bc = new BroadcastChannel('4guard_wms_events');
-          bc.onmessage = (event) => {
+          this.broadcastChannel = new BroadcastChannel('4guard_wms_events');
+          this.broadcastChannel.onmessage = (event) => {
             if (event.data?.type === 'NOTIFICATION' && event.data.notification) {
               const notif = event.data.notification;
               if (!this._notifications().some((n) => n.id === notif.id)) {
                 this._notifications.update((list) => [notif, ...list.slice(0, 49)]);
+                this.handleIncomingRampAlert(notif);
                 if (this.isRelevantForCurrentUser(notif)) {
                   this.latestNotification.set(notif);
                   this.playChime(notif.severity);
@@ -128,6 +157,7 @@ export class SmartNotificationService {
               const notif = parsed.notification;
               if (!this._notifications().some((n) => n.id === notif.id)) {
                 this._notifications.update((list) => [notif, ...list.slice(0, 49)]);
+                this.handleIncomingRampAlert(notif);
                 if (this.isRelevantForCurrentUser(notif)) {
                   this.latestNotification.set(notif);
                   this.playChime(notif.severity);
@@ -266,37 +296,19 @@ export class SmartNotificationService {
     this._notifications.update(list => [notification, ...list.slice(0, 49)]);
 
     // Registrar en cola de rampas si aplica
-    if (notification.category === 'SECURITY' && notification.title.includes('Rampa') && notification.data) {
-      const d = notification.data;
-      const checkIn = d.checkIn || {};
-      const rampNum = checkIn.rampNumber || d.rampNumber || '';
-      if (rampNum) {
-        const rampAlert = {
-          id: notification.id,
-          folio: String(d.folio || notification.referenceFolio || 'S/F'),
-          rampNumber: rampNum,
-          client: checkIn.client || d.client || 'Cliente',
-          driverName: checkIn.driverName || d.driverName || 'Chofer Transportista',
-          tractorPlates: checkIn.tractorPlates || d.tractorPlates || 'S/P',
-          docNumber: checkIn.docNumber || d.docNumber || '',
-          carrierLine: checkIn.carrierLine || d.carrierLine || '',
-          time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-          timestamp: new Date()
-        };
-        this.pendingRampAssignments.update(list => [rampAlert, ...list.filter(item => item.folio !== rampAlert.folio)]);
-        this.hasNewRampAssignment.set(true);
-      }
-    }
+    this.handleIncomingRampAlert(notification);
 
     // Notificar a otras pestañas/dispositivos (ej. Terminal RF en tablet montacarguista)
     try {
       if (typeof window !== 'undefined') {
         const payload = JSON.stringify({ type: 'NOTIFICATION', notification });
         localStorage.setItem('4g_last_notification', payload);
-        if ('BroadcastChannel' in window) {
+        if (this.broadcastChannel) {
+          this.broadcastChannel.postMessage({ type: 'NOTIFICATION', notification });
+        } else if ('BroadcastChannel' in window) {
           const bc = new BroadcastChannel('4guard_wms_events');
           bc.postMessage({ type: 'NOTIFICATION', notification });
-          bc.close();
+          setTimeout(() => { try { bc.close(); } catch(_) {} }, 1000);
         }
       }
     } catch (_) {}

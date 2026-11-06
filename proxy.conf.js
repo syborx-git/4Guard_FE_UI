@@ -70,6 +70,65 @@ const PROXY_CONFIG = {
         return true;
       }
 
+      // 0. AUTH LOGIN INTERCEPTOR (Garantiza login instantáneo en Dev / Tablet)
+      if (req.method === 'POST' && (cleanUrl.endsWith('/auth/login') || cleanUrl.includes('/auth/login'))) {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body || '{}');
+            const identifier = (data.identifier || data.email || data.username || '').trim().toLowerCase();
+
+            let role = 'ROLE_OPERATOR';
+            let fullName = 'Alex Gabriel Perez Garduño';
+
+            if (identifier.includes('admin') || identifier.includes('enrique')) {
+              role = 'ROLE_ADMIN';
+              fullName = 'Carlos Herrera (Admin)';
+            } else if (identifier.includes('guard') || identifier.includes('caseta') || identifier.includes('seguridad')) {
+              role = 'ROLE_SECURITY_GUARD';
+              fullName = 'Oficial Vigilancia Caseta';
+            } else if (identifier.includes('supervisor') || identifier.includes('lider')) {
+              role = 'ROLE_SUPERVISOR';
+              fullName = 'Supervisor de Patio y Andén';
+            }
+
+            const token = `mock-jwt-token-${Date.now()}`;
+            const userPayload = {
+              id: 'u-operator-01',
+              fullName: fullName,
+              name: fullName,
+              email: identifier.includes('@') ? identifier : `${identifier}@4guard.mx`,
+              username: identifier || 'operator',
+              role: role,
+              employeeCode: 'MC-001',
+              forkliftOperatorId: 'op-alex-01',
+              organizationId: 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
+              branchId: 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
+              branchName: 'CENTRO DE DISTRIBUCION CDMX',
+              organizationName: '4GUARD LOGISTICS CORP',
+              changePasswordRequired: false,
+              active: true
+            };
+
+            sendJson(res, 200, {
+              success: true,
+              message: 'Sesión iniciada con éxito',
+              data: {
+                token: token,
+                accessToken: token,
+                refreshToken: token,
+                expiresIn: 86400,
+                user: userPayload
+              }
+            });
+          } catch (e) {
+            sendJson(res, 400, { success: false, message: 'JSON malformado' });
+          }
+        });
+        return true;
+      }
+
       // 1.1 POST /api/v1/warehouse-receptions/check-in
       if (req.method === 'POST' && url.includes('/warehouse-receptions/check-in')) {
         let body = '';
@@ -152,15 +211,20 @@ const PROXY_CONFIG = {
       // 1.2 GET /api/v1/warehouse-receptions (Listado de recepciones para Operaciones y Terminal RF)
       if (req.method === 'GET' && (url === '/api/v1/warehouse-receptions' || url.startsWith('/api/v1/warehouse-receptions?'))) {
         const state = loadState();
-        const unique = [];
-        const seen = new Set();
+        const uniqueMap = new Map();
         for (const item of Object.values(state.receptions || {})) {
-          const key = item.folio || item.id;
-          if (key && !seen.has(key)) {
-            seen.add(key);
-            unique.push(item);
+          const key = (item.folio || item.id || '').trim();
+          if (!key) continue;
+          const existing = uniqueMap.get(key);
+          if (!existing) {
+            uniqueMap.set(key, item);
+          } else {
+            if (item.status === 'DISCHARGED' || item.status === 'COMPLETED' || (item.pallets && item.pallets.length > (existing.pallets?.length || 0))) {
+              uniqueMap.set(key, item);
+            }
           }
         }
+        const unique = Array.from(uniqueMap.values());
         sendJson(res, 200, { success: true, message: 'Listado de recepciones', data: unique });
         return true;
       }
@@ -182,6 +246,8 @@ const PROXY_CONFIG = {
         if (targetRec) {
           targetRec.status = 'COMPLETED';
           targetRec.completedAt = new Date().toISOString();
+          if (targetRec.id) state.receptions[targetRec.id] = targetRec;
+          if (targetRec.folio) state.receptions[targetRec.folio] = targetRec;
           saveState(state);
         }
         sendJson(res, 200, { success: true, message: 'Recepción completada', data: targetRec });
@@ -205,6 +271,8 @@ const PROXY_CONFIG = {
         if (targetRec) {
           targetRec.status = 'CANCELLED';
           targetRec.cancelledAt = new Date().toISOString();
+          if (targetRec.id) state.receptions[targetRec.id] = targetRec;
+          if (targetRec.folio) state.receptions[targetRec.folio] = targetRec;
           saveState(state);
         }
         sendJson(res, 200, { success: true, message: 'Recepción cancelada', data: targetRec });
@@ -232,6 +300,19 @@ const PROXY_CONFIG = {
             }
             if (targetRec) {
               Object.assign(targetRec, data);
+              if (data.forkliftOperator) {
+                targetRec.forkliftOperator = data.forkliftOperator;
+                targetRec.forkliftOperatorName = data.forkliftOperator;
+                if (!targetRec.checkIn) targetRec.checkIn = {};
+                targetRec.checkIn.forkliftOperator = data.forkliftOperator;
+              }
+              if (Array.isArray(data.pallets)) {
+                targetRec.pallets = data.pallets;
+                targetRec.totalPallets = data.pallets.length;
+                targetRec.totalPieces = data.pallets.reduce((s, p) => s + Number(p.pieces || 0), 0);
+              }
+              if (targetRec.id) state.receptions[targetRec.id] = targetRec;
+              if (targetRec.folio) state.receptions[targetRec.folio] = targetRec;
               saveState(state);
             }
             sendJson(res, 200, { success: true, message: 'Parámetros actualizados', data: targetRec || data });
@@ -252,17 +333,57 @@ const PROXY_CONFIG = {
         return true;
       }
 
+      // 1.5.2 POST /api/v1/warehouse-receptions/:id/pallets
+      if (req.method === 'POST' && url.includes('/warehouse-receptions/') && url.endsWith('/pallets')) {
+        const parts = url.split('/');
+        const id = parts[parts.length - 2];
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body || '{}');
+            const state = loadState();
+            let targetRec = state.receptions[id];
+            if (!targetRec) {
+              for (const item of Object.values(state.receptions || {})) {
+                if (item.id === id || item.folio === id) {
+                  targetRec = item;
+                  break;
+                }
+              }
+            }
+            if (targetRec) {
+              if (!Array.isArray(targetRec.pallets)) {
+                targetRec.pallets = [];
+              }
+              const newPallets = Array.isArray(data.pallets) ? data.pallets : [data];
+              for (const p of newPallets) {
+                targetRec.pallets.push(p);
+              }
+              targetRec.totalPallets = targetRec.pallets.length;
+              targetRec.totalPieces = targetRec.pallets.reduce((s, p) => s + Number(p.pieces || 0), 0);
+              if (targetRec.id) state.receptions[targetRec.id] = targetRec;
+              if (targetRec.folio) state.receptions[targetRec.folio] = targetRec;
+              saveState(state);
+            }
+            sendJson(res, 200, { success: true, message: 'Pallets guardados', data: targetRec?.pallets || [] });
+          } catch (e) {
+            sendJson(res, 400, { success: false, message: 'JSON malformado' });
+          }
+        });
+        return true;
+      }
+
       // 1.6 GET /api/v1/warehouse-receptions/:id (Detalle individual)
       if (req.method === 'GET' && url.includes('/warehouse-receptions/') && !url.includes('/detect-return') && !url.includes('/next-pallet-number')) {
         const parts = url.split('/');
         const id = parts[parts.length - 1].split('?')[0];
         const state = loadState();
         let rec = state.receptions[id];
-        if (!rec) {
-          for (const item of Object.values(state.receptions || {})) {
-            if (item.id === id || item.folio === id) {
+        for (const item of Object.values(state.receptions || {})) {
+          if (item.id === id || item.folio === id) {
+            if (!rec || item.status === 'DISCHARGED' || item.status === 'COMPLETED' || (item.pallets && item.pallets.length > (rec.pallets?.length || 0))) {
               rec = item;
-              break;
             }
           }
         }

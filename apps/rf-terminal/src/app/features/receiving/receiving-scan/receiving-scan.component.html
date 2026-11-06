@@ -1,95 +1,930 @@
-<!-- apps/rf-terminal/.../receiving/receiving-scan/receiving-scan.component.html -->
-<!-- P8 — Escaneo de Recepción RF -->
-<div class="rscan" role="main" (click)="focusScanInput()" aria-label="Pantalla de escaneo de recepción">
+<!-- ================================================================
+     Recepción y Descarga en Andén — Terminal RF PWA (Tableta)
+     Módulo Táctico para Montacarguista / Checador de Andén
+     Diseño: Cyber-Obsidian Industrial Glassmorphism 4GUARD
+     ================================================================ -->
+<div class="rf-receiving-workspace">
 
-  <!-- Input OCULTO — captura el láser industrial -->
-  <input
-    #scanInput
-    type="text"
-    class="scan-hidden-input"
-    [ngModel]="currentInput()"
-    (ngModelChange)="currentInput.set($event)"
-    (input)="onScanInput($event)"
-    (keydown)="onKeydown($event)"
-    autocomplete="off"
-    spellcheck="false"
-    aria-label="Escáner láser de recepción">
+  <!-- ── 1. BARRA SUPERIOR: NAVEGACIÓN Y TELEMETRÍA ──────────────── -->
+  <header class="rf-topbar">
+    <div class="topbar-left">
+      <button
+        type="button"
+        (click)="goToMenu()"
+        class="btn-back"
+        title="Volver al Menú Principal"
+        aria-label="Volver">
+        <span class="material-symbols-outlined text-xl">arrow_back</span>
+      </button>
 
-  <!-- ── Header ──────────────────────────────────────────── -->
-  <div class="rscan__header">
-    <div>
-      <h1 class="rscan__title">📥 Recepción</h1>
-      <p class="rscan__sub">ASN-NESPRESSO-240616 · Andén 01</p>
+      <div class="topbar-icon-wrap">
+        <span class="material-symbols-outlined text-amber-400 text-2xl">move_to_inbox</span>
+      </div>
+
+      <div class="topbar-title-wrap">
+        <div class="topbar-badge">
+          <span class="badge-dot-live"></span>
+          <span>Terminal RF</span>
+          <span class="sep">•</span>
+          <span class="badge-gold">Descarga en Andén</span>
+        </div>
+        <h1 class="topbar-title">Recepción de Mercancía</h1>
+      </div>
     </div>
-    <div class="rscan__progress" role="status"
-      [attr.aria-label]="scannedCount() + ' de ' + expectedTotal() + ' ítems escaneados'">
-      <span class="rscan__progress-val">{{ scannedCount() }}<span class="rscan__progress-sep">/</span>{{ expectedTotal() }}</span>
-      <span class="rscan__progress-lbl">Escaneados</span>
+
+    <!-- Telemetría & Acciones Rápidas -->
+    <div class="topbar-right">
+      @if (selectedReception(); as rec) {
+        <div class="telemetry-chip ramp-chip" title="Rampa Asignada">
+          <span class="material-symbols-outlined text-amber-400 text-lg">door_front</span>
+          <div class="telemetry-text">
+            <span class="telemetry-label">Andén</span>
+            <span class="telemetry-val">Rampa {{ rec.rampNumber }}</span>
+          </div>
+        </div>
+      }
+
+      <div class="telemetry-chip operator-chip" title="Operador en Turno">
+        <span class="material-symbols-outlined text-emerald-400 text-lg">person</span>
+        <div class="telemetry-text">
+          <span class="telemetry-label">Montacarguista</span>
+          <span class="telemetry-val">{{ operatorName() }}</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="loadReceptions()"
+        class="btn-topbar-action"
+        title="Actualizar datos de andén">
+        <span class="material-symbols-outlined text-xl" [class.animate-spin]="isLoadingReceptions()">refresh</span>
+      </button>
     </div>
-  </div>
+  </header>
 
-  <!-- ── Scan zone ──────────────────────────────────────── -->
-  <div class="rscan__zone" role="button" tabindex="0" (keydown.enter)="focusScanInput()"
-    [class.rscan__zone--processing]="isProcessing()"
-    aria-label="Zona de escaneo — apunta el lector aquí">
-    <span class="rscan__zone-icon" aria-hidden="true">
-      {{ isProcessing() ? '⟳' : '⬛' }}
-    </span>
-    <span class="rscan__zone-text">
-      {{ isProcessing() ? 'Procesando…' : 'Apunta el lector al código' }}
-    </span>
-    <span class="rscan__zone-sub">o haz clic para enfocar</span>
-  </div>
+  <!-- ── 2. FICHA OPERATIVA DE LA RECEPCIÓN EN ANDÉN ─────────────── -->
+  @if (selectedReception(); as rec) {
+    <section class="rf-manifest-banner">
+      <div class="manifest-card">
+        <div class="manifest-card-glow"></div>
+        <div class="manifest-content">
+          
+          <div class="manifest-header">
+            <div class="manifest-folio-wrap">
+              <span class="manifest-tag-icon">
+                <span class="material-symbols-outlined text-amber-400 text-base">receipt_long</span>
+              </span>
+              <div class="flex flex-col">
+                <span class="manifest-folio-lbl">Remisión / Folio Activo</span>
+                <span class="manifest-folio-val font-mono">#{{ rec.folio }}</span>
+              </div>
+              <span class="manifest-status-badge" [class.badge--in-progress]="rec.status === 'IN_PROGRESS' || rec.status === 'REGISTERED'">
+                <span class="status-pulse-dot"></span>
+                <span>{{ rec.status === 'DISCHARGED' ? 'Descarga Concluida' : 'En Descarga Física' }}</span>
+              </span>
+            </div>
 
-  <!-- Botón de simulación de scan -->
-  <button
-    id="rf-sim-scan-btn"
-    class="rscan__sim-btn"
-    (click)="simulateScan(); $event.stopPropagation()">
-    📷 Simular Escaneo
-  </button>
+            <button
+              type="button"
+              (click)="showReceptionPicker.set(true)"
+              class="btn-change-reception"
+              title="Cambiar de recepción en andén">
+              <span class="material-symbols-outlined text-sm">swap_horiz</span>
+              <span>Cambiar Unidad ({{ receptions().length }})</span>
+            </button>
+          </div>
 
-  <!-- Error message -->
-  @if (lastError()) {
-    <div class="rscan__error" role="alert" aria-live="assertive">
-      {{ lastError() }}
+          <div class="manifest-grid">
+            <div class="manifest-field">
+              <span class="field-label">Cliente Destinatario</span>
+              <span class="field-value font-bold text-slate-100 truncate">{{ rec.clientName }}</span>
+            </div>
+
+            <div class="manifest-field">
+              <span class="field-label">Transportista / Operador</span>
+              <span class="field-value text-slate-200 truncate">{{ rec.carrierName }} • {{ rec.driverName }}</span>
+            </div>
+
+            <div class="manifest-field">
+              <span class="field-label">Placas Tractor / Caja</span>
+              <span class="field-value font-mono text-amber-300">T: {{ rec.tractorPlates || 'N/A' }} • C: {{ rec.boxPlates || 'N/A' }}</span>
+            </div>
+
+            <div class="manifest-field">
+              <span class="field-label">Bahía Destino Staging</span>
+              <span class="field-value bay-highlight">
+                <span class="material-symbols-outlined text-sm">warehouse</span>
+                <span>{{ rec.stagingBay || 'STAGING-R01' }}</span>
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  } @else {
+    <div class="rf-no-reception-card">
+      <span class="material-symbols-outlined text-4xl text-amber-500">pending_actions</span>
+      <div>
+        <h3 class="text-base font-bold text-slate-100">Sin unidades en andén actualmente</h3>
+        <p class="text-xs text-slate-400">Espera a que Caseta de Seguridad registre un arribo o recarga la pantalla.</p>
+      </div>
+      <button type="button" (click)="loadReceptions()" class="btn-primary-rf">
+        <span class="material-symbols-outlined text-base">refresh</span>
+        <span>Buscar Arribos</span>
+      </button>
     </div>
   }
 
-  <!-- ── Buffer Asíncrono ────────────────────────────────── -->
-  <div class="rscan__buffer">
-    <h2 class="rscan__buffer-title">
-      Buffer de Recepción
-      @if (scannedCount() > 0) {
-        <span class="rscan__buffer-count" aria-hidden="true">{{ scannedCount() }}</span>
-      }
-    </h2>
+  <!-- ── 3. BARRA DE PARÁMETROS ACTIVOS (TACTICAL CONTROL BAR) ────── -->
+  <section class="rf-active-params-section">
+    <div class="params-header">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-amber-400 text-lg">tune</span>
+        <h2 class="params-title">Parámetros Activos de la Tarima en Curso</h2>
+      </div>
+      <span class="params-sub">Se asignarán automáticamente a cada tarima que descargues</span>
+    </div>
 
-    <div class="buffer-list" role="list" aria-label="Ítems en buffer de recepción">
-      @for (item of buffer(); track item.sscc) {
-        <div class="buffer-item" role="listitem">
-          <div class="buffer-item__code">{{ item.sscc }}</div>
-          <div class="buffer-item__info">
-            <span class="buffer-item__sku">{{ item.sku }}</span>
-            <span class="buffer-item__desc">{{ item.description }}</span>
+    <div class="params-grid">
+      <!-- 1. Producto (SKU) Activo -->
+      <div class="param-box param-sku">
+        <label class="param-label">
+          <span class="material-symbols-outlined text-xs text-amber-400">inventory_2</span>
+          <span>Producto (SKU) Activo</span>
+        </label>
+        <div class="custom-select-wrap">
+          <select
+            [ngModel]="selectedSku()"
+            (ngModelChange)="onSkuSelected($event)"
+            class="param-select">
+            @for (prod of products(); track prod.code) {
+              <option [value]="prod.code">
+                {{ prod.code }} — {{ prod.name }} ({{ prod.defaultPieces }} pzas)
+              </option>
+            }
+          </select>
+          <span class="material-symbols-outlined custom-select-arrow">arrow_drop_down</span>
+        </div>
+      </div>
+
+      <!-- 2. Piezas por Tarima -->
+      <div class="param-box param-pieces">
+        <div class="flex items-center justify-between">
+          <label class="param-label">
+            <span class="material-symbols-outlined text-xs text-amber-400">pin</span>
+            <span>Piezas por Tarima</span>
+          </label>
+          <span class="text-[11px] font-mono font-bold text-amber-400">{{ piecesPerPallet() }} PZAS</span>
+        </div>
+        
+        <div class="pieces-stepper-row">
+          <button type="button" (click)="adjustPieces(-10)" class="btn-step" title="-10 pzas">-10</button>
+          <button type="button" (click)="adjustPieces(-1)" class="btn-step btn-step--sm" title="-1 pza">-1</button>
+          <div class="pieces-display-box">
+            <input
+              type="number"
+              [ngModel]="piecesPerPallet()"
+              (ngModelChange)="piecesPerPallet.set($event)"
+              class="param-input-pieces font-mono"
+              min="1" />
           </div>
-          <div class="buffer-item__right">
-            <span
-              class="status-badge"
-              [class.status-badge--10]="item.status === 10"
-              [class.status-badge--20]="item.status === 20">
-              {{ getStatusLabel(item.status) }}
-            </span>
-            <span class="buffer-item__time">{{ formatTime(item.scannedAt) }}</span>
+          <button type="button" (click)="adjustPieces(1)" class="btn-step btn-step--sm" title="+1 pza">+1</button>
+          <button type="button" (click)="adjustPieces(10)" class="btn-step" title="+10 pzas">+10</button>
+        </div>
+
+        <!-- Presets Rápidos -->
+        <div class="pieces-presets-row">
+          <button type="button" (click)="setPresetPieces(135)" [class.preset--active]="piecesPerPallet() === 135" class="btn-preset">135 (Cama)</button>
+          <button type="button" (click)="setPresetPieces(300)" [class.preset--active]="piecesPerPallet() === 300" class="btn-preset">300</button>
+          <button type="button" (click)="setPresetPieces(324)" [class.preset--active]="piecesPerPallet() === 324" class="btn-preset">324</button>
+          <button type="button" (click)="setPresetPieces(48)" [class.preset--active]="piecesPerPallet() === 48" class="btn-preset btn-preset--pico">48 (Pico)</button>
+        </div>
+      </div>
+
+      <!-- 3. Tipo de Tarima -->
+      <div class="param-box param-type">
+        <label class="param-label">
+          <span class="material-symbols-outlined text-xs text-amber-400">pallet</span>
+          <span>Tipo de Tarima</span>
+        </label>
+        <div class="custom-select-wrap">
+          <select
+            [ngModel]="selectedPalletType()"
+            (ngModelChange)="selectedPalletType.set($event)"
+            class="param-select">
+            @for (type of palletTypes(); track type) {
+              <option [value]="type">{{ type }}</option>
+            }
+          </select>
+          <span class="material-symbols-outlined custom-select-arrow">arrow_drop_down</span>
+        </div>
+      </div>
+
+      <!-- 4. Lote Activo + Botón (+ Lote) -->
+      <div class="param-box param-lot">
+        <div class="flex items-center justify-between">
+          <label class="param-label">
+            <span class="material-symbols-outlined text-xs text-amber-400">sell</span>
+            <span>Lote Activo</span>
+          </label>
+          <button
+            type="button"
+            (click)="openAddLotModal()"
+            class="btn-add-lot"
+            title="Dar de alta nuevo lote de proveedor">
+            <span class="material-symbols-outlined text-xs">add</span>
+            <span>Lote</span>
+          </button>
+        </div>
+        <div class="custom-select-wrap">
+          <select
+            [ngModel]="activeLot()"
+            (ngModelChange)="selectLot($event)"
+            class="param-select font-mono">
+            @for (lot of availableLots(); track lot.lotNumber) {
+              <option [value]="lot.lotNumber">
+                {{ lot.lotNumber }} (Cad: {{ lot.expirationDate }})
+              </option>
+            }
+          </select>
+          <span class="material-symbols-outlined custom-select-arrow">arrow_drop_down</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 4. VISOR TÁCTICO DE CÁMARA & DISPARADOR LÁSER ───────────── -->
+  <section class="rf-scanner-section">
+    <div class="scanner-card">
+      
+      <!-- Barra de Control del Lector -->
+      <div class="scanner-control-bar">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-lg" [class.text-emerald-400]="cameraActive()" [class.text-slate-400]="!cameraActive()">
+            {{ cameraActive() ? 'photo_camera' : 'barcode_scanner' }}
+          </span>
+          <span class="scanner-mode-text">
+            {{ cameraActive() ? (currentFacingMode() === 'environment' ? 'Cámara Trasera Activa' : 'Cámara Frontal Activa') : 'Sensor de Escaneo en Espera' }}
+          </span>
+        </div>
+
+        <div class="scanner-actions-group">
+          @if (cameraActive()) {
+            <button
+              type="button"
+              (click)="switchCamera()"
+              class="btn-scanner-action"
+              title="Alternar cámara frontal/trasera">
+              <span class="material-symbols-outlined text-sm">flip_camera_ios</span>
+            </button>
+          }
+
+          <button
+            type="button"
+            (click)="toggleCamera()"
+            class="btn-scanner-action"
+            [class.btn-scanner-action--active]="cameraActive()"
+            [title]="cameraActive() ? 'Apagar cámara' : 'Encender cámara de tableta'">
+            <span class="material-symbols-outlined text-sm">{{ cameraActive() ? 'videocam_off' : 'photo_camera' }}</span>
+            <span>{{ cameraActive() ? 'Pausar Cámara' : 'Activar Cámara' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cuadro Retícula de Cámara (Viewfinder) -->
+      <div
+        class="scanner-reticle"
+        (click)="onCameraFeedTapped()"
+        title="Tocar para escanear código en pantalla">
+
+        <!-- Video en Vivo de la Cámara -->
+        <video
+          #cameraVideo
+          class="camera-feed"
+          [class.camera-feed--active]="cameraActive()"
+          autoplay
+          playsinline
+          webkit-playsinline
+          muted></video>
+
+        <!-- Placeholder cuando la cámara no está activa -->
+        @if (!cameraActive()) {
+          <div class="camera-off-overlay">
+            <div class="camera-radar-pulse"></div>
+            <span class="material-symbols-outlined text-5xl text-amber-400">qr_code_scanner</span>
+            <div class="camera-off-title">Apunta el lector láser o activa la cámara</div>
+            <div class="camera-off-sub">El sistema detectará el código de barras GS1/SSCC automáticamente</div>
+
+            @if (cameraError()) {
+              <div class="p-2.5 px-3.5 my-1 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-semibold max-w-sm flex items-center gap-2">
+                <span class="material-symbols-outlined text-base text-rose-400 shrink-0">error</span>
+                <span>{{ cameraError() }}</span>
+              </div>
+            }
+
+            <button
+              type="button"
+              (click)="startCamera(); $event.stopPropagation()"
+              class="btn-turn-on-cam"
+              [disabled]="cameraLoading()"
+            >
+              @if (cameraLoading()) {
+                <span class="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                <span>Iniciando Cámara...</span>
+              } @else {
+                <span class="material-symbols-outlined text-lg">photo_camera</span>
+                <span>Abrir Cámara de la Tablet</span>
+              }
+            </button>
+          </div>
+        }
+
+        <!-- Haz Láser Animado de Escaneo -->
+        @if (cameraActive()) {
+          <div class="laser-sweep-line"></div>
+        }
+
+        <!-- Esquinas fluorescentes tácticas -->
+        <div class="corner-bracket corner-tl"></div>
+        <div class="corner-bracket corner-tr"></div>
+        <div class="corner-bracket corner-bl"></div>
+        <div class="corner-bracket corner-br"></div>
+
+        <!-- Badge Flotante Superior -->
+        <div class="reticle-floating-badge">
+          <span class="reticle-dot"></span>
+          <span>Enfoca la etiqueta de la tarima (SSCC / GS1)</span>
+        </div>
+
+        <!-- Badge Flotante Inferior -->
+        @if (cameraActive()) {
+          <div class="reticle-touch-hint">
+            <span class="material-symbols-outlined text-xs">touch_app</span>
+            <span>Toca pantalla para capturar</span>
+          </div>
+        }
+      </div>
+
+      <!-- Acciones de Prueba Rápida y Simulación (Diseño Táctico Cyber) -->
+      <div class="scanner-quick-buttons">
+        <button
+          type="button"
+          (click)="simulateScan()"
+          class="btn-cyber-sim btn-cyber-sim--full"
+          title="Generar y registrar tarima completa estándar">
+          <div class="cyber-btn-glow"></div>
+          <div class="cyber-btn-content">
+            <span class="material-symbols-outlined text-2xl text-emerald-400">pallet</span>
+            <div class="flex flex-col text-left">
+              <span class="cyber-btn-title">+ Simular Tarima Completa</span>
+              <span class="cyber-btn-sub">{{ piecesPerPallet() }} Pzas • Lote {{ activeLot() }}</span>
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          (click)="simulatePico()"
+          class="btn-cyber-sim btn-cyber-sim--pico"
+          title="Registrar tarima pico">
+          <div class="cyber-btn-glow"></div>
+          <div class="cyber-btn-content">
+            <span class="material-symbols-outlined text-2xl text-sky-400">pie_chart</span>
+            <div class="flex flex-col text-left">
+              <span class="cyber-btn-title">+ Simular Tarima Pico</span>
+              <span class="cyber-btn-sub">48 Pzas Incompletas</span>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <!-- Input para Pistola Láser Física / Captura Manual -->
+      <div class="laser-manual-row">
+        <div class="laser-input-wrap">
+          <span class="material-symbols-outlined text-amber-400 text-base">barcode_reader</span>
+          <input
+            #scanInput
+            type="text"
+            [ngModel]="manualInput()"
+            (ngModelChange)="manualInput.set($event)"
+            (keydown.enter)="onManualLaserSubmit()"
+            placeholder="Pistola láser lista... o escribe el código SSCC"
+            class="laser-input-field font-mono"
+            autocomplete="off" />
+          <button
+            type="button"
+            (click)="onManualLaserSubmit()"
+            class="btn-laser-enter"
+            title="Registrar código manual">
+            <span class="material-symbols-outlined text-sm">subdirectory_arrow_left</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Banner de Feedback del Último Escaneo -->
+      @if (lastScanFeedback(); as fb) {
+        <div
+          class="feedback-banner animate-fade-in"
+          [class.feedback--success]="fb.success"
+          [class.feedback--error]="!fb.success">
+          <span class="material-symbols-outlined text-base">
+            {{ fb.success ? 'check_circle' : 'error' }}
+          </span>
+          <span>{{ fb.message }}</span>
+        </div>
+      }
+
+    </div>
+  </section>
+
+  <!-- ── 5. BARRA DE PROGRESO Y MÉTRICAS ─────────────────────────── -->
+  <section class="rf-progress-section">
+    <div class="progress-card">
+      <div class="progress-header">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-amber-400 text-base">monitoring</span>
+          <span class="progress-title">Avance de Descarga en Andén</span>
+        </div>
+        <div class="progress-badge font-mono">
+          <span class="text-amber-400 font-bold">{{ scannedCount() }}</span> / {{ expectedPallets() }} Tarimas
+          <span class="progress-pct-tag">({{ progressPct() }}%)</span>
+        </div>
+      </div>
+
+      <!-- Barra de Progreso Dinámica -->
+      <div class="progress-track">
+        <div
+          class="progress-fill"
+          [style.width.%]="progressPct()"
+          [class.progress-fill--complete]="progressPct() >= 100"></div>
+      </div>
+
+      <!-- Grid de Métricas Operativas -->
+      <div class="metrics-grid">
+        <div class="metric-box">
+          <div class="metric-box-header">
+            <span class="metric-label">Tarimas Descargadas</span>
+            <span class="material-symbols-outlined text-xs text-amber-400">pallet</span>
+          </div>
+          <div class="metric-val text-amber-400 font-mono font-black">
+            {{ scannedCount() }} <span class="metric-val-sub">/ {{ expectedPallets() }}</span>
+          </div>
+        </div>
+
+        <div class="metric-box">
+          <div class="metric-box-header">
+            <span class="metric-label">Piezas Totales</span>
+            <span class="material-symbols-outlined text-xs text-emerald-400">check_box</span>
+          </div>
+          <div class="metric-val text-emerald-400 font-mono font-black">
+            {{ totalPiecesScanned() | number }} <span class="metric-val-sub">PZAS</span>
+          </div>
+        </div>
+
+        <div class="metric-box">
+          <div class="metric-box-header">
+            <span class="metric-label">Lote en Proceso</span>
+            <span class="material-symbols-outlined text-xs text-sky-400">sell</span>
+          </div>
+          <div class="metric-val font-mono text-slate-100 font-bold truncate">
+            {{ activeLot() }}
+          </div>
+        </div>
+
+        <div class="metric-box">
+          <div class="metric-box-header">
+            <span class="metric-label">Rampa de Descarga</span>
+            <span class="material-symbols-outlined text-xs text-purple-400">warehouse</span>
+          </div>
+          <div class="metric-val text-purple-300 font-bold font-mono truncate">
+            Rampa {{ selectedReception()?.rampNumber || 11 }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 6. BUFFER / LISTA DE TARIMAS DESCARGADAS ────────────────── -->
+  <section class="rf-buffer-section">
+    <div class="buffer-header">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-amber-400 text-lg">list_alt</span>
+        <h3 class="buffer-title">Detalle de Tarimas Descargadas ({{ scannedCount() }})</h3>
+      </div>
+      @if (scannedCount() > 0) {
+        <span class="buffer-badge">
+          <span class="buffer-pulse-dot"></span>
+          <span>Buffer Activo • {{ totalPiecesScanned() | number }} Pzas</span>
+        </span>
+      }
+    </div>
+
+    <div class="buffer-list">
+      @for (pallet of scannedPallets(); track pallet.id) {
+        <div class="buffer-card" (click)="openEditPalletModal(pallet)">
+          <div class="buffer-card-left">
+            <div class="buffer-num-badge">
+              <span class="buffer-num-hash">#</span>
+              <span class="buffer-num-val">{{ pallet.palletNumber }}</span>
+            </div>
+            <div class="buffer-info">
+              <div class="buffer-code-row">
+                <span class="buffer-code font-mono">{{ pallet.palletCode }}</span>
+                @if (pallet.isPico) {
+                  <span class="tag-pico">PICO</span>
+                }
+              </div>
+              <div class="buffer-product truncate">{{ pallet.sku }} — {{ pallet.productName }}</div>
+              <div class="buffer-tags">
+                <span class="tag-lot font-mono">
+                  <span class="material-symbols-outlined text-[11px] text-amber-400">sell</span>
+                  <span>{{ pallet.lotNumber }}</span>
+                </span>
+                <span class="tag-type">{{ pallet.palletType }}</span>
+                <span class="tag-time font-mono">⏱ {{ pallet.scannedAt }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="buffer-card-right">
+            <div class="buffer-pieces-badge font-mono">
+              <span class="buffer-pieces-num">{{ pallet.pieces }}</span>
+              <span class="buffer-pieces-unit">PZAS</span>
+            </div>
+            <div class="buffer-card-actions">
+              <button
+                type="button"
+                (click)="openEditPalletModal(pallet); $event.stopPropagation()"
+                class="btn-edit-pallet"
+                title="Modificar piezas, lote o tipo">
+                <span class="material-symbols-outlined text-sm">edit</span>
+              </button>
+              <button
+                type="button"
+                (click)="deletePallet(pallet); $event.stopPropagation()"
+                class="btn-delete-pallet"
+                title="Eliminar tarima escaneada">
+                <span class="material-symbols-outlined text-sm">delete</span>
+              </button>
+            </div>
           </div>
         </div>
       } @empty {
-        <div class="buffer-empty">
-          <span aria-hidden="true">📭</span>
-          <span>Sin ítems escaneados. Apunta el lector al código de barras.</span>
+        <div class="buffer-empty-state">
+          <div class="empty-radar-ring"></div>
+          <span class="material-symbols-outlined text-5xl text-amber-400/80">pallet</span>
+          <div class="text-slate-100 font-bold text-base mt-2">No hay tarimas escaneadas aún</div>
+          <div class="text-slate-400 text-xs max-w-sm mt-1">Usa la cámara de la tableta, el lector láser o los botones de simulación arriba para registrar la primera tarima.</div>
         </div>
       }
     </div>
-  </div>
+  </section>
+
+  <!-- ── 7. BARRA FIJA INFERIOR: CONCLUIR DESCARGA FÍSICA (F01) ───── -->
+  <footer class="rf-bottom-bar">
+    <button
+      type="button"
+      (click)="goToMenu()"
+      class="btn-bottom-secondary">
+      <span class="material-symbols-outlined text-lg">arrow_back</span>
+      <span>Menú</span>
+    </button>
+
+    <button
+      type="button"
+      (click)="openConcludeModal()"
+      class="btn-bottom-conclude"
+      [disabled]="scannedCount() === 0">
+      <div class="btn-conclude-glow"></div>
+      <span class="material-symbols-outlined text-2xl">verified</span>
+      <div class="flex flex-col text-left">
+        <span class="font-extrabold text-sm tracking-wide">CONCLUIR DESCARGA FÍSICA (F01)</span>
+        <span class="text-[11px] opacity-90 font-mono">{{ scannedCount() }} Tarimas • {{ totalPiecesScanned() | number }} Pzas • Rampa {{ selectedReception()?.rampNumber || 11 }}</span>
+      </div>
+    </button>
+  </footer>
+
+  <!-- ── MODAL 1: PICKER SELECTOR DE RECEPCIÓN ─────────────────────── -->
+  @if (showReceptionPicker()) {
+    <div class="rf-modal-backdrop" (click)="showReceptionPicker.set(false)">
+      <div class="rf-modal-card" (click)="$event.stopPropagation()">
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-400 text-xl">swap_horiz</span>
+            <h3 class="rf-modal-title">Seleccionar Recepción en Andén</h3>
+          </div>
+          <button type="button" (click)="showReceptionPicker.set(false)" class="btn-modal-close">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+
+        <div class="rf-modal-body">
+          <p class="rf-modal-desc">
+            Elige la unidad asignada a tu rampa para registrar las tarimas de descarga:
+          </p>
+          <div class="reception-picker-list">
+            @for (rec of receptions(); track rec.id) {
+              <div
+                class="reception-picker-item"
+                [class.picker-item--active]="selectedReception()?.id === rec.id"
+                (click)="selectReception(rec)">
+                <div class="picker-item-left">
+                  <div class="picker-ramp-badge font-mono">R{{ rec.rampNumber }}</div>
+                  <div>
+                    <div class="picker-folio font-mono font-bold">#{{ rec.folio }}</div>
+                    <div class="picker-client">{{ rec.clientName }}</div>
+                    <div class="picker-carrier text-xs text-slate-400">{{ rec.carrierName }}</div>
+                  </div>
+                </div>
+                <div class="picker-item-right font-mono text-xs">
+                  <span class="text-amber-400">{{ rec.stagingBay || 'STAGING-R01' }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── MODAL 2: ALTA RÁPIDA DE LOTE (+ Lote) ─────────────────────── -->
+  @if (showAddLotModal()) {
+    <div class="rf-modal-backdrop" (click)="closeAddLotModal()">
+      <div class="rf-modal-card" (click)="$event.stopPropagation()">
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-400 text-xl">add_box</span>
+            <h3 class="rf-modal-title">Registrar Nuevo Lote</h3>
+          </div>
+          <button type="button" (click)="closeAddLotModal()" class="btn-modal-close">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+
+        <div class="rf-modal-body">
+          <p class="rf-modal-desc">
+            Ingresa la nomenclatura de lote impresa en la tarima o en el certificado de calidad:
+          </p>
+
+          <div class="form-group mb-3">
+            <label class="form-label">Número / Código de Lote</label>
+            <input
+              type="text"
+              [ngModel]="newLotInput()"
+              (ngModelChange)="newLotInput.set($event)"
+              placeholder="Ej. LOT-2026-X09"
+              class="form-input font-mono uppercase"
+              autofocus />
+          </div>
+
+          <div class="form-row mb-3">
+            <div class="form-group flex-1">
+              <label class="form-label">Fecha de Caducidad</label>
+              <input
+                type="date"
+                [ngModel]="newLotExpirationInput()"
+                (ngModelChange)="newLotExpirationInput.set($event)"
+                class="form-input font-mono" />
+            </div>
+
+            <div class="form-group flex-1">
+              <label class="form-label">Fecha de Elaboración</label>
+              <input
+                type="date"
+                [ngModel]="newLotElaborationInput()"
+                (ngModelChange)="newLotElaborationInput.set($event)"
+                class="form-input font-mono" />
+            </div>
+          </div>
+        </div>
+
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeAddLotModal()" class="btn-modal-cancel">
+            Cancelar
+          </button>
+          <button type="button" (click)="saveNewLot()" class="btn-primary-rf">
+            <span class="material-symbols-outlined text-base">check</span>
+            <span>Guardar y Asignar Lote</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── MODAL 3: CONFIRMACIÓN DE CONCLUSIÓN DE DESCARGA (F01) ─────── -->
+  @if (showConcludeModal()) {
+    <div class="rf-modal-backdrop" (click)="closeConcludeModal()">
+      <div class="rf-modal-card" (click)="$event.stopPropagation()">
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-400 text-2xl">verified</span>
+            <h3 class="rf-modal-title">Concluir Descarga Física en Andén</h3>
+          </div>
+          <button type="button" (click)="closeConcludeModal()" class="btn-modal-close">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+
+        <div class="rf-modal-body">
+          <p class="rf-modal-desc mb-3">
+            ¿Confirmas que se terminó de bajar físicamente la mercancía del tráiler para turnar a Mesa de Control?
+          </p>
+
+          <div class="conclude-summary-grid">
+            <div class="conclude-stat-box">
+              <span class="stat-lbl">Tarimas Descargadas</span>
+              <span class="stat-val font-mono text-amber-400 font-bold">{{ scannedCount() }}</span>
+            </div>
+            <div class="conclude-stat-box">
+              <span class="stat-lbl">Piezas Totales</span>
+              <span class="stat-val font-mono text-emerald-400 font-bold">{{ totalPiecesScanned() | number }} PZAS</span>
+            </div>
+            <div class="conclude-stat-box">
+              <span class="stat-lbl">Andén</span>
+              <span class="stat-val font-bold">Rampa {{ selectedReception()?.rampNumber || 11 }}</span>
+            </div>
+            <div class="conclude-stat-box">
+              <span class="stat-lbl">Destino Inicial</span>
+              <span class="stat-val font-mono text-purple-300 font-bold">{{ selectedReception()?.stagingBay || 'STAGING-R01' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeConcludeModal()" class="btn-modal-cancel">
+            Seguir Descargando
+          </button>
+          <button
+            type="button"
+            (click)="confirmConcludeDischarge()"
+            class="btn-primary-rf"
+            [disabled]="isConcluding()">
+            <span class="material-symbols-outlined text-base" [class.animate-spin]="isConcluding()">
+              {{ isConcluding() ? 'refresh' : 'check_circle' }}
+            </span>
+            <span>{{ isConcluding() ? 'Guardando en Servidor...' : 'Sí, Concluir Descarga' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── MODAL 4: CELEBRACIÓN / HANDOFF COMPLETADO ────────────────── -->
+  @if (showCelebrationModal(); as data) {
+    <div class="rf-modal-backdrop celebration-backdrop">
+      <div class="rf-modal-card celebration-card" (click)="$event.stopPropagation()">
+        
+        <div class="celebration-seal">
+          <span class="material-symbols-outlined text-5xl text-emerald-400">check_circle</span>
+        </div>
+
+        <h2 class="celebration-title">¡Descarga Física Concluida!</h2>
+        <p class="celebration-desc">
+          Se han registrado <strong class="text-emerald-400 font-bold">{{ celebrationSummary()?.totalPallets }} tarimas</strong> 
+          ({{ celebrationSummary()?.totalPieces | number }} piezas) para la remisión <strong class="text-amber-400 font-mono">#{{ celebrationSummary()?.folio }}</strong>.
+        </p>
+
+        <div class="celebration-card-handoff">
+          <div class="handoff-tag">
+            <span class="material-symbols-outlined text-sm text-emerald-400">arrow_forward</span>
+            <span>Turnado a Mesa de Control y Oficina</span>
+          </div>
+          <p class="text-xs text-slate-300 mt-1">
+            El personal administrativo ya tiene disponibles todas las tarimas en la consola central para revisión y descarga del <strong>Formato F01</strong>.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          (click)="closeCelebrationModal()"
+          class="btn-celebration-finish">
+          <span class="material-symbols-outlined text-xl">home</span>
+          <span>Volver al Menú Principal</span>
+        </button>
+
+      </div>
+    </div>
+  }
+
+  <!-- ── MODAL 5: EDICIÓN TÁCTIL DE TARIMA ESCANEADA (PIEZAS / LOTE / PICO) ── -->
+  @if (showEditPalletModal(); as editing) {
+    <div class="rf-modal-backdrop" (click)="closeEditPalletModal()">
+      <div class="rf-modal-card" (click)="$event.stopPropagation()">
+        
+        <div class="rf-modal-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-400 text-xl">edit_note</span>
+            <h3 class="rf-modal-title">Modificar Tarima #{{ editingPallet()?.palletNumber }}</h3>
+          </div>
+          <button type="button" (click)="closeEditPalletModal()" class="btn-modal-close">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+
+        <div class="rf-modal-body">
+          <p class="rf-modal-desc font-mono text-xs text-slate-400 mb-3">
+            UA / SSCC: <span class="text-amber-400 font-bold">{{ editingPallet()?.palletCode }}</span>
+          </p>
+
+          <!-- Cantidad de Piezas -->
+          <div class="param-box mb-3">
+            <label class="param-label flex items-center justify-between">
+              <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-xs text-amber-400">pin</span>
+                <span>Piezas Físicas en esta Tarima</span>
+              </span>
+              <span class="text-xs font-mono font-bold text-amber-400">{{ editPiecesInput() }} PZAS</span>
+            </label>
+            <div class="pieces-stepper-row mt-1">
+              <button type="button" (click)="adjustEditPieces(-10)" class="btn-step">-10</button>
+              <button type="button" (click)="adjustEditPieces(-1)" class="btn-step btn-step--sm">-1</button>
+              <div class="pieces-display-box">
+                <input
+                  type="number"
+                  [ngModel]="editPiecesInput()"
+                  (ngModelChange)="editPiecesInput.set($event)"
+                  class="param-input-pieces font-mono"
+                  min="1" />
+              </div>
+              <button type="button" (click)="adjustEditPieces(1)" class="btn-step btn-step--sm">+1</button>
+              <button type="button" (click)="adjustEditPieces(10)" class="btn-step">+10</button>
+            </div>
+            <!-- Presets Rápidos -->
+            <div class="pieces-presets-row mt-2">
+              <button type="button" (click)="setEditPiecesPreset(135)" [class.preset--active]="editPiecesInput() === 135" class="btn-preset">135 (Cama)</button>
+              <button type="button" (click)="setEditPiecesPreset(300)" [class.preset--active]="editPiecesInput() === 300" class="btn-preset">300</button>
+              <button type="button" (click)="setEditPiecesPreset(48, true)" [class.preset--active]="editPiecesInput() === 48" class="btn-preset btn-preset--pico">48 (Pico)</button>
+            </div>
+          </div>
+
+          <!-- Asignación de Lote -->
+          <div class="param-box mb-3">
+            <label class="param-label flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs text-amber-400">sell</span>
+              <span>Lote Asignado a esta Tarima</span>
+            </label>
+            <div class="custom-select-wrap mt-1">
+              <select
+                [ngModel]="editLotInput()"
+                (ngModelChange)="editLotInput.set($event)"
+                class="param-select font-mono">
+                @for (lot of availableLots(); track lot.lotNumber) {
+                  <option [value]="lot.lotNumber">
+                    {{ lot.lotNumber }} (Cad: {{ lot.expirationDate }})
+                  </option>
+                }
+              </select>
+              <span class="material-symbols-outlined custom-select-arrow">arrow_drop_down</span>
+            </div>
+          </div>
+
+          <!-- Tipo de Tarima -->
+          <div class="param-box mb-3">
+            <label class="param-label flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs text-amber-400">pallet</span>
+              <span>Tipo de Tarima</span>
+            </label>
+            <div class="custom-select-wrap mt-1">
+              <select
+                [ngModel]="editPalletTypeInput()"
+                (ngModelChange)="editPalletTypeInput.set($event)"
+                class="param-select">
+                @for (type of palletTypes(); track type) {
+                  <option [value]="type">{{ type }}</option>
+                }
+              </select>
+              <span class="material-symbols-outlined custom-select-arrow">arrow_drop_down</span>
+            </div>
+          </div>
+
+          <!-- Toggle Pico / Incompleta -->
+          <div class="flex items-center gap-2 p-2 rounded-lg bg-slate-900/80 border border-slate-700/60 mb-2">
+            <input
+              type="checkbox"
+              id="chk-pico"
+              [ngModel]="editIsPicoInput()"
+              (ngModelChange)="editIsPicoInput.set($event)"
+              style="accent-color: #f59e0b; width: 18px; height: 18px; cursor: pointer;" />
+            <label for="chk-pico" class="text-xs text-slate-200 font-bold cursor-pointer">
+              Marcar como Tarima Pico / Incompleta (Menor a estiba estándar)
+            </label>
+          </div>
+
+        </div>
+
+        <div class="rf-modal-footer">
+          <button type="button" (click)="closeEditPalletModal()" class="btn-modal-cancel">
+            Cancelar
+          </button>
+          <button type="button" (click)="saveEditedPallet()" class="btn-primary-rf">
+            <span class="material-symbols-outlined text-base">check</span>
+            <span>Guardar Cambios</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
 
 </div>

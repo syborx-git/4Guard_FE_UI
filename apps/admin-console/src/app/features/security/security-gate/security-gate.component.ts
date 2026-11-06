@@ -198,13 +198,19 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   protected attendRampAssignment(ramp: any): void {
+    const rNum = ramp.rampNumber || '';
+    const rLabel = rNum ? `Rampa ${rNum}` : 'Andén';
+    const fol = ramp.folio || '';
+    const plates = ramp.tractorPlates ? ` (Placas: ${ramp.tractorPlates})` : '';
+
+    this.smartNotification.dismissRampAssignment(fol);
+    this.toast.success(`🟢 ¡ACCESO AUTORIZADO! Unidad #${fol}${plates} lista para ingresar a ${rLabel}. Levante la pluma.`, 5000);
     this.setTab('IN_YARD');
     if (ramp.tractorPlates) {
       this.inYardSearch.set(ramp.tractorPlates);
     } else if (ramp.folio) {
       this.inYardSearch.set(ramp.folio);
     }
-    this.toast.info(`🔔 Mostrando unidad en patio: Folio #${ramp.folio} (Rampa ${ramp.rampNumber}) — Avise al transportista avanzar a rampa.`);
   }
 
   protected getLoggedGuardName(): string {
@@ -463,6 +469,21 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           isReadyForExit: isReady,
           createdAt: o.dispatchedAt || new Date().toISOString()
         });
+      }
+    }
+
+    // 5. Interceptar con alertas activas de asignación de rampa emitidas por Almacén en tiempo real
+    const rampAlerts = this.smartNotification.pendingRampAssignments();
+    for (const alert of rampAlerts) {
+      const alertKey = (alert.folio || '').trim().toUpperCase();
+      if (!alertKey) continue;
+      for (const [k, item] of mergedMap.entries()) {
+        const itemKey = (item.generatedFolio || item.token || item.id || '').trim().toUpperCase();
+        if (itemKey === alertKey || itemKey.endsWith(alertKey) || alertKey.endsWith(itemKey)) {
+          item.rampNumber = alert.rampNumber;
+          item.rampCode = `R-${String(alert.rampNumber).padStart(2, '0')}`;
+          break;
+        }
       }
     }
 
@@ -786,7 +807,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     carrierLineCustom: [''],
     nombreOperador: ['', Validators.required],
     driverPhone: [''],
-    assignmentType: ['RAMP'],
+    assignmentType: ['PATIO'],
     rampCode: [''],
     rampNumber: [null as number | null],
     placasTracto: ['', Validators.required],
@@ -970,7 +991,17 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       return true;
     }
     const code = String(item.rampCode || item.ramp || item.rampName || item.rampId || '').trim();
-    return !!code && code !== '0' && code !== 'null' && code !== 'undefined' && !code.toUpperCase().includes('PATIO');
+    if (!!code && code !== '0' && code !== 'null' && code !== 'undefined' && !code.toUpperCase().includes('PATIO')) {
+      return true;
+    }
+    const key = (item.generatedFolio || item.token || item.id || '').trim().toUpperCase();
+    if (key) {
+      return this.smartNotification.pendingRampAssignments().some(a => {
+        const ak = (a.folio || '').trim().toUpperCase();
+        return ak === key || ak.endsWith(key) || key.endsWith(ak);
+      });
+    }
+    return false;
   }
 
   protected formatRampDisplay(item: any): string {
@@ -980,6 +1011,18 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     if (item.rampNumber != null && Number(item.rampNumber) > 0 && Number(item.rampNumber) <= 50) {
       const num = Number(item.rampNumber);
       return `R-${String(num).padStart(2, '0')}`;
+    }
+
+    // 1.5 Si coincide con una alerta activa de asignación de rampa
+    const key = (item.generatedFolio || item.token || item.id || '').trim().toUpperCase();
+    if (key) {
+      const match = this.smartNotification.pendingRampAssignments().find(a => {
+        const ak = (a.folio || '').trim().toUpperCase();
+        return ak === key || ak.endsWith(key) || key.endsWith(ak);
+      });
+      if (match?.rampNumber) {
+        return `R-${String(match.rampNumber).padStart(2, '0')}`;
+      }
     }
 
     // 2. Extraer cualquier código o ID disponible
@@ -1184,7 +1227,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       if (this.activeTab() === 'HISTORY') {
         this.reloadHistoryPasses(true);
       }
-    }, 5000);
+    }, 2000);
 
     // Auto-detección reactiva con debounce de retornos al escribir No. de Remisión / Documento
     this.checkInForm.get('remision')?.valueChanges.pipe(
@@ -2614,7 +2657,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       carrierLineCustom: '',
       nombreOperador: '',
       driverPhone: '',
-      assignmentType: 'RAMP',
+      assignmentType: 'PATIO',
       rampCode: '',
       rampNumber: null,
       placasTracto: '',

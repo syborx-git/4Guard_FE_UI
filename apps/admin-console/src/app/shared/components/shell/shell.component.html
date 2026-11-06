@@ -238,6 +238,24 @@
           <span class="shell__branch-prefix">SUCURSAL:</span>
           <span class="shell__branch-value">BR-TOL-01 - Toluca</span>
         </div>
+
+        <!-- Notificador Inteligente de Patio (En espera de Andén) -->
+        @if (pendingPatioReceptionsCount() > 0) {
+          <button
+            type="button"
+            (click)="navigateToPatioWaiting()"
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/50 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/20 text-amber-300 hover:text-amber-200 hover:border-amber-400 hover:scale-[1.02] active:scale-95 transition-all shadow-md shadow-amber-500/10 cursor-pointer animate-pulse"
+            title="Ver unidades en patio esperando asignación de andén"
+          >
+            <span class="material-symbols-outlined text-amber-400 text-sm">local_shipping</span>
+            <span class="text-amber-300 font-extrabold text-xs">
+              {{ pendingPatioReceptionsCount() }} {{ pendingPatioReceptionsCount() === 1 ? 'UNIDAD EN PATIO' : 'UNIDADES EN PATIO' }}
+            </span>
+            <span class="px-1.5 py-0.2 rounded bg-amber-400/25 text-amber-200 font-mono text-[10px] font-black border border-amber-500/40">
+              POR ASIGNAR ANDÉN
+            </span>
+          </button>
+        }
       </div>
 
       <div class="shell__header-right">

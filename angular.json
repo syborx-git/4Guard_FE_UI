@@ -43,6 +43,12 @@
           },
           "configurations": {
             "production": {
+              "fileReplacements": [
+                {
+                  "replace": "apps/admin-console/src/environments/environment.ts",
+                  "with": "apps/admin-console/src/environments/environment.develop.ts"
+                }
+              ],
               "budgets": [
                 { "type": "initial", "maximumWarning": "500kb", "maximumError": "1mb" },
                 { "type": "anyComponentStyle", "maximumWarning": "120kb", "maximumError": "200kb" }
@@ -160,6 +166,12 @@
           },
           "configurations": {
             "production": {
+              "fileReplacements": [
+                {
+                  "replace": "apps/rf-terminal/src/environments/environment.ts",
+                  "with": "apps/rf-terminal/src/environments/environment.develop.ts"
+                }
+              ],
               "budgets": [
                 { "type": "initial", "maximumWarning": "1mb", "maximumError": "2mb" },
                 { "type": "anyComponentStyle", "maximumWarning": "120kb", "maximumError": "200kb" }

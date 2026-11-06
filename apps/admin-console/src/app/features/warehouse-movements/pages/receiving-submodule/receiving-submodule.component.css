@@ -5684,6 +5684,117 @@ h6 {
   border-color: rgba(244, 63, 94, 0.3);
 }
 
+/* Badges y Estilos de Modo Tablet Montacarguista */
+.badge--discharged {
+  background: #fae8ff;
+  color: #86198f;
+  border: 1px solid #f0abfc;
+}
+
+:host-context(.theme-dark) .badge--discharged,
+:host-context(.dark) .badge--discharged {
+  background: rgba(217, 70, 239, 0.18);
+  color: #f0abfc;
+  border-color: rgba(217, 70, 239, 0.35);
+}
+
+.executive-badge--audit-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(245, 158, 11, 0.2));
+  color: #6b21a8;
+  border: 1.5px solid rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.25);
+}
+
+:host-context(.dark) .executive-badge--audit-pending,
+:host-context(.theme-dark) .executive-badge--audit-pending {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(245, 158, 11, 0.25));
+  color: #f3e8ff;
+  border-color: rgba(192, 132, 252, 0.6);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.4);
+}
+
+.badge-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #a855f7;
+  box-shadow: 0 0 6px #a855f7;
+  animation: pingDot 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes pingDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+.executive-badge--tablet-waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  border: 1px dashed rgba(59, 130, 246, 0.4);
+}
+
+:host-context(.dark) .executive-badge--tablet-waiting,
+:host-context(.theme-dark) .executive-badge--tablet-waiting {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border-color: rgba(96, 165, 250, 0.4);
+}
+
+.executive-card--discharged {
+  border-color: rgba(168, 85, 247, 0.5) !important;
+  box-shadow: 0 4px 20px -2px rgba(168, 85, 247, 0.2) !important;
+}
+
+.executive-card--discharged:hover {
+  border-color: rgba(168, 85, 247, 0.8) !important;
+  box-shadow: 0 8px 25px -2px rgba(168, 85, 247, 0.35) !important;
+}
+
+.executive-tablet-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(90deg, rgba(168, 85, 247, 0.12), rgba(245, 158, 11, 0.08));
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  font-size: 0.73rem;
+  color: #581c87;
+}
+
+:host-context(.dark) .executive-tablet-notice,
+:host-context(.theme-dark) .executive-tablet-notice {
+  background: linear-gradient(90deg, rgba(168, 85, 247, 0.2), rgba(245, 158, 11, 0.12));
+  border-color: rgba(168, 85, 247, 0.4);
+  color: #e9d5ff;
+}
+
+.executive-link--audit {
+  color: #7e22ce !important;
+  font-weight: 800 !important;
+}
+
+:host-context(.dark) .executive-link--audit,
+:host-context(.theme-dark) .executive-link--audit {
+  color: #d8b4fe !important;
+}
+
 /* Folio & Date Row */
 .executive-folio-row {
   display: flex;
