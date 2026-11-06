@@ -66,24 +66,27 @@ export class WarehouseMovementsApiService {
       const userStr = localStorage.getItem('4guard_user');
       if (userStr) {
         const user = JSON.parse(userStr);
-        if (user?.organizationId) {
-          return { organizationId: user.organizationId, branchId: user.branchId || '' };
+        if (user?.organizationId || user?.branchId) {
+          return {
+            organizationId: user.organizationId || DEFAULT_ORG_ID,
+            branchId: user.branchId || DEFAULT_BRANCH_ID
+          };
         }
       }
       const sessionStr = localStorage.getItem('session');
       if (sessionStr) {
         const session = JSON.parse(sessionStr);
-        if (session?.user?.organizationId) {
+        if (session?.user?.organizationId || session?.user?.branchId) {
           return {
-            organizationId: session.user.organizationId,
-            branchId: session.user.branchId || '',
+            organizationId: session.user.organizationId || DEFAULT_ORG_ID,
+            branchId: session.user.branchId || DEFAULT_BRANCH_ID,
           };
         }
       }
     } catch {
       // Fallback
     }
-    return { organizationId: '', branchId: '' };
+    return { organizationId: DEFAULT_ORG_ID, branchId: DEFAULT_BRANCH_ID };
   }
 
   getSessionOrgId(): string {
@@ -864,9 +867,8 @@ export class WarehouseMovementsApiService {
   }
 
   getLocations(branchId?: string): Observable<any[]> {
-    let url = `${this.baseUrl}/api/v1/warehouse-map/positions`;
-    const bId = branchId || this.getSessionOrg().branchId;
-    if (bId) url += `?branchId=${bId}`;
+    const bId = branchId || this.getSessionOrg().branchId || DEFAULT_BRANCH_ID;
+    const url = `${this.baseUrl}/api/v1/warehouse-map/positions?branchId=${bId}`;
     return this.http.get<ApiResponse<any[]>>(url).pipe(
       map((res) => res.data || []),
       catchError(() => of([]))
@@ -874,9 +876,8 @@ export class WarehouseMovementsApiService {
   }
 
   getBayOccupancy(branchId?: string): Observable<any[]> {
-    let url = `${this.baseUrl}/api/v1/warehouse-map/positions`;
-    const bId = branchId || this.getSessionOrg().branchId;
-    if (bId) url += `?branchId=${bId}`;
+    const bId = branchId || this.getSessionOrg().branchId || DEFAULT_BRANCH_ID;
+    const url = `${this.baseUrl}/api/v1/warehouse-map/positions?branchId=${bId}`;
     return this.http.get<ApiResponse<any[]>>(url).pipe(
       map((res) => res.data || []),
       catchError(() => of([]))
