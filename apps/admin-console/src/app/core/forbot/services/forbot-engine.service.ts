@@ -20,6 +20,8 @@ import { CatalogsService } from '../../../features/catalogs/services/catalogs.se
 import { QualityStateService } from '../../../features/quality/services/quality-state.service';
 import { AuthState } from '../../../core/auth/auth.state';
 import { ForbotTourService } from './forbot-tour.service';
+import { ShiftService } from '../../../features/admin/shifts/services/shift.service';
+import { PerformanceKpiService } from '../../../features/performance/services/performance-kpi.service';
 
 @Injectable({
   providedIn: 'root'
@@ -32,6 +34,8 @@ export class ForbotEngineService {
   private readonly qualityState = inject(QualityStateService);
   private readonly authState = inject(AuthState);
   private readonly tourService = inject(ForbotTourService);
+  private readonly shiftService = inject(ShiftService);
+  private readonly performanceService = inject(PerformanceKpiService);
 
   /** Visibilidad del Drawer Flotante Lateral */
   public readonly isDrawerOpen = signal<boolean>(false);
@@ -247,18 +251,89 @@ export class ForbotEngineService {
   private classifyIntent(query: string): ForbotIntentType {
     const q = query.toLowerCase();
 
-    if (q.includes('tour') || q.includes('recorrido') || q.includes('guiado') || q.includes('pantalla')) {
+    // 0. Tour Guiado de Interfaz
+    if (q.includes('tour') || q.includes('recorrido') || q.includes('guiado') || q.includes('pantalla') || q.includes('iniciar tour')) {
       return 'TOUR_DRIVER_JS';
     }
 
+    // 1. Inducción de Procesos Core
     if (q.includes('fsm') || q.includes('8 estados') || q.includes('estados') || q.includes('ciclo de vida') || q.includes('cuarentena')) {
       return 'FSM_8_ESTADOS';
     }
 
-    if (q.includes('pablo') || q.includes('regla de pablo')) {
+    if (q.includes('pablo') || q.includes('regla de pablo') || q.includes('semaforización') || q.includes('semaforizacion')) {
       return 'REGLA_PABLO_INFO';
     }
 
+    // 2. Rol: Caseta de Seguridad (Security Guard)
+    if (q.includes('f02') || q.includes('bitácora') || q.includes('bitacora') || q.includes('exportar f02') || q.includes('bitacora de caseta')) {
+      return 'EXPORTAR_BITACORA_F02';
+    }
+
+    if (q.includes('pase qr') || q.includes('pases qr') || q.includes('sin cita') || q.includes('validar pases') || q.includes('escanear chofer') || q.includes('choferes sin cita') || q.includes('pase digital')) {
+      return 'TUTOR_SECURITY_QR';
+    }
+
+    if (q.includes('checklist oficial') || q.includes('inspección física f01') || q.includes('inspeccion fisica f01') || q.includes('checklist f01') || (q.includes('f01') && (q.includes('checklist') || q.includes('inspecc') || q.includes('inspección')))) {
+      return 'TUTOR_SECURITY_F01';
+    }
+
+    if (q.includes('rampa vs patio') || q.includes('rampa o a patio') || q.includes('patio de espera') || q.includes('enviar a rampa') || q.includes('enviar un transporte a rampa')) {
+      return 'TUTOR_SECURITY_RAMPA';
+    }
+
+    if (q.includes('check-out') || q.includes('checkout') || q.includes('salida de un camión') || q.includes('salida de un camion') || q.includes('salida camión') || q.includes('salida tráiler') || q.includes('salida trailer') || q.includes('check out')) {
+      return 'TUTOR_SECURITY_SALIDA';
+    }
+
+    // 3. Rol: Mesa de Control (Control Desk)
+    if (q.includes('365 días') || q.includes('365 dias') || q.includes('vida útil') || q.includes('vida util') || q.includes('365')) {
+      return 'TUTOR_DESK_365_DAYS';
+    }
+
+    if (q.includes('prioridad urgente') || q.includes('asignar misiones') || q.includes('terminal rf') || q.includes('misiones a rf') || q.includes('asignar a terminal') || q.includes('mision rf') || q.includes('misión rf')) {
+      return 'TUTOR_DESK_ASSIGN_RF';
+    }
+
+    if (q.includes('fefo en órdenes') || q.includes('fefo en salidas') || q.includes('despachos fefo') || q.includes('criterio fefo') || (q.includes('fefo') && (q.includes('despacho') || q.includes('orden') || q.includes('salida')))) {
+      return 'TUTOR_DESK_FEFO';
+    }
+
+    // 4. Rol: Gerente de Operaciones (Operations Manager)
+    if (q.includes('comida') || q.includes('horario de comida') || q.includes('pausa anticipad') || q.includes('pausar las acitivdades') || q.includes('pausar las actividades') || q.includes('pausar actividades') || q.includes('minutos antes') || q.includes('uñas a piso') || q.includes('almuerzo')) {
+      return 'TURNO_COMIDA_ANTICIPACION';
+    }
+
+    if (q.includes('throughput') || q.includes('cuello de botella') || q.includes('cuellos de botella') || q.includes('flujo andenes') || q.includes('tiempo andén') || q.includes('tiempo anden')) {
+      return 'TUTOR_MGR_THROUGHPUT';
+    }
+
+    if (q.includes('horas trabajadas') || q.includes('horas trabajadas de montacarguistas') || q.includes('auditar las horas') || q.includes('auditar horas') || q.includes('jornada') || q.includes('cuadrilla')) {
+      return 'TUTOR_MGR_HOURS';
+    }
+
+    if (q.includes('topología 2d') || q.includes('topologia 2d') || q.includes('blueprint') || q.includes('mapa 2d') || q.includes('supervisar la topología') || q.includes('supervisar la topologia')) {
+      return 'TUTOR_MGR_TOPOLOGY';
+    }
+
+    // 5. Rol: Dirección General (Executive / Director)
+    if (q.includes('sla') || q.includes('slas') || q.includes('otif') || q.includes('throughput global') || q.includes('cumplimiento de slas')) {
+      return 'TUTOR_DIR_SLAS';
+    }
+
+    if (q.includes('seguridad pin') || q.includes('gobernanza de turnos') || q.includes('gobernanza') || q.includes('administración de turnos y seguridad') || q.includes('supervisar la administración de turnos') || q.includes('sod')) {
+      return 'TUTOR_DIR_GOVERNANCE';
+    }
+
+    if (q.includes('capacidad contratada') || q.includes('18k') || q.includes('18,000') || q.includes('18000') || q.includes('13.5k') || q.includes('13,500') || q.includes('sobrecupo') || q.includes('capacidad de planta')) {
+      return 'TUTOR_DIR_CAPACITY';
+    }
+
+    if (q.includes('costo merma') || q.includes('pérdida merma') || q.includes('valor caducidad') || q.includes('cumplimiento normativo nom-251 y mermas') || q.includes('riesgo financiero')) {
+      return 'TUTOR_DIR_MERMAS';
+    }
+
+    // 6. Consultas Operativas Generales (Stocks, Rampas, Bodegas, Montacargas)
     if (
       q.includes('caduc') ||
       q.includes('merma') ||
@@ -274,7 +349,6 @@ export class ForbotEngineService {
       q.includes('anden') ||
       q.includes('andén') ||
       q.includes('recep') ||
-      q.includes('f01') ||
       q.includes('embarque')
     ) {
       return 'ESTADO_RAMPAS';
@@ -286,7 +360,8 @@ export class ForbotEngineService {
       q.includes('satura') ||
       q.includes('capacidad') ||
       q.includes('apc') ||
-      q.includes('topología')
+      q.includes('topología') ||
+      q.includes('topologia')
     ) {
       return 'SATURACION_BODEGAS';
     }
@@ -437,6 +512,462 @@ export class ForbotEngineService {
             ],
             actionRoute: '/inventory-query',
             actionLabel: 'Filtrar Alertas de Pablo'
+          }
+        };
+      }
+
+      
+      case 'TUTOR_SECURITY_QR': {
+        const receptionsList = this.movementsService.receptions();
+        const inGateCount = receptionsList.filter((r: any) => r.status === 'CASETA').length;
+
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `📱 **Validación de Pases QR & Registro de Choferes:**
+1. **Con Cita Previa:** El operador transportista presenta el código QR digital en su smartphone o impreso. Al escanearlo con la cámara o pistola óptica, 4GUARD recupera la Orden de Compra y pre-llena los datos de la unidad en menos de 3 segundos.
+2. **Choferes Sin Cita:** Si la unidad no cuenta con cita previa, pulsa **"Nuevo Registro Manual"** en Caseta. Registra placas, línea transportista, nombre del chofer e identificación oficial. La unidad queda encolada en estatus *CASETA* a la espera de asignación de rampa por Mesa de Control.
+Actualmente hay **${inGateCount} unidad(es)** en proceso en Caseta.`,
+          widgetData: {
+            type: 'action-card',
+            title: 'Control de Acceso Vehicular (QR / Caseta)',
+            items: [
+              { label: 'Unidades en Caseta', value: `${inGateCount} Vehículo(s)`, badgeColor: 'blue' },
+              { label: 'Escáner QR', value: 'Óptico / Cámara', badgeColor: 'emerald' },
+              { label: 'Chofer Sin Cita', value: 'Registro F01 Manual', badgeColor: 'amber' }
+            ],
+            actionRoute: '/security',
+            actionLabel: 'Ir a Caseta de Seguridad',
+            proactiveTip: 'Tip de Seguridad: Exige identificación oficial con fotografía (INE/Licencia) antes de autorizar el ingreso al patio.'
+          }
+        };
+      }
+
+      case 'TUTOR_SECURITY_F01': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `📋 **Protocolo de Inspección Física F01 (F01-PO-SEC-01):**
+Todo transporte que ingresa a patio debe ser inspeccionado rigurosamente en Caseta antes de ingresar a rampa:
+• **Integridad de Lona / Caja:** Máximo 1 rasgadura $\\le 5\\text{ cm}$ debidamente parchada y sellada sin filtración de luz ni agua.
+• **Sellos Fiscales & Candados:** Números de sello deben coincidir exactamente con el documento de embarque / carta porte.
+• **Condiciones Higiénicas (NOM-251):** Piso limpio, seco, sin olores a combustible o químicos, sin clavos salientes ni astillas.
+• **Plagas y Fauna Nociva:** **Tolerancia CERO** a indicios de insectos, roedores o suciedad.
+• **Termógrafo (Refrigerados):** Verificar temperatura conforme a la ficha técnica del producto antes de abrir sellos.`,
+          widgetData: {
+            type: 'status-list',
+            title: 'Criterios de Inspección Física F01',
+            items: [
+              { label: 'Caja / Lona', value: 'Sin filtraciones (≤5cm)', badgeColor: 'emerald' },
+              { label: 'Sellos Fiscales', value: 'Cotejo Carta Porte', badgeColor: 'blue' },
+              { label: 'Plagas (NOM-251)', value: 'Tolerancia Cero', badgeColor: 'rose' }
+            ],
+            actionRoute: '/security',
+            actionLabel: 'Abrir Inspección en Caseta',
+            proactiveTip: 'Si una unidad presenta anomalías en sellos o plagas, repórtalo de inmediato y mantenla detenida en patio.'
+          }
+        };
+      }
+
+      case 'TUTOR_SECURITY_RAMPA': {
+        const ramps = this.movementsService.ramps();
+        const availableRamps = ramps.filter((r: any) => r.isAvailable || r.status === 'AVAILABLE').length;
+
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `🚛 **Decisión Operativa: Rampa vs Patio de Espera:**
+• **Asignar a Rampa Directa (Andenes 1-4):** Procede cuando la inspección F01 está aprobada, la cita está confirmada y Mesa de Control ha liberado un andén de descarga.
+• **Enviar a Patio de Espera:** Se canaliza al patio si los andenes están saturados, si la unidad llegó con anticipación a su horario de cita, o si es un transporte "Sin Cita" en espera de validación de orden de compra por Mesa de Control.
+• **Tiempo Máximo en Patio:** Si el cliente depositante no autoriza la descarga en un lapso de **30 minutos**, la unidad debe desalojar las instalaciones.
+Actualmente hay **${availableRamps} rampa(s) disponible(s)** en andenes.`,
+          widgetData: {
+            type: 'status-list',
+            title: 'Disponibilidad de Andenes & Patio',
+            items: [
+              { label: 'Rampas Disponibles', value: `${availableRamps} Andén(es)`, badgeColor: 'emerald' },
+              { label: 'Tiempo Máx. Espera', value: '30 Minutos', badgeColor: 'amber' },
+              { label: 'Mesa de Control', value: 'Asignación Vía Sistema', badgeColor: 'blue' }
+            ],
+            actionRoute: '/warehouse-movements/receiving',
+            actionLabel: 'Ver Andenes de Recepción',
+            proactiveTip: 'Los choferes deben permanecer en la sala de espera de transportistas durante la maniobra en andén.'
+          }
+        };
+      }
+
+      case 'TUTOR_SECURITY_SALIDA': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `🚪 **Procedimiento de Check-Out y Salida de Patio:**
+1. **Cotejo Documental:** El transportista debe presentar su Remisión de Salida firmada y sellada por el Jefe de Almacén o Mesa de Control.
+2. **Inspección de Caja / Sellos:**
+   • Si la unidad sale vacía tras descarga: Inspeccionar visualmente el interior de la caja para asegurar que no queden herramientas ni bultos ajenos.
+   • Si la unidad sale con carga (despacho): Verificar y registrar en el sistema el número de sello fiscal de seguridad colocado en las puertas.
+3. **Registro de Salida (Gate-to-Gate):** Pulsa **"Registrar Salida"** en Caseta para estampar la fecha/hora exacta en el ciclo de estadía.
+4. **Liberación de Pluma:** Autorizar el levantamiento de la pluma vehicular para permitir el egreso del tráiler.`,
+          widgetData: {
+            type: 'action-card',
+            title: 'Check-Out de Seguridad & Salida',
+            items: [
+              { label: 'Documento Requerido', value: 'Remisión Sellada', badgeColor: 'emerald' },
+              { label: 'Cierre de Ciclo', value: 'Gate-to-Gate Final', badgeColor: 'blue' },
+              { label: 'Sellos de Salida', value: 'Registro F01 Obligatorio', badgeColor: 'amber' }
+            ],
+            actionRoute: '/security',
+            actionLabel: 'Ir a Caseta de Salida',
+            proactiveTip: 'Ninguna unidad puede egresar sin la firma digital o física de liberación por Mesa de Control.'
+          }
+        };
+      }
+
+      case 'EXPORTAR_BITACORA_F02': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `📄 **Exportación de Bitácora Oficial de Caseta (F02):**
+La bitácora **F02-PO-SEC-01** consolida la trazabilidad de todos los transportes que han ingresado y egresado de las instalaciones:
+• Contiene: Folio de Entrada, Placas del Tracto/Caja, Línea Transportista, Nombre del Chofer, Hora de Llegada, Tiempo en Andén, Hora de Salida y Tiempo Total de Ciclo (Gate-to-Gate).
+• Para descargar el archivo oficial en formato Excel (.xlsx), dirígete al módulo de **Caseta de Seguridad** y pulsa el botón **"Exportar Bitácora F02"** en la barra superior.`,
+          widgetData: {
+            type: 'action-card',
+            title: 'Bitácora de Caseta F02 (Excel)',
+            items: [
+              { label: 'Formato Oficial', value: 'Excel (.xlsx)', badgeColor: 'emerald' },
+              { label: 'Estándar', value: 'F02-PO-SEC-01', badgeColor: 'blue' },
+              { label: 'Auditoría', value: 'Trazabilidad C-TPAT/BRC', badgeColor: 'purple' }
+            ],
+            actionRoute: '/security',
+            actionLabel: 'Abrir Caseta para Exportar F02',
+            proactiveTip: 'La bitácora F02 debe auditarse al final de cada turno antes del relevo de guardia.'
+          }
+        };
+      }
+
+      case 'TUTOR_DESK_365_DAYS': {
+        const records = this.inventoryService.rawInventory();
+        const alertRecords = records.filter((r) => r.expirationStatus === 'PROXIMO_30_DIAS' || r.expirationStatus === 'CADUCO').length;
+
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `⏳ **Regla de Vida Útil Mínima (≥ 365 Días en Recepción):**
+• **Criterio de Aceptación:** Todo producto terminado recibido en andén debe contar con **al menos 365 días de vida útil remanente** calculados entre la fecha de recepción y la fecha de caducidad indicada en el empaque.
+• **Rechazo Preventivo:** Si el producto arriba con menos de 365 días, el WMS emite una **Alerta de Vida Útil Insuficiente**.
+• **Protocolo de Excepción:** La descarga solo puede continuar si el Cliente Depositante emite una autorización por escrito (*CARTA DE ACEPTACIÓN DE VIDA ÚTIL CORTA*) y el Superintendente de Mesa de Control registra la excepción en el sistema.
+Actualmente existen **${alertRecords} tarima(s)** en seguimiento por caducidad en el inventario.`,
+          widgetData: {
+            type: 'warning-card',
+            title: 'Regla de Vida Útil ≥ 365 Días',
+            items: [
+              { label: 'Mínimo de Ingreso', value: '≥ 365 Días', badgeColor: 'emerald' },
+              { label: 'Acción ante Desviación', value: 'Rechazo / Autorización', badgeColor: 'rose' },
+              { label: 'Seguimiento', value: 'Kardex de Lotes', badgeColor: 'amber' }
+            ],
+            actionRoute: '/warehouse-movements/receiving',
+            actionLabel: 'Ver Recepciones en Andén',
+            proactiveTip: 'Valida siempre el lote y fecha de vencimiento física contra la factura antes de autorizar el ingreso al WMS.'
+          }
+        };
+      }
+
+      case 'TUTOR_DESK_ASSIGN_RF': {
+        const operators = this.catalogsService.forkliftOperators();
+
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `⚡ **Asignación de Misiones a Terminal RF & Prioridad Urgente:**
+• **Asignación de Guardado (Putaway):** Mesa de Control puede asignar directamente pallets descargados en andén a un montacarguista específico o dejarlos en cola compartida de asignación inteligente.
+• **Bandera de Prioridad Urgente:** Al activar la casilla **"Prioridad Urgente"** en una orden de movimiento:
+  1. La Terminal RF del montacarguista emite un pitido de alerta acústica continuo.
+  2. La pantalla del montacarguista se bloquea priorizando exclusivamente esta misión urgente por encima de otras tareas.
+  3. El sistema calcula la ruta más corta en el Layout 2D para acelerar la maniobra.
+Hay **${operators.length} montacarguistas activos** listos para recibir misiones en terminales RF.`,
+          widgetData: {
+            type: 'status-list',
+            title: 'Misiones RF & Despacho Inteligente',
+            items: [
+              { label: 'Operadores Conectados', value: `${operators.length} Montacarguistas`, badgeColor: 'emerald' },
+              { label: 'Prioridad Urgente', value: 'Interrupción Activa RF', badgeColor: 'rose' },
+              { label: 'Enrutamiento 2D', value: 'Optimización de Pasillo', badgeColor: 'blue' }
+            ],
+            actionRoute: '/warehouse-movements/receiving',
+            actionLabel: 'Gestionar Misiones de Recepción',
+            proactiveTip: 'Usa la prioridad urgente con prudencia para no romper los circuitos de guardado continuo de los pasillos.'
+          }
+        };
+      }
+
+      case 'TUTOR_DESK_FEFO': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `📦 **Criterio FEFO en Órdenes de Salida (First Expired, First Out):**
+• **Lógica de Despacho:** Al generar una Orden de Salida (Outbound), el WMS evalúa todas las tarimas disponibles del SKU solicitado y selecciona prioritariamente aquellas cuya fecha de expiración sea la más próxima.
+• **Protección contra Mermas:** Este algoritmo garantiza que ningún producto perezca en racks. Los lotes bajo la **Regla de Pablo (<30 días)** son etiquetados como *"Salida Inmediata"*.
+• **Restricción:** Solo tarimas en estado **30 (Disponible)** son elegibles para asignación FEFO; cualquier tarima en estado **20 (Cuarentena)** o **70 (Bloqueado QM)** queda excluida automáticamente del algoritmo.`,
+          widgetData: {
+            type: 'action-card',
+            title: 'Despacho FEFO Automatizado',
+            items: [
+              { label: 'Algoritmo Primario', value: 'FEFO (Vencimiento)', badgeColor: 'emerald' },
+              { label: 'Filtro de Estado', value: 'Solo Estado 30 (Disponible)', badgeColor: 'blue' },
+              { label: 'Regla de Pablo', value: 'Prioridad Máxima <30d', badgeColor: 'amber' }
+            ],
+            actionRoute: '/warehouse-movements/outbound',
+            actionLabel: 'Ver Salidas de Almacén',
+            proactiveTip: 'Si un cliente exige vida útil mínima de entrega (ej. >90 días), el filtro FEFO restringe la búsqueda a lotes conformes.'
+          }
+        };
+      }
+
+      case 'TUTOR_MGR_THROUGHPUT': {
+        const ramps = this.movementsService.ramps();
+        const activeCount = ramps.filter((r: any) => !r.isAvailable && r.status !== 'AVAILABLE').length;
+
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `📈 **Throughput & Cuellos de Botella en Andenes:**
+• **Throughput de Almacén:** Medimos la productividad global en **Pallets por Hora (PPH)**. La meta operativa es $\\ge 25\\text{ PPH}$ por montacarguista en maniobras de descarga y almacenamiento.
+• **Cuellos de Botella en Andenes:**
+  - **Tiempo Estándar de Descarga:** $\\le 45\\text{ minutos}$ por tráiler completo (24 a 28 tarimas).
+  - **Alerta Amarilla:** $\\ge 60\\text{ minutos}$ en andén (posible incidencia documental o mercancía dañada).
+  - **Alerta Roja Crítica:** $\\ge 90\\text{ minutos}$ (riesgo inminente de cobro de demoras por transportista).
+Actualmente hay **${activeCount} rampa(s) con maniobras activas**.`,
+          widgetData: {
+            type: 'kpi-summary',
+            title: 'Productividad & Flujo de Andenes',
+            items: [
+              { label: 'Meta de Descarga', value: '≤ 45 Min / Tráiler', badgeColor: 'emerald' },
+              { label: 'Meta Throughput', value: '≥ 25 PPH', badgeColor: 'blue' },
+              { label: 'Rampas Ocupadas', value: `${activeCount} de ${ramps.length}`, badgeColor: 'amber' }
+            ],
+            actionRoute: '/performance',
+            actionLabel: 'Ver Monitoreo de Rendimiento',
+            proactiveTip: 'Si un andén supera 60 minutos, acude de inmediato a revisar el reporte de incidencias o apoya con un segundo operador.'
+          }
+        };
+      }
+
+      case 'TUTOR_MGR_HOURS': {
+        const operators = this.catalogsService.forkliftOperators();
+        const currentShift = this.authState.userShiftBadge();
+
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `⏱️ **Auditoría de Horas Trabajadas de Montacarguistas:**
+• **Monitoreo de Jornada:** En el módulo de Rendimiento puedes auditar el tiempo efectivo de conducción de montacargas, tiempos de traslado y pausas operativas de cada montacarguista.
+• **Cumplimiento STPS (DC-3):** Todos los operadores registrados en plantilla (**${operators.length} montacarguistas**) cuentan con su constancia de habilidades laborales DC-3 vigente para operación segura de maquinaria pesada.
+• **Turno en Curso:** Operando bajo **${currentShift}**. Puedes conciliar las horas marcadas contra las metas de pallets movidos para detectar desviaciones en el índice de aprovechamiento de jornada.`,
+          widgetData: {
+            type: 'kpi-summary',
+            title: 'Jornada & Operadores de Montacargas',
+            items: [
+              { label: 'Operadores en Plantilla', value: `${operators.length} Certificados`, badgeColor: 'emerald' },
+              { label: 'Licencia STPS', value: 'DC-3 Vigente', badgeColor: 'emerald' },
+              { label: 'Turno Activo', value: currentShift, badgeColor: 'blue' }
+            ],
+            actionRoute: '/performance',
+            actionLabel: 'Auditar Rendimiento de Operadores',
+            proactiveTip: 'Revisa periódicamente el gráfico de horas muertas para rebalancear las cuadrillas en horas pico de arribo.'
+          }
+        };
+      }
+
+      case 'TUTOR_MGR_TOPOLOGY': {
+        const bays = this.catalogsService.bays();
+
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `🗺️ **Topología 2D & Saturación de Bodegas:**
+• **Visualización Gráfica en Tiempo Real:** El mapa 2D interactivo reproduce la planta física completa de 4GUARD con sus **6 bodegas** (A, APC, AT, B, BPC, BT) y sus **${bays.length} posiciones de rack**.
+• **Semaforización de Pasillos & Bahías:**
+  - 🟢 **Verde:** Bahía libre lista para asignación Putaway.
+  - 🟡 **Ámbar:** Bahía con producto en alerta de caducidad (<30 días) o reservada para picking.
+  - 🔵 **Azul:** Bahía con ocupación óptima y producto en estado 30 (Disponible).
+  - 🔴 **Rojo:** Bahía con producto bloqueado por Calidad (Estado 70) o en mantenimiento.
+• **Zoom Dinámico & Filtros:** Puedes acercar la vista a nivel pasillo, rack y nivel de estiba con un solo clic.`,
+          widgetData: {
+            type: 'kpi-summary',
+            title: 'Topología 2D & Capacidad de Planta',
+            items: [
+              { label: 'Bodegas Físicas', value: '6 Naves Industriales', badgeColor: 'blue' },
+              { label: 'Posiciones Totales', value: `${bays.length} Bahías`, badgeColor: 'emerald' },
+              { label: 'Vista de Blueprint', value: 'Interactiva 2D', badgeColor: 'purple' }
+            ],
+            actionRoute: '/catalogs/warehouse',
+            actionLabel: 'Abrir Mapa 2D de Topología',
+            proactiveTip: 'Mantén la bodega APC (climatizada) con ocupación controlada para optimizar los costos de refrigeración.'
+          }
+        };
+      }
+
+      case 'TURNO_COMIDA_ANTICIPACION': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `🍽️ **Horario de Comida & Protocolo de Pausa Anticipada:**
+• **Ventana de Comida Oficial:** 60 minutos programados por turno para todo el personal operativo:
+  - **Turno 1 (Matutino):** 13:00 a 14:00 hrs.
+  - **Turno 2 (Vespertino):** 21:00 a 22:00 hrs.
+• **Regla de Pausa Anticipada (10 a 15 Minutos Antes):**
+  Los montacarguistas y operadores tienen autorización de pausar actividades a partir de las **12:45 hrs** (Turno 1) o **20:45 hrs** (Turno 2) cumpliendo estrictamente con el siguiente protocolo de seguridad industrial:
+  1. **Uñas al Piso:** Bajar completamente las horquillas del montacargas hasta tocar el suelo y colocar el freno de mano.
+  2. **Zona Segura de Estacionamiento:** Aparcar el equipo en la bahía designada de montacargas, fuera de pasillos de tránsito peatonal y rutas de evacuación.
+  3. **Cero Cargas Suspendidas:** Está estrictamente **prohibido dejar tarimas suspendidas en el aire** o a medio acomodar en un rack.
+  4. **Pausa en Terminal RF:** Cerrar o pausar la sesión en la terminal RF para no perjudicar las métricas individuales de PPH.`,
+          widgetData: {
+            type: 'warning-card',
+            title: 'Protocolo de Pausa de Comida',
+            items: [
+              { label: 'Duración Oficial', value: '60 Minutos', badgeColor: 'blue' },
+              { label: 'Pausa Autorizada', value: '10 a 15 min antes', badgeColor: 'amber' },
+              { label: 'Seguridad Industrial', value: 'Uñas a Piso en Zona Segura', badgeColor: 'emerald' }
+            ],
+            actionRoute: '/shifts',
+            actionLabel: 'Ver Administración de Turnos',
+            proactiveTip: 'El supervisor de turno audita que ningún montacargas permanezca con la llave en el switch durante la comida.'
+          }
+        };
+      }
+
+      case 'TUTOR_DIR_SLAS': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `📊 **Throughput Global & Cumplimiento de SLAs:**
+Para la toma de decisiones a nivel Dirección General, el WMS consolida los indicadores macro de nivel de servicio:
+• **OTIF (On-Time In-Full):** Meta institucional de **$\\ge 98.5\\%$**. Evalúa si los despachos a clientes salieron en la fecha prometida y con el 100% de los pallets solicitados.
+• **Ciclo Total Gate-to-Gate:** Meta corporativa de **$\\le 90\\text{ minutos}$** desde que el transporte cruza la pluma de seguridad hasta que egresa con remisión sellada.
+• **Exactitud de Inventario (IRA):** Meta de **$\\ge 99.8\\%$** en conteos cíclicos por RFID/código de barras.
+• **Disponibilidad de Rampas:** Nivel de servicio en andenes con rotación continua para evitar demoras de transporte (*demurrage*).`,
+          widgetData: {
+            type: 'kpi-summary',
+            title: 'SLAs Corporativos (Dirección General)',
+            items: [
+              { label: 'OTIF Global', value: '≥ 98.5% Meta', badgeColor: 'emerald' },
+              { label: 'Gate-to-Gate', value: '≤ 90 Minutos', badgeColor: 'blue' },
+              { label: 'Exactitud IRA', value: '≥ 99.8%', badgeColor: 'purple' }
+            ],
+            actionRoute: '/performance',
+            actionLabel: 'Ver Dashboard de Rendimiento Global',
+            proactiveTip: 'Un índice OTIF superior a 98% garantiza la renovación automática de contratos 3PL con clientes corporativos.'
+          }
+        };
+      }
+
+      case 'TUTOR_DIR_GOVERNANCE': {
+        const conflicts = this.shiftService.conflictCount();
+
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `⚙️ **Gobernanza de Turnos, RBAC & Seguridad con PIN:**
+• **Separación Estricta de Funciones (SoD):** El sistema bloquea acciones cruzadas; un operador de caseta no puede validar calidad, y un montacarguista no puede auto-aprobar una remisión de salida.
+• **Autorización con PIN de Seguridad:** Operaciones críticas (ajustes manuales de inventario, bajas por merma, cancelación de órdenes y desbloqueo QM) requieren confirmación de PIN de 4 dígitos del Director o Gerente de Operaciones.
+• **Administración de Turnos:** Supervisión de horarios de operación, rotación de personal y prevención de traslapes. Actualmente detecto **${conflicts} conflicto(s) de traslape** entre turnos activos.`,
+          widgetData: {
+            type: 'status-list',
+            title: 'Gobernanza & Seguridad PIN',
+            items: [
+              { label: 'Seguridad Operativa', value: 'PIN 4 Dígitos Requerido', badgeColor: 'blue' },
+              { label: 'Conflictos de Turno', value: `${conflicts} Traslape(s)`, badgeColor: conflicts > 0 ? 'rose' : 'emerald' },
+              { label: 'Modelo de Acceso', value: 'RBAC Nivel 5 (SDD)', badgeColor: 'emerald' }
+            ],
+            actionRoute: '/shifts',
+            actionLabel: 'Administrar Turnos & Seguridad',
+            proactiveTip: 'Cambia periódicamente los PINs de autorización gerencial y audita la bitácora de eventos críticos.'
+          }
+        };
+      }
+
+      case 'TUTOR_DIR_CAPACITY': {
+        const bays = this.catalogsService.bays();
+
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `🏢 **Capacidad de Planta & Contratos de Almacenamiento:**
+• **Capacidad Física Instalada:** Diseñada para albergar hasta **18,000 tarimas estándar** en racks de doble profundidad y piso en sus 6 bodegas (compuestas por ${bays.length} posiciones de rack activas).
+• **Capacidad Base Contratada:** **13,500 posiciones fijas** comprometidas con clientes fijos de volumen continuo (75% de ocupación base óptima).
+• **Margen de Sobrecupo / Buffer Flexible:** **4,500 posiciones (25%)** reservadas estratégicamente para atender temporadas altas (Hot Sale, Buen Fin, Navidad) y servicios de almacenamiento spot de alto margen.`,
+          widgetData: {
+            type: 'kpi-summary',
+            title: 'Capacidad de Almacenamiento 18K',
+            items: [
+              { label: 'Capacidad Total', value: '18,000 Pallets', badgeColor: 'blue' },
+              { label: 'Base Contratada', value: '13,500 Pallets (75%)', badgeColor: 'emerald' },
+              { label: 'Buffer Sobrecupo', value: '4,500 Pallets (25%)', badgeColor: 'amber' }
+            ],
+            actionRoute: '/catalogs/warehouse',
+            actionLabel: 'Ver Topología & Distribución de Naves',
+            proactiveTip: 'Supervisa que la ocupación general no rebase el 85% para preservar la fluidez de maniobra de los montacargas.'
+          }
+        };
+      }
+
+      case 'TUTOR_DIR_MERMAS': {
+        const records = this.inventoryService.rawInventory();
+        const expiring = records.filter((r) => r.expirationStatus === 'PROXIMO_30_DIAS').length;
+        const expired = records.filter((r) => r.expirationStatus === 'CADUCO').length;
+
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `💰 **Riesgo Financiero de Mermas & Cumplimiento NOM-251:**
+• **Tolerancia Contractual de Merma:** Establecida en **$\\le 0.05\\%$ del valor del inventario en custodia**. Cualquier desviación superior genera penalización directa al operador 3PL.
+• **Monitoreo Proactivo (Regla de Pablo):**
+  - Actualmente detecto **${expiring} tarima(s) próximas a vencer (<30 días)** y **${expired} tarima(s) caducadas**.
+  - El WMS genera alertas tempranas para coordinar con el cliente depositante descuentos comerciales, liquidación preferente FEFO o retiro preventivo.
+• **Blindaje Normativo NOM-251:** Todo producto caduco es trasladado de inmediato al área de retención para evitar contaminación cruzada y garantizar auditorías sanitarias limpias.`,
+          widgetData: {
+            type: 'warning-card',
+            title: 'Auditoría Financiera de Mermas',
+            items: [
+              { label: 'Meta de Merma', value: '≤ 0.05% Contractual', badgeColor: 'emerald' },
+              { label: 'Lotes <30 Días', value: `${expiring} Tarima(s)`, badgeColor: 'amber' },
+              { label: 'Lotes Caducos', value: `${expired} Tarima(s)`, badgeColor: expired > 0 ? 'rose' : 'emerald' }
+            ],
+            actionRoute: '/inventory-query',
+            actionLabel: 'Auditar Lotes en Inventario',
+            proactiveTip: 'Programa revisiones semanales de caducidades con los representantes comerciales de los clientes depositantes.'
           }
         };
       }
