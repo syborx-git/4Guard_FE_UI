@@ -37,6 +37,7 @@
     <div class="flex items-center gap-2.5 flex-wrap">
       <!-- Imprimir Cartel Oficial QR para Entrada (Formato F01 Tamaño Carta) -->
       <button
+        id="sec-btn-print-poster"
         type="button"
         (click)="openPosterPrintModal()"
         class="btn-primary-gold flex items-center gap-1.5 shadow-sm"
@@ -49,6 +50,7 @@
 
       <!-- Ver Código QR Rápido / Configuración de Túnel -->
       <button
+        id="sec-btn-view-qr"
         type="button"
         (click)="openQrModal()"
         [disabled]="isGeneratingPass()"
@@ -73,6 +75,7 @@
 
       <!-- Exportar Bitácora Oficial Excel F02 -->
       <button
+        id="sec-btn-export-f02"
         type="button"
         (click)="openF02ExportModal()"
         class="btn-secondary-outline flex items-center gap-1.5 border-emerald-500/40 hover:border-emerald-500 hover:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-bold"
@@ -93,6 +96,7 @@
       <div class="flex items-center gap-2 flex-wrap">
         <!-- Tab 1: Registro & Pases QR -->
         <button
+          id="sec-tab-registration"
           type="button"
           (click)="setTab('REGISTRATION')"
           [class.active]="activeTab() === 'REGISTRATION'"
@@ -109,6 +113,7 @@
 
         <!-- Tab 2: Unidades en Planta & Salidas -->
         <button
+          id="sec-tab-in-yard"
           type="button"
           (click)="setTab('IN_YARD')"
           [class.active]="activeTab() === 'IN_YARD'"
@@ -130,6 +135,7 @@
 
         <!-- Tab 3: Historial del Turno -->
         <button
+          id="sec-tab-history"
           type="button"
           (click)="setTab('HISTORY')"
           [class.active]="activeTab() === 'HISTORY'"
@@ -259,7 +265,7 @@
       </div>
     } @else {
       <!-- Grid Completo de KPIs (4 Tarjetas) -->
-      <div class="module-kpi-grid animate-fade-in">
+      <div id="sec-kpi-grid" class="module-kpi-grid animate-fade-in">
         <!-- KPI 1: Unidades en Planta -->
         <div class="module-kpi-card module-kpi-card--primary">
           <div class="module-kpi-card__icon">
@@ -387,7 +393,7 @@
         </aside>
       } @else {
         <!-- Panel Completo Desplegado -->
-        <aside class="lg:col-span-4 space-y-5 transition-all duration-300 ease-in-out">
+        <aside id="sec-queue-column" class="lg:col-span-4 space-y-5 transition-all duration-300 ease-in-out">
           <!-- Tarjeta de Choferes en Espera / Solicitudes Móviles -->
           <div class="security-card p-5">
             <div class="flex items-center justify-between mb-3">
@@ -569,7 +575,7 @@
       <main [class]="isQueueCollapsed() ? 'flex-1 min-w-0 space-y-5 transition-all duration-300 ease-in-out' : 'lg:col-span-8 w-full space-y-5 transition-all duration-300 ease-in-out'">
         
         <!-- Barra Flotante de Navegación Rápida por Pasos del Formulario (Stepper) -->
-        <div class="form-stepper-bar">
+        <div id="sec-form-stepper" class="form-stepper-bar">
           <div class="form-stepper-group">
             @if (isQueueCollapsed()) {
               <!-- Botón para Re-expandir la Cola de Espera cuando el panel está oculto -->
@@ -633,7 +639,7 @@
           }
         </div>
 
-        <form [formGroup]="checkInForm" (ngSubmit)="submitCheckIn()" class="security-card p-5 sm:p-6 space-y-6">
+        <form id="sec-form-card" [formGroup]="checkInForm" (ngSubmit)="submitCheckIn()" class="security-card p-5 sm:p-6 space-y-6">
           
           <!-- Encabezado del Formato Oficial -->
           <div class="border-b border-slate-200 dark:border-slate-700/80 pb-4">

@@ -57,7 +57,7 @@ export class ForbotChatDrawerComponent {
 
   /** Píldoras de Tutor para Guardia de Caseta de Seguridad */
   private readonly securityTutorPills = [
-    { label: '🚀 Tour Caseta', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '🚀 Tour Caseta (14 Pasos)', query: 'Iniciar tour guiado de la interfaz' },
     { label: '📱 Pases QR & Choferes', query: '¿Cómo validar pases QR y registrar choferes sin cita?' },
     { label: '📋 Inspección F01', query: '¿Cuál es el checklist oficial de inspección física F01?' },
     { label: '🚛 Rampa vs Patio', query: '¿Cuándo enviar un transporte a rampa o a patio de espera?' },
@@ -66,7 +66,7 @@ export class ForbotChatDrawerComponent {
 
   /** Píldoras de Tutor para Gerente de Operaciones */
   private readonly operationsManagerTutorPills = [
-    { label: '🚀 Tour Ejecutivo', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '🚀 Tour Ejecutivo (19 Pasos)', query: 'Iniciar tour guiado de la interfaz' },
     { label: '📈 Throughput & Andenes', query: '¿Cómo interpretar el throughput y cuellos de botella en andenes?' },
     { label: '🗺️ Topología 2D', query: '¿Cómo supervisar la topología 2D y saturación de bodegas?' },
     { label: '⏱️ Horas Trabajadas', query: '¿Cómo auditar las horas trabajadas de montacarguistas por turno?' },
@@ -75,11 +75,20 @@ export class ForbotChatDrawerComponent {
 
   /** Píldoras de Tutor para Mesa de Control */
   private readonly controlDeskTutorPills = [
-    { label: '🚀 Tour Operativo', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '🚀 Tour Operativo (15 Pasos)', query: 'Iniciar tour guiado de la interfaz' },
     { label: '⏳ Vida Útil ≥ 365 días', query: '¿Cómo aplicar la regla de vida útil mínima de 365 días en recepción?' },
     { label: '⚡ Asignar Misiones a RF', query: '¿Cómo asignar misiones a montacarguistas y marcar prioridad urgente?' },
     { label: '📦 Despachos FEFO', query: '¿Cómo funciona el criterio FEFO en órdenes de salida?' },
     { label: '📘 Inducción FSM (8 Estados)', query: 'Explícame el ciclo de vida del producto en los 8 estados del FSM' }
+  ];
+
+  /** Píldoras de Tutor para Dirección General */
+  private readonly generalDirectorTutorPills = [
+    { label: '🚀 Tour Estratégico (19 Pasos)', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '📊 Throughput & SLAs', query: '¿Cómo evaluar el cumplimiento de SLAs de clientes y throughput global?' },
+    { label: '📈 Rendimiento de Planta', query: '¿Cómo auditar la productividad y horas trabajadas de cuadrillas?' },
+    { label: '⚙️ Gobernanza de Turnos', query: '¿Cómo supervisar la administración de turnos y seguridad PIN?' },
+    { label: '🔬 Calidad NOM-251', query: '¿Cuál es el estado de cumplimiento normativo NOM-251 y mermas?' }
   ];
 
   /** Píldoras de Sugerencia Rápida para Modo Tutor General (Default) */
@@ -96,9 +105,10 @@ export class ForbotChatDrawerComponent {
     const role = rawRole.replace(/^ROLE_/, '').toUpperCase();
 
     if (this.forbotEngine.currentMode() === 'tutor') {
-      if (role === 'SECURITY_GUARD') return this.securityTutorPills;
-      if (role === 'OPERATIONS_MANAGER') return this.operationsManagerTutorPills;
-      if (role === 'CONTROL_DESK') return this.controlDeskTutorPills;
+      if (role === 'SECURITY_GUARD' || role === 'GUARD' || role === 'CASETA' || role === 'VIGILANCIA') return this.securityTutorPills;
+      if (role === 'OPERATIONS_MANAGER' || role === 'WAREHOUSE_MANAGER' || role === 'OPERATIONS_COORDINATOR' || role === 'OPERATIONS_SUPERVISOR') return this.operationsManagerTutorPills;
+      if (role === 'CONTROL_DESK' || role === 'MESA_DE_CONTROL' || role === 'MESA') return this.controlDeskTutorPills;
+      if (role === 'ADMIN' || role === 'CEO' || role === 'DIRECTOR_GENERAL' || role === 'GENERAL_DIRECTOR' || role === 'SUPER_ADMIN' || role === 'DIRECTOR') return this.generalDirectorTutorPills;
       return this.defaultTutorPills;
     }
 
