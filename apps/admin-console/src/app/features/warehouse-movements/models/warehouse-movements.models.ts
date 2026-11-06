@@ -157,6 +157,7 @@ export interface CheckInCasetaData {
   sealNumbers?: string[];   // Lista de sellos agregados
   noEcoTractor?: string;    // No. Económico Tracto
   noEcoCaja?: string;       // No. Económico Caja
+  preCheckinId?: string;    // ID de pase digital QR de caseta
   transportType?: string;   // Tipo de transporte
   medidasCaja?: string;     // Medidas de la caja
   noCartaPorte?: string;    // Carta Porte
@@ -242,6 +243,7 @@ export interface ReceptionHeader {
   id?: string;               // UUID del backend
   folio: string;             // ej. 26506 / REC-2026-000001
   status: ReceptionStatus;
+  priority?: 'NORMAL' | 'URGENT';
   checkIn: CheckInCasetaData;
   lotNumber: string;
   elaborationDate: string;
@@ -300,14 +302,19 @@ export const TRANSFER_REASONS: TransferReasonItem[] = [
   { id: 'OTRO', label: 'Otro motivo (especificar)', description: 'Motivo extraordinario no catalogado.', requiresObservation: true },
 ];
 
+export type TransferStatus = 'DRAFT' | 'CONFIRMED' | 'ASSIGNED' | 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED' | 'CANCELLED';
+
 export interface WarehouseTransfer {
   id?: string;
   folio: string;             // ej. CAM-2026-000001
-  status?: 'DRAFT' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+  status?: TransferStatus;
+  priority?: 'NORMAL' | 'URGENT';
   forkliftOperator: string;  // Montacarguista responsable
   forkliftOperatorId?: string;
   originLocation: string;    // ej. A-14
+  originLocationId?: string;
   destinationLocation: string; // ej. M-98
+  destinationLocationId?: string;
   reasonId?: string;
   reasonLabel?: string;
   observations?: string;
@@ -316,6 +323,10 @@ export interface WarehouseTransfer {
   totalPieces: number;
   distinctSkus?: number;
   timestamp?: string;
+  startedAt?: string;
+  completedAt?: string;
+  pausedAt?: string;
+  pauseReason?: string;
   transferredAt: string;
   transferredBy: string;
   clientName?: string;
@@ -399,7 +410,7 @@ export interface OutboundDispatch {
 
 // ─── SALIDA DE ALMACÉN (OUTBOUND MVP1) ────────────────────────────────────────
 
-export type OutboundStatus = 'DRAFT' | 'REGISTERED' | 'ASSIGNED' | 'IN_PROGRESS' | 'LOADED' | 'COMPLETED' | 'CANCELLED';
+export type OutboundStatus = 'DRAFT' | 'REGISTERED' | 'ASSIGNED' | 'IN_PROGRESS' | 'PAUSED' | 'LOADED' | 'COMPLETED' | 'CANCELLED';
 export type TransportType = 'CAMION' | 'TORTON' | 'TRAILER';
 
 export interface OutboundItem {
@@ -423,6 +434,10 @@ export interface WarehouseOutbound {
   id: string;
   folio: string;             // 'SAL-YYYY-XXXXXX'
   status: OutboundStatus;
+  priority?: 'NORMAL' | 'URGENT';
+  startedAt?: string;
+  pausedAt?: string;
+  pauseReason?: string;
 
   // Cliente / Destino (Snapshot)
   clientCode: string;

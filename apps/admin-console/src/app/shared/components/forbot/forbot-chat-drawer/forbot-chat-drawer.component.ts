@@ -37,13 +37,49 @@ export class ForbotChatDrawerComponent {
 
   protected userQueryText = signal<string>('');
 
-  /** Píldoras de Sugerencia Rápida para Modo Operativo */
+  /** Píldoras de Sugerencia Rápida para Modo Operativo General */
   private readonly operativePills = [
     { label: '💡 Mermas <30 días', query: '¿Qué productos caducan en menos de 30 días?' },
     { label: '🚛 Estado de Rampas', query: '¿Cuál es el estado de las rampas en andén?' },
     { label: '📦 Espacio en Bodegas', query: '¿Cómo está la ocupación en las bodegas A y APC?' },
     { label: '🚜 Montacarguistas', query: '¿Cuántos montacarguistas tienen certificación DC-3?' },
     { label: '🔬 NOM-251 Calidad', query: '¿Hay lotes bloqueados por NOM-251?' }
+  ];
+
+  /** Píldoras operativas para Caseta de Seguridad */
+  private readonly securityOperativePills = [
+    { label: '📱 Pases QR & Choferes', query: '¿Cómo validar pases QR y registrar choferes sin cita?' },
+    { label: '📋 Inspección F01', query: '¿Cuál es el checklist oficial de inspección física F01?' },
+    { label: '🚛 Rampa vs Patio', query: '¿Cuándo enviar un transporte a rampa o a patio de espera?' },
+    { label: '🚪 Salida Check-Out', query: '¿Cómo realizar el check-out de salida de un camión?' },
+    { label: '📄 Bitácora F02', query: '¿Cómo exportar la bitácora oficial de caseta F02 en Excel?' }
+  ];
+
+  /** Píldoras operativas para Gerente de Operaciones */
+  private readonly operationsManagerOperativePills = [
+    { label: '📈 Throughput Andenes', query: '¿Cómo interpretar el throughput y cuellos de botella en andenes?' },
+    { label: '🍽️ Horario Comida & Pausa', query: '¿Cómo funciona el horario de comida y cuántos minutos antes pausar actividades con uñas a piso?' },
+    { label: '🗺️ Saturación Bodegas', query: '¿Cómo está la ocupación en las bodegas A y APC?' },
+    { label: '🚜 Montacarguistas DC-3', query: '¿Cuántos montacarguistas tienen certificación DC-3?' },
+    { label: '💡 Mermas <30 días', query: '¿Qué productos caducan en menos de 30 días?' }
+  ];
+
+  /** Píldoras operativas para Mesa de Control */
+  private readonly controlDeskOperativePills = [
+    { label: '⏳ Vida Útil ≥ 365 días', query: '¿Cómo aplicar la regla de vida útil mínima de 365 días en recepción?' },
+    { label: '⚡ Misiones a RF', query: '¿Cómo asignar misiones a montacarguistas y marcar prioridad urgente?' },
+    { label: '📦 Despachos FEFO', query: '¿Cómo funciona el criterio FEFO en órdenes de salida?' },
+    { label: '🚛 Estado de Rampas', query: '¿Cuál es el estado de las rampas en andén?' },
+    { label: '💡 Mermas <30 días', query: '¿Qué productos caducan en menos de 30 días?' }
+  ];
+
+  /** Píldoras operativas para Dirección General */
+  private readonly generalDirectorOperativePills = [
+    { label: '📊 SLAs & OTIF Global', query: '¿Cómo evaluar el cumplimiento de SLAs de clientes y throughput global?' },
+    { label: '🏢 Capacidad 18K & Buffer', query: '¿Cuál es la capacidad contratada de 13.5K vs el buffer de sobrecupo de 18K?' },
+    { label: '⚙️ Gobernanza & PIN', query: '¿Cómo supervisar la administración de turnos y seguridad PIN?' },
+    { label: '💰 Riesgo de Mermas', query: '¿Cuál es el costo y riesgo de mermas bajo la Regla de Pablo y NOM-251?' },
+    { label: '🚜 Montacarguistas', query: '¿Cuántos montacarguistas tienen certificación DC-3?' }
   ];
 
   /** Píldoras especializadas para Roles de Calidad (QM) o ruta /quality */
@@ -55,8 +91,47 @@ export class ForbotChatDrawerComponent {
     { label: '🪵 Reparación vs Traspaleo', query: '¿Cuántas tablas rotas en una tarima obligan a traspaleo?' }
   ];
 
-  /** Píldoras de Sugerencia Rápida para Modo Tutor (Limpio y enfocado a aprendizaje) */
-  private readonly tutorPills = [
+  /** Píldoras de Tutor para Guardia de Caseta de Seguridad */
+  private readonly securityTutorPills = [
+    { label: '🚀 Tour Caseta & Patio (4 Etapas)', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '📱 Pases QR & Choferes', query: '¿Cómo validar pases QR y registrar choferes sin cita?' },
+    { label: '📋 Inspección F01', query: '¿Cuál es el checklist oficial de inspección física F01?' },
+    { label: '🚛 Rampa vs Patio', query: '¿Cuándo enviar un transporte a rampa o a patio de espera?' },
+    { label: '🚪 Salida Check-Out', query: '¿Cómo realizar el check-out de salida de un camión?' },
+    { label: '📄 Exportar Bitácora F02', query: '¿Cómo exportar la bitácora oficial de caseta F02 en Excel?' }
+  ];
+
+  /** Píldoras de Tutor para Gerente de Operaciones */
+  private readonly operationsManagerTutorPills = [
+    { label: '🚀 Tour Multi-Módulo (6 Módulos)', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '📈 Throughput & Andenes', query: '¿Cómo interpretar el throughput y cuellos de botella en andenes?' },
+    { label: '🍽️ Horario Comida & Pausa', query: '¿Cómo funciona el horario de comida y cuántos minutos antes pausar actividades con uñas a piso?' },
+    { label: '🗺️ Topología 2D', query: '¿Cómo supervisar la topología 2D y saturación de bodegas?' },
+    { label: '⏱️ Horas Trabajadas', query: '¿Cómo auditar las horas trabajadas de montacarguistas por turno?' },
+    { label: '⏳ Regla de Pablo', query: '¿Cómo funciona la Regla Crítica de Pablo y la semaforización?' }
+  ];
+
+  /** Píldoras de Tutor para Mesa de Control */
+  private readonly controlDeskTutorPills = [
+    { label: '🚀 Tour Multi-Módulo (4 Módulos)', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '⏳ Vida Útil ≥ 365 días', query: '¿Cómo aplicar la regla de vida útil mínima de 365 días en recepción?' },
+    { label: '⚡ Asignar Misiones a RF', query: '¿Cómo asignar misiones a montacarguistas y marcar prioridad urgente?' },
+    { label: '📦 Despachos FEFO', query: '¿Cómo funciona el criterio FEFO en órdenes de salida?' },
+    { label: '📘 Inducción FSM (8 Estados)', query: 'Explícame el ciclo de vida del producto en los 8 estados del FSM' }
+  ];
+
+  /** Píldoras de Tutor para Dirección General */
+  private readonly generalDirectorTutorPills = [
+    { label: '🚀 Tour Ejecutivo (8 Módulos)', query: 'Iniciar tour guiado de la interfaz' },
+    { label: '📊 Throughput & SLAs', query: '¿Cómo evaluar el cumplimiento de SLAs de clientes y throughput global?' },
+    { label: '🏢 Capacidad 18K & Buffer', query: '¿Cuál es la capacidad contratada de 13.5K vs el buffer de sobrecupo de 18K?' },
+    { label: '⚙️ Gobernanza de Turnos & PIN', query: '¿Cómo supervisar la administración de turnos y seguridad PIN?' },
+    { label: '💰 Mermas & NOM-251', query: '¿Cuál es el costo y riesgo de mermas bajo la Regla de Pablo y NOM-251?' },
+    { label: '📈 Rendimiento de Planta', query: '¿Cómo auditar la productividad y horas trabajadas de cuadrillas?' }
+  ];
+
+  /** Píldoras de Sugerencia Rápida para Modo Tutor General (Default) */
+  private readonly defaultTutorPills = [
     { label: '🚀 Iniciar Tour', query: 'Iniciar tour guiado de la interfaz' },
     { label: '📘 Inducción FSM (8 Estados)', query: 'Explícame el ciclo de vida del producto en los 8 estados del FSM' },
     { label: '⏳ Regla de Pablo', query: '¿Cómo funciona la Regla Crítica de Pablo y la semaforización?' },
@@ -65,16 +140,29 @@ export class ForbotChatDrawerComponent {
 
   /** Píldoras reactivas según el modo actual y contexto de ruta / rol */
   protected readonly activePills = computed(() => {
+    const rawRole = this.authState.role() || '';
+    const role = rawRole.replace(/^ROLE_/, '').toUpperCase();
+
     if (this.forbotEngine.currentMode() === 'tutor') {
-      return this.tutorPills;
+      if (role === 'SECURITY_GUARD' || role === 'GUARD' || role === 'CASETA' || role === 'VIGILANCIA') return this.securityTutorPills;
+      if (role === 'OPERATIONS_MANAGER' || role === 'WAREHOUSE_MANAGER' || role === 'OPERATIONS_COORDINATOR' || role === 'OPERATIONS_SUPERVISOR') return this.operationsManagerTutorPills;
+      if (role === 'CONTROL_DESK' || role === 'MESA_DE_CONTROL' || role === 'MESA') return this.controlDeskTutorPills;
+      if (role === 'ADMIN' || role === 'CEO' || role === 'DIRECTOR_GENERAL' || role === 'GENERAL_DIRECTOR' || role === 'SUPER_ADMIN' || role === 'DIRECTOR') return this.generalDirectorTutorPills;
+      return this.defaultTutorPills;
     }
 
+    // Modo Operativo
     const currentUrl = this.router.url;
-    const role = this.authState.role() || '';
     const isQualityContext = currentUrl.includes('/quality') ||
       ['QM_INSPECTOR', 'ROLE_QM_INSPECTOR', 'AUDITOR', 'ROLE_AUDITOR'].includes(role);
+    if (isQualityContext) return this.qualityPills;
 
-    return isQualityContext ? this.qualityPills : this.operativePills;
+    if (role === 'SECURITY_GUARD' || role === 'GUARD' || role === 'CASETA' || role === 'VIGILANCIA') return this.securityOperativePills;
+    if (role === 'OPERATIONS_MANAGER' || role === 'WAREHOUSE_MANAGER' || role === 'OPERATIONS_COORDINATOR' || role === 'OPERATIONS_SUPERVISOR') return this.operationsManagerOperativePills;
+    if (role === 'CONTROL_DESK' || role === 'MESA_DE_CONTROL' || role === 'MESA') return this.controlDeskOperativePills;
+    if (role === 'ADMIN' || role === 'CEO' || role === 'DIRECTOR_GENERAL' || role === 'GENERAL_DIRECTOR' || role === 'SUPER_ADMIN' || role === 'DIRECTOR') return this.generalDirectorOperativePills;
+
+    return this.operativePills;
   });
 
   constructor() {

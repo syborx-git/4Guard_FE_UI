@@ -32,63 +32,6 @@ export class AuthService {
    */
   login(credentials: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.API_URL}/login`, credentials).pipe(
-      catchError((error) => {
-        // Fallback para desarrollo cuando el backend Spring Boot (localhost:8080) no está encendido
-        const id = (credentials.identifier || '').trim().toLowerCase();
-        const pwd = credentials.password || '';
-        const isKnownAdmin =
-          id === 'enrique@4guard.com' ||
-          id === 'admin@4guard.mx' ||
-          id === 'admin@4guard.com' ||
-          id === 'admin';
-        const isKnownPassword =
-          pwd === 'admin123' || pwd === 'Admin123!' || pwd === 'admin';
-
-        if (isKnownAdmin && isKnownPassword) {
-          const payload = {
-            userId: 'u-001',
-            sub: id,
-            email: id.includes('@') ? id : `${id}@4guard.com`,
-            fullName: id.startsWith('enrique') ? 'Enrique (Superadmin)' : 'Carlos Herrera (Admin)',
-            role: 'ROLE_ADMIN',
-            roleLevel: 100,
-            permissions: ['*'],
-            exp: Math.floor(Date.now() / 1000) + 86400 * 7,
-            iat: Math.floor(Date.now() / 1000)
-          };
-          const jsonStr = JSON.stringify(payload);
-          const base64Url = btoa(unescape(encodeURIComponent(jsonStr)))
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
-          const mockJwt = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${base64Url}.mock_signature`;
-
-          const mockResponse: LoginResponse = {
-            success: true,
-            message: 'Inicio de sesión local (desarrollo)',
-            timestamp: new Date().toISOString(),
-            data: {
-              accessToken: mockJwt,
-              refreshToken: `mock-refresh-${Date.now()}`,
-              expiresAt: new Date(Date.now() + 86400000 * 7).toISOString(),
-              user: {
-                id: 'u-001',
-                username: id,
-                fullName: payload.fullName,
-                email: payload.email,
-                role: 'ROLE_ADMIN',
-                roleLevel: 100,
-                permissions: ['*'],
-                changePasswordRequired: false,
-                shift: 'TURNO 1'
-              }
-            }
-          };
-          return of(mockResponse);
-        }
-
-        return throwError(() => error);
-      }),
       tap(response => {
         if (response.success && response.data) {
           this.handleAuthentication(response.data);
@@ -263,7 +206,7 @@ export class AuthService {
     const headers = { Authorization: `Bearer ${accessToken}` };
 
     this.http
-      .post<any>(`${this.API_URL}/logout`, { refreshToken }, { headers })
+      .post<any>(`${this.API_URL}/logout`, { refreshToken, reason: 'MANUAL' }, { headers })
       .pipe(
         finalize(() => {
           this.clearSessionAndRedirect();
@@ -376,8 +319,8 @@ export class AuthService {
       }
     }
 
-    // Si el token existe y no podemos comprobar que expiró, se mantiene vigente
-    return false;
+    // Seguridad Fail-Closed: Si el token existe pero no puede verificarse su claim 'exp', se considera expirado
+    return true;
   }
 
   private getUserFromSessionOrJwt(): AuthenticatedUser | null {

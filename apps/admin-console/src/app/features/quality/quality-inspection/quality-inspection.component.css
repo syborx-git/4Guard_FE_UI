@@ -16,7 +16,9 @@
 
   --bg-page:        #f5f4f0;
   --bg-card:        rgba(255, 255, 255, 0.95);
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --border-card:    rgba(76, 86, 105, 0.12);
+  --border-card-gold: rgba(197, 168, 107, 0.35);
   --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255,255,255,0.85);
 
   --text-primary:   #1c2940;
@@ -58,12 +60,10 @@
   position: relative;
   width: min(1180px, 100%);
   overflow: hidden;
-  border: 1px solid var(--border-card);
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
   border-radius: 28px;
-  background:
-    linear-gradient(145deg,
-      rgba(255, 255, 255, 0.95),
-      rgba(250, 248, 243, 0.92));
+  background: var(--bg-card-exec, var(--bg-card));
   box-shadow:
     0 28px 70px rgba(32, 45, 70, 0.13),
     inset 0 1px 0 rgba(255, 255, 255, 0.96);
@@ -226,9 +226,10 @@
   gap: 0.28rem;
   min-width: 0;
   padding: 0.9rem 1rem;
-  border: 1px solid rgba(23, 36, 61, 0.075);
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.25));
+  border-top: 3.5px solid var(--gold);
   border-radius: 15px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--bg-card-exec, rgba(255, 255, 255, 0.72));
   box-shadow:
     0 10px 25px rgba(31, 42, 68, 0.045),
     inset 0 1px 0 rgba(255, 255, 255, 0.88);
@@ -279,9 +280,10 @@
 .checklist-column {
   min-width: 0;
   overflow: hidden;
-  border: 1px solid rgba(23, 36, 61, 0.075);
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.25));
+  border-top: 3.5px solid var(--gold);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.66);
+  background: var(--bg-card-exec, rgba(255, 255, 255, 0.66));
   box-shadow: 0 12px 28px rgba(31, 42, 68, 0.045);
 }
 

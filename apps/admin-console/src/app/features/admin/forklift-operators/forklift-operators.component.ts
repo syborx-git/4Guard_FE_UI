@@ -77,10 +77,10 @@ export class ForkliftOperatorsComponent implements OnInit {
     this.isOperatorDropdownOpen.set(false);
   }
 
-  @HostListener('document:click', [''])
+  @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    if (this.isOperatorDropdownOpen() && !target.closest('.operator-selector-dropdown-wrap')) {
+    const target = event?.target as HTMLElement | null;
+    if (this.isOperatorDropdownOpen() && target && !target.closest('.operator-selector-dropdown-wrap')) {
       this.closeOperatorDropdown();
     }
   }

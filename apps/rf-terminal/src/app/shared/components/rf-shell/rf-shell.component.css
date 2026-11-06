@@ -77,18 +77,24 @@
   color: inherit;
 }
 
-.logo-badge {
+.logo-mark-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-  color: #172033;
-  font-weight: 900;
-  font-size: 0.95rem;
   border-radius: 9px;
-  box-shadow: 0 2px 8px rgba(197, 168, 107, 0.35);
+  overflow: hidden;
+  border: 1px solid rgba(197, 168, 107, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  background: #131b2e;
+}
+
+.rf-header__logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .logo-text {
@@ -412,8 +418,8 @@
 .forbot-rf-avatar {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
-  object-fit: contain;
+  border-radius: 6px;
+  object-fit: cover;
 }
 
 .forbot-rf-text {

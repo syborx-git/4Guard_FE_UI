@@ -121,10 +121,21 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   protected readonly isSecurityUser = computed(() => {
     const role = (this.authState.role() || '').toUpperCase();
+    // El Gerente de Operaciones y Mesa de Control no tienen asignado el modulo ni las alertas de Caseta de Seguridad
+    if (
+      role === 'OPERATIONS_MANAGER' ||
+      role === 'ROLE_OPERATIONS_MANAGER' ||
+      role === 'WAREHOUSE_MANAGER' ||
+      role === 'ROLE_WAREHOUSE_MANAGER' ||
+      role === 'CONTROL_DESK' ||
+      role === 'ROLE_CONTROL_DESK' ||
+      role.includes('MESA')
+    ) {
+      return false;
+    }
     const route = this.router.url;
     return (
       role.includes('ADMIN') ||
-      role.includes('MANAGER') ||
       role.includes('DIRECTOR') ||
       role.includes('CEO') ||
       role.includes('SECURITY') ||
@@ -144,6 +155,9 @@ export class ShellComponent implements OnInit, OnDestroy {
       role.includes('MANAGER') ||
       role.includes('DIRECTOR') ||
       role.includes('CEO') ||
+      role.includes('CONTROL_DESK') ||
+      role.includes('MESA') ||
+      role.includes('SHIFT_LEADER') ||
       role.includes('WAREHOUSE') ||
       role.includes('DOCK') ||
       role.includes('OPERAT') ||
@@ -156,10 +170,21 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly isQualityUser = computed(() => {
     if (this.isGuardOnly()) return false;
     const role = (this.authState.role() || '').toUpperCase();
+    // El Gerente de Operaciones y Mesa de Control no tienen asignado el modulo ni las alertas de Control de Calidad
+    if (
+      role === 'OPERATIONS_MANAGER' ||
+      role === 'ROLE_OPERATIONS_MANAGER' ||
+      role === 'WAREHOUSE_MANAGER' ||
+      role === 'ROLE_WAREHOUSE_MANAGER' ||
+      role === 'CONTROL_DESK' ||
+      role === 'ROLE_CONTROL_DESK' ||
+      role.includes('MESA')
+    ) {
+      return false;
+    }
     const route = this.router.url;
     return (
       role.includes('ADMIN') ||
-      role.includes('MANAGER') ||
       role.includes('DIRECTOR') ||
       role.includes('CEO') ||
       role.includes('QM') ||

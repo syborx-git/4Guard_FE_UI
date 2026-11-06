@@ -29,7 +29,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-import { catchError, tap, delay, map } from 'rxjs/operators';
+import { catchError, tap, map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import {
   PerformanceKpi,
@@ -53,164 +53,6 @@ import {
   DEFAULT_OPERATIONAL_TARGETS,
 } from '../models/performance-kpi.model';
 
-// ─── Datos de Respaldo Local (Fallback) ─────────────────────────────────────────
-
-const FALLBACK_KPIS: PerformanceKpi[] = [
-
-  {
-    id: 'kpi-001',
-    name: 'Tiempo de descarga',
-    description: 'Tiempo promedio desde la llegada del camión hasta que se completa la descarga total de mercancía en el andén de recepción.',
-    module: 'RECEIVING',
-    unit: 'MINUTES',
-    evaluationType: 'LOWER_IS_BETTER',
-    thresholds: { target: 45, warning: 60, critical: 90 },
-    currentValue: 38,
-    lastMeasuredAt: '2026-07-20T14:30:00Z',
-    status: 'OPTIMAL',
-    sourceConfig: {
-      sourceProcess: 'Recepción',
-      startEvent: 'Llegada del camión',
-      endEvent: 'Fin de descarga',
-      frequencyValue: 5,
-      frequencyUnit: 'MINUTES',
-      active: true,
-    },
-    isEnabled: true,
-    createdAt: '2026-01-15T09:00:00Z',
-    updatedAt: '2026-07-20T14:30:00Z',
-    createdBy: 'admin',
-    updatedBy: 'jperez',
-  },
-  {
-    id: 'kpi-002',
-    name: 'Exactitud de inventario',
-    description: 'Porcentaje de coincidencia entre el inventario físico y el registrado en el sistema WMS. Mide la precisión del control de existencias.',
-    module: 'INVENTORY',
-    unit: 'PERCENTAGE',
-    evaluationType: 'HIGHER_IS_BETTER',
-    thresholds: { target: 99, warning: 95, critical: 90 },
-    currentValue: 96.2,
-    lastMeasuredAt: '2026-07-20T12:00:00Z',
-    status: 'WARNING',
-    sourceConfig: {
-      sourceProcess: 'Inventario cíclico',
-      startEvent: 'Inicio de conteo cíclico',
-      endEvent: 'Cierre de conteo cíclico',
-      frequencyValue: 1,
-      frequencyUnit: 'HOURS',
-      active: true,
-    },
-    isEnabled: true,
-    createdAt: '2026-02-01T10:00:00Z',
-    updatedAt: '2026-07-20T12:00:00Z',
-    createdBy: 'admin',
-    updatedBy: 'admin',
-  },
-  {
-    id: 'kpi-003',
-    name: 'Ocupación del almacén',
-    description: 'Porcentaje de ubicaciones ocupadas respecto al total de ubicaciones disponibles. El rango ideal evita tanto la subutilización como la saturación.',
-    module: 'INVENTORY',
-    unit: 'PERCENTAGE',
-    evaluationType: 'RANGE',
-    thresholds: { target: 0, warning: 10, critical: 20, rangeLow: 60, rangeHigh: 85 },
-    currentValue: 72,
-    lastMeasuredAt: '2026-07-20T13:00:00Z',
-    status: 'OPTIMAL',
-    sourceConfig: {
-      sourceProcess: 'Gestión de ubicaciones',
-      startEvent: 'Cálculo de ocupación',
-      endEvent: 'Reporte de ocupación',
-      frequencyValue: 30,
-      frequencyUnit: 'MINUTES',
-      active: true,
-    },
-    isEnabled: true,
-    createdAt: '2026-02-15T08:00:00Z',
-    updatedAt: '2026-07-20T13:00:00Z',
-    createdBy: 'admin',
-    updatedBy: 'supervisor01',
-  },
-  {
-    id: 'kpi-004',
-    name: 'Productividad de picking',
-    description: 'Cantidad de unidades o líneas procesadas por hora por operador durante la operación de picking.',
-    module: 'PICKING',
-    unit: 'UNITS_PER_HOUR',
-    evaluationType: 'HIGHER_IS_BETTER',
-    thresholds: { target: 120, warning: 90, critical: 60 },
-    currentValue: 115,
-    lastMeasuredAt: '2026-07-20T15:00:00Z',
-    status: 'OPTIMAL',
-    sourceConfig: {
-      sourceProcess: 'Picking',
-      startEvent: 'Asignación de tarea de picking',
-      endEvent: 'Confirmación de picking completo',
-      frequencyValue: 15,
-      frequencyUnit: 'MINUTES',
-      active: true,
-    },
-    isEnabled: true,
-    createdAt: '2026-03-10T07:00:00Z',
-    updatedAt: '2026-07-20T15:00:00Z',
-    createdBy: 'admin',
-    updatedBy: 'jperez',
-  },
-  {
-    id: 'kpi-005',
-    name: 'Tiempo de embarque',
-    description: 'Tiempo promedio desde el inicio de la carga del camión hasta el cierre del embarque y la liberación del andén.',
-    module: 'SHIPPING',
-    unit: 'MINUTES',
-    evaluationType: 'LOWER_IS_BETTER',
-    thresholds: { target: 30, warning: 50, critical: 75 },
-    currentValue: 82,
-    lastMeasuredAt: '2026-07-20T16:00:00Z',
-    status: 'CRITICAL',
-    sourceConfig: {
-      sourceProcess: 'Embarques',
-      startEvent: 'Inicio de carga',
-      endEvent: 'Cierre de embarque',
-      frequencyValue: 10,
-      frequencyUnit: 'MINUTES',
-      active: true,
-    },
-    isEnabled: true,
-    createdAt: '2026-04-05T11:00:00Z',
-    updatedAt: '2026-07-20T16:00:00Z',
-    createdBy: 'jperez',
-    updatedBy: 'jperez',
-  },
-  {
-    id: 'kpi-006',
-    name: 'Puntualidad de transportistas',
-    description: 'Porcentaje de transportistas que llegan dentro de la ventana horaria programada respecto al total de citas agendadas.',
-    module: 'CARRIERS',
-    unit: 'PERCENTAGE',
-    evaluationType: 'HIGHER_IS_BETTER',
-    thresholds: { target: 95, warning: 85, critical: 70 },
-    currentValue: 83,
-    lastMeasuredAt: '2026-07-20T14:00:00Z',
-    status: 'WARNING',
-    sourceConfig: {
-      sourceProcess: 'Control de citas',
-      startEvent: 'Hora programada de cita',
-      endEvent: 'Check-in real del transportista',
-      frequencyValue: 1,
-      frequencyUnit: 'HOURS',
-      active: true,
-    },
-    isEnabled: true,
-    createdAt: '2026-05-01T09:00:00Z',
-    updatedAt: '2026-07-20T14:00:00Z',
-    createdBy: 'admin',
-    updatedBy: 'supervisor01',
-  },
-];
-
-// ─── Servicio ─────────────────────────────────────────────────────────────────
-
 @Injectable({
   providedIn: 'root'
 })
@@ -225,7 +67,7 @@ export class PerformanceKpiService {
   /**
    * En modo false intenta conectar al backend primero, con fallback transparente.
    */
-  private readonly USE_FALLBACK = false;
+  
 
 
   // ─── Estado reactivo (Signals) ──────────────────────────────────────────────
@@ -343,28 +185,10 @@ export class PerformanceKpiService {
       }));
     };
 
-    if (this.USE_FALLBACK) {
-      const formatted = applyFiltersAndFormat(FALLBACK_KPIS);
-      const mockResponse: KpiApiResponse<PerformanceKpi[]> = {
-        success: true,
-        message: 'KPIs cargados correctamente.',
-        data: formatted,
-        timestamp: new Date().toISOString(),
-      };
-      return of(mockResponse).pipe(
-        delay(300),
-        tap(res => {
-          this.kpis.set(res.data);
-          this.totalCount.set(res.data.length);
-          this.loading.set(false);
-        })
-      );
-    }
-
     return this.http.get<KpiApiResponse<PerformanceKpi[]>>(this.API_URL).pipe(
       map(res => {
         const rawList = Array.isArray(res?.data) ? res.data : [];
-        const formatted = applyFiltersAndFormat(rawList.length > 0 ? rawList : FALLBACK_KPIS);
+        const formatted = applyFiltersAndFormat(rawList);
         return {
           ...res,
           data: formatted,
@@ -377,165 +201,64 @@ export class PerformanceKpiService {
         this.loadError.set(null);
       }),
       catchError(err => {
-        console.warn('Backend /api/v1/performance-kpis no disponible, utilizando catálogo local:', err);
-        const formatted = applyFiltersAndFormat(FALLBACK_KPIS);
-        this.kpis.set(formatted);
-        this.totalCount.set(formatted.length);
+        const errMsg = err?.error?.message || err?.message || 'Error al cargar catálogo de KPIs desde el backend';
+        this.loadError.set(errMsg);
         this.loading.set(false);
-        this.loadError.set(null);
-        return of({
-
-          success: true,
-          message: 'KPIs cargados desde catálogo integrado.',
-          data: formatted,
-          timestamp: new Date().toISOString(),
-        });
+        this.kpis.set([]);
+        this.totalCount.set(0);
+        return throwError(() => err);
       })
     );
   }
 
-  // ─── Métodos de escritura ────────────────────────────────────────────────────
-
-  /**
-   * Crea un nuevo KPI en el backend o en el catálogo local.
-   */
   createKpi(dto: CreateKpiRequest): Observable<KpiApiResponse<PerformanceKpi>> {
     this.saving.set(true);
-
-    const fallbackKpi: PerformanceKpi = {
-      ...dto,
-      id: `kpi-${Date.now()}`,
-      currentValue: null,
-      lastMeasuredAt: null,
-      status: 'NO_DATA',
-      isEnabled: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: 'admin',
-      updatedBy: 'admin',
-    };
-
     return this.http.post<KpiApiResponse<PerformanceKpi>>(this.API_URL, dto).pipe(
-      map(res => {
-        const item = res?.data || fallbackKpi;
-        return { ...res, data: item };
-      }),
       tap(res => {
-        const created = res.data;
-        FALLBACK_KPIS.unshift(created);
-        this.kpis.update(list => [created, ...list]);
-        this.totalCount.update(n => n + 1);
-        this.saving.set(false);
-      }),
-      catchError(err => {
-        console.warn('Backend POST error, guardando en memoria:', err);
-        FALLBACK_KPIS.unshift(fallbackKpi);
-        this.kpis.update(list => [fallbackKpi, ...list]);
-        this.totalCount.update(n => n + 1);
-        this.saving.set(false);
-        return of({
-          success: true,
-          message: 'KPI registrado con éxito en el catálogo.',
-          data: fallbackKpi,
-          timestamp: new Date().toISOString(),
-        });
-      })
-    );
-  }
-
-  /**
-   * Actualiza un KPI existente.
-   */
-  updateKpi(id: string, dto: UpdateKpiRequest): Observable<KpiApiResponse<PerformanceKpi>> {
-    this.saving.set(true);
-
-    const applyLocalUpdate = () => {
-      const currentList = this.kpis();
-      const current = currentList.find(k => k.id === id) || FALLBACK_KPIS.find(k => k.id === id);
-      const updated: PerformanceKpi = {
-        ...(current || ({} as PerformanceKpi)),
-        ...dto,
-        id,
-        status: this.calculateStatus(current?.currentValue ?? null, dto.evaluationType, dto.thresholds),
-        updatedAt: new Date().toISOString(),
-        updatedBy: 'admin',
-      };
-      const idx = FALLBACK_KPIS.findIndex(k => k.id === id);
-      if (idx !== -1) {
-        FALLBACK_KPIS[idx] = updated;
-      }
-      this.kpis.update(list => list.map(k => k.id === id ? updated : k));
-      this.saving.set(false);
-      return updated;
-    };
-
-    return this.http.put<KpiApiResponse<PerformanceKpi>>(`${this.API_URL}/${id}`, dto).pipe(
-      map(res => {
-        const updated = res?.data || applyLocalUpdate();
-        return { ...res, data: updated };
-      }),
-      tap(res => {
-        this.kpis.update(list => list.map(k => k.id === id ? res.data : k));
-        const idx = FALLBACK_KPIS.findIndex(k => k.id === id);
-        if (idx !== -1) {
-          FALLBACK_KPIS[idx] = res.data;
+        if (res.data) {
+          this.kpis.update(list => [res.data, ...list]);
+          this.totalCount.update(n => n + 1);
         }
         this.saving.set(false);
       }),
       catchError(err => {
-        console.warn('Backend PUT error, actualizando en memoria:', err);
-        const updated = applyLocalUpdate();
-        return of({
-          success: true,
-          message: 'KPI actualizado con éxito.',
-          data: updated,
-          timestamp: new Date().toISOString(),
-        });
+        this.saving.set(false);
+        return throwError(() => err);
       })
     );
   }
 
-  /**
-   * Desactiva un KPI (eliminación lógica).
-   */
-  disableKpi(id: string): Observable<KpiApiResponse<PerformanceKpi | null>> {
+  updateKpi(id: string, dto: UpdateKpiRequest): Observable<KpiApiResponse<PerformanceKpi>> {
     this.saving.set(true);
-
-    const applyLocalDelete = () => {
-      this.kpis.update(list => list.filter(k => k.id !== id));
-      const idx = FALLBACK_KPIS.findIndex(k => k.id === id);
-      if (idx !== -1) {
-        FALLBACK_KPIS[idx].isEnabled = false;
-      }
-      this.totalCount.update(n => Math.max(0, n - 1));
-      this.saving.set(false);
-    };
-
-
-    return this.http.delete<KpiApiResponse<PerformanceKpi>>(`${this.API_URL}/${id}`).pipe(
-      tap(() => {
-        applyLocalDelete();
+    return this.http.put<KpiApiResponse<PerformanceKpi>>(`${this.API_URL}/${id}`, dto).pipe(
+      tap(res => {
+        if (res.data) {
+          this.kpis.update(list => list.map(k => k.id === id ? res.data : k));
+        }
+        this.saving.set(false);
       }),
       catchError(err => {
-        console.warn('Backend DELETE error, desactivando en memoria:', err);
-        applyLocalDelete();
-        return of({
-          success: true,
-          message: 'KPI desactivado con éxito.',
-          data: null,
-          timestamp: new Date().toISOString(),
-        });
+        this.saving.set(false);
+        return throwError(() => err);
       })
     );
   }
 
-  // ─── Validación de duplicados ──────────────────────────────────────────────
+  disableKpi(id: string): Observable<KpiApiResponse<PerformanceKpi | null>> {
+    this.saving.set(true);
+    return this.http.delete<KpiApiResponse<PerformanceKpi>>(`${this.API_URL}/${id}`).pipe(
+      tap(() => {
+        this.kpis.update(list => list.filter(k => k.id !== id));
+        this.totalCount.update(n => Math.max(0, n - 1));
+        this.saving.set(false);
+      }),
+      catchError(err => {
+        this.saving.set(false);
+        return throwError(() => err);
+      })
+    );
+  }
 
-  /**
-   * Verifica si ya existe un KPI con el mismo nombre normalizado
-   * dentro del mismo módulo y proceso origen.
-   * Permite varios KPIs del mismo proceso siempre que tengan nombres distintos.
-   */
   isDuplicate(name: string, module: string, sourceProcess: string, excludeId?: string): boolean {
     const normalizedName = name.trim().toLowerCase();
     const normalizedProcess = sourceProcess.trim().toLowerCase();
@@ -565,6 +288,7 @@ export class PerformanceKpiService {
   readonly selectedDateRange = signal<string>('today');
   readonly lastPolledAt = signal<Date>(new Date());
   readonly isAnalyticsLoading = signal<boolean>(false);
+  readonly analyticsError = signal<string | null>(null);
 
   private readonly STORAGE_TARGETS_KEY = '4guard_operational_user_targets';
 
@@ -642,8 +366,9 @@ export class PerformanceKpiService {
    */
   loadExecutiveKpis(branchId?: string, startDate?: string, endDate?: string): Observable<ExecutiveKpiData> {
     this.isAnalyticsLoading.set(true);
+    this.analyticsError.set(null);
     let params: any = {};
-    if (branchId) params.branchId = branchId;
+    if (branchId && branchId !== 'all') params.branchId = branchId;
     if (startDate) params.startDate = startDate;
     if (endDate) params.endDate = endDate;
 
@@ -656,471 +381,141 @@ export class PerformanceKpiService {
         }
         this.isAnalyticsLoading.set(false);
       }),
-      catchError(() => {
-        // Fallback a datos simulados en caso de desconexión
-        const fallback: ExecutiveKpiData = {
-          branchName: 'CEDIS Principal — 4GUARD',
-          warehouseOccupancyPercentage: 76.8,
-          inventoryAccuracyPercentage: 99.8,
-          onTimeDeliveryPercentage: 98.4,
-          avgDockToStockHours: 1.4,
-          avgOrderCycleHours: 2.8,
-          totalReceptionsToday: 14,
-          totalOutboundsToday: 22,
-          totalMovementsToday: 58,
-          activeIncidencesCount: 1,
-          lastCalculatedAt: new Date().toISOString()
-        };
-        this.executiveKpis.set(fallback);
-        this.lastPolledAt.set(new Date());
+      catchError(err => {
         this.isAnalyticsLoading.set(false);
-        return of(fallback);
+        const errMsg = err?.error?.message || err?.message || 'Error al conectar con /performance/executive-kpi';
+        this.analyticsError.set(errMsg);
+        return throwError(() => err);
       })
     );
   }
 
-  /**
-   * Carga métricas de tiempos Inbound / Descarga.
-   */
   loadInboundTimes(branchId?: string): Observable<InboundProcessTimesData> {
     let params: any = {};
-    if (branchId) params.branchId = branchId;
+    if (branchId && branchId !== 'all') params.branchId = branchId;
 
     return this.http.get<KpiApiResponse<InboundProcessTimesData>>(`${this.PERF_API_URL}/inbound-times`, { params }).pipe(
       map(res => res.data),
       tap(data => {
         if (data) this.inboundTimes.set(data);
       }),
-      catchError(() => {
-        const fallback: InboundProcessTimesData = {
-          totalReceptions: 14,
-          totalPiecesReceived: 28450,
-          avgUnloadMinutes: 38.5,
-          minUnloadMinutes: 22,
-          maxUnloadMinutes: 52,
-          rampMetrics: [
-            { rampId: 'r1', rampCode: 'RAMPA-01', operationsCount: 6, avgStayMinutes: 36.2, status: 'ACTIVA' },
-            { rampId: 'r2', rampCode: 'RAMPA-02', operationsCount: 5, avgStayMinutes: 41.0, status: 'ACTIVA' },
-            { rampId: 'r3', rampCode: 'RAMPA-03', operationsCount: 3, avgStayMinutes: 32.5, status: 'DISPONIBLE' },
-          ]
-        };
-        this.inboundTimes.set(fallback);
-        return of(fallback);
-      })
+      catchError(err => throwError(() => err))
     );
   }
 
-  /**
-   * Carga ranking de operadores y productividad por turno.
-   */
   loadOperatorRankings(branchId?: string, shiftId?: string): Observable<OperatorProductivityData[]> {
     let params: any = {};
-    if (branchId) params.branchId = branchId;
+    if (branchId && branchId !== 'all') params.branchId = branchId;
     if (shiftId) params.shiftId = shiftId;
 
     return this.http.get<KpiApiResponse<OperatorProductivityData[]>>(`${this.PERF_API_URL}/operator-ranking`, { params }).pipe(
-      map(res => res.data),
+      map(res => res.data || []),
       tap(data => {
-        if (data) this.operatorRankings.set(data);
+        this.operatorRankings.set(data);
       }),
-      catchError(() => {
-        const fallback: OperatorProductivityData[] = [
-          {
-            operatorId: 'op-01',
-            operatorCode: 'MC-001',
-            fullName: 'Carlos Mendoza Ruiz',
-            jobTitle: 'Almacenista Montacarguista',
-            licenseNumberDc3: 'DC3-2024-0012',
-            licenseStatus: 'VIGENTE',
-            shiftName: 'Turno Matutino (06:00 - 14:00)',
-            receptionsHandled: 18,
-            transfersCompleted: 24,
-            outboundsDispatched: 12,
-            totalMovements: 54,
-            shiftEffectiveHours: 7.5,
-            movementsPerHour: 7.2,
-            targetMovements: 45,
-            shiftCompliancePercentage: 120.0,
-            performanceBadge: 'OPTIMAL'
-          },
-          {
-            operatorId: 'op-02',
-            operatorCode: 'MC-002',
-            fullName: 'Roberto Gómez Santos',
-            jobTitle: 'Líder de Montacarguistas',
-            licenseNumberDc3: 'DC3-2023-0891',
-            licenseStatus: 'VIGENTE',
-            shiftName: 'Turno Matutino (06:00 - 14:00)',
-            receptionsHandled: 15,
-            transfersCompleted: 21,
-            outboundsDispatched: 10,
-            totalMovements: 46,
-            shiftEffectiveHours: 7.5,
-            movementsPerHour: 6.13,
-            targetMovements: 45,
-            shiftCompliancePercentage: 102.2,
-            performanceBadge: 'OPTIMAL'
-          },
-          {
-            operatorId: 'op-03',
-            operatorCode: 'MC-003',
-            fullName: 'Juan Pablo Herrera',
-            jobTitle: 'Operador de Pasillo Angosto',
-            licenseNumberDc3: 'DC3-2024-0341',
-            licenseStatus: 'VIGENTE',
-            shiftName: 'Turno Vespertino (14:00 - 21:30)',
-            receptionsHandled: 9,
-            transfersCompleted: 14,
-            outboundsDispatched: 8,
-            totalMovements: 31,
-            shiftEffectiveHours: 7.0,
-            movementsPerHour: 4.43,
-            targetMovements: 42,
-            shiftCompliancePercentage: 73.8,
-            performanceBadge: 'WARNING'
-          }
-        ];
-        this.operatorRankings.set(fallback);
-        return of(fallback);
+      catchError(err => {
+        this.operatorRankings.set([]);
+        return throwError(() => err);
       })
     );
   }
 
-  /**
-   * Carga resumen de productividad por turno de trabajo.
-   */
   loadShiftProductivity(branchId?: string): Observable<ShiftProductivityData[]> {
     let params: any = {};
-    if (branchId) params.branchId = branchId;
+    if (branchId && branchId !== 'all') params.branchId = branchId;
 
     return this.http.get<KpiApiResponse<ShiftProductivityData[]>>(`${this.PERF_API_URL}/shift-productivity`, { params }).pipe(
-      map(res => res.data),
+      map(res => res.data || []),
       tap(data => {
-        if (data) this.shiftProductivity.set(data);
+        this.shiftProductivity.set(data);
       }),
-      catchError(() => {
-        const fallback: ShiftProductivityData[] = [
-          {
-            shiftId: 's1',
-            shiftName: 'Turno Matutino',
-            timeRange: '06:00 - 14:00',
-            activeOperatorsCount: 8,
-            totalMovements: 32,
-            avgMovementsPerHour: 6.8,
-            targetPph: 6.0,
-            compliancePercentage: 113.3,
-            status: 'OPTIMAL'
-          },
-          {
-            shiftId: 's2',
-            shiftName: 'Turno Vespertino',
-            timeRange: '14:00 - 21:30',
-            activeOperatorsCount: 6,
-            totalMovements: 20,
-            avgMovementsPerHour: 5.4,
-            targetPph: 6.0,
-            compliancePercentage: 90.0,
-            status: 'WARNING'
-          },
-          {
-            shiftId: 's3',
-            shiftName: 'Turno Nocturno',
-            timeRange: '21:30 - 06:00',
-            activeOperatorsCount: 4,
-            totalMovements: 6,
-            avgMovementsPerHour: 6.2,
-            targetPph: 6.0,
-            compliancePercentage: 103.3,
-            status: 'OPTIMAL'
-          }
-        ];
-        this.shiftProductivity.set(fallback);
-        return of(fallback);
+      catchError(err => {
+        this.shiftProductivity.set([]);
+        return throwError(() => err);
       })
     );
   }
 
-  /**
-   * Carga tiempos de los 4 procesos nodales.
-   */
   loadProcessFlowTimes(branchId?: string): Observable<ProcessFlowTimesData[]> {
     let params: any = {};
-    if (branchId) params.branchId = branchId;
+    if (branchId && branchId !== 'all') params.branchId = branchId;
 
     return this.http.get<KpiApiResponse<ProcessFlowTimesData[]>>(`${this.PERF_API_URL}/process-flow-times`, { params }).pipe(
-      map(res => res.data),
+      map(res => res.data || []),
       tap(data => {
-        if (data) this.processFlows.set(data);
+        this.processFlows.set(data);
       }),
-      catchError(() => {
-        const fallback: ProcessFlowTimesData[] = [
-          {
-            processName: 'Recepción (Inbound)',
-            initialMilestone: 'Asignación de Rampa',
-            finalMilestone: 'Validación de Tarimas',
-            averageDurationMinutes: 39.2,
-            targetStandardMinutes: 45.0,
-            compliancePercentage: 94.5,
-            status: 'OPTIMAL'
-          },
-          {
-            processName: 'Acomodo (Putaway)',
-            initialMilestone: 'Fin de Descarga (Estado 20)',
-            finalMilestone: 'Ubicación en Rack (Estado 30)',
-            averageDurationMinutes: 78.0,
-            targetStandardMinutes: 120.0,
-            compliancePercentage: 96.2,
-            status: 'OPTIMAL'
-          },
-          {
-            processName: 'Surtido (Picking)',
-            initialMilestone: 'Liberación de Wave',
-            finalMilestone: 'Última Línea Surtida',
-            averageDurationMinutes: 48.5,
-            targetStandardMinutes: 60.0,
-            compliancePercentage: 91.8,
-            status: 'OPTIMAL'
-          },
-          {
-            processName: 'Embarque (Dispatch)',
-            initialMilestone: 'Inicio de Carga',
-            finalMilestone: 'Colocación de Sellos',
-            averageDurationMinutes: 34.0,
-            targetStandardMinutes: 40.0,
-            compliancePercentage: 97.0,
-            status: 'OPTIMAL'
-          }
-        ];
-        this.processFlows.set(fallback);
-        return of(fallback);
+      catchError(err => {
+        this.processFlows.set([]);
+        return throwError(() => err);
       })
     );
   }
 
-  /**
-   * Carga métricas del Circuito Delicado (10 Choferes & 7 Unidades de Transporte Propio).
-   */
   loadCircuitoDelicado(branchId?: string): Observable<CircuitoDelicadoSummary> {
     let params: any = {};
-    if (branchId) params.branchId = branchId;
+    if (branchId && branchId !== 'all') params.branchId = branchId;
 
     return this.http.get<KpiApiResponse<CircuitoDelicadoSummary>>(`${this.PERF_API_URL}/delicate-circuit`, { params }).pipe(
       map(res => res.data),
       tap(data => {
         if (data) this.circuitoDelicado.set(data);
       }),
-      catchError(() => {
-        const fallback: CircuitoDelicadoSummary = {
-          totalTripsMonth: 146,
-          activeUnitsCount: 7,
-          activeDriversCount: 10,
-          avgTurnaroundHours: 3.4,
-          totalPalletsMoved: 3504,
-          totalPiecesMoved: 245280,
-          drivers: [
-            { driverId: 'd1', driverName: 'Jorge Ramírez Méndez', driverLicense: 'FED-2024-8812', assignedVehiclePlates: '98-AA-1A', totalTripsMonth: 18, totalPalletsMoved: 432, totalPiecesMoved: 30240, avgTurnaroundHours: 3.2, boxRotationCount: 18, status: 'EN_RUTA' },
-            { driverId: 'd2', driverName: 'Fernando Castro Ortiz', driverLicense: 'FED-2023-7721', assignedVehiclePlates: '45-BB-2B', totalTripsMonth: 16, totalPalletsMoved: 384, totalPiecesMoved: 26880, avgTurnaroundHours: 3.6, boxRotationCount: 16, status: 'EN_RUTA' },
-            { driverId: 'd3', driverName: 'Alejandro Morales Vera', driverLicense: 'FED-2024-9933', assignedVehiclePlates: '12-CC-3C', totalTripsMonth: 15, totalPalletsMoved: 360, totalPiecesMoved: 25200, avgTurnaroundHours: 3.1, boxRotationCount: 15, status: 'EN_RUTA' },
-            { driverId: 'd4', driverName: 'Miguel Ángel Torres', driverLicense: 'FED-2023-5544', assignedVehiclePlates: '67-DD-4D', totalTripsMonth: 17, totalPalletsMoved: 408, totalPiecesMoved: 28560, avgTurnaroundHours: 3.5, boxRotationCount: 17, status: 'EN_RUTA' },
-            { driverId: 'd5', driverName: 'Ricardo Soto Lugo', driverLicense: 'FED-2024-1122', assignedVehiclePlates: '89-EE-5E', totalTripsMonth: 14, totalPalletsMoved: 336, totalPiecesMoved: 23520, avgTurnaroundHours: 3.3, boxRotationCount: 14, status: 'EN_RUTA' },
-            { driverId: 'd6', driverName: 'Armando Vega Delgado', driverLicense: 'FED-2024-3344', assignedVehiclePlates: '23-FF-6F', totalTripsMonth: 15, totalPalletsMoved: 360, totalPiecesMoved: 25200, avgTurnaroundHours: 3.7, boxRotationCount: 15, status: 'EN_RUTA' },
-            { driverId: 'd7', driverName: 'Héctor Beltrán Ríos', driverLicense: 'FED-2023-6677', assignedVehiclePlates: '56-GG-7G', totalTripsMonth: 13, totalPalletsMoved: 312, totalPiecesMoved: 21840, avgTurnaroundHours: 3.4, boxRotationCount: 13, status: 'EN_RUTA' },
-            { driverId: 'd8', driverName: 'Gabriel Rivas Cruz', driverLicense: 'FED-2024-4455', assignedVehiclePlates: '98-AA-1A', totalTripsMonth: 14, totalPalletsMoved: 336, totalPiecesMoved: 23520, avgTurnaroundHours: 3.2, boxRotationCount: 14, status: 'DISPONIBLE' },
-            { driverId: 'd9', driverName: 'Esteban Nava Gómez', driverLicense: 'FED-2023-2211', assignedVehiclePlates: '45-BB-2B', totalTripsMonth: 12, totalPalletsMoved: 288, totalPiecesMoved: 20160, avgTurnaroundHours: 3.8, boxRotationCount: 12, status: 'DISPONIBLE' },
-            { driverId: 'd10', driverName: 'Oscar Pineda Silva', driverLicense: 'FED-2024-7788', assignedVehiclePlates: '12-CC-3C', totalTripsMonth: 12, totalPalletsMoved: 288, totalPiecesMoved: 20160, avgTurnaroundHours: 3.5, boxRotationCount: 12, status: 'DISPONIBLE' }
-          ],
-          vehicles: [
-            { vehicleId: 'v1', economicNumber: 'TR-01', tractorPlates: '98-AA-1A', transportType: 'TORTON 2 EJES', assignedDriverName: 'Jorge Ramírez Méndez', tripsCount: 22, boxesTowedCount: 26, totalPieces: 38500, operatingHours: 74.8, status: 'EN_RUTA' },
-            { vehicleId: 'v2', economicNumber: 'TR-02', tractorPlates: '45-BB-2B', transportType: 'TRACTOCAMION 3 EJES', assignedDriverName: 'Fernando Castro Ortiz', tripsCount: 20, boxesTowedCount: 24, totalPieces: 35000, operatingHours: 68.0, status: 'EN_RUTA' },
-            { vehicleId: 'v3', economicNumber: 'TR-03', tractorPlates: '12-CC-3C', transportType: 'RABON REFRIGERADO', assignedDriverName: 'Alejandro Morales Vera', tripsCount: 24, boxesTowedCount: 28, totalPieces: 42000, operatingHours: 81.6, status: 'EN_RUTA' },
-            { vehicleId: 'v4', economicNumber: 'TR-04', tractorPlates: '67-DD-4D', transportType: 'TRACTOCAMION 3 EJES', assignedDriverName: 'Miguel Ángel Torres', tripsCount: 21, boxesTowedCount: 25, totalPieces: 36750, operatingHours: 71.4, status: 'EN_RUTA' },
-            { vehicleId: 'v5', economicNumber: 'TR-05', tractorPlates: '89-EE-5E', transportType: 'TORTON 2 EJES', assignedDriverName: 'Ricardo Soto Lugo', tripsCount: 19, boxesTowedCount: 22, totalPieces: 33250, operatingHours: 64.6, status: 'EN_RUTA' },
-            { vehicleId: 'v6', economicNumber: 'TR-06', tractorPlates: '23-FF-6F', transportType: 'TRACTOCAMION 3 EJES', assignedDriverName: 'Armando Vega Delgado', tripsCount: 23, boxesTowedCount: 27, totalPieces: 40250, operatingHours: 78.2, status: 'EN_RUTA' },
-            { vehicleId: 'v7', economicNumber: 'TR-07', tractorPlates: '56-GG-7G', transportType: 'RABON SECO', assignedDriverName: 'Héctor Beltrán Ríos', tripsCount: 17, boxesTowedCount: 20, totalPieces: 29750, operatingHours: 57.8, status: 'EN_PATIO' }
-          ]
-        };
-        this.circuitoDelicado.set(fallback);
-        return of(fallback);
-      })
+      catchError(err => throwError(() => err))
     );
   }
 
-  /**
-   * Carga métricas de ciclo Puerta a Puerta (Caseta QR -> Rampa -> Salida) y Candados.
-   */
   loadGateToGateCycle(branchId?: string): Observable<GateToGateCycleData> {
     let params: any = {};
-    if (branchId) params.branchId = branchId;
+    if (branchId && branchId !== 'all') params.branchId = branchId;
 
     return this.http.get<KpiApiResponse<GateToGateCycleData>>(`${this.PERF_API_URL}/gate-to-gate-cycle`, { params }).pipe(
       map(res => res.data),
       tap(data => {
         if (data) this.gateToGateCycle.set(data);
       }),
-      catchError(() => {
-        const fallback: GateToGateCycleData = {
-          gateQrPreCheckinAvgMinutes: 8.5,
-          gateToDockAvgMinutes: 14.2,
-          dockOperationAvgMinutes: 39.2,
-          dockToExitAvgMinutes: 12.0,
-          totalGateToGateAvgMinutes: 73.9,
-          targetGateToGateMinutes: 120.0,
-          compliancePercentage: 97.4,
-          qualityLocks: {
-            f01ChecklistApprovedCount: 142,
-            f01PendingCount: 0,
-            weightValidationPassedCount: 138,
-            weightValidationFailedCount: 0,
-            allLocksEnforced: true
-          }
-        };
-        this.gateToGateCycle.set(fallback);
-        return of(fallback);
-      })
+      catchError(err => throwError(() => err))
     );
   }
 
-  /**
-   * Carga la línea de tiempo auditada (Timeline Audit por Folio / SSCC).
-   */
-  loadMovementAuditTimeline(filterParams?: { folio?: string; sscc?: string; operatorId?: string; branchId?: string }): Observable<MovementAuditTimelineItem[]> {
+  loadMovementAuditTimeline(filterParams?: {
+    branchId?: string;
+    folio?: string;
+    sscc?: string;
+    operatorCode?: string;
+    operationType?: string;
+    limit?: number;
+  }): Observable<MovementAuditTimelineItem[]> {
     let params: any = {};
+    if (filterParams?.branchId && filterParams.branchId !== 'all') params.branchId = filterParams.branchId;
     if (filterParams?.folio) params.folio = filterParams.folio;
     if (filterParams?.sscc) params.sscc = filterParams.sscc;
-    if (filterParams?.operatorId) params.operatorId = filterParams.operatorId;
-    if (filterParams?.branchId) params.branchId = filterParams.branchId;
+    if (filterParams?.operatorCode) params.operatorCode = filterParams.operatorCode;
+    if (filterParams?.operationType) params.operationType = filterParams.operationType;
+    if (filterParams?.limit) params.limit = filterParams.limit.toString();
 
     return this.http.get<KpiApiResponse<MovementAuditTimelineItem[]>>(`${this.PERF_API_URL}/timeline-audit`, { params }).pipe(
-      map(res => res.data),
+      map(res => res.data || []),
       tap(data => {
-        if (data) this.movementAuditTimeline.set(data);
+        this.movementAuditTimeline.set(data);
       }),
-      catchError(() => {
-        const now = new Date();
-        const fallback: MovementAuditTimelineItem[] = [
-          {
-            eventId: 'ev-1',
-            timestamp: new Date(now.getTime() - 4 * 3600000).toISOString(),
-            operatorName: 'Jorge Ramírez Méndez',
-            operatorCode: 'DRV-001',
-            operationType: 'PRE_CHECKIN_CASETA',
-            folio: filterParams?.folio || 'FOL-2026-0921-01',
-            sscc: filterParams?.sscc || '075010001234567890',
-            sourceLocation: 'CASETA-ACCESO-01',
-            targetLocation: 'PATIO-ESPERA',
-            durationSeconds: 480,
-            qualityLockStatus: 'APROBADO',
-            status: 'COMPLETADO',
-            details: 'Escaneo QR de Pre-Registro validado. Pase digital generado con éxito.'
-          },
-          {
-            eventId: 'ev-2',
-            timestamp: new Date(now.getTime() - 3.5 * 3600000).toISOString(),
-            operatorName: 'Carlos Mendoza Ruiz',
-            operatorCode: 'MC-001',
-            operationType: 'DESCARGA_RAMPA',
-            folio: filterParams?.folio || 'FOL-2026-0921-01',
-            sscc: filterParams?.sscc || '075010001234567890',
-            sourceLocation: 'RAMPA-01',
-            targetLocation: 'STAGING-INBOUND',
-            durationSeconds: 1250,
-            qualityLockStatus: 'APROBADO',
-            status: 'COMPLETADO',
-            details: 'Descarga de 24 tarimas con montacargas eléctrico. Sin incidencias físicas.'
-          },
-          {
-            eventId: 'ev-3',
-            timestamp: new Date(now.getTime() - 2 * 3600000).toISOString(),
-            operatorName: 'Carlos Mendoza Ruiz',
-            operatorCode: 'MC-001',
-            operationType: 'ACOMODO_PUTAWAY',
-            folio: filterParams?.folio || 'FOL-2026-0921-01',
-            sscc: filterParams?.sscc || '075010001234567890',
-            sourceLocation: 'STAGING-INBOUND',
-            targetLocation: 'RACK-A-03-02',
-            durationSeconds: 980,
-            qualityLockStatus: 'APROBADO',
-            status: 'COMPLETADO',
-            details: 'Ubicación en rack confirmada por lector RF con escaneo de código de barras.'
-          },
-          {
-            eventId: 'ev-4',
-            timestamp: new Date(now.getTime() - 1.2 * 3600000).toISOString(),
-            operatorName: 'Roberto Gómez Santos',
-            operatorCode: 'MC-002',
-            operationType: 'SURTIDO_PICKING',
-            folio: filterParams?.folio || 'FOL-2026-0921-01',
-            sscc: filterParams?.sscc || '075010001234567890',
-            sourceLocation: 'RACK-A-03-02',
-            targetLocation: 'ZONA-PACKING-01',
-            durationSeconds: 720,
-            qualityLockStatus: 'APROBADO',
-            status: 'COMPLETADO',
-            details: 'Surtido por ruta serpiente completado al 100% de líneas.'
-          },
-          {
-            eventId: 'ev-5',
-            timestamp: new Date(now.getTime() - 35 * 60000).toISOString(),
-            operatorName: 'Líder de Calidad / Mesa Control',
-            operatorCode: 'QA-001',
-            operationType: 'VALIDACION_PESO_F01',
-            folio: filterParams?.folio || 'FOL-2026-0921-01',
-            sscc: filterParams?.sscc || '075010001234567890',
-            sourceLocation: 'BASCULA-01',
-            targetLocation: 'RAMPA-02',
-            durationSeconds: 360,
-            qualityLockStatus: 'APROBADO',
-            status: 'COMPLETADO',
-            details: 'Peso verificado: 1,420.50 kg (+0.4% vs proyectado, dentro de tolerancia ±2%). Checklist F01 17/17 aprobado.'
-          },
-          {
-            eventId: 'ev-6',
-            timestamp: new Date(now.getTime() - 10 * 60000).toISOString(),
-            operatorName: 'Juan Pablo Herrera',
-            operatorCode: 'MC-003',
-            operationType: 'DESPACHO_EMBARQUE',
-            folio: filterParams?.folio || 'FOL-2026-0921-01',
-            sscc: filterParams?.sscc || '075010001234567890',
-            sourceLocation: 'RAMPA-02',
-            targetLocation: 'TRANSPORTE-TR-01',
-            durationSeconds: 540,
-            qualityLockStatus: 'APROBADO',
-            status: 'COMPLETADO',
-            details: 'T1 Congelado. Colocación de sellos y liberación de rampa confirmada.'
-          }
-        ];
-        this.movementAuditTimeline.set(fallback);
-        return of(fallback);
+      catchError(err => {
+        this.movementAuditTimeline.set([]);
+        return throwError(() => err);
       })
     );
   }
 
-  /**
-   * Encola la exportación asíncrona de reportes Excel (HU-158).
-   */
   enqueueExportJob(reportType: string = 'FULL_PERFORMANCE_21COL', branchId?: string): Observable<ExportJobResponse> {
     let params: any = { reportType };
-    if (branchId) params.branchId = branchId;
+    if (branchId && branchId !== 'all') params.branchId = branchId;
 
     return this.http.post<KpiApiResponse<ExportJobResponse>>(`${this.PERF_API_URL}/export-jobs`, null, { params }).pipe(
       map(res => res.data),
-      catchError(() => {
-        const fallback: ExportJobResponse = {
-          jobId: 'JOB-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
-          reportType,
-          status: 'COMPLETED',
-          downloadUrl: '#',
-          createdAt: new Date().toISOString(),
-          message: 'Reporte Excel generado con 21 columnas y firma criptográfica.'
-        };
-        return of(fallback);
-      })
+      catchError(err => throwError(() => err))
     );
   }
 
-  /**
-   * Refresca todas las métricas analíticas simultáneamente (Polling 60s o botón manual).
-   */
   refreshAllAnalytics(): void {
     const branch = this.selectedBranchId() || undefined;
     this.loadExecutiveKpis(branch).subscribe();

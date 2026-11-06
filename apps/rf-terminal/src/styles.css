@@ -7,6 +7,7 @@
 
 /* Tokens base y tokens de diseño SDD */
 @import './assets/rf-design-tokens.css';
+@import 'driver.js/dist/driver.css';
 
 /* ── Reset ───────────────────────────────────────────────── */
 *, *::before, *::after {
@@ -151,3 +152,64 @@ textarea::placeholder,
   text-transform: none;
 }
 
+
+/* ── Soporte para Tour Táctil Industrial con Driver.js (Tablets RF) ── */
+.driver-popover {
+  border-radius: 14px !important;
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.5) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(212, 175, 55, 0.25) !important;
+  font-family: inherit !important;
+  max-width: 440px !important;
+  padding: 18px 20px !important;
+  z-index: 100000 !important;
+}
+
+.driver-popover-title {
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  color: #fbbf24 !important;
+  margin-bottom: 8px !important;
+}
+
+.driver-popover-description {
+  font-size: 0.95rem !important;
+  line-height: 1.55 !important;
+  color: #e2e8f0 !important;
+}
+
+.driver-popover-footer {
+  margin-top: 14px !important;
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+}
+
+.driver-popover-footer button {
+  min-height: 48px !important;
+  min-width: 90px !important;
+  padding: 10px 16px !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  touch-action: manipulation !important;
+}
+
+.driver-popover-next-btn {
+  background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%) !important;
+  color: #0f172a !important;
+  border: none !important;
+}
+
+.driver-popover-prev-btn {
+  background: rgba(51, 65, 85, 0.9) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+}
+
+.driver-popover-close-btn {
+  color: #94a3b8 !important;
+  font-size: 22px !important;
+}

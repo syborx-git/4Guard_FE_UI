@@ -21,9 +21,13 @@
 
   --bg-page: #f5f4f0;
   --bg-card: rgba(255, 255, 255, 0.92);
+  --bg-card-exec: linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --border-card: rgba(76, 86, 105, 0.10);
+  --border-card-gold: rgba(197, 168, 107, 0.35);
   --shadow-card: 0 12px 32px rgba(36, 44, 58, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --shadow-hover: 0 16px 40px rgba(197, 168, 107, 0.22);
+  --radius-xl: 18px;
 
   --text-primary: #1c2940;
   --text-secondary: #5a6477;
@@ -60,8 +64,11 @@
 :host-context(.dark) {
   --bg-page:        #0b1119;
   --bg-card:        rgba(17, 26, 38, 0.94);
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --border-card:    rgba(255, 255, 255, 0.08);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-hover:   0 20px 44px rgba(208, 175, 103, 0.18);
 
   --text-primary:   #edf1f5;
   --text-secondary: #9aa6b4;
@@ -105,15 +112,11 @@
   gap: 1.15rem;
   padding: 1.25rem;
   overflow: hidden;
-  background:
-    linear-gradient(145deg,
-      rgba(255, 255, 255, 0.96),
-      rgba(250, 249, 246, 0.88));
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  box-shadow:
-    0 10px 28px rgba(36, 44, 58, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   animation: kpiPerformanceEnter 0.35s ease both;
 }
 
@@ -1188,7 +1191,7 @@
 
 :host-context(.theme-dark) .kpi-header__icon-wrap,
 :host-context(.dark) .kpi-header__icon-wrap {
-  background: linear-gradient(145deg, #1e293b, #0f172a);
+  background: linear-gradient(145deg, #16212f, #1f2d3e);
   border-color: var(--gold-border);
 }
 
@@ -1315,7 +1318,7 @@
 
 :host-context(.theme-dark) .kpi-tab-btn.tab-active,
 :host-context(.dark) .kpi-tab-btn.tab-active {
-  background: linear-gradient(145deg, #1e293b, #0f172a);
+  background: linear-gradient(145deg, #16212f, #1f2d3e);
   border-color: var(--gold-border);
   color: #f8fafc;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
@@ -2188,9 +2191,18 @@
 .kpi-exec-card {
   min-width: 0;
   padding: 0.85rem;
-  background: rgba(245, 244, 240, 0.48);
-  border: 1px solid var(--border-card);
-  border-radius: 12px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-exec-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .kpi-exec-card__header {
@@ -3114,30 +3126,8 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   DARK MODE
+   DARK MODE OVERRIDES (Alineado con Tokens Institucionales SDD v3.0)
    ───────────────────────────────────────────────────────────── */
-
-:host-context(.theme-dark) {
-  --bg-page: #0e1117;
-  --bg-card: rgba(22, 27, 38, 0.92);
-  --border-card: rgba(255, 255, 255, 0.08);
-  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-
-  --text-primary: #e8eaf0;
-  --text-secondary: #9ca3b0;
-  --text-muted: #6b7280;
-  --text-gold: #e0c87a;
-
-  --gold-bg: rgba(197, 168, 107, 0.12);
-  --gold-border: rgba(197, 168, 107, 0.20);
-
-  --c-success-bg: rgba(32, 132, 87, 0.14);
-  --c-success-bdr: rgba(32, 132, 87, 0.30);
-  --c-warning-bg: rgba(213, 145, 39, 0.14);
-  --c-warning-bdr: rgba(213, 145, 39, 0.30);
-  --c-danger-bg: rgba(200, 73, 73, 0.14);
-  --c-danger-bdr: rgba(200, 73, 73, 0.30);
-}
 
 :host-context(.theme-dark) .kpi-search__input,
 :host-context(.theme-dark) .kpi-filter-select,
@@ -3233,15 +3223,11 @@
   gap: 1.15rem;
   padding: 1.25rem;
   overflow: hidden;
-  background:
-    linear-gradient(145deg,
-      rgba(255, 255, 255, 0.96),
-      rgba(250, 249, 246, 0.88));
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  box-shadow:
-    0 10px 28px rgba(36, 44, 58, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   animation: kpiPerformanceEnter 0.35s ease both;
 }
 
@@ -5823,4 +5809,18 @@
   .kpi-executive-card:hover {
     transform: none;
   }
+}
+
+.kpi-filter-select option,
+.kpi-field__select option {
+  background: #ffffff;
+  color: #1c2940;
+}
+
+:host-context(.theme-dark) .kpi-filter-select option,
+:host-context(.theme-dark) .kpi-field__select option,
+:host-context(.dark) .kpi-filter-select option,
+:host-context(.dark) .kpi-field__select option {
+  background: #111a26;
+  color: #edf1f5;
 }

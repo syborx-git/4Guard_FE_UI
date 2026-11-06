@@ -73,6 +73,10 @@ export interface ShelfLifeEvaluation {
   styleUrl: './receiving-submodule.component.css',
 })
 export class ReceivingSubmoduleComponent implements OnInit {
+  protected readonly isDarkMode = computed(() => {
+    if (typeof document === 'undefined') return false;
+    return document.documentElement.classList.contains('dark') || document.documentElement.classList.contains('theme-dark');
+  });
   protected readonly authState = inject(AuthState);
   protected readonly Math      = Math;
   private readonly movementsService = inject(WarehouseMovementsService);
@@ -169,6 +173,16 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
   // Modal Edición de Ficha de Caseta
   showEditCasetaModal = signal(false);
+
+  getEcoTractor(rec?: ReceptionHeader | null): string {
+    if (!rec) return '';
+    return (rec.checkIn?.noEcoTractor || (rec as any).noEcoTractor || '').trim();
+  }
+
+  getEcoCaja(rec?: ReceptionHeader | null): string {
+    if (!rec) return '';
+    return (rec.checkIn?.noEcoCaja || (rec as any).noEcoCaja || '').trim();
+  }
   editCasetaSeals = signal<string[]>([]);
   tempEditSealInput = signal('');
 
@@ -339,7 +353,15 @@ export class ReceivingSubmoduleComponent implements OnInit {
 
     this.movementsService.updateCasetaCheckInBackend(currentRec.id || currentRec.folio, updatedCheckIn).subscribe({
       next: (persisted) => {
-        this.selectedReception.set(persisted);
+        const merged: ReceptionHeader = {
+          ...persisted,
+          checkIn: {
+            ...persisted.checkIn,
+            noEcoTractor: updatedCheckIn.noEcoTractor || persisted.checkIn?.noEcoTractor || '',
+            noEcoCaja: updatedCheckIn.noEcoCaja || persisted.checkIn?.noEcoCaja || '',
+          }
+        };
+        this.selectedReception.set(merged);
         this.showEditCasetaModal.set(false);
         this.toast.success('Ficha operativa de arribo actualizada y guardada correctamente.');
         this.loadAuditLogs(persisted.id || persisted.folio);
@@ -868,6 +890,45 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const today = new Date().toISOString().slice(0, 10);
     return this.boardReceptions().filter((r) => r.status === 'CANCELLED' && (r.checkIn?.docDate === today || (r as any).docDate === today || (r as any).cancelledAt?.startsWith(today) || (r as any).createdAt?.startsWith(today))).length;
   });
+  isCarryOverFilterActive = signal<boolean>(false);
+  isUrgentFilterActive = signal<boolean>(false);
+  kpiCarryOver = computed(() => this.boardReceptions().filter((r) => this.isCarryOver(r)).length);
+  kpiUrgent = computed(() => this.boardReceptions().filter((r) => r.priority === 'URGENT' && this.isActiveStatus(r.status)).length);
+
+  toggleCarryOverFilter(): void {
+    this.isCarryOverFilterActive.update((v) => !v);
+  }
+
+  toggleUrgentFilter(): void {
+    this.isUrgentFilterActive.update((v) => !v);
+  }
+
+  toggleReceptionPriority(rec?: ReceptionHeader | null): void {
+    const target = rec || this.selectedReception();
+    if (!target) return;
+    const targetId = target.id || target.folio;
+    const newPriority: 'NORMAL' | 'URGENT' = target.priority === 'URGENT' ? 'NORMAL' : 'URGENT';
+
+    // Actualización reactiva optimista inmediata en memoria local
+    target.priority = newPriority;
+    this.movementsService.updateReception(targetId, { priority: newPriority }, true);
+
+    this.movementsService.setReceptionPriority(targetId, newPriority).subscribe({
+      next: () => {
+        this.toast.success(
+          newPriority === 'URGENT'
+            ? `⚡ Remisión ${target.checkIn?.docNumber || target.folio} marcada como PRIORIDAD URGENTE. Cola preemptiva de montacargas notificada.`
+            : `Prioridad normal restablecida para remisión ${target.checkIn?.docNumber || target.folio}.`
+        );
+      },
+      error: (err) => {
+        console.error('Error al actualizar prioridad:', err);
+        target.priority = newPriority === 'URGENT' ? 'NORMAL' : 'URGENT';
+        this.movementsService.updateReception(targetId, { priority: target.priority }, true);
+        this.toast.error('No se pudo actualizar la prioridad de la remisión.');
+      }
+    });
+  }
 
   // Filtros Multi-Estado Píldoras
   // Por defecto el tablero operativo arranca en "En Caseta" (REGISTERED).
@@ -969,6 +1030,12 @@ export class ReceivingSubmoduleComponent implements OnInit {
         (r.productName && r.productName.toLowerCase().includes(q)) ||
         (r.productId && r.productId.toLowerCase().includes(q));
 
+      if (this.isCarryOverFilterActive() && !this.isCarryOver(r)) {
+        return false;
+      }
+      if (this.isUrgentFilterActive() && r.priority !== 'URGENT') {
+        return false;
+      }
       return matchStatus && matchQuery;
     });
   });
@@ -1370,7 +1437,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
     const rNum = (assignedRampNum != null && Number(assignedRampNum) > 0) ? Number(assignedRampNum) : null;
     let bayLoc = rec.storageLocation || rec.storageLocationCode;
     if (!bayLoc || bayLoc === 'POS-A-001') {
-      bayLoc = rNum ? `STAGING-R${String(rNum).padStart(2, '0')}` : 'STAGING-R01';
+      bayLoc = rNum ? `STAGING-R${String(rNum).padStart(2, '0')}` : 'STAGING-BUFFER';
     }
     this.selectedBayName.set(bayLoc);
     if (rec.storageLocation !== bayLoc) {
@@ -2105,10 +2172,7 @@ export class ReceivingSubmoduleComponent implements OnInit {
       const op = this.forkliftOperators()[0];
       this.checkInForm.patchValue({ forkliftOperatorCode: op.code, forkliftOperator: op.name });
     }
-    if (!this.checkInForm.value.rampNumber && this.ramps().length > 0) {
-      const rm = this.ramps()[0];
-      this.checkInForm.patchValue({ rampCode: rm.code, rampNumber: rm.rampNumber });
-    }
+    // No auto-asignar rampa 1 por defecto; se respeta la rampa asignada o queda pendiente para selección del operador
 
     if (this.tempSealInput().trim()) {
       this.addSeal();
@@ -3620,6 +3684,9 @@ export class ReceivingSubmoduleComponent implements OnInit {
     }
     this.altaForm.patchValue({ rampNumber: rm.rampNumber });
     this.rampSearchQuery.set(rm.name);
+    const bayLoc = `STAGING-R${String(rm.rampNumber).padStart(2, '0')}`;
+    this.selectedBayName.set(bayLoc);
+    this.altaForm.patchValue({ storageLocation: bayLoc, storageLocationCode: bayLoc } as any);
     this.isRampDropdownOpen.set(false);
   }
 

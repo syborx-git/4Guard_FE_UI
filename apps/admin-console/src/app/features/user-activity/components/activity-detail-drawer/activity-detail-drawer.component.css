@@ -5,6 +5,11 @@
 */
 
 :host {
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+  --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --shadow-card:      0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --radius-xl:        18px;
+
   --navy: #172033;
   --navy-mid: #25324a;
   --gold: #c5a86b;
@@ -37,6 +42,10 @@
 
 /* ── Dark mode ──────────────────────────────────────────────────── */
 :host-context(.theme-dark) {
+  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
   --bg-card: rgba(28, 35, 52, 0.98);
   --border-card: rgba(255, 255, 255, 0.08);
   --text-primary: #e8e6e0;

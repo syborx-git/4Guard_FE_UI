@@ -1,42 +1,48 @@
 /**
  * @file rf-login.component.ts
  * @description P6 — Login RF (Acceso Rápido) [HU-002].
- * Botón masivo para QR/RFID. PIN numérico con código de operador.
+ * Acceso por PIN numérico con código de operador.
+ * Acceso biométrico con Face ID / W3C WebAuthn de plataforma (Zero Biometric Knowledge).
  * Autenticación real contra el backend (/api/v1/auth/login) y base de datos PostgreSQL.
  */
 
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthState, AuthService, UserRole, User } from '@4guard/shared-core';
+import { AuthState, AuthService, BiometricAuthService, UserRole, User } from '@4guard/shared-core';
 import { PwaService } from '../../../core/services/pwa.service';
 
-type LoginMode = 'credentials' | 'pin' | 'scan';
+export type LoginMode = 'pin' | 'face-id';
 
 @Component({
   selector: 'fg-rf-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule],
   templateUrl: './rf-login.component.html',
   styleUrl: './rf-login.component.css',
 })
-export class RfLoginComponent {
-  private readonly fb          = inject(FormBuilder);
-  private readonly authState   = inject(AuthState);
-  private readonly authService = inject(AuthService);
-  private readonly router      = inject(Router);
-  protected readonly pwaService = inject(PwaService);
+export class RfLoginComponent implements OnInit {
+  private readonly authState        = inject(AuthState);
+  private readonly authService      = inject(AuthService);
+  private readonly biometricService = inject(BiometricAuthService);
+  private readonly router           = inject(Router);
+  protected readonly pwaService     = inject(PwaService);
 
-  protected readonly mode            = signal<LoginMode>('credentials');
+  protected readonly mode            = signal<LoginMode>('pin');
   protected readonly pin             = signal<string>('');
   protected readonly operatorCode    = signal<string>('');
-  protected readonly isScanning      = signal(false);
   protected readonly isLoading       = signal(false);
-  protected readonly showPassword    = signal(false);
   protected readonly error           = signal<string | null>(null);
   protected readonly isOffline       = signal(!navigator.onLine);
   protected readonly currentLiveTime = signal<string>(new Date().toLocaleTimeString('es-MX'));
+
+  // ── Biometría de Plataforma (Face ID / WebAuthn Level 3) ──
+  protected readonly isBiometricsSupported = signal<boolean>(false);
+  protected readonly isBiometricsEnrolled  = signal<boolean>(false);
+  protected readonly biometricPrompting    = signal<boolean>(false);
+  protected readonly enrolledUserName      = signal<string>('');
+  protected readonly showEnrollmentBanner  = signal<boolean>(false);
+  protected readonly pendingEnrollUser     = signal<User | null>(null);
 
   // ── Cambio obligatorio de PIN / Contraseña temporal tras reseteo ──
   protected readonly mustChangePin   = signal<boolean>(false);
@@ -45,20 +51,42 @@ export class RfLoginComponent {
   protected readonly confirmNewPin   = signal<string>('');
   protected readonly pinChangeStep   = signal<'new' | 'confirm'>('new');
 
-  protected readonly loginForm = this.fb.nonNullable.group({
-    identifier: ['', [Validators.required]],
-    password: ['', [Validators.required, Validators.minLength(4)]],
-    remember: [true]
-  });
-
   constructor() {
     setInterval(() => {
       this.currentLiveTime.set(new Date().toLocaleTimeString('es-MX'));
     }, 1000);
   }
 
-  protected toggleShowPassword(): void {
-    this.showPassword.update(v => !v);
+  async ngOnInit(): Promise<void> {
+    await this.initBiometrics();
+  }
+
+  /**
+   * Evalúa hardware biométrico del dispositivo y preselecciona Face ID si está enrolado.
+   */
+  private async initBiometrics(): Promise<void> {
+    try {
+      const status = await this.biometricService.checkBiometricAvailability();
+      this.isBiometricsSupported.set(status.isSupported && status.isPlatformAuthenticatorAvailable);
+      this.isBiometricsEnrolled.set(status.isEnrolledLocally);
+
+      if (status.enrolledUserName) {
+        this.enrolledUserName.set(status.enrolledUserName);
+      }
+
+      // Si el dispositivo cuenta con Face ID y el operador ya está enrolado en esta terminal,
+      // activar la pestaña de Face ID por defecto para acceso en <1 segundo.
+      if (status.isPlatformAuthenticatorAvailable && status.isEnrolledLocally) {
+        this.mode.set('face-id');
+      }
+    } catch {
+      this.isBiometricsSupported.set(false);
+      this.isBiometricsEnrolled.set(false);
+    }
+  }
+
+  protected get currentTabIndex(): number {
+    return this.mode() === 'face-id' ? 1 : 0;
   }
 
   protected async promptInstallPwa(): Promise<void> {
@@ -195,7 +223,7 @@ export class RfLoginComponent {
         this.pendingUser.set(null);
         this.newPin.set('');
         this.confirmNewPin.set('');
-        this.navigateToUserLanding(user);
+        this.checkEnrollmentOrNavigate(user);
       },
       error: (err) => {
         this.isLoading.set(false);
@@ -203,17 +231,6 @@ export class RfLoginComponent {
         this.error.set(msg);
       }
     });
-  }
-
-  protected triggerScan(): void {
-    this.isScanning.set(true);
-    this.error.set(null);
-
-    // Detección óptica de gafete / credencial RFID
-    setTimeout(() => {
-      this.isScanning.set(false);
-      this.mode.set('pin');
-    }, 700);
   }
 
   protected submitPin(): void {
@@ -247,7 +264,7 @@ export class RfLoginComponent {
           this.mustChangePin.set(true);
           return;
         }
-        this.navigateToUserLanding(user);
+        this.checkEnrollmentOrNavigate(user);
       },
       error: (err) => {
         this.isLoading.set(false);
@@ -258,35 +275,86 @@ export class RfLoginComponent {
     });
   }
 
-  protected submitCredentials(): void {
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
-      return;
-    }
+  // ─── ACCIONES DE BIOMETRÍA FACE ID ──────────────────────────────────────────
 
-    const { identifier, password } = this.loginForm.getRawValue();
+  /**
+   * Ejecuta la autenticación biométrica de plataforma con Face ID / BiometricPrompt.
+   */
+  protected async authenticateWithFaceId(): Promise<void> {
+    if (this.biometricPrompting() || this.isLoading()) return;
+
+    this.biometricPrompting.set(true);
+    this.error.set(null);
+
+    try {
+      this.biometricService.authenticateWithBiometrics().subscribe({
+        next: (result) => {
+          this.biometricPrompting.set(false);
+          if (result.success && result.user) {
+            this.navigateToUserLanding(result.user);
+          }
+        },
+        error: (err) => {
+          this.biometricPrompting.set(false);
+          const msg = err?.message || 'No se pudo verificar el rostro. Usa tu PIN de 4 dígitos.';
+          this.error.set(msg);
+        }
+      });
+    } catch (err: any) {
+      this.biometricPrompting.set(false);
+      this.error.set(err?.message || 'Fallo al iniciar el sensor biométrico.');
+    }
+  }
+
+  /**
+   * Enrola al operador actual vinculando su Face ID en este dispositivo.
+   */
+  protected async enrollFaceId(): Promise<void> {
+    const user = this.pendingEnrollUser() || this.authService.currentUser();
+    if (!user) return;
+
     this.isLoading.set(true);
     this.error.set(null);
 
-    const cleanIdentifier = identifier.trim();
-    this.authService.login({ email: cleanIdentifier, password }).subscribe({
-      next: (user) => {
+    this.biometricService.registerBiometrics(user).subscribe({
+      next: () => {
         this.isLoading.set(false);
-        if (user?.changePasswordRequired) {
-          this.pendingUser.set(user);
-          this.newPin.set('');
-          this.confirmNewPin.set('');
-          this.pinChangeStep.set('new');
-          this.mustChangePin.set(true);
-          return;
-        }
+        this.isBiometricsEnrolled.set(true);
+        this.enrolledUserName.set(user.fullName || user.username || '');
+        this.showEnrollmentBanner.set(false);
+        this.pendingEnrollUser.set(null);
         this.navigateToUserLanding(user);
       },
       error: (err) => {
         this.isLoading.set(false);
-        this.error.set(err?.error?.message || err?.message || 'Credenciales inválidas o error de conexión con el servidor.');
+        const msg = err?.message || 'No se pudo vincular Face ID. Puedes intentarlo en tu próximo inicio de sesión.';
+        this.error.set(msg);
       }
     });
+  }
+
+  /**
+   * Omite el enrolamiento de Face ID y continúa a la pantalla operativa.
+   */
+  protected dismissEnrollmentBanner(): void {
+    const user = this.pendingEnrollUser();
+    this.showEnrollmentBanner.set(false);
+    this.pendingEnrollUser.set(null);
+    if (user) {
+      this.navigateToUserLanding(user);
+    }
+  }
+
+  /**
+   * Verifica si el usuario debe recibir la oferta de enrolar Face ID o pasar directo a su panel.
+   */
+  private checkEnrollmentOrNavigate(user: any): void {
+    if (this.isBiometricsSupported() && !this.isBiometricsEnrolled()) {
+      this.pendingEnrollUser.set(user);
+      this.showEnrollmentBanner.set(true);
+      return;
+    }
+    this.navigateToUserLanding(user);
   }
 
   private navigateToUserLanding(user: any): void {

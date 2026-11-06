@@ -227,6 +227,13 @@
                   <span class="material-symbols-outlined text-[13px] text-slate-400">schedule</span>
                   {{ shift.startTime }} → {{ shift.endTime }}
                 </span>
+                @if (shift.hasMealBreak && shift.mealStartTime) {
+                  <span class="user-item__dot-sep text-slate-400">•</span>
+                  <span class="flex items-center gap-0.5 text-xs text-amber-600 dark:text-amber-400 font-medium" title="Horario de comida">
+                    <span class="material-symbols-outlined text-[13px]">restaurant</span>
+                    {{ shift.mealStartTime }}-{{ shift.mealEndTime }} (-{{ shift.mealEarlyPauseMinutes || 10 }}m)
+                  </span>
+                }
               </div>
 
               <!-- Fila 3: Chips de Días Operativos + Sucursal con icono + Badges de conflicto/nocturno -->
@@ -507,6 +514,82 @@
                 <span class="field-error">{{ getFieldError('toleranceMinutes') }}</span>
                 }
               </div>
+            </div>
+          </fieldset>
+
+          <!-- 🍽️ SECCIÓN: Horario de Comida / Colación Programada -->
+          <fieldset class="shift-form__fieldset" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
+            <legend class="shift-form__legend">🍽️ Horario de Comida / Colación Programada</legend>
+
+            <div class="shift-form-grid">
+              <!-- Checkbox Activar -->
+              <div class="field-group col-12" style="display: flex; align-items: center; gap: 8px; padding-bottom: 6px;">
+                <input
+                  type="checkbox"
+                  id="shift-has-meal"
+                  formControlName="hasMealBreak"
+                  style="width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer;"
+                />
+                <label for="shift-has-meal" class="field-label" style="margin: 0; cursor: pointer; font-weight: 600;">
+                  Habilitar Horario de Comida Programado para este turno
+                </label>
+              </div>
+
+              @if (shiftForm.get('hasMealBreak')?.value) {
+                <!-- Inicio de Comida -->
+                <div class="field-group col-4">
+                  <label class="field-label" for="shift-meal-start">
+                    Inicio de Comida <span class="required-star">*</span>
+                  </label>
+                  <input
+                    id="shift-meal-start"
+                    type="time"
+                    class="field-input"
+                    formControlName="mealStartTime"
+                  />
+                </div>
+
+                <!-- Término de Comida -->
+                <div class="field-group col-4">
+                  <label class="field-label" for="shift-meal-end">
+                    Término de Comida <span class="required-star">*</span>
+                  </label>
+                  <input
+                    id="shift-meal-end"
+                    type="time"
+                    class="field-input"
+                    formControlName="mealEndTime"
+                  />
+                </div>
+
+                <!-- Ventana de Anticipación para Pausa en RF -->
+                <div class="field-group col-4">
+                  <label class="field-label" for="shift-meal-early-pause">
+                    Anticipación de Pausa RF <span class="required-star">*</span>
+                  </label>
+                  <select
+                    id="shift-meal-early-pause"
+                    class="field-input"
+                    formControlName="mealEarlyPauseMinutes"
+                  >
+                    <option [value]="5">5 minutos antes</option>
+                    <option [value]="10">10 minutos antes (Recomendado)</option>
+                    <option [value]="15">15 minutos antes</option>
+                    <option [value]="20">20 minutos antes</option>
+                  </select>
+                </div>
+
+                <!-- Banner Informativo de Duración y Reglas de Montacargas -->
+                <div class="col-12" style="background: rgba(37, 99, 235, 0.07); border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 8px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; font-size: 0.85rem; color: #1e3a8a;">
+                  <span class="material-symbols-outlined" style="font-size: 22px; color: #2563eb; flex-shrink: 0; margin-top: 2px;">restaurant</span>
+                  <div style="line-height: 1.45;">
+                    <div><strong>Duración estimada de comida:</strong> {{ calculatedMealDuration() }} minutos.</div>
+                    <div style="margin-top: 4px; color: #3b82f6;">
+                      ℹ️ Los operadores y montacarguistas en Terminal RF podrán pausar su misión activa hasta <strong>{{ shiftForm.get('mealEarlyPauseMinutes')?.value || 10 }} minutos antes</strong> del inicio de la colación para resguardar la unidad con uñas a piso de manera segura.
+                    </div>
+                  </div>
+                </div>
+              }
             </div>
           </fieldset>
 

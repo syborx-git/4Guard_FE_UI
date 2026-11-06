@@ -295,12 +295,11 @@
   gap: 0.85rem;
   min-width: 0;
   padding: 1rem;
-  border: 1px solid rgba(23, 36, 61, 0.075);
-  border-radius: 17px;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow:
-    0 12px 28px rgba(31, 42, 68, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
 }
 
 .summary-card__icon {
@@ -343,7 +342,7 @@
 }
 
 .summary-card__label {
-  color: #8993a3;
+  color: var(--text-secondary);
   font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.09em;
@@ -351,7 +350,7 @@
 }
 
 .summary-card__value {
-  color: #1f2d48;
+  color: var(--text-primary);
   font-size: 1.35rem;
   font-weight: 750;
   line-height: 1;
@@ -359,7 +358,7 @@
 
 .summary-card__meta {
   overflow: hidden;
-  color: #a0a8b4;
+  color: var(--text-muted);
   font-size: 0.62rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -369,12 +368,11 @@
 
 .shipping-card {
   overflow: hidden;
-  border: 1px solid rgba(23, 36, 61, 0.08);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow:
-    0 20px 50px rgba(36, 49, 74, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   backdrop-filter: blur(18px);
 }
 
@@ -394,7 +392,7 @@
 .shipping-card__eyebrow {
   display: block;
   margin-bottom: 0.32rem;
-  color: #a47a27;
+  color: var(--text-gold, var(--gold));
   font-size: 0.61rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -403,7 +401,7 @@
 
 .shipping-card__title {
   margin: 0;
-  color: #1f2d48;
+  color: var(--text-primary);
   font-size: 1rem;
   font-weight: 750;
 }
@@ -1162,14 +1160,11 @@
 /* ---------------------------------------------------------- */
 
 :host-context(.theme-dark) .summary-card {
-
-  background: var(--glass-bg);
-
-  border-color: var(--glass-border);
-
-  backdrop-filter: blur(18px);
-
-  box-shadow: none;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .summary-card__value {
@@ -1189,13 +1184,11 @@
 /* ---------------------------------------------------------- */
 
 :host-context(.theme-dark) .shipping-card {
-
-  background: var(--glass-bg);
-
-  border-color: var(--glass-border);
-
-  box-shadow: none;
-
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   backdrop-filter: blur(22px);
 }
 

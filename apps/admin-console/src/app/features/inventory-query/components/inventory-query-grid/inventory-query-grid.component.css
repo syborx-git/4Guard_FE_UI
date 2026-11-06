@@ -109,9 +109,10 @@
   justify-content: space-between;
   gap: 16px;
   padding: 1.25rem 1.4rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -120,8 +121,8 @@
 
 .iq-kpi-card:hover {
   transform: translateY(-2px);
-  border-color: var(--gold-border);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hover);
 }
 
 .iq-kpi-info {
@@ -387,9 +388,10 @@
    TABLA INTERACTIVA DE INVENTARIOS
    ══════════════════════════════════════════════════════════ */
 .iq-table-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   overflow: hidden;
   backdrop-filter: blur(16px);

@@ -276,7 +276,7 @@
               </button>
             }
 
-            <div class="wmap__legend" aria-label="Simbología del mapa térmico">
+            <div class="wmap__legend" id="topo-legend" aria-label="Simbología del mapa térmico">
               <span class="wmap__legend-item" title="Bahía totalmente libre (0 tarimas)">
                 <span class="wmap__legend-dot wmap__legend-dot--vacant"></span>Vacío (0 T)
               </span>
@@ -530,7 +530,7 @@
             [style.cursor]="'grab'"
             [style.transform]="'translate(' + panOffset().x + 'px, ' + panOffset().y + 'px) scale(' + zoomScale() + ')'"
           >
-            <svg viewBox="0 0 1000 888" class="wmap__svg" aria-label="Plano de distribución del almacén">
+            <svg viewBox="0 0 1000 888" class="wmap__svg" id="topo-blueprint-svg" aria-label="Plano de distribución del almacén">
               <defs>
                 <!-- Grid de fondo tipo papel milimetrado -->
                 <pattern id="bg-grid-cat" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -737,7 +737,7 @@
           </div>
 
           <!-- Controles Zoom -->
-          <div class="wmap__zoom-bar" aria-label="Controles de zoom">
+          <div class="wmap__zoom-bar" id="topo-zoom-bar" aria-label="Controles de zoom">
             <button type="button" class="wmap__zoom-btn" (click)="zoomIn()" title="Acercar">
               <span class="material-symbols-outlined">add</span>
             </button>

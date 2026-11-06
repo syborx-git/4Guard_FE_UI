@@ -15,9 +15,10 @@
 import { Injectable, inject, signal, computed, Signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, map, of, delay, catchError } from 'rxjs';
+import { Observable, tap, map, of, delay, catchError, throwError } from 'rxjs';
 import { AuthResponse, JwtPayload, LoginRequest, User } from '../../domain/models/user.model';
 import { UserRole } from '../../domain/enums/role.enum';
+import { OfflineIndexedDb } from '../db/offline-indexed-db';
 import { environment } from '../../../environments/environment';
 
 /** Claves de localStorage para persistencia de sesión */
@@ -94,10 +95,10 @@ export class AuthService {
           forkliftOperatorId: rawUser?.forkliftOperatorId ? String(rawUser.forkliftOperatorId) : undefined,
           employeeCode: rawUser?.employeeCode || rawUser?.username || undefined,
           role,
-          organizationId: rawUser?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
-          branchId: rawUser?.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
-          branchName: rawUser?.branchName || (rawUser?.branchId === 'b73f0907-9fa5-4bdf-87db-2eb5e7683936' ? 'CENTRO DE DISTRIBUCION CDMX' : null) || 'CENTRO DE DISTRIBUCION CDMX',
-          organizationName: rawUser?.organizationName || '4GUARD LOGISTICS CORP',
+          organizationId: rawUser?.organizationId || '',
+          branchId: rawUser?.branchId || '',
+          branchName: rawUser?.branchName || '',
+          organizationName: rawUser?.organizationName || '',
           changePasswordRequired: Boolean(rawUser?.changePasswordRequired),
           active: true,
           createdAt: new Date().toISOString(),
@@ -163,8 +164,9 @@ export class AuthService {
   refreshToken(): Observable<string> {
     const storedRefresh = this.getRefreshToken();
     const existingAccess = this.getAccessToken();
-    if (!storedRefresh || storedRefresh.startsWith('mock-')) {
-      return of(existingAccess || '');
+    if (!storedRefresh || storedRefresh.startsWith('mock-') || storedRefresh.startsWith('dev-')) {
+      this.logout('Sesión expirada');
+      return throwError(() => new Error('No refresh token available'));
     }
     return this.http.post<any>('/api/v1/auth/refresh', { refreshToken: storedRefresh }).pipe(
       map((res: any) => {
@@ -214,10 +216,7 @@ export class AuthService {
     const token = this.getAccessToken();
     if (!token) return false;
 
-    // Aceptar automáticamente los tokens simulados de desarrollo
-    if (token.startsWith('mock-') || token.startsWith('rf-')) {
-      return true;
-    }
+    // Fail-Closed: Solo tokens con firma y payload JWT validables son aceptados
 
     try {
       const payload = this.decodeJwtPayload(token);
@@ -231,39 +230,8 @@ export class AuthService {
   /**
    * Cambia el rol del usuario activo para pruebas rápidas de interfaz (RBAC demo switcher).
    */
-  switchRoleForTesting(role: UserRole, customName?: string): void {
-    const roleNames: Record<UserRole, string> = {
-      [UserRole.ADMIN]: 'Ing. Carlos Herrera (Director General)',
-      [UserRole.OPERATIONS_MANAGER]: 'Ing. Roberto Garza (Gerente Operaciones)',
-      [UserRole.OPERATIONS_COORDINATOR]: 'Lic. Fernando Lozano (Coordinador Operaciones)',
-      [UserRole.OPERATIONS_SUPERVISOR]: 'Ing. Héctor Salinas (Supervisor Operaciones)',
-      [UserRole.CONTROL_DESK]: 'Lic. Patricia Gómez (Mesa de Control)',
-      [UserRole.SHIFT_LEADER]: 'Ricardo Peña (Líder de Turno)',
-      [UserRole.WAREHOUSE_OPERATOR]: 'Oficial Montacarguista',
-      [UserRole.QM_INSPECTOR]: 'Dra. Elena Ramos (Inspector de Calidad)',
-      [UserRole.SECURITY_GUARD]: 'Oficial de Turno Caseta',
-    };
-
-    const updatedUser: User = {
-      id: `u-${role.toLowerCase()}`,
-      fullName: customName || roleNames[role] || 'Usuario Operativo',
-      email: `${role.toLowerCase().replace('role_', '')}@4guard.mx`,
-      role,
-      branchId: 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
-      branchName: 'CENTRO DE DISTRIBUCION CDMX',
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const dummyResponse: AuthResponse = {
-      accessToken: `mock-jwt-token-for-${role}-${Date.now()}`,
-      refreshToken: `mock-refresh-token-for-${role}-${Date.now()}`,
-      expiresIn: 3600,
-      user: updatedUser,
-    };
-
-    this.saveSession(dummyResponse);
+  switchRoleForTesting(_role: UserRole, _customName?: string): void {
+    console.warn('[Security] switchRoleForTesting deshabilitado para evitar escalación de privilegios.');
   }
 
   /**
@@ -286,6 +254,17 @@ export class AuthService {
     localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
     this._currentUser.set(response.user);
+
+    // Persistir en IndexedDB auth_cache para desbloqueo biométrico Offline-First (ADR-012)
+    OfflineIndexedDb.saveAuthCache({
+      userId: response.user.id,
+      username: response.user.username || response.user.email,
+      token: response.accessToken,
+      role: response.user.role,
+      branchId: response.user.branchId || '',
+      cachedAt: Date.now(),
+      expiresAt: Date.now() + (12 * 60 * 60 * 1000)
+    }).catch(() => { /* silent fallback */ });
   }
 
   private clearSession(): void {

@@ -66,16 +66,19 @@ export class WarehouseMovementsApiService {
       const userStr = localStorage.getItem('4guard_user');
       if (userStr) {
         const user = JSON.parse(userStr);
-        if (user?.organizationId) {
-          return { organizationId: user.organizationId, branchId: user.branchId || DEFAULT_BRANCH_ID };
+        if (user?.organizationId || user?.branchId) {
+          return {
+            organizationId: user.organizationId || DEFAULT_ORG_ID,
+            branchId: user.branchId || DEFAULT_BRANCH_ID
+          };
         }
       }
       const sessionStr = localStorage.getItem('session');
       if (sessionStr) {
         const session = JSON.parse(sessionStr);
-        if (session?.user?.organizationId) {
+        if (session?.user?.organizationId || session?.user?.branchId) {
           return {
-            organizationId: session.user.organizationId,
+            organizationId: session.user.organizationId || DEFAULT_ORG_ID,
             branchId: session.user.branchId || DEFAULT_BRANCH_ID,
           };
         }
@@ -170,13 +173,25 @@ export class WarehouseMovementsApiService {
     );
   }
 
-  getPassHistory(options?: { organizationId?: string; branchId?: string; search?: string }): Observable<any[]> {
+  getPassHistory(options?: {
+    organizationId?: string;
+    branchId?: string;
+    search?: string;
+    currentShiftOnly?: boolean;
+    shiftSessionId?: string;
+    from?: string;
+    to?: string;
+  }): Observable<any[]> {
     const orgId = options?.organizationId || this.getSessionOrgId();
     let params = new HttpParams().set('organizationId', orgId);
     if (options?.branchId && options.branchId !== 'ALL' && options.branchId !== 'null' && options.branchId !== 'undefined') {
       params = params.set('branchId', options.branchId);
     }
     if (options?.search) params = params.set('search', options.search);
+    if (options?.currentShiftOnly !== undefined) params = params.set('currentShiftOnly', String(options.currentShiftOnly));
+    if (options?.shiftSessionId) params = params.set('shiftSessionId', options.shiftSessionId);
+    if (options?.from) params = params.set('from', options.from);
+    if (options?.to) params = params.set('to', options.to);
 
     return this.http.get<ApiResponse<any[]>>(`${this.securityGateUrl}/passes/history`, { params }).pipe(
       timeout(8000),
@@ -202,9 +217,18 @@ export class WarehouseMovementsApiService {
   }
 
   deletePass(passIdOrToken: string, secondaryToken?: string): Observable<void> {
-    this.removeLocalSubmittedPass(passIdOrToken);
-    if (secondaryToken) this.removeLocalSubmittedPass(secondaryToken);
-    return this.http.delete<ApiResponse<void>>(`${this.securityGateUrl}/passes/${passIdOrToken}`).pipe(
+    const p1 = (passIdOrToken || '').trim();
+    const p2 = (secondaryToken || '').trim();
+
+    if (p1) this.removeLocalSubmittedPass(p1);
+    if (p2) this.removeLocalSubmittedPass(p2);
+
+    const idToSend = p1 || p2;
+    if (!idToSend) {
+      return of(void 0);
+    }
+
+    return this.http.delete<ApiResponse<void>>(`${this.securityGateUrl}/passes/${encodeURIComponent(idToSend)}`).pipe(
       map(() => void 0),
       catchError(() => of(void 0))
     );
@@ -369,15 +393,11 @@ export class WarehouseMovementsApiService {
   }
 
   purgeAllTestData(): Observable<any> {
+    // Seguridad: Bloqueado llamado externo a endpoints no autorizados de purga
     this.clearAllLocalOperationalData();
     const purgeTime = Date.now();
     this.broadcastEvent('PURGE_ALL', { timestamp: purgeTime });
-
-    // Intenta notificar al backend/proxy para reset general si el endpoint existe
-    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/api/v1/dev/purge-all`, {}).pipe(
-      map((res) => res?.data || { success: true }),
-      catchError(() => of({ success: true }))
-    );
+    return of({ success: true, message: 'Operación local completada' });
   }
 
   createCheckIn(body: any): Observable<any> {
@@ -622,6 +642,42 @@ export class WarehouseMovementsApiService {
     );
   }
 
+  startTransfer(id: string, operatorId?: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.transfersUrl}/${id}/start`, { operatorId }).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  pauseTransfer(id: string, reason?: string, notes?: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.transfersUrl}/${id}/pause`, { reason, notes }).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  resumeTransfer(id: string, operatorId?: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.transfersUrl}/${id}/resume`, { operatorId }).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  completeTransfer(id: string, destinationLocationId?: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.transfersUrl}/${id}/complete`, { destinationLocationId }).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  updateTransferPriority(id: string, priority: 'NORMAL' | 'URGENT'): Observable<any> {
+    return this.http.patch<ApiResponse<any>>(`${this.transfersUrl}/${id}/priority`, { priority }).pipe(
+      map((res) => res.data)
+    );
+  }
+
+  reassignTransferOperator(id: string, forkliftOperatorId: string): Observable<any> {
+    return this.http.put<ApiResponse<any>>(`${this.transfersUrl}/${id}/reassign`, { forkliftOperatorId }).pipe(
+      map((res) => res.data)
+    );
+  }
+
   // ─── 3. SALIDAS DE ALMACÉN (OUTBOUND) ───────────────────────────────────────
 
   createOutbound(body: any): Observable<any> {
@@ -660,6 +716,27 @@ export class WarehouseMovementsApiService {
         const local = this.getLocalOutbounds().find(o => o.id === id || o.folio === id);
         return of(local || null);
       })
+    );
+  }
+
+  updateOutboundPriority(id: string, priority: 'NORMAL' | 'URGENT'): Observable<any> {
+    return this.http.put<ApiResponse<any>>(`${this.outboundsUrl}/${id}/priority`, { priority }).pipe(
+      map((res) => res?.data || { id, priority }),
+      catchError(() => this.updateOutbound(id, { priority }))
+    );
+  }
+
+  pauseOutbound(id: string, reason: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.outboundsUrl}/${id}/pause`, { reason }).pipe(
+      map((res) => res?.data || { id, status: 'PAUSED', pauseReason: reason }),
+      catchError(() => this.updateOutbound(id, { status: 'PAUSED', pauseReason: reason }))
+    );
+  }
+
+  resumeOutbound(id: string): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${this.outboundsUrl}/${id}/resume`, {}).pipe(
+      map((res) => res?.data || { id, status: 'IN_PROGRESS' }),
+      catchError(() => this.updateOutbound(id, { status: 'IN_PROGRESS' }))
     );
   }
 
@@ -790,9 +867,8 @@ export class WarehouseMovementsApiService {
   }
 
   getLocations(branchId?: string): Observable<any[]> {
-    let url = `${this.baseUrl}/api/v1/warehouse-map/positions`;
-    const bId = branchId || this.getSessionOrg().branchId;
-    if (bId) url += `?branchId=${bId}`;
+    const bId = branchId || this.getSessionOrg().branchId || DEFAULT_BRANCH_ID;
+    const url = `${this.baseUrl}/api/v1/warehouse-map/positions?branchId=${bId}`;
     return this.http.get<ApiResponse<any[]>>(url).pipe(
       map((res) => res.data || []),
       catchError(() => of([]))
@@ -800,9 +876,8 @@ export class WarehouseMovementsApiService {
   }
 
   getBayOccupancy(branchId?: string): Observable<any[]> {
-    let url = `${this.baseUrl}/api/v1/warehouse-map/positions`;
-    const bId = branchId || this.getSessionOrg().branchId;
-    if (bId) url += `?branchId=${bId}`;
+    const bId = branchId || this.getSessionOrg().branchId || DEFAULT_BRANCH_ID;
+    const url = `${this.baseUrl}/api/v1/warehouse-map/positions?branchId=${bId}`;
     return this.http.get<ApiResponse<any[]>>(url).pipe(
       map((res) => res.data || []),
       catchError(() => of([]))

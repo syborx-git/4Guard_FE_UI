@@ -6,7 +6,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════
        HEADER PRINCIPAL CON EL SLIDE DE PESTAÑAS Y BOTÓN DE ACCIÓN
        ════════════════════════════════════════════════════════════════ -->
-  <header class="receiving-header">
+  <header class="receiving-header" id="rec-header">
     <div class="receiving-header__top">
 
       <div class="receiving-header__left">
@@ -67,7 +67,7 @@
 
     <!-- ── BARRA DE PESTAÑAS FLOTANTE (SEGMENTED CONTROL) & ANDENES ── -->
     <div class="movements-toolbar-row">
-      <nav class="movements-tabs-nav" aria-label="Navegación de movimientos de almacén">
+      <nav class="movements-tabs-nav" id="tour-movements-tabs" aria-label="Navegación de movimientos de almacén">
         <a
           routerLink="/warehouse-movements/receiving"
           routerLinkActive="tab-active"
@@ -104,7 +104,7 @@
         <button
           type="button"
           (click)="showDockMapModal.set(true)"
-          class="dock-summary-pill"
+          id="tour-dock-summary-pill" class="dock-summary-pill"
           title="Ver plano interactivo y estado de andenes 1-12"
         >
           <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-sm">domain</span>
@@ -131,7 +131,7 @@
   </header>
 
   <!-- ── 1. KPI CARDS HEADER (CON VISTA COMPACTA COLAPSABLE HOMOLOGADA) ── -->
-  <section aria-label="Métricas Operativas de Recepción" class="mb-0">
+  <section aria-label="Métricas Operativas de Recepción" id="rec-kpi-grid" class="mb-0">
     <div class="flex items-center justify-between mb-1.5">
       <span class="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
         <span class="material-symbols-outlined text-sm text-gold">analytics</span>
@@ -254,7 +254,7 @@
     <!-- ═══════════════════════════════════════════════════════════════
          DIRECTORIO EJECUTIVO DE RECEPCIONES (PIXEL-PERFECT MOCKUP)
          ═══════════════════════════════════════════════════════════════ -->
-    <div class="executive-directory-card" fgStarBorder fgSpecularGlow>
+    <div class="executive-directory-card" id="rec-directory-card-grid" fgStarBorder fgSpecularGlow>
       <!-- Header Row: Dot + Title + Count Pill + Hint + Subtitle -->
       <div class="directory-header-row">
         <div class="directory-header-left">
@@ -277,7 +277,7 @@
           <span class="material-symbols-outlined directory-search-icon">search</span>
           <input
             type="search"
-            class="directory-search-input"
+            id="rec-search-input" class="directory-search-input"
             [ngModel]="searchQuery()"
             (ngModelChange)="searchQuery.set($event)"
             placeholder="Buscar por folio, cliente, rampa, chofer o sello de seguridad..."
@@ -287,7 +287,7 @@
         </div>
 
         <!-- Filter Pills -->
-        <div class="directory-filter-pills" role="group" aria-label="Filtrar por estado">
+        <div class="directory-filter-pills" id="rec-status-filter-pills" role="group" aria-label="Filtrar por estado">
           <button
             type="button"
             (click)="toggleStatusFilter('ALL')"
@@ -467,13 +467,13 @@
         </div>
       } @else {
         <!-- Empty State -->
-        <div class="p-12 text-center space-y-3 bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-          <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
+        <div class="synexia-card p-12 text-center space-y-3" fgStarBorder fgSpecularGlow>
+          <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
             <span class="material-symbols-outlined text-3xl">search_off</span>
           </div>
           <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">No se encontraron recepciones</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            No hay registros que coincidan con la búsqueda o con el filtro de estado seleccionado.
+          <p class="text-xs text-slate-500 max-w-sm mx-auto">
+            No hay registros que coincidan con el criterio de búsqueda o filtro seleccionado.
           </p>
           <button
             type="button"
@@ -534,6 +534,15 @@
                 @else if (rec.status === 'CANCELLED') { Cancelado }
               </span>
 
+              @if (rec.priority === 'URGENT') {
+                <span
+                  class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-black rounded-lg bg-rose-500/20 text-rose-500 border border-rose-500/40 shadow-sm animate-pulse"
+                  title="Prioridad Preemptiva asignada: El montacargas atenderá esta remisión interrumpiendo maniobras normales."
+                >
+                  <span class="material-symbols-outlined text-[14px]">bolt</span>
+                  <span>PRIORIDAD URGENTE</span>
+                </span>
+              }
               @if (isCarryOver(rec)) {
                 <span
                   class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40"
@@ -721,10 +730,10 @@
                 </span>
                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span class="logistics-command-badge-plate">
-                    T: {{ (rec.checkIn.noEcoTractor ? 'Eco ' + rec.checkIn.noEcoTractor + ' / ' : '') }}{{ rec.checkIn.tractorPlates || 'S/P' }}
+                    T: {{ (getEcoTractor(rec) ? 'Eco ' + getEcoTractor(rec) + ' / ' : '') }}{{ rec.checkIn.tractorPlates || 'S/P' }}
                   </span>
                   <span class="logistics-command-badge-plate">
-                    C: {{ (rec.checkIn.noEcoCaja ? 'Eco ' + rec.checkIn.noEcoCaja + ' / ' : '') }}{{ rec.checkIn.boxPlates || 'S/P' }}
+                    C: {{ (getEcoCaja(rec) ? 'Eco ' + getEcoCaja(rec) + ' / ' : '') }}{{ rec.checkIn.boxPlates || 'S/P' }}
                   </span>
                 </div>
               </div>
@@ -3794,7 +3803,7 @@
               <span class="material-symbols-outlined text-lg">edit_note</span>
             </div>
             <div>
-              <h3 class="font-black text-sm text-slate-950 dark:text-slate-100 uppercase tracking-wide m-0" style="color: #0f172a !important;">
+              <h3 class="font-black text-sm text-slate-900 dark:text-slate-100 uppercase tracking-wide m-0" >
                 Modificar Ficha Operativa de Arribo
               </h3>
               <p class="text-[11px] text-slate-800 dark:text-slate-200 m-0 font-bold">

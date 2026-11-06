@@ -83,6 +83,11 @@ export class CountingScanComponent implements AfterViewInit, OnDestroy {
 
   // ─── Cámara en Vivo / Lector HUD ──────────────────────────────────────────
   protected readonly cameraActive           = signal<boolean>(true);
+  protected readonly isCameraExpanded      = signal<boolean>(false);
+
+  protected toggleCameraExpanded(): void {
+    this.isCameraExpanded.update(v => !v);
+  }
   protected readonly cameraLoading          = signal<boolean>(false);
   protected readonly cameraError            = signal<string | null>(null);
   protected readonly currentFacingMode      = signal<'environment' | 'user'>('environment');
@@ -175,8 +180,8 @@ export class CountingScanComponent implements AfterViewInit, OnDestroy {
   protected readonly currentLocIndex   = signal<number>(1);
   protected readonly isRackUnlocked    = signal<boolean>(false); // Inicia bloqueado para exigir escaneo de bahía
   protected readonly manualInputCode   = signal<string>('');
-  protected readonly manualInputPieces = signal<number>(48);
-  protected readonly manualInputLot    = signal<string>('LOT-2026-Y01');
+  protected readonly manualInputPieces = signal<number>(0);
+  protected readonly manualInputLot    = signal<string>('');
 
   // ─── Zone Lease Timer (30 min) HU-155 ─────────────────────────────────────
   protected readonly zoneLeaseSeconds = signal<number>(1680); // ~28 min restantes
@@ -221,6 +226,32 @@ export class CountingScanComponent implements AfterViewInit, OnDestroy {
   // ─── Filtros Contextuales (Pills de Auditoría Homologadas) ────────────────
   protected readonly currentFilter = signal<'ALL' | 'CURRENT' | 'PENDING' | 'AUDITED' | 'DISCREPANCY'>('ALL');
   protected readonly showCameraModal = signal<boolean>(false);
+  // ─── Homologación con Picking FEFO ─────────────────────────────────────────
+  protected readonly activeTab = signal<'ROUTE' | 'BUFFER'>('ROUTE');
+  protected readonly alertFlash = signal<boolean>(false);
+  protected readonly successFlash = signal<boolean>(false);
+
+  protected readonly completedLocationsCount = computed(() => this.auditedLocationsCount());
+
+  protected readonly auditedPercentage = computed(() => {
+    const total = this.totalLocationsCount();
+    return total > 0 ? Math.round((this.auditedLocationsCount() / total) * 100) : 0;
+  });
+
+  protected focusScan(): void {
+    this.focusInput();
+  }
+
+  private triggerSuccessFlash(): void {
+    this.successFlash.set(true);
+    setTimeout(() => this.successFlash.set(false), 800);
+  }
+
+  private triggerAlertFlash(): void {
+    this.alertFlash.set(true);
+    setTimeout(() => this.alertFlash.set(false), 1500);
+  }
+
 
   // ─── Señales Computadas ───────────────────────────────────────────────────
   protected readonly currentLocation = computed<CountingLocationItem>(() => {
@@ -285,7 +316,7 @@ export class CountingScanComponent implements AfterViewInit, OnDestroy {
     this.zoneLeaseSeconds.set(1800);
     this.currentLocIndex.set(1);
     this.isRackUnlocked.set(true);
-    this.manualInputPieces.set(48);
+    this.manualInputPieces.set(0);
     this.manualInputLot.set('LOT-2026-Y01');
     this.audioService.playSuccess();
     this.scanFeedback.set({
@@ -315,6 +346,7 @@ export class CountingScanComponent implements AfterViewInit, OnDestroy {
       clearInterval(this.barcodeDetectorTimer);
     }
     this.stopCamera();
+    this.zoneLease.releaseLease();
   }
 
   private initBarcodeDetector(): void {
@@ -439,7 +471,12 @@ export class CountingScanComponent implements AfterViewInit, OnDestroy {
   }
 
   protected registerCurrentManualPallet(): void {
-    const code = this.manualInputCode() || 'SSCC-175012345000000025';
+    const code = this.manualInputCode().trim();
+    if (!code) {
+      this.audioService.playWarning();
+      this.toast.warning('Escanea la etiqueta SSCC o ingresa el código de la tarima física', 'DATO REQUERIDO');
+      return;
+    }
     this.processScan(code);
   }
 
@@ -518,7 +555,7 @@ export class CountingScanComponent implements AfterViewInit, OnDestroy {
     const matched = this.MOCK_CATALOG[code];
     const sku = matched?.sku || 'SKU-881204';
     const productName = matched?.name || 'Mercancía General Identificada';
-    const pieces = this.manualInputPieces() > 0 ? this.manualInputPieces() : (matched?.defaultPcs || 48);
+    const pieces = this.manualInputPieces() > 0 ? this.manualInputPieces() : 1;
     const lot = this.manualInputLot() || matched?.defaultLot || 'LOT-2026-Y01';
 
     const newRecord: CountedPalletRecord = {

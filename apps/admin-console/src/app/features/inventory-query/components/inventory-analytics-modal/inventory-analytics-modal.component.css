@@ -112,10 +112,11 @@
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
   font-family: var(--font-body);
   color: var(--text-primary);
@@ -561,9 +562,11 @@
   flex-direction: column;
   gap: 3px;
   padding: 12px;
-  background: rgba(17, 26, 38, 0.90);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 12px);
+  box-shadow: var(--shadow-card);
 }
 
 .chart-summary-lbl {

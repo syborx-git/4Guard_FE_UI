@@ -61,7 +61,9 @@ body {
   font-weight: $fw-regular;
   line-height: $lh-normal;
   color: var(--text-primary, #17243d);
-  background-color: var(--bg-primary, #f3f0e9);
+  background-color: var(--bg-page, #f5f4f0);
+  background-image: var(--bg-page-gradient);
+  background-attachment: fixed;
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -307,8 +309,10 @@ footer,
 
 .synexia-surface {
   color: var(--text-primary);
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
+  background: var(--bg-card-exec, var(--surface-card));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32));
+  border-top: 3.5px solid var(--gold, #c5a86b);
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
 }
 
@@ -1210,4 +1214,412 @@ body.dark,
   border-color: #0f172a !important;
 }
 
-
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 4GUARD WMS — SDD OFICIAL: MODALES & POPUPS UNIFICADOS (LIGHT & DARK MODE)
+// Cumplimiento estricto de ui-design-system-dark.sdd.md & ui-design-system-light.sdd.md
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── MODO OSCURO (Enterprise Luxury / Obsidian Slate & Prestige Gold) ──
+html.theme-dark,
+html.dark,
+body.theme-dark,
+body.dark,
+:root.theme-dark,
+:root.dark,
+.theme-dark,
+.dark {
+  // Overlays con difuminado táctico
+  .modal-overlay,
+  .bay-modal-overlay {
+    background: rgba(11, 17, 25, 0.82) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+
+  // Tarjetas principales de modales
+  .modal-card,
+  .bay-modal-card,
+  .dock-map-modal-card {
+    background: #0f172a !important;
+    color: #edf1f5 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-top: 3.5px solid #d0af67 !important;
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  }
+
+  // Encabezados de Modales
+  .modal-header,
+  .bay-modal-header,
+  .dock-map-modal-header {
+    background: #111a26 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #edf1f5 !important;
+
+    h1, h2, h3, h4, .modal-title, .modal-header-title, .bay-modal-title, .dock-map-modal-title, .relabel-modal-title {
+      color: #edf1f5 !important;
+    }
+    p, span, .modal-subtitle, .modal-header-subtitle, .bay-modal-subtitle, .dock-map-modal-subtitle, .relabel-modal-subtitle {
+      color: #9aa6b4 !important;
+    }
+  }
+
+  // Barra de Navegación y Pestañas (Selector de Bahías)
+  .bay-modal-nav-bar {
+    background: #111a26 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #edf1f5 !important;
+  }
+
+  .bay-pill-tab {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #9aa6b4 !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      color: #edf1f5 !important;
+    }
+
+    &.bay-pill-tab--active {
+      background: #d0af67 !important;
+      color: #0b1119 !important;
+      border-color: #d0af67 !important;
+      font-weight: 800 !important;
+    }
+  }
+
+  // Buscador y controles en modales
+  .bay-modal-search-input,
+  .bay-modal-reload-btn,
+  .bay-btn-back {
+    background: #0b1119 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #edf1f5 !important;
+
+    &::placeholder {
+      color: #64748b !important;
+    }
+
+    &:focus {
+      border-color: #d0af67 !important;
+      box-shadow: 0 0 0 3px rgba(208, 175, 103, 0.18) !important;
+    }
+  }
+
+  // Cuerpos de Modales
+  .modal-body,
+  .bay-modal-body {
+    background: #0f172a !important;
+    color: #edf1f5 !important;
+  }
+
+  // Pie de Página de Modales
+  .modal-footer,
+  .bay-modal-footer {
+    background: #111a26 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #edf1f5 !important;
+  }
+
+  // Cajas de resumen y telemetría dentro de modales
+  .modal-summary-box,
+  .modal-summary-box--ops-auth {
+    background: rgba(17, 26, 38, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #edf1f5 !important;
+
+    .modal-summary-label {
+      color: #9aa6b4 !important;
+    }
+    .modal-summary-value {
+      color: #edf1f5 !important;
+    }
+  }
+
+  // Tarjetas internas de almacenes y posiciones en Selector
+  .bay-warehouse-card,
+  .bay-position-card {
+    background: #111a26 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #edf1f5 !important;
+
+    &:hover {
+      background: #16212f !important;
+      border-color: rgba(208, 175, 103, 0.35) !important;
+    }
+
+    .bay-wh-title, .bay-pos-code {
+      color: #edf1f5 !important;
+    }
+    .bay-wh-subtitle, .bay-wh-metric-lbl {
+      color: #9aa6b4 !important;
+    }
+  }
+
+  .bay-smart-suggestion-banner {
+    background: rgba(208, 175, 103, 0.1) !important;
+    border: 1px solid rgba(208, 175, 103, 0.25) !important;
+    color: #e1c47c !important;
+  }
+
+  // Formularios, Inputs y Selects dentro de Modales
+  .modal-card input:not([type="checkbox"]):not([type="radio"]),
+  .modal-card select,
+  .modal-card textarea {
+    background-color: #111a26 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #edf1f5 !important;
+
+    &::placeholder {
+      color: #64748b !important;
+    }
+
+    &:focus {
+      border-color: #d0af67 !important;
+      box-shadow: 0 0 0 3px rgba(208, 175, 103, 0.18) !important;
+    }
+  }
+
+  .modal-card .fg-label,
+  .modal-card .modal-field-label,
+  .modal-card label {
+    color: #cbd5e1 !important;
+  }
+
+  .modal-card .fg-label--required::after,
+  .modal-card .modal-field-label span.text-rose-500 {
+    color: #ef7773 !important;
+  }
+
+  // Botones dentro de Modales
+  .btn-ghost,
+  .bay-btn-cancel,
+  .btn-secondary-outline {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #edf1f5 !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12) !important;
+      border-color: rgba(255, 255, 255, 0.22) !important;
+      color: #ffffff !important;
+    }
+  }
+
+  .btn-save,
+  .bay-btn-confirm {
+    background: #d0af67 !important;
+    color: #0b1119 !important;
+    border: none !important;
+    font-weight: 850 !important;
+
+    &:hover {
+      background: #e1c47c !important;
+      color: #0b1119 !important;
+      box-shadow: 0 4px 14px rgba(208, 175, 103, 0.35) !important;
+    }
+  }
+
+  .bay-modal-close-btn,
+  .modal-close-icon-btn,
+  .dock-map-modal-close-btn,
+  .relabel-modal-close-btn {
+    color: #9aa6b4 !important;
+    background: transparent !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      color: #ffffff !important;
+    }
+  }
+}
+
+// ── MODO CLARO (Enterprise Light / Sand & Crisp White) ──
+html.theme-light,
+body.theme-light,
+:root.theme-light,
+.theme-light {
+  .modal-overlay,
+  .bay-modal-overlay {
+    background: rgba(15, 23, 42, 0.5) !important;
+    backdrop-filter: blur(6px) !important;
+  }
+
+  .modal-card,
+  .bay-modal-card,
+  .dock-map-modal-card {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #e2e8f0 !important;
+    border-top: 3.5px solid #c5a86b !important;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+  }
+
+  .modal-header,
+  .bay-modal-header,
+  .dock-map-modal-header {
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+
+    h1, h2, h3, h4, .modal-title, .modal-header-title, .bay-modal-title, .dock-map-modal-title, .relabel-modal-title {
+      color: #0f172a !important;
+    }
+    p, span, .modal-subtitle, .modal-header-subtitle, .bay-modal-subtitle, .dock-map-modal-subtitle, .relabel-modal-subtitle {
+      color: #64748b !important;
+    }
+  }
+
+  .bay-modal-nav-bar {
+    background: #ffffff !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+  }
+
+  .bay-pill-tab {
+    background: #f1f5f9 !important;
+    border-color: #e2e8f0 !important;
+    color: #475569 !important;
+
+    &:hover {
+      background: #e2e8f0 !important;
+      color: #0f172a !important;
+    }
+
+    &.bay-pill-tab--active {
+      background: #0f172a !important;
+      color: #ffffff !important;
+      border-color: #0f172a !important;
+      font-weight: 800 !important;
+    }
+  }
+
+  .bay-modal-search-input,
+  .bay-modal-reload-btn,
+  .bay-btn-back {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+
+    &::placeholder {
+      color: #94a3b8 !important;
+    }
+
+    &:focus {
+      border-color: #c5a86b !important;
+      box-shadow: 0 0 0 3px rgba(197, 168, 107, 0.2) !important;
+    }
+  }
+
+  .modal-body,
+  .bay-modal-body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .modal-footer,
+  .bay-modal-footer {
+    background: #f8fafc !important;
+    border-top: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+  }
+
+  .modal-summary-box,
+  .modal-summary-box--ops-auth {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+
+    .modal-summary-label {
+      color: #64748b !important;
+    }
+    .modal-summary-value {
+      color: #0f172a !important;
+    }
+  }
+
+  .bay-warehouse-card,
+  .bay-position-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+
+    &:hover {
+      background: #f8fafc !important;
+      border-color: #c5a86b !important;
+    }
+
+    .bay-wh-title, .bay-pos-code {
+      color: #0f172a !important;
+    }
+    .bay-wh-subtitle, .bay-wh-metric-lbl {
+      color: #64748b !important;
+    }
+  }
+
+  .bay-smart-suggestion-banner {
+    background: #fffbeb !important;
+    border: 1px solid #fde68a !important;
+    color: #b45309 !important;
+  }
+
+  .modal-card input:not([type="checkbox"]):not([type="radio"]),
+  .modal-card select,
+  .modal-card textarea {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+
+    &::placeholder {
+      color: #94a3b8 !important;
+    }
+
+    &:focus {
+      border-color: #c5a86b !important;
+      box-shadow: 0 0 0 3px rgba(197, 168, 107, 0.2) !important;
+    }
+  }
+
+  .modal-card .fg-label,
+  .modal-card .modal-field-label,
+  .modal-card label {
+    color: #334155 !important;
+  }
+
+  .btn-ghost,
+  .bay-btn-cancel,
+  .btn-secondary-outline {
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+
+    &:hover {
+      background: #e2e8f0 !important;
+      color: #0f172a !important;
+    }
+  }
+
+  .btn-save,
+  .bay-btn-confirm {
+    background: #c5a86b !important;
+    color: #ffffff !important;
+    border: none !important;
+
+    &:hover {
+      background: #b5985b !important;
+    }
+  }
+
+  .bay-modal-close-btn,
+  .modal-close-icon-btn,
+  .dock-map-modal-close-btn,
+  .relabel-modal-close-btn {
+    color: #64748b !important;
+
+    &:hover {
+      background: #e2e8f0 !important;
+      color: #0f172a !important;
+    }
+  }
+}

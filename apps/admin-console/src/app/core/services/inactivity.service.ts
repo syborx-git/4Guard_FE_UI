@@ -6,7 +6,7 @@
 import { Injectable, inject, signal, OnDestroy } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { fromEvent, merge, Subscription, timer, of } from 'rxjs';
+import { fromEvent, merge, Subscription, timer, of, throwError } from 'rxjs';
 import { switchMap, throttleTime, startWith, timeout, catchError } from 'rxjs/operators';
 import { AuthState } from '../auth/auth.state';
 import { AuthService } from './auth.service';
@@ -121,26 +121,27 @@ export class InactivityService implements OnDestroy {
     const refreshToken = this.authService.getRefreshToken();
 
     if (!refreshToken) {
-      this.handleKeepAliveSuccess();
+      this.autoLogout();
       return;
     }
 
     this.http.post<any>(`${this.BASE_URL}/refresh`, { refreshToken }).pipe(
       timeout(4000),
-      catchError(() => of(null))
+      catchError(err => {
+        return throwError(() => err);
+      })
     ).subscribe({
       next: (response) => {
         if (response && response.success && response.data) {
           this.authState.setSession(response.data);
-        }
-        this.handleKeepAliveSuccess();
-      },
-      error: () => {
-        if (this.authState.currentUser()) {
           this.handleKeepAliveSuccess();
         } else {
           this.autoLogout();
         }
+      },
+      error: () => {
+        // En error de refresh o credencial revocada en backend, cerrar sesion de inmediato
+        this.autoLogout();
       }
     });
   }
@@ -173,7 +174,7 @@ export class InactivityService implements OnDestroy {
       return;
     }
 
-    this.http.post<any>(`${this.BASE_URL}/logout`, { refreshToken }, { headers }).subscribe({
+    this.http.post<any>(`${this.BASE_URL}/logout`, { refreshToken, reason: 'TIMEOUT' }, { headers }).subscribe({
       next: () => this.finalizeLogout(),
       error: () => this.finalizeLogout()
     });
