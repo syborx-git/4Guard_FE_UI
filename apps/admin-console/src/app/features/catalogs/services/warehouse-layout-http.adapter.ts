@@ -141,9 +141,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['DAN-MILK-1L · Danone Entera'],
     notes: '181 Fijas · 40 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '',
-    labelPosition: { x: 0, y: 0 },
-    sublabelPosition: { x: 0, y: 0 }
+    polygonPoints: '588,166 692,145 694,328 694,378 588,378',
+    labelPosition: { x: 641, y: 245 },
+    sublabelPosition: { x: 641, y: 267 }
   },
   {
     id: 'sec-b',
@@ -180,9 +180,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     sublabelPosition: { x: 654, y: 551 }
   },
   {
-    id: 'sec-m',
-    code: 'M',
-    name: 'Almacén M — Consolidación & Despacho',
+    id: 'sec-l',
+    code: 'L',
+    name: 'Almacén L — Consolidación & Despacho',
     category: 'Consolidación',
     posFijas: 132,
     posTemp: 35,
@@ -192,9 +192,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['COFFEE-MATE ORIGINAL 12X640G N1MX'],
     notes: '132 Fijas · 35 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '',
-    labelPosition: { x: 0, y: 0 },
-    sublabelPosition: { x: 0, y: 0 }
+    polygonPoints: '650,378 702,378 702,520 650,520',
+    labelPosition: { x: 676, y: 440 },
+    sublabelPosition: { x: 676, y: 462 }
   },
   {
     id: 'sec-d',
@@ -209,9 +209,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
     notes: '120 Fijas · 30 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '',
-    labelPosition: { x: 0, y: 0 },
-    sublabelPosition: { x: 0, y: 0 }
+    polygonPoints: '588,378 650,378 650,782 588,782',
+    labelPosition: { x: 619, y: 550 },
+    sublabelPosition: { x: 619, y: 572 }
   },
   {
     id: 'sec-j',
@@ -265,6 +265,7 @@ const SEED_STATS: WarehouseLayoutStats = {
 export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/api/v1/warehouse-map`;
+  private _cachedSections: WarehouseSection[] = [];
 
   getTopology(): Observable<WarehouseTopologyData> {
     const branchId = (environment as any).defaultBranchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
@@ -274,17 +275,21 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
       map(res => {
         const rawSections = res.data?.sections || [];
         if (rawSections.length === 0) {
+          this._cachedSections = [...SEED_SECTIONS];
           return {
             sections: SEED_SECTIONS,
             stats: SEED_STATS
           };
         }
+        const mapped = rawSections.map(s => this.mapSectionFromBackend(s));
+        this._cachedSections = mapped;
         return {
-          sections: rawSections.map(s => this.mapSectionFromBackend(s)),
+          sections: mapped,
           stats: this.mapStatsFromBackend(res.data?.globalStats)
         };
       }),
       catchError(() => {
+        this._cachedSections = [...SEED_SECTIONS];
         return of({
           sections: SEED_SECTIONS,
           stats: SEED_STATS
@@ -342,21 +347,25 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
 
     return this.http.patch<ApiResponse<any>>(`${this.baseUrl}/positions/${positionId}/status`, payload).pipe(
       map(res => this.mapPositionFromBackend(res.data)),
-      catchError(() => of({
-        id: positionId,
-        positionNumber: 1,
-        code: 'POS-A-001',
-        sectionId: 'sec-a',
-        sectionName: 'Almacén A',
-        category: 'FIXED_STORAGE' as const,
-        skuCode: 'LALA-MILK-1L',
-        skuDescription: 'Leche Lala Entera UHT 1L (Caja 12 pzas)',
-        status: (action === 'BLOCK' ? 'BLOCKED' : action === 'RELEASE' ? 'AVAILABLE' : 'OCCUPIED') as PositionStatus,
-        capacityTarimas: 22,
-        currentTarimas: action === 'BLOCK' ? 10 : action === 'RELEASE' ? 0 : 22,
-        batchNumber: 'LOT-2026-901',
-        lastMovement: 'Actualizado manualmente (Modo Demo)'
-      } as PositionDetail))
+      catchError(() => {
+        const targetSec = this._cachedSections.length > 0 ? this._cachedSections[0] : SEED_SECTIONS[0];
+        const zoneChar = this.extractZoneLetter(targetSec.code || targetSec.name);
+        return of({
+          id: positionId,
+          positionNumber: 1,
+          code: `POS-${zoneChar}-001`,
+          sectionId: targetSec.id,
+          sectionName: targetSec.name,
+          category: 'FIXED_STORAGE' as const,
+          skuCode: 'LALA-MILK-1L',
+          skuDescription: 'Leche Lala Entera UHT 1L (Caja 12 pzas)',
+          status: (action === 'BLOCK' ? 'BLOCKED' : action === 'RELEASE' ? 'AVAILABLE' : 'OCCUPIED') as PositionStatus,
+          capacityTarimas: 22,
+          currentTarimas: action === 'BLOCK' ? 10 : action === 'RELEASE' ? 0 : 22,
+          batchNumber: 'LOT-2026-901',
+          lastMovement: 'Actualizado manualmente (Modo Demo)'
+        } as PositionDetail);
+      })
     );
   }
 
@@ -451,6 +460,7 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
   private mapSectionFromBackend(raw: any): WarehouseSection {
     const codeClean = raw.code ? raw.code.replace('SEC-ALM-', '') : raw.name;
     const matchedSeed = SEED_SECTIONS.find(s => s.code === codeClean || s.id === raw.id);
+    const useDxf = !!matchedSeed?.polygonPoints?.trim();
 
     return {
       id: raw.id,
@@ -465,9 +475,15 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
       materials: raw.materials && raw.materials.length > 0 ? raw.materials : (matchedSeed?.materials || []),
       notes: raw.notes || matchedSeed?.notes || '',
       status: 'LOADED',
-      polygonPoints: raw.polygonPoints || matchedSeed?.polygonPoints || '',
-      labelPosition: { x: Number(raw.labelPosition?.x || matchedSeed?.labelPosition.x || 0), y: Number(raw.labelPosition?.y || matchedSeed?.labelPosition.y || 0) },
-      sublabelPosition: { x: Number(raw.sublabelPosition?.x || matchedSeed?.sublabelPosition.x || 0), y: Number(raw.sublabelPosition?.y || matchedSeed?.sublabelPosition.y || 0) }
+      // El contorno calcado del plano DXF (SEED) manda sobre la cuadrícula genérica del backend,
+      // para que naves y bahías coincidan con el croquis real (layout_almacen_principal.svg).
+      polygonPoints: (useDxf ? matchedSeed!.polygonPoints : raw.polygonPoints) || '',
+      labelPosition: useDxf
+        ? { x: Number(matchedSeed!.labelPosition.x), y: Number(matchedSeed!.labelPosition.y) }
+        : { x: Number(raw.labelPosition?.x || 0), y: Number(raw.labelPosition?.y || 0) },
+      sublabelPosition: useDxf
+        ? { x: Number(matchedSeed!.sublabelPosition.x), y: Number(matchedSeed!.sublabelPosition.y) }
+        : { x: Number(raw.sublabelPosition?.x || 0), y: Number(raw.sublabelPosition?.y || 0) }
     };
   }
 
@@ -499,13 +515,77 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
     };
   }
 
-  private generateSeedPositionsForSection(sectionId: string): PositionDetail[] {
-    const section = SEED_SECTIONS.find(s => s.id === sectionId || s.code === sectionId) || SEED_SECTIONS[0];
+  private extractZoneLetter(codeOrName?: string): string {
+    if (!codeOrName) return 'A';
+    const clean = codeOrName.replace(/^SEC-ALM-/i, '').replace(/^sec-/i, '').replace(/^ALM-/i, '').trim();
+    if (clean.length === 1 && /[A-Za-z]/.test(clean)) {
+      return clean.toUpperCase();
+    }
+    const match = codeOrName.match(/(?:Almac[eé]n|Nave|Zone|SEC-ALM-?)\s*([A-Za-z])/i);
+    if (match) return match[1].toUpperCase();
+    const letter = clean.match(/[A-Za-z]/);
+    return letter ? letter[0].toUpperCase() : 'A';
+  }
+
+  private resolveSection(sectionId: string, backendPositions?: PositionDetail[]): WarehouseSection {
+    const cleanCode = (sectionId || '').replace(/^SEC-ALM-/i, '').replace(/^sec-/i, '').replace(/^ALM-/i, '').trim().toUpperCase();
+
+    // 1. Direct match by id or code in cached sections
+    let found = this._cachedSections.find(s =>
+      s.id === sectionId ||
+      s.code.toUpperCase() === sectionId.toUpperCase() ||
+      s.code.toUpperCase() === cleanCode ||
+      s.id.toLowerCase() === `sec-${cleanCode.toLowerCase()}`
+    );
+    if (found) return found;
+
+    // 2. Direct match in SEED_SECTIONS
+    found = SEED_SECTIONS.find(s =>
+      s.id === sectionId ||
+      s.code.toUpperCase() === sectionId.toUpperCase() ||
+      s.code.toUpperCase() === cleanCode ||
+      s.id.toLowerCase() === `sec-${cleanCode.toLowerCase()}`
+    );
+    if (found) return { ...found, id: sectionId };
+
+    // 3. Inspect backend positions if available (look at code like POS-B-001 or sectionName)
+    if (backendPositions && backendPositions.length > 0) {
+      const posWithCode = backendPositions.find(p => p.code && p.code.startsWith('POS-'));
+      if (posWithCode) {
+        const m = posWithCode.code.match(/^POS-([A-Za-z]+)-/);
+        if (m) {
+          const zoneLetter = m[1].toUpperCase();
+          const matchSec = this._cachedSections.find(s => this.extractZoneLetter(s.code) === zoneLetter) ||
+                           SEED_SECTIONS.find(s => this.extractZoneLetter(s.code) === zoneLetter);
+          if (matchSec) return { ...matchSec, id: sectionId };
+        }
+      }
+      const posWithName = backendPositions.find(p => p.sectionName);
+      if (posWithName) {
+        const zoneLetter = this.extractZoneLetter(posWithName.sectionName);
+        const matchSec = this._cachedSections.find(s => this.extractZoneLetter(s.name) === zoneLetter) ||
+                         SEED_SECTIONS.find(s => this.extractZoneLetter(s.name) === zoneLetter);
+        if (matchSec) return { ...matchSec, id: sectionId };
+      }
+    }
+
+    // 4. Extract zone letter from sectionId string itself if it contains a section code (e.g. "SEC-ALM-B")
+    const letter = this.extractZoneLetter(sectionId);
+    found = this._cachedSections.find(s => this.extractZoneLetter(s.code) === letter || this.extractZoneLetter(s.name) === letter) ||
+            SEED_SECTIONS.find(s => this.extractZoneLetter(s.code) === letter || this.extractZoneLetter(s.name) === letter);
+    if (found) return { ...found, id: sectionId };
+
+    // 5. Fallback if completely unknown: default to Section A with current sectionId
+    return { ...SEED_SECTIONS[0], id: sectionId };
+  }
+
+  private generateSeedPositionsForSection(sectionId: string, targetSection?: WarehouseSection): PositionDetail[] {
+    const section = targetSection || this.resolveSection(sectionId);
     const fixedCount = section.posFijas || 175;
     const tempCount = section.posTemp || 50;
     const preloadCount = section.posPreload || 4;
     const list: PositionDetail[] = [];
-    const zoneChar = section.code.replace(/[^A-Z]/g, '') || 'A';
+    const zoneChar = this.extractZoneLetter(section.code || section.name);
 
     // 1. Fijas
     const defaultSku = section.materials && section.materials.length > 0 ? section.materials[0] : 'Material Industrial Estándar';
@@ -518,28 +598,45 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
       let batchNumber = 'N/A';
       let blockReason: string | undefined = undefined;
 
-      // Nave F: Cuarentena QM con alertas críticas rojas
+      // 1. Posiciones Bloqueadas QM / Cuarentena (ROJO)
       if (zoneChar === 'F' && i <= 8) {
         status = 'BLOCKED';
         currentTarimas = 12;
         skuDesc = defaultSku;
         batchNumber = `LOT-2026-F${i.toString().padStart(2, '0')}`;
         blockReason = i % 2 === 0 ? 'Desviación de Embalaje / Cuarentena QM' : 'Dictamen de Auditoría Pendiente';
-      }
-      // Nave A, C, K, M: Ocupadas con alerta amarilla por saturación o libres
-      else if (['A', 'C', 'K', 'M'].includes(zoneChar) && i <= Math.min(fixedCount, 12)) {
-        status = 'OCCUPIED';
-        currentTarimas = 22; // 100% capacidad -> Alerta preventiva amarilla de saturación
-        skuDesc = defaultSku;
-        batchNumber = `LOT-2026-${zoneChar}${i.toString().padStart(2, '0')}`;
-      }
-      // Alguna posición bloqueada esporádica (alerta roja)
-      else if (i === 5 && ['G', 'D', 'L'].includes(zoneChar)) {
+      } else if (i === 6 || (i % 23 === 0 && i < fixedCount - 5)) {
         status = 'BLOCKED';
-        currentTarimas = 0;
+        currentTarimas = 6;
         skuDesc = defaultSku;
-        batchNumber = `LOT-2026-${zoneChar}05`;
-        blockReason = 'Caducidad Próxima / Bloqueo FSM';
+        batchNumber = `LOT-QM-${zoneChar}${posNum}`;
+        blockReason = 'Retención de Calidad / Cuarentena QM';
+      }
+      // 2. Posiciones Llenas / Alta Densidad 81% - 100% (AZUL ZAFIRO)
+      else if (i % 5 === 0 || i % 7 === 0) {
+        status = 'OCCUPIED';
+        currentTarimas = 22; // 100% Lleno
+        skuDesc = defaultSku;
+        batchNumber = `LOT-2026-${zoneChar}${posNum}`;
+      } else if (i % 9 === 0) {
+        status = 'OCCUPIED';
+        currentTarimas = 20; // 91% Lleno
+        skuDesc = defaultSku;
+        batchNumber = `LOT-2026-${zoneChar}${posNum}`;
+      }
+      // 3. Posiciones con Ocupación Media 31% - 80% (AMARILLO / ÁMBAR)
+      else if (i % 3 === 0 || i % 4 === 0) {
+        status = 'OCCUPIED';
+        currentTarimas = (i % 2 === 0) ? 14 : 11; // 50% - 64% Ocupación
+        skuDesc = defaultSku;
+        batchNumber = `LOT-2026-${zoneChar}${posNum}`;
+      }
+      // 4. Posiciones Libres / Baja Ocupación 0% - 30% (VERDE ESMERALDA)
+      else {
+        status = 'AVAILABLE';
+        currentTarimas = (i % 11 === 0) ? 4 : 0; // 0% - 18% Ocupación
+        skuDesc = (currentTarimas > 0) ? defaultSku : 'Sin Material Asignado';
+        batchNumber = (currentTarimas > 0) ? `LOT-2026-${zoneChar}${posNum}` : 'N/A';
       }
 
       list.push({
@@ -597,31 +694,62 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
       });
     }
 
+    try {
+      const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_simulated_bay_positions') : null;
+      if (stored) {
+        const overrides: Record<string, Partial<PositionDetail>> = JSON.parse(stored);
+        for (const item of list) {
+          const over = overrides[item.code.toUpperCase()];
+          if (over) {
+            item.currentTarimas = over.currentTarimas ?? item.currentTarimas;
+            item.skuDescription = over.skuDescription ?? item.skuDescription;
+            item.batchNumber = over.batchNumber ?? item.batchNumber;
+            item.status = (over.status as PositionStatus) ?? item.status;
+            item.lastMovement = over.lastMovement ?? item.lastMovement;
+          }
+        }
+      }
+    } catch {}
+
     return list;
   }
 
   private generateAllSeedPositions(): PositionDetail[] {
     const all: PositionDetail[] = [];
-    for (const sec of SEED_SECTIONS) {
-      all.push(...this.generateSeedPositionsForSection(sec.id));
+    const sourceSections = this._cachedSections.length > 0 ? this._cachedSections : SEED_SECTIONS;
+    for (const sec of sourceSections) {
+      all.push(...this.generateSeedPositionsForSection(sec.id, sec));
     }
     return all;
   }
 
   private ensureSectionPositionsComplete(sectionId: string, backendPositions: PositionDetail[]): PositionDetail[] {
-    const seedSection = this.generateSeedPositionsForSection(sectionId);
+    const section = this.resolveSection(sectionId, backendPositions);
+    const zoneChar = this.extractZoneLetter(section.code || section.name);
+    const expectedPrefix = `POS-${zoneChar}-`;
+
+    // Filtrar estrictamente: Solo posiciones que corresponden a esta nave o códigos legacy de esta nave
+    const sectionBackendPositions = backendPositions.filter(b => {
+      if (!b.code) return false;
+      if (b.code.startsWith(expectedPrefix)) return true;
+      if (b.code.startsWith('LOC-')) {
+        const m = b.code.match(/LOC[-_]?(?:ALM[-_]?)?(?:Z)?([A-Ma-m])/i);
+        return m ? m[1].toUpperCase() === zoneChar : false;
+      }
+      return false;
+    });
+
+    const seedSection = this.generateSeedPositionsForSection(sectionId, section);
     const mapByCode = new Map<string, PositionDetail>();
 
     for (const seed of seedSection) {
       mapByCode.set(seed.code, seed);
     }
 
-    for (const b of backendPositions) {
+    for (const b of sectionBackendPositions) {
       if (b.code && !b.code.startsWith('POS-')) {
         // Ignorar códigos legacy obsoletos; transferir ocupación a POS-X-001 si existe
         if (b.currentTarimas && b.currentTarimas > 0) {
-          const match = b.code.match(/LOC[-_]?(?:ALM[-_]?)?(?:Z)?([A-Ma-m])/i);
-          const zoneChar = match ? match[1].toUpperCase() : 'A';
           const targetCode = `POS-${zoneChar}-001`;
           if (mapByCode.has(targetCode)) {
             const target = mapByCode.get(targetCode)!;
@@ -637,20 +765,35 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
         mapByCode.set(b.code, {
           ...existing,
           id: b.id || existing.id,
-          status: b.status || existing.status,
-          currentTarimas: b.currentTarimas ?? existing.currentTarimas,
+          sectionId: section.id,
+          sectionName: section.name,
+          category: b.category || existing.category,
+          capacityTarimas: b.capacityTarimas || existing.capacityTarimas,
+          status: (b.currentTarimas && b.currentTarimas > 0) ? (b.status || existing.status) : existing.status,
+          currentTarimas: (b.currentTarimas !== undefined && b.currentTarimas !== null && b.currentTarimas > 0) ? b.currentTarimas : existing.currentTarimas,
           skuCode: b.skuCode || existing.skuCode,
           skuDescription: (b.skuDescription && b.skuDescription !== 'Sin Material Asignado') ? b.skuDescription : existing.skuDescription,
           batchNumber: b.batchNumber !== 'N/A' ? b.batchNumber : existing.batchNumber,
           lastMovement: b.lastMovement !== 'Sin movimientos' ? b.lastMovement : existing.lastMovement,
           blockReason: b.blockReason || existing.blockReason
         });
-      } else if (b.code && b.code.startsWith('POS-')) {
-        mapByCode.set(b.code, b);
+      } else if (b.code && b.code.startsWith(expectedPrefix)) {
+        mapByCode.set(b.code, {
+          ...b,
+          sectionId: section.id,
+          sectionName: section.name
+        });
       }
     }
 
-    return Array.from(mapByCode.values());
+    // Ordenar de forma determinista: Fijas primero por número, luego Temporales, luego Precarga
+    return Array.from(mapByCode.values()).sort((a, b) => {
+      const order = (cat?: string) => cat === 'FIXED_STORAGE' ? 1 : cat === 'TEMPORARY_BUFFER' ? 2 : 3;
+      const catA = order(a.category);
+      const catB = order(b.category);
+      if (catA !== catB) return catA - catB;
+      return (a.positionNumber || 0) - (b.positionNumber || 0);
+    });
   }
 
   private ensureAllPositionsComplete(backendPositions: PositionDetail[]): PositionDetail[] {
@@ -658,6 +801,12 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
     const mapByCode = new Map<string, PositionDetail>();
 
     for (const seed of seedAll) {
+      // Sincronizar el sectionId del seed con el id real de la sección en caché si existe
+      const realSec = this._cachedSections.find(s => this.extractZoneLetter(s.code) === this.extractZoneLetter(seed.code));
+      if (realSec) {
+        seed.sectionId = realSec.id;
+        seed.sectionName = realSec.name;
+      }
       mapByCode.set(seed.code, seed);
     }
 
@@ -682,8 +831,12 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
         mapByCode.set(b.code, {
           ...existing,
           id: b.id || existing.id,
-          status: b.status || existing.status,
-          currentTarimas: b.currentTarimas ?? existing.currentTarimas,
+          sectionId: b.sectionId || existing.sectionId,
+          sectionName: b.sectionName || existing.sectionName,
+          category: b.category || existing.category,
+          capacityTarimas: b.capacityTarimas || existing.capacityTarimas,
+          status: (b.currentTarimas && b.currentTarimas > 0) ? (b.status || existing.status) : existing.status,
+          currentTarimas: (b.currentTarimas !== undefined && b.currentTarimas !== null && b.currentTarimas > 0) ? b.currentTarimas : existing.currentTarimas,
           skuCode: b.skuCode || existing.skuCode,
           skuDescription: (b.skuDescription && b.skuDescription !== 'Sin Material Asignado') ? b.skuDescription : existing.skuDescription,
           batchNumber: b.batchNumber !== 'N/A' ? b.batchNumber : existing.batchNumber,
