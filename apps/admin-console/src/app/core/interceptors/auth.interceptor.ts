@@ -112,8 +112,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
          error.error.message.toLowerCase().includes('no autenticado') ||
          error.error.message.toLowerCase().includes('jwt expired'));
 
-      // Interceptar 401 Unauthorized únicamente en peticiones protegidas
-      if ((error.status === 401 || isExpiredForbidden) && !isAuthOrPublic) {
+      // Interceptar 401 Unauthorized únicamente en peticiones protegidas donde existía un token previo
+      if ((error.status === 401 || isExpiredForbidden) && !isAuthOrPublic && !!authService.getAccessToken()) {
         return handle401Error(req, next, authService, router, error);
       }
 
