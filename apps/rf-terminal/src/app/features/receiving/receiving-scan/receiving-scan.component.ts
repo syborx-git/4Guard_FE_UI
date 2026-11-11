@@ -240,6 +240,7 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
         host.includes('ngrok') ||
         host === 'localhost' ||
         host === '127.0.0.1' ||
+        host === '46.224.3.72' ||
         host.startsWith('192.168.') ||
         host.startsWith('172.') ||
         host.startsWith('10.') ||
@@ -248,7 +249,7 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
         return '';
       }
     }
-    return (environment as any).apiBaseUrl || 'https://fourguard-be-huzh.onrender.com';
+    return (environment as any).apiBaseUrl ?? '';
   }
 
   // ─── 1. Carga de Recepciones desde Backend / Shared Proxy ─────────────────

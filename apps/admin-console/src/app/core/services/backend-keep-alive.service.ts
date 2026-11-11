@@ -24,7 +24,7 @@ export class BackendKeepAliveService {
   }
 
   private get pingUrl(): string {
-    const apiBase = environment.apiBaseUrl || 'https://fourguard-be-huzh.onrender.com';
+    const apiBase = environment.apiBaseUrl ?? '';
     return `${apiBase}/api/v1/warehouse-receptions?organizationId=a53f0907-9fa5-4bdf-87db-2eb5e7683935&limit=1`;
   }
 

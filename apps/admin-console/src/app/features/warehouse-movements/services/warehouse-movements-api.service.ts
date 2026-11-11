@@ -39,6 +39,7 @@ export class WarehouseMovementsApiService {
         host.includes('ngrok') ||
         host === 'localhost' ||
         host === '127.0.0.1' ||
+        host === '46.224.3.72' ||
         host.startsWith('192.168.') ||
         host.startsWith('172.') ||
         host.startsWith('10.') ||
@@ -47,7 +48,7 @@ export class WarehouseMovementsApiService {
         return '';
       }
     }
-    return environment.apiBaseUrl || 'https://fourguard-be-huzh.onrender.com';
+    return environment.apiBaseUrl ?? '';
   }
 
   private get receptionsUrl(): string { return `${this.baseUrl}/api/v1/warehouse-receptions`; }

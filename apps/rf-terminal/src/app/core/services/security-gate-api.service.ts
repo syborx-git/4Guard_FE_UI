@@ -79,6 +79,7 @@ export class SecurityGateApiService {
         host.includes('ngrok') ||
         host === 'localhost' ||
         host === '127.0.0.1' ||
+        host === '46.224.3.72' ||
         host.startsWith('192.168.') ||
         host.startsWith('172.') ||
         host.startsWith('10.') ||
@@ -87,7 +88,7 @@ export class SecurityGateApiService {
         return '/api/v1/security-gate';
       }
     }
-    const apiBase = (environment as any).apiBaseUrl || 'https://fourguard-be-huzh.onrender.com';
+    const apiBase = (environment as any).apiBaseUrl ?? '';
     return `${apiBase}/api/v1/security-gate`;
   }
 

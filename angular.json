@@ -63,7 +63,7 @@
               "fileReplacements": [
                 {
                   "replace": "apps/admin-console/src/environments/environment.ts",
-                  "with": "apps/admin-console/src/environments/environment.develop.ts"
+                  "with": "apps/admin-console/src/environments/environment.prod.ts"
                 }
               ],
               "budgets": [
@@ -246,7 +246,7 @@
               "fileReplacements": [
                 {
                   "replace": "apps/rf-terminal/src/environments/environment.ts",
-                  "with": "apps/rf-terminal/src/environments/environment.develop.ts"
+                  "with": "apps/rf-terminal/src/environments/environment.prod.ts"
                 }
               ],
               "budgets": [
