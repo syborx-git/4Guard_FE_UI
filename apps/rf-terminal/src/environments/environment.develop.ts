@@ -9,6 +9,6 @@ export const environment = {
   production: false,
   envName: 'develop',
   apiBaseUrl: 'https://fourguard-be-huzh.onrender.com',
-  appVersion: '1.0.0-develop',
+  appVersion: '1.0.1-develop',
 };
 

@@ -9,6 +9,6 @@ export const environment = {
   production: true,
   envName: 'production',
   apiBaseUrl: '',
-  appVersion: '1.0.0-prod',
+  appVersion: '1.0.1-prod',
 };
 

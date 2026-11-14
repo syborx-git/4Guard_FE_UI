@@ -1,6 +1,6 @@
 {
   "name": "4guard-fe",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "4GUARD WMS 3PL — Angular 17+ Monorepo Frontend",
   "private": true,
   "scripts": {

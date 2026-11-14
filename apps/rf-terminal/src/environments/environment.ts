@@ -9,5 +9,5 @@ export const environment = {
   production: false,
   envName: 'local',
   apiBaseUrl: '',
-  appVersion: '1.0.0-local',
+  appVersion: '1.0.1-local',
 };

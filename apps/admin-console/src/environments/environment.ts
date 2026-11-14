@@ -11,6 +11,6 @@ export const environment = {
   apiBaseUrl: '',
   publicAppUrl: '',
   defaultBranchId: 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
-  appVersion: '1.0.0-local',
+  appVersion: '1.0.1-local',
   useMockData: false,
 };
