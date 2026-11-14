@@ -79,11 +79,13 @@ export class SecurityGateApiService {
         host.includes('ngrok') ||
         host === 'localhost' ||
         host === '127.0.0.1' ||
+        host === '65.21.255.53' ||
         host === '46.224.3.72' ||
         host.startsWith('192.168.') ||
         host.startsWith('172.') ||
         host.startsWith('10.') ||
-        host.endsWith('.local')
+        host.endsWith('.local') ||
+        !host.includes('onrender.com')
       ) {
         return '/api/v1/security-gate';
       }
