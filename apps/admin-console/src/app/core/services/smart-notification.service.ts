@@ -12,6 +12,7 @@
 
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
+import { StompClientService } from '@4guard/shared-core';
 import { AuthState } from '../auth/auth.state';
 import { ToastService } from './toast.service';
 
@@ -42,6 +43,7 @@ export class SmartNotificationService {
   private readonly authState = inject(AuthState);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly stompService = inject(StompClientService);
 
   // ── Historial y Cola Reactiva de Notificaciones ──
   private readonly _notifications = signal<SmartNotification[]>([]);
@@ -129,6 +131,7 @@ export class SmartNotificationService {
   }
 
   constructor() {
+    this.initStompSubscriptions();
     if (typeof window !== 'undefined') {
       if ('BroadcastChannel' in window) {
         try {
@@ -168,6 +171,131 @@ export class SmartNotificationService {
         }
       });
     }
+  }
+
+  /**
+   * Suscripción en tiempo real a tópicos STOMP WebSocket para la Consola de Administración.
+   */
+  private initStompSubscriptions(): void {
+    if (typeof window === 'undefined') return;
+
+    // 1. Tópico de Caseta / Pases de Acceso (/topic/org/{orgId}/branch/{branchId}/gate)
+    this.stompService.watchBranchDriverPasses().subscribe({
+      next: (event: any) => {
+        if (!event) return;
+        const type = event.eventType;
+
+        if (type === 'DRIVER_PRE_CHECKIN_SUBMITTED' || event.status === 'SUBMITTED') {
+          const driverName = event.driverName || 'Chofer';
+          const carrier = event.carrierName || 'Transportista';
+          const token = event.token || event.folio || 'QR';
+
+          this.pendingDriverPasses.update(list => [event, ...list.filter(p => (p.token || p.id) !== token)]);
+          this.hasNewDriverSubmission.set(true);
+
+          this.dispatch({
+            category: 'SECURITY',
+            title: '🚛 Chofer Completó Registro QR',
+            message: `Pase #${token} (${driverName} - ${carrier}) listo para inspección en Caseta.`,
+            referenceFolio: token,
+            route: '/security',
+            targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+            targetRoutes: ['/security'],
+            severity: 'SUCCESS',
+            data: event
+          });
+        } else if (type === 'GUARD_CHECKIN_COMPLETED') {
+          const token = event.token || event.folio;
+          this.pendingDriverPasses.update(list => list.filter(p => (p.token || p.id) !== token));
+
+          this.dispatch({
+            category: 'RECEIVING',
+            title: '✅ Arribo Validado en Caseta',
+            message: `Unidad con folio ${event.folio || token} aprobada en caseta e ingresando al patio.`,
+            referenceFolio: event.folio || token,
+            route: '/receiving',
+            severity: 'INFO',
+            data: event
+          });
+        } else if (type === 'GUARD_CHECKOUT_COMPLETED') {
+          this.readyForExitPasses.update(list => list.filter(p => (p.folio || p.token) !== (event.folio || event.token)));
+        }
+      },
+      error: (err) => console.error('[Console-STOMP] Error en canal de Caseta:', err)
+    });
+
+    // 2. Tópico de Rampas (/topic/org/{orgId}/branch/{branchId}/ramps)
+    this.stompService.watchBranchRamps().subscribe({
+      next: (event: any) => {
+        if (!event) return;
+        const type = event.eventType;
+
+        if (type === 'RAMP_ASSIGNED') {
+          const rampNum = event.rampNumber || (event.rampCode ? event.rampCode.replace(/[^0-9]/g, '') : 'Andén');
+          const rampAlert = {
+            id: event.rampId || event.currentFolio || `ramp-${Date.now()}`,
+            folio: String(event.currentFolio || 'S/F'),
+            rampNumber: rampNum,
+            client: event.clientName || 'Cliente',
+            driverName: event.driverName || 'Chofer Transportista',
+            tractorPlates: event.tractorPlates || 'S/P',
+            docNumber: event.docNumber || '',
+            carrierLine: event.carrierName || '',
+            time: new Date(event.timestamp || Date.now()).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+            timestamp: new Date()
+          };
+
+          this.pendingRampAssignments.update(list => [rampAlert, ...list.filter(item => item.folio !== rampAlert.folio)]);
+          this.hasNewRampAssignment.set(true);
+
+          this.dispatch({
+            category: 'SECURITY',
+            title: '🚦 Rampa Asignada',
+            message: `Folio ${event.currentFolio} asignado a Rampa ${rampNum}.`,
+            referenceFolio: String(event.currentFolio),
+            route: '/security',
+            severity: 'INFO',
+            data: event
+          });
+        } else if (type === 'RAMP_RELEASED') {
+          if (event.currentFolio) {
+            this.dismissRampAssignment(String(event.currentFolio));
+          }
+        }
+      },
+      error: (err) => console.error('[Console-STOMP] Error en canal de Rampas:', err)
+    });
+
+    // 3. Tópico de Calidad QM (/topic/org/{orgId}/branch/{branchId}/quality)
+    this.stompService.watchBranchQualityAlerts().subscribe({
+      next: (event: any) => {
+        if (!event) return;
+        const type = event.eventType;
+
+        if (type === 'QM_BLOCK_ALERT') {
+          this.dispatch({
+            category: 'QUALITY',
+            title: '⛔ Alerta de Calidad - Bloqueo de Lote/SSCC',
+            message: `SSCC ${event.sscc || 'S/N'}: ${event.reason || 'Desviación de calidad'} (${event.severity || 'CRITICAL'}).`,
+            referenceFolio: event.sscc,
+            route: '/quality',
+            severity: 'CRITICAL',
+            data: event
+          });
+        } else if (type === 'QM_RELEASE_AUTHORIZED') {
+          this.dispatch({
+            category: 'QUALITY',
+            title: '🔓 Liberación de Calidad Autorizada',
+            message: `SSCC ${event.sscc || 'S/N'} liberado por ${event.reportedBy || 'Calidad'}.`,
+            referenceFolio: event.sscc,
+            route: '/quality',
+            severity: 'SUCCESS',
+            data: event
+          });
+        }
+      },
+      error: (err) => console.error('[Console-STOMP] Error en canal de Calidad:', err)
+    });
   }
 
   /**

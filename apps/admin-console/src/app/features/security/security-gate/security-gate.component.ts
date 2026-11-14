@@ -1884,8 +1884,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             if (match) {
               this.setTab('REGISTRATION');
               this.loadDriverSubmission(match);
+            } else {
+              this.cleanUrlQueryParams();
             }
-          }
+          },
+          error: () => this.cleanUrlQueryParams()
         });
       },
       error: () => {
@@ -1895,10 +1898,22 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             if (match) {
               this.setTab('REGISTRATION');
               this.loadDriverSubmission(match);
+            } else {
+              this.cleanUrlQueryParams();
             }
-          }
+          },
+          error: () => this.cleanUrlQueryParams()
         });
       }
+    });
+  }
+
+  private cleanUrlQueryParams(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { token: null, folio: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
     });
   }
 
@@ -2128,6 +2143,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     } else {
       this.toast.info(`Pase #${passData.token} vinculado. Puedes completar los campos pendientes manualmente.`);
     }
+
+    // 10.1 Limpiar query params de la URL para evitar que se re-vincule al recargar la página
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { token: null, folio: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
 
     // 11. Desplazar suavemente a la Sección 1 del formulario para que el guardia visualice todo
     this.scrollToFormSection('form-step-1', 'STEP1');
@@ -2933,6 +2956,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.assignedRampLabel.set(null);
     this.errorMessage.set(null);
     this.lastCompletedPrintItem.set(null);
+    this.lastHandledToken = null;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { token: null, folio: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   // ── HELPERS FECHA Y HORA ───────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject, OnInit, OnDestroy, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -39,7 +39,7 @@ function noWhitespaceValidator(control: AbstractControl): ValidationErrors | nul
   templateUrl: './users-list.component.html',
   styleUrl: './users-list.component.css'
 })
-export class UsersListComponent implements OnInit, OnDestroy {
+export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
   // ── Servicios ────────────────────────────────────────────
   private readonly fb = inject(FormBuilder);
   private readonly usersService = inject(UsersService);
@@ -83,9 +83,9 @@ export class UsersListComponent implements OnInit, OnDestroy {
 
   protected isForkliftOperator(u: UserAdminItem | null | undefined): boolean {
     if (!u) return false;
-    const role = (u.role || '').toUpperCase();
+    const role = (u.role || '').replace('ROLE_', '').toUpperCase();
     const username = (u.username || '').toUpperCase();
-    return role.includes('WAREHOUSE_OPERATOR') || role.includes('FORKLIFT') || username.startsWith('MC-');
+    return role === 'WAREHOUSE_OPERATOR' || role === 'FORKLIFT_OPERATOR' || role === 'FORKLIFT' || username.startsWith('MC-');
   }
 
   // ── Filtros del directorio (Señales Reactivas) ─────────────
@@ -184,7 +184,7 @@ export class UsersListComponent implements OnInit, OnDestroy {
         .filter(r => r.name !== 'VIGILANCIA' && r.name !== 'WAREHOUSE_OPERATOR' && r.name !== 'ROLE_WAREHOUSE_OPERATOR' && r.name !== 'FORKLIFT_OPERATOR')
         .map(r => ({
           id: r.id,
-          name: r.name,
+          name: r.name.replace('ROLE_', ''),
           label: this.getRoleLabel(r.name)
         }));
     }
@@ -271,11 +271,58 @@ export class UsersListComponent implements OnInit, OnDestroy {
     });
     this.loadUsers();
     this.startNewUser();
+    this.scrollToTop();
+  }
+
+  ngAfterViewInit(): void {
+    this.scrollToTop();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * Resetea el scroll del viewport completo al tope para que la barra de métricas,
+   * el encabezado del módulo y el selector de usuarios del directorio queden
+   * siempre visibles de inmediato al ingresar o cambiar de modo.
+   */
+  protected scrollToTop(): void {
+    const doScroll = () => {
+      // 1. Contenedor principal con scroll de la Shell (#main-content / .shell__content)
+      const mainContent = document.getElementById('main-content') || document.querySelector('.shell__content');
+      if (mainContent) {
+        mainContent.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        mainContent.scrollTop = 0;
+      }
+
+      // 2. Cabecera principal del módulo de usuarios
+      const pageTop = document.querySelector('.users-header') || document.querySelector('.users-page');
+      if (pageTop && typeof pageTop.scrollIntoView === 'function') {
+        pageTop.scrollIntoView({ behavior: 'instant', block: 'start' });
+      }
+
+      // 3. Contenedor interno del formulario
+      if (this.formContainer?.nativeElement) {
+        this.formContainer.nativeElement.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        this.formContainer.nativeElement.scrollTop = 0;
+      }
+
+      // 4. Fallbacks de ventana y documento
+      window.scrollTo({ top: 0, left: 0 });
+      if (document.documentElement) {
+        document.documentElement.scrollTo({ top: 0, left: 0 });
+        document.documentElement.scrollTop = 0;
+      }
+      if (document.body) {
+        document.body.scrollTop = 0;
+      }
+    };
+
+    doScroll();
+    setTimeout(doScroll, 40);
+    setTimeout(doScroll, 120);
   }
 
   // ── Carga de Usuarios ────────────────────────────────────
@@ -356,18 +403,17 @@ export class UsersListComponent implements OnInit, OnDestroy {
   }
 
   private resetFormScroll(): void {
-    if (this.formContainer?.nativeElement) {
-      this.formContainer.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    this.scrollToTop();
   }
 
   private populateForm(user: UserAdminItem): void {
+    const rawRole = (user.role || '').replace('ROLE_', '');
     this.form.patchValue({
       firstName: user.firstName,
       lastName: user.lastName,
       username: user.username,
       email: user.email,
-      role: user.role,
+      role: rawRole,
       branchId: user.branchId,
       status: user.status
     });
@@ -446,16 +492,9 @@ export class UsersListComponent implements OnInit, OnDestroy {
           this.toastService.success(`⚡ Usuario "${fullName}" creado y registrado con éxito en el sistema.`, 4000);
           
           this.loadUsers();
-          const createdUser = response?.data;
-          if (createdUser) {
-            const mappedItem = this.userAdminService.users().find(u => u.id === createdUser.id);
-            if (mappedItem) {
-              this.selectedUser.set(mappedItem);
-              this.loadAuditLogs(mappedItem.id);
-            }
-          }
-          this.formMode.set('edit');
-          this.submitAttempted.set(false);
+          // Limpiar el formulario para evitar que los datos se queden estáticos y permitir nueva captura
+          this.startNewUser();
+          this.saveSuccess.set(true);
           setTimeout(() => this.saveSuccess.set(false), 4000);
         },
         error: (err: HttpErrorResponse) => {
@@ -617,7 +656,11 @@ export class UsersListComponent implements OnInit, OnDestroy {
         this.isDeleting.set(false);
         this.deletingUser.set(null);
         this.selectedUser.set(null);
-        this.formMode.set('idle');
+
+        // Recargar el directorio de usuarios y reiniciar los campos del formulario
+        this.loadUsers();
+        this.startNewUser();
+
         this.toastService.success(`Usuario "${user.firstName} ${user.lastName}" eliminado correctamente.`, 4000);
       },
       error: (err: HttpErrorResponse) => {
@@ -643,19 +686,11 @@ export class UsersListComponent implements OnInit, OnDestroy {
             next: () => {
               this.isDeleting.set(false);
               this.deletingUser.set(null);
-              this.form.patchValue({ status: 'INACTIVE' });
-              this.form.markAsPristine();
+              this.selectedUser.set(null);
 
-              if (this.selectedUser()?.id === user.id) {
-                this.selectedUser.set({
-                  ...this.selectedUser()!,
-                  status: 'INACTIVE',
-                  isEnabled: false
-                });
-              }
-
-              this.userAdminService.loadUsers().subscribe();
-              this.loadAuditLogs(user.id);
+              // Recargar el directorio de usuarios y reiniciar los campos del formulario
+              this.loadUsers();
+              this.startNewUser();
 
               this.toastService.warning(
                 `🛡️ Por trazabilidad legal y operativa (tiene pases de caseta o movimientos registrados), no puede borrarse de la BD. Ha sido dado de baja lógica e inhabilitado permanentemente.`,
@@ -835,14 +870,21 @@ export class UsersListComponent implements OnInit, OnDestroy {
   protected formatFieldLabel(fieldName: string): string {
     if (!fieldName) return '';
     const map: Record<string, string> = {
+      id: 'ID de Usuario (UUID)',
       username: 'Usuario',
       email: 'Correo Electrónico',
       firstName: 'Nombre',
       lastName: 'Apellido',
       role: 'Rol de Sistema',
+      roleId: 'Rol Asignado',
       branchId: 'Sucursal / Sede',
+      organizationId: 'Organización',
       status: 'Estado',
-      active: 'Activo'
+      active: 'Activo',
+      isEnabled: 'Cuenta Habilitada',
+      changePasswordRequired: 'Requiere Cambio de Contraseña',
+      permanentlyLocked: 'Bloqueo Permanente',
+      failedAttempts: 'Intentos Fallidos'
     };
     return map[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
   }
@@ -856,8 +898,19 @@ export class UsersListComponent implements OnInit, OnDestroy {
       if (s === 'INACTIVE') return 'Inactivo';
       if (s === 'BLOCKED') return 'Bloqueado';
     }
-    if (fieldName === 'role') {
+    if (fieldName === 'role' || fieldName === 'roleId') {
+      if (typeof value === 'string' && value.includes('-')) {
+        const found = this.roleService.roles().find(r => r.id === value);
+        if (found) return this.getRoleLabel(found.name);
+      }
       return this.getRoleLabel(value);
+    }
+    if (fieldName === 'branchId') {
+      const branch = this.availableBranches().find(b => b.id === value);
+      if (branch) return branch.name;
+    }
+    if (fieldName === 'organizationId') {
+      return '4GUARD LOGISTICS CORP';
     }
     return String(value);
   }

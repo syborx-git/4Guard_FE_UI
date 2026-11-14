@@ -10,7 +10,7 @@
 const path = require('path');
 const fs = require('fs');
 
-const target = process.env.BACKEND_URL || 'https://fourguard-be-huzh.onrender.com';
+const target = process.env.BACKEND_URL || 'http://localhost:8080';
 const SHARED_STATE_FILE = path.join(__dirname, '.proxy-shared-state.json');
 
 function loadState() {
@@ -50,6 +50,21 @@ function sendJson(res, statusCode, payload) {
 }
 
 const PROXY_CONFIG = {
+  "/ws-wms": {
+    "target": target,
+    "pathRewrite": { "^/ws-wms": "/api/v1/ws-wms" },
+    "secure": false,
+    "ws": true,
+    "changeOrigin": true,
+    "logLevel": "info"
+  },
+  "/api/v1/ws-wms": {
+    "target": target,
+    "secure": false,
+    "ws": true,
+    "changeOrigin": true,
+    "logLevel": "info"
+  },
   "/api": {
     "target": target,
     "secure": false,
@@ -70,8 +85,8 @@ const PROXY_CONFIG = {
         return true;
       }
 
-      // 0. AUTH LOGIN INTERCEPTOR (Garantiza login instantáneo en Dev / Tablet)
-      if (req.method === 'POST' && (cleanUrl.endsWith('/auth/login') || cleanUrl.includes('/auth/login'))) {
+      // 0. AUTH LOGIN INTERCEPTOR (Solo activo si explícitamente se solicita USE_MOCK_AUTH=true)
+      if (process.env.USE_MOCK_AUTH === 'true' && req.method === 'POST' && (cleanUrl.endsWith('/auth/login') || cleanUrl.includes('/auth/login'))) {
         let body = '';
         req.on('data', chunk => { body += chunk; });
         req.on('end', () => {
