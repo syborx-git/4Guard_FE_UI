@@ -12,7 +12,7 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, interval } from 'rxjs';
 import { AuthState } from '../../../core/auth/auth.state';
@@ -27,7 +27,7 @@ type LoginViewState = 'login' | 'locked-temporary' | 'locked-permanent';
 @Component({
   selector: 'fg-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ForgotPasswordModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, ForgotPasswordModalComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })

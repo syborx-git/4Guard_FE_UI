@@ -84,13 +84,17 @@ export class ChangePasswordComponent {
 
   protected readonly newPwdValue = toSignal(this.form.controls.newPassword.valueChanges, { initialValue: '' });
 
+  // ── Criterios de validación individuales ─────────────────────
+  protected readonly hasMinLength = computed(() => (this.newPwdValue() ?? '').length >= 8);
+  protected readonly hasUpperCase = computed(() => /[A-Z]/.test(this.newPwdValue() ?? ''));
+  protected readonly hasNumberOrSpecial = computed(() => /[0-9!@#$%^&*]/.test(this.newPwdValue() ?? ''));
+
   /** Fuerza de la contraseña: 0–3 */
   protected readonly passwordStrength = computed(() => {
-    const pwd = this.newPwdValue() ?? '';
     let score = 0;
-    if (pwd.length >= 8)          score++;
-    if (/[A-Z]/.test(pwd))        score++;
-    if (/[0-9!@#$%^&*]/.test(pwd)) score++;
+    if (this.hasMinLength()) score++;
+    if (this.hasUpperCase()) score++;
+    if (this.hasNumberOrSpecial()) score++;
     return score;
   });
 

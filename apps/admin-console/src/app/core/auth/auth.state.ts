@@ -251,17 +251,20 @@ export class AuthState {
       return true;
     }
 
-    // 1. Gerente de Operaciones y Almacén: Acceso total operativo (incluyendo Caseta de Seguridad y Calidad)
+    // 1. Gerente de Operaciones y Almacén: Acceso total operativo EXCEPTO Calidad (SoD estricto según V51)
     if (
       normRole === 'OPERATIONS_MANAGER' ||
       normRole === 'ROLE_OPERATIONS_MANAGER' ||
       normRole === 'WAREHOUSE_MANAGER' ||
       normRole === 'ROLE_WAREHOUSE_MANAGER'
     ) {
+      if (module === 'quality') {
+        return false;
+      }
       return true;
     }
 
-    // 2. Coordinadores y Supervisores de Operaciones: Acceso total operativo
+    // 2. Coordinadores y Supervisores de Operaciones: Acceso total operativo EXCEPTO Calidad (SoD)
     if (
       normRole === 'OPERATIONS_COORDINATOR' ||
       normRole === 'ROLE_OPERATIONS_COORDINATOR' ||
@@ -270,6 +273,9 @@ export class AuthState {
       normRole === 'WAREHOUSE_SUPERVISOR' ||
       normRole === 'ROLE_WAREHOUSE_SUPERVISOR'
     ) {
+      if (module === 'quality') {
+        return false;
+      }
       return true;
     }
 
@@ -290,6 +296,8 @@ export class AuthState {
     if (
       normRole === 'QM_INSPECTOR' ||
       normRole === 'ROLE_QM_INSPECTOR' ||
+      normRole === 'QUALITY_AUDITOR' ||
+      normRole === 'ROLE_QUALITY_AUDITOR' ||
       normRole.includes('QUALITY') ||
       normRole.includes('INSPECTOR')
     ) {
