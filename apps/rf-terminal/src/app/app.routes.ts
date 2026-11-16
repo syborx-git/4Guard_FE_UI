@@ -164,11 +164,6 @@ export const rfRoutes: Routes = [
         data: {
           roles: [
             UserRole.QM_INSPECTOR,
-            UserRole.SHIFT_LEADER,
-            UserRole.CONTROL_DESK,
-            UserRole.OPERATIONS_SUPERVISOR,
-            UserRole.OPERATIONS_COORDINATOR,
-            UserRole.OPERATIONS_MANAGER,
             UserRole.ADMIN,
           ],
         },

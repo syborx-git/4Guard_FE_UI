@@ -13,9 +13,6 @@
    ───────────────────────────────────────────────────────────── */
 
 :host {
-  --border-card-gold: rgba(208, 175, 103, 0.24);
-  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
-
   --border-card-gold: rgba(197, 168, 107, 0.32);
   --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --radius-xl:        18px;
@@ -62,6 +59,9 @@
 
 :host-context(.theme-dark),
 :host-context(.dark) {
+  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+
   --bg-page:        #0b1119;
   --bg-card:        rgba(17, 26, 38, 0.94);
   --bg-card-hover:  rgba(23, 35, 50, 0.98);

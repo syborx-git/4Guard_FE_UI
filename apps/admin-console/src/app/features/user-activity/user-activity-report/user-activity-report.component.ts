@@ -54,7 +54,7 @@ import {
   AbstractControl,
   ValidationErrors,
 } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { UserActivityService } from '../user-activity.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -120,6 +120,33 @@ export class UserActivityReportComponent implements OnInit, OnDestroy {
   readonly filteredEvents = this.activityService.filteredEvents;
   readonly isLoading = this.activityService.isLoading;
 
+  // ─── KPIs Colapsables (Estado persistente) ─────────────────────────────────
+  private readonly STORAGE_KEY_KPIS_COLLAPSED = '4g_user_activity_kpis_collapsed';
+
+  protected readonly isKpiCollapsed = signal<boolean>(
+    (() => {
+      try {
+        const stored = localStorage.getItem(this.STORAGE_KEY_KPIS_COLLAPSED);
+        return stored !== null ? stored === 'true' : false;
+      } catch {
+        return false;
+      }
+    })()
+  );
+
+  protected toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem(this.STORAGE_KEY_KPIS_COLLAPSED, String(next));
+      } catch {}
+      return next;
+    });
+  }
+
+  // ─── Usuario activo ───────────────────────────────────────────────────────
+  protected readonly currentUserId = computed(() => this.authState.currentUser()?.id || 'usr-03');
+
   // ─── Vista activa: TABLE | TIMELINE ──────────────────────────────────────
 
   protected readonly activeView = signal<ActiveView>('TABLE');
@@ -159,12 +186,18 @@ export class UserActivityReportComponent implements OnInit, OnDestroy {
     Math.max(1, Math.ceil(this.filteredEvents().length / this.pageSize()))
   );
 
+  protected readonly safePageIndex = computed(() => {
+    const current = this.pageIndex();
+    const max = this.totalPages() - 1;
+    return Math.max(0, Math.min(current, max));
+  });
+
   /**
    * Eventos de la página actual.
    * Se calcula sobre filteredEvents del servicio (que ya aplicó los filtros).
    */
   protected readonly pagedEvents = computed<UserActivityEvent[]>(() => {
-    const start = this.pageIndex() * this.pageSize();
+    const start = this.safePageIndex() * this.pageSize();
     return this.filteredEvents().slice(start, start + this.pageSize());
   });
 
@@ -253,6 +286,18 @@ export class UserActivityReportComponent implements OnInit, OnDestroy {
     // Carga inicial automática de datos desde el backend al entrar a la pantalla
     this.applyFilters();
     this.refresh();
+
+    // Búsqueda en vivo reactiva con debounce
+    this.filterForm
+      .get('searchText')
+      ?.valueChanges.pipe(
+        debounceTime(350),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.applyFilters();
+      });
   }
 
   ngOnDestroy(): void {

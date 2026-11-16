@@ -92,3 +92,13 @@ export { AuthState }      from './lib/application/state/auth.state';
 export { InventoryState } from './lib/application/state/inventory.state';
 export { SyncState }      from './lib/application/state/sync.state';
 
+// ─── Infrastructure — WebSocket STOMP (Real-Time) ───────────────────────────
+export { StompClientService } from './lib/infrastructure/services/stomp-client.service';
+export type {
+  DriverPassWsMessage,
+  RampAssignmentWsMessage,
+  ReceptionAlertWsMessage,
+  ReadyExitWsMessage,
+  QualityAlertWsMessage
+} from './lib/infrastructure/services/stomp-client.service';
+

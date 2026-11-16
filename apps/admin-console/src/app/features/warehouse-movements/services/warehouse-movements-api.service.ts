@@ -25,6 +25,7 @@ export interface ApiResponse<T> {
 
 const DEFAULT_ORG_ID = 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
 const DEFAULT_BRANCH_ID = 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 @Injectable({
   providedIn: 'root',
@@ -39,15 +40,18 @@ export class WarehouseMovementsApiService {
         host.includes('ngrok') ||
         host === 'localhost' ||
         host === '127.0.0.1' ||
+        host === '65.21.255.53' ||
+        host === '46.224.3.72' ||
         host.startsWith('192.168.') ||
         host.startsWith('172.') ||
         host.startsWith('10.') ||
-        host.endsWith('.local')
+        host.endsWith('.local') ||
+        !host.includes('onrender.com')
       ) {
         return '';
       }
     }
-    return environment.apiBaseUrl || 'https://fourguard-be-huzh.onrender.com';
+    return environment.apiBaseUrl ?? '';
   }
 
   private get receptionsUrl(): string { return `${this.baseUrl}/api/v1/warehouse-receptions`; }
@@ -136,7 +140,7 @@ export class WarehouseMovementsApiService {
   getActivePasses(options?: { organizationId?: string; branchId?: string }): Observable<any[]> {
     const orgId = options?.organizationId || this.getSessionOrgId();
     let params = new HttpParams().set('organizationId', orgId);
-    if (options?.branchId && options.branchId !== 'ALL' && options.branchId !== 'null' && options.branchId !== 'undefined') {
+    if (options?.branchId && UUID_REGEX.test(options.branchId)) {
       params = params.set('branchId', options.branchId);
     }
 
@@ -162,7 +166,7 @@ export class WarehouseMovementsApiService {
   getInYardPasses(options?: { organizationId?: string; branchId?: string }): Observable<any[]> {
     const orgId = options?.organizationId || this.getSessionOrgId();
     let params = new HttpParams().set('organizationId', orgId);
-    if (options?.branchId && options.branchId !== 'ALL' && options.branchId !== 'null' && options.branchId !== 'undefined') {
+    if (options?.branchId && UUID_REGEX.test(options.branchId)) {
       params = params.set('branchId', options.branchId);
     }
 

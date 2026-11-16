@@ -460,6 +460,7 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
   private mapSectionFromBackend(raw: any): WarehouseSection {
     const codeClean = raw.code ? raw.code.replace('SEC-ALM-', '') : raw.name;
     const matchedSeed = SEED_SECTIONS.find(s => s.code === codeClean || s.id === raw.id);
+    const useDxf = !!matchedSeed?.polygonPoints?.trim();
 
     return {
       id: raw.id,
@@ -474,9 +475,15 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
       materials: raw.materials && raw.materials.length > 0 ? raw.materials : (matchedSeed?.materials || []),
       notes: raw.notes || matchedSeed?.notes || '',
       status: 'LOADED',
-      polygonPoints: raw.polygonPoints || matchedSeed?.polygonPoints || '',
-      labelPosition: { x: Number(raw.labelPosition?.x || matchedSeed?.labelPosition.x || 0), y: Number(raw.labelPosition?.y || matchedSeed?.labelPosition.y || 0) },
-      sublabelPosition: { x: Number(raw.sublabelPosition?.x || matchedSeed?.sublabelPosition.x || 0), y: Number(raw.sublabelPosition?.y || matchedSeed?.sublabelPosition.y || 0) }
+      // El contorno calcado del plano DXF (SEED) manda sobre la cuadrícula genérica del backend,
+      // para que naves y bahías coincidan con el croquis real (layout_almacen_principal.svg).
+      polygonPoints: (useDxf ? matchedSeed!.polygonPoints : raw.polygonPoints) || '',
+      labelPosition: useDxf
+        ? { x: Number(matchedSeed!.labelPosition.x), y: Number(matchedSeed!.labelPosition.y) }
+        : { x: Number(raw.labelPosition?.x || 0), y: Number(raw.labelPosition?.y || 0) },
+      sublabelPosition: useDxf
+        ? { x: Number(matchedSeed!.sublabelPosition.x), y: Number(matchedSeed!.sublabelPosition.y) }
+        : { x: Number(raw.sublabelPosition?.x || 0), y: Number(raw.sublabelPosition?.y || 0) }
     };
   }
 

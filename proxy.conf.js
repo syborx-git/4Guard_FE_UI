@@ -10,7 +10,7 @@
 const path = require('path');
 const fs = require('fs');
 
-const target = process.env.BACKEND_URL || 'https://fourguard-be-huzh.onrender.com';
+const target = process.env.BACKEND_URL || 'http://localhost:8080';
 const SHARED_STATE_FILE = path.join(__dirname, '.proxy-shared-state.json');
 
 function loadState() {
@@ -85,39 +85,39 @@ function readBody(req, callback) {
  * @returns {boolean} true si la petición fue atendida localmente; false si debe reenviarse al backend remoto.
  */
 function handleSharedBridge(req, res) {
-      const url = req.url || '';
-      const cleanUrl = url.split('?')[0];
+  const url = req.url || '';
+  const cleanUrl = url.split('?')[0];
 
-      // Manejar preflight CORS
-      if (req.method === 'OPTIONS') {
-        res.writeHead(204, CORS_HEADERS);
-        res.end();
-        return true;
+  // Manejar preflight CORS
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, CORS_HEADERS);
+    res.end();
+    return true;
+  }
+
+  // 0.0 SSE Keep-Alive para Terminal RF (evita spam de reconexión si el backend remoto está fuera de línea)
+  if (req.method === 'GET' && cleanUrl.includes('/notifications/rf-stream')) {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+    res.write(': 4guard-rf-stream-connected\n\n');
+    const hb = setInterval(() => {
+      if (!res.writableEnded) {
+        res.write(': keepalive\n\n');
+      } else {
+        clearInterval(hb);
       }
+    }, 25000);
+    req.on('close', () => clearInterval(hb));
+    return true;
+  }
 
-      // 0.0 SSE Keep-Alive para Terminal RF (evita spam de reconexión si el backend remoto está fuera de línea)
-      if (req.method === 'GET' && cleanUrl.includes('/notifications/rf-stream')) {
-        res.writeHead(200, {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*'
-        });
-        res.write(': 4guard-rf-stream-connected\n\n');
-        const hb = setInterval(() => {
-          if (!res.writableEnded) {
-            res.write(': keepalive\n\n');
-          } else {
-            clearInterval(hb);
-          }
-        }, 25000);
-        req.on('close', () => clearInterval(hb));
-        return true;
-      }
-
-      // 0. AUTH LOGIN INTERCEPTOR (Garantiza login instantáneo en Dev / Tablet)
-      if (req.method === 'POST' && (cleanUrl.endsWith('/auth/login') || cleanUrl.includes('/auth/login'))) {
-        readBody(req, (body) => {
+  // 0. AUTH LOGIN INTERCEPTOR (Garantiza login instantáneo en Dev / Tablet)
+  if (req.method === 'POST' && (cleanUrl.endsWith('/auth/login') || cleanUrl.includes('/auth/login'))) {
+    readBody(req, (body) => {
           try {
             const data = JSON.parse(body || '{}');
             const identifier = (data.identifier || data.email || data.username || 'enrique@4guard.com').trim().toLowerCase();
@@ -1015,6 +1015,21 @@ function handleSharedBridge(req, res) {
 }
 
 const PROXY_CONFIG = {
+  "/ws-wms": {
+    "target": target,
+    "pathRewrite": { "^/ws-wms": "/api/v1/ws-wms" },
+    "secure": false,
+    "ws": true,
+    "changeOrigin": true,
+    "logLevel": "info"
+  },
+  "/api/v1/ws-wms": {
+    "target": target,
+    "secure": false,
+    "ws": true,
+    "changeOrigin": true,
+    "logLevel": "info"
+  },
   "/api": {
     "target": target,
     "secure": false,

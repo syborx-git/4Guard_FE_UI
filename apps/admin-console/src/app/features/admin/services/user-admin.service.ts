@@ -125,6 +125,9 @@ export class UserAdminService {
     return this.usersService.createUser(payload).pipe(
       tap(response => {
         if (response.success && response.data) {
+          if (!response.data.roleName && roleClean) {
+            response.data.roleName = roleClean;
+          }
           this.originalDtos.set(response.data.id, response.data);
           const mapped = this.mapDtoToItem(response.data);
           this.items.update(list => [...list, mapped]);
@@ -207,6 +210,9 @@ export class UserAdminService {
     return this.usersService.updateUser(updatedDto).pipe(
       tap(response => {
         if (response.success && response.data) {
+          if (!response.data.roleName && updatedDto.roleName) {
+            response.data.roleName = updatedDto.roleName;
+          }
           // Actualizar caché
           this.originalDtos.set(id, response.data);
           const mapped = this.mapDtoToItem(response.data);
@@ -255,6 +261,19 @@ export class UserAdminService {
   }
 
   private mapDtoToItem(dto: UserProfileDto): UserAdminItem {
+    let resolvedRole = dto.roleName || (dto as any).role;
+    if (!resolvedRole && dto.roleId) {
+      const found = this.roleService.roles().find(r => r.id === dto.roleId);
+      if (found) {
+        resolvedRole = found.name;
+      }
+    }
+    if (!resolvedRole) {
+      resolvedRole = 'QM_INSPECTOR';
+    }
+    const cleanRole = resolvedRole.replace('ROLE_', '');
+    const fullRole = `ROLE_${cleanRole}` as UserRole;
+
     return {
       id: dto.id,
       username: dto.username,
@@ -265,7 +284,7 @@ export class UserAdminService {
       orgName: dto.organizationName || '4GUARD LOGISTICS CORP',
       branchId: dto.branchId || null,
       branchName: dto.branchName || 'Corporativo',
-      role: (dto.roleName || (dto as any).role || UserRole.WAREHOUSE_OPERATOR) as UserRole,
+      role: fullRole,
       status: (dto.status || 'ACTIVE') as UserStatus,
       isEnabled: dto.isEnabled ?? true,
       changePasswordRequired: false,

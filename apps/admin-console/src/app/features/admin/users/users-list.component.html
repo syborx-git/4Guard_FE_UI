@@ -387,7 +387,10 @@
           @if (saveSuccess()) {
             <div class="users-alert users-alert--success" role="status" aria-live="polite">
               <span class="material-symbols-outlined">check_circle</span>
-              <span>⚡ Usuario guardado y dado de alta exitosamente en el WMS.</span>
+              <div class="flex flex-col text-xs leading-relaxed">
+                <span class="font-bold">⚡ Usuario guardado y dado de alta exitosamente en el WMS.</span>
+                <span>Contraseña temporal asignada: <strong class="font-mono text-amber-300 bg-black/30 px-1 py-0.5 rounded">TemporaryPassword123!</strong> (requiere cambio obligatorio en su primer inicio).</span>
+              </div>
             </div>
           }
 
@@ -409,7 +412,7 @@
           }
 
           <!-- Banner Operador de Montacargas (Unificación Opción 1) -->
-          @if (formMode() === 'edit' && selectedUser() && isForkliftOperator(selectedUser()!)) {
+          @if (formMode() === 'edit' && selectedUser() && isForkliftOperator(selectedUser()!) && (form.get('role')?.value === 'WAREHOUSE_OPERATOR' || form.get('role')?.value === 'ROLE_WAREHOUSE_OPERATOR' || selectedUser()?.username?.toUpperCase()?.startsWith('MC-'))) {
             <div class="operator-profile-banner">
               <div class="operator-profile-banner__icon">
                 <span class="material-symbols-outlined">precision_manufacturing</span>
@@ -604,6 +607,30 @@
               </div>
             </fieldset>
 
+            <!-- SECCIÓN 3 (Alta) — Credenciales de Primer Ingreso ──────── -->
+            @if (formMode() === 'new') {
+              <fieldset class="users-form-section">
+                <legend class="users-form-section__legend">
+                  <span class="material-symbols-outlined">key</span>
+                  3. Credenciales Provisionales de Primer Ingreso
+                </legend>
+
+                <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+                  <span class="material-symbols-outlined text-amber-500 text-xl mt-0.5">info</span>
+                  <div class="text-xs space-y-1.5">
+                    <strong class="text-amber-400 block text-sm">Contraseña Temporal de Primer Acceso:</strong>
+                    <div class="flex items-center gap-2 mt-1">
+                      <code class="px-2.5 py-1 rounded bg-black/40 border border-amber-500/40 text-amber-300 font-mono font-bold text-sm">TemporaryPassword123!</code>
+                      <span class="text-muted text-[11px]">(Clave maestra predeterminada de primer inicio)</span>
+                    </div>
+                    <p class="text-muted leading-relaxed">
+                      El sistema asigna automáticamente esta clave provisional y activa la bandera de seguridad para que el colaborador deba registrar su propia contraseña permanente al ingresar por primera vez.
+                    </p>
+                  </div>
+                </div>
+              </fieldset>
+            }
+
             <!-- SECCIÓN 3 — Seguridad & Acciones Rápidas ───────────── -->
             @if (formMode() === 'edit' && selectedUser()) {
               <fieldset class="users-form-section">
@@ -663,7 +690,10 @@
                     <div class="carriers-readonly-grid grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div class="carriers-readonly-field">
                         <span class="carriers-readonly-field__label">Usuario / Identificador</span>
-                        <span class="carriers-readonly-field__value font-mono font-black text-xs">&#64;{{ selectedUser()!.username }}</span>
+                        <div class="carriers-readonly-field__value flex flex-col">
+                          <span class="font-mono font-black text-xs">&#64;{{ selectedUser()!.username }}</span>
+                          <span class="font-mono text-[10px] text-muted font-normal tracking-tight truncate" [title]="selectedUser()!.id">{{ selectedUser()!.id }}</span>
+                        </div>
                       </div>
                       <div class="carriers-readonly-field">
                         <span class="carriers-readonly-field__label">Organización</span>

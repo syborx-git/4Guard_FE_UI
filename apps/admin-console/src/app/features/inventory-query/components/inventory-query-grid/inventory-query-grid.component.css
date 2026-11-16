@@ -19,6 +19,8 @@
 
   --bg-page:        #f5f4f0;
   --bg-card:        rgba(255, 255, 255, 0.94);
+  --bg-card-exec:    linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --border-card-gold: rgba(197, 168, 107, 0.32);
   --bg-card-hover:  #ffffff;
   --border-card:    rgba(76, 86, 105, 0.10);
   --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
@@ -57,6 +59,9 @@
 /* ── 2. Tokens — Modo Oscuro (.theme-dark / .dark) ── */
 :host-context(.theme-dark),
 :host-context(.dark) {
+  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+
   --bg-page:        #0b1119;
   --bg-card:        rgba(17, 26, 38, 0.94);
   --bg-card-hover:  rgba(23, 35, 50, 0.98);

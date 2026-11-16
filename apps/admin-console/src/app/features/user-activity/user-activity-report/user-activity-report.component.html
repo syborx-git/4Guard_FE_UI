@@ -119,55 +119,109 @@
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════
-       KPIs (COMPACTAS)
+       KPIs / MÉTRICAS OPERATIVAS (EXPANDIBLES / COLAPSABLES)
        ═══════════════════════════════════════════════════════════ -->
-  <section class="ua-kpis" aria-label="Indicadores clave de actividad">
-
-    <div class="ua-kpi-card ua-kpi-card--users">
-      <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">group</span></div>
-      <div class="ua-kpi-card__body">
-        <span class="ua-kpi-card__value">{{ kpis().activeUsers }}</span>
-        <span class="ua-kpi-card__label">Usuarios activos</span>
-        <span class="ua-kpi-card__desc">Con al menos un evento</span>
-      </div>
+  <section class="ua-kpi-section" aria-label="Métricas de actividad operativa">
+    <div class="ua-kpi-header">
+      <span class="ua-kpi-header__title">
+        <span class="material-symbols-outlined ua-kpi-header__icon">analytics</span>
+        Métricas de Actividad Operativa
+      </span>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="wms-kpi-toggle-btn"
+        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        [attr.aria-expanded]="!isKpiCollapsed()">
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
     </div>
 
-    <div class="ua-kpi-card ua-kpi-card--events">
-      <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">receipt_long</span></div>
-      <div class="ua-kpi-card__body">
-        <span class="ua-kpi-card__value">{{ kpis().totalEvents | number }}</span>
-        <span class="ua-kpi-card__label">Eventos totales</span>
-        <span class="ua-kpi-card__desc">En el rango seleccionado</span>
-      </div>
-    </div>
+    @if (isKpiCollapsed()) {
+      <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+      <div class="wms-kpi-summary-bar ua-kpi-summary-bar animate-fade-in" role="region" aria-label="Resumen compacto de métricas">
+        <div class="wms-kpi-summary-items">
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--blue"></span>
+            <span class="wms-kpi-summary-label">Usuarios activos:</span>
+            <strong class="wms-kpi-summary-value">{{ kpis().activeUsers }}</strong>
+          </div>
 
-    <div class="ua-kpi-card ua-kpi-card--critical">
-      <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">dangerous</span></div>
-      <div class="ua-kpi-card__body">
-        <span class="ua-kpi-card__value">{{ kpis().criticalOperations }}</span>
-        <span class="ua-kpi-card__label">Op. críticas</span>
-        <span class="ua-kpi-card__desc">Severidad HIGH o CRITICAL</span>
-      </div>
-    </div>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+            <span class="wms-kpi-summary-label">Eventos totales:</span>
+            <strong class="wms-kpi-summary-value">{{ kpis().totalEvents | number }}</strong>
+          </div>
 
-    <div class="ua-kpi-card ua-kpi-card--errors">
-      <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">error</span></div>
-      <div class="ua-kpi-card__body">
-        <span class="ua-kpi-card__value">{{ kpis().errorsOrRejections }}</span>
-        <span class="ua-kpi-card__label">Errores / rechazos</span>
-        <span class="ua-kpi-card__desc">Resultado ERROR o REJECTED</span>
-      </div>
-    </div>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--rose"></span>
+            <span class="wms-kpi-summary-label">Op. críticas:</span>
+            <strong class="wms-kpi-summary-value text-rose-500">{{ kpis().criticalOperations }}</strong>
+          </div>
 
-    <div class="ua-kpi-card ua-kpi-card--outside">
-      <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">dark_mode</span></div>
-      <div class="ua-kpi-card__body">
-        <span class="ua-kpi-card__value">{{ kpis().outsideShiftCount }}</span>
-        <span class="ua-kpi-card__label">Fuera de horario</span>
-        <span class="ua-kpi-card__desc">Antes 06:00 o después 22:00</span>
-      </div>
-    </div>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--alert"></span>
+            <span class="wms-kpi-summary-label">Errores / rechazos:</span>
+            <strong class="wms-kpi-summary-value text-amber-500">{{ kpis().errorsOrRejections }}</strong>
+          </div>
 
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--purple"></span>
+            <span class="wms-kpi-summary-label">Fuera de horario:</span>
+            <strong class="wms-kpi-summary-value text-purple-400">{{ kpis().outsideShiftCount }}</strong>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <!-- Grid Completo de Tarjetas Grandes -->
+      <div class="ua-kpis animate-fade-in" aria-label="Tarjetas de indicadores clave">
+        <div class="ua-kpi-card ua-kpi-card--users">
+          <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">group</span></div>
+          <div class="ua-kpi-card__body">
+            <span class="ua-kpi-card__value">{{ kpis().activeUsers }}</span>
+            <span class="ua-kpi-card__label">Usuarios activos</span>
+            <span class="ua-kpi-card__desc">Con al menos un evento</span>
+          </div>
+        </div>
+
+        <div class="ua-kpi-card ua-kpi-card--events">
+          <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">receipt_long</span></div>
+          <div class="ua-kpi-card__body">
+            <span class="ua-kpi-card__value">{{ kpis().totalEvents | number }}</span>
+            <span class="ua-kpi-card__label">Eventos totales</span>
+            <span class="ua-kpi-card__desc">En el rango seleccionado</span>
+          </div>
+        </div>
+
+        <div class="ua-kpi-card ua-kpi-card--critical">
+          <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">dangerous</span></div>
+          <div class="ua-kpi-card__body">
+            <span class="ua-kpi-card__value">{{ kpis().criticalOperations }}</span>
+            <span class="ua-kpi-card__label">Op. críticas</span>
+            <span class="ua-kpi-card__desc">Severidad HIGH o CRITICAL</span>
+          </div>
+        </div>
+
+        <div class="ua-kpi-card ua-kpi-card--errors">
+          <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">error</span></div>
+          <div class="ua-kpi-card__body">
+            <span class="ua-kpi-card__value">{{ kpis().errorsOrRejections }}</span>
+            <span class="ua-kpi-card__label">Errores / rechazos</span>
+            <span class="ua-kpi-card__desc">Resultado ERROR o REJECTED</span>
+          </div>
+        </div>
+
+        <div class="ua-kpi-card ua-kpi-card--outside">
+          <div class="ua-kpi-card__icon"><span class="material-symbols-outlined">dark_mode</span></div>
+          <div class="ua-kpi-card__body">
+            <span class="ua-kpi-card__value">{{ kpis().outsideShiftCount }}</span>
+            <span class="ua-kpi-card__label">Fuera de horario</span>
+            <span class="ua-kpi-card__desc">Antes 06:00 o después 22:00</span>
+          </div>
+        </div>
+      </div>
+    }
   </section>
 
   <!-- ═══════════════════════════════════════════════════════════
@@ -850,7 +904,7 @@
      ═══════════════════════════════════════════════════════════ -->
 @if (showProfileManager()) {
   <fg-report-profile-manager
-    [currentUserId]="'usr-03'"
+    [currentUserId]="currentUserId()"
     (close)="closeProfileManager()"
     (applyProfile)="applyProfile($event)">
   </fg-report-profile-manager>

@@ -17,8 +17,9 @@ import {
   effect,
   ViewChild
 } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Subscription, filter } from 'rxjs';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -219,8 +220,28 @@ export class ShellComponent implements OnInit, OnDestroy {
         }
       }
     }, { allowSignalWrites: true });
+
+    // ── Reseteo Automático de Scroll de la Shell en cada cambio de ruta ──
+    this.routerNavSub = this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe(() => {
+        const doScroll = () => {
+          const mainContent = document.getElementById('main-content') || document.querySelector('.shell__content');
+          if (mainContent) {
+            mainContent.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            mainContent.scrollTop = 0;
+          }
+          window.scrollTo({ top: 0, left: 0 });
+          if (document.documentElement) {
+            document.documentElement.scrollTop = 0;
+          }
+        };
+        doScroll();
+        setTimeout(doScroll, 30);
+      });
   }
 
+  private routerNavSub?: Subscription;
   private preReceptionPollIntervalId: any = null;
 
   /** Listener global para abrir/cerrar ForBot con Ctrl + K */
@@ -687,6 +708,10 @@ export class ShellComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.routerNavSub) {
+      this.routerNavSub.unsubscribe();
+    }
+
     if (this.clockIntervalId) {
       clearInterval(this.clockIntervalId);
     }

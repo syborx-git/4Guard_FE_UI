@@ -13,7 +13,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { filter } from 'rxjs/operators';
-import { AuthState } from '@4guard/shared-core';
+import { AuthState, StompClientService } from '@4guard/shared-core';
 import { AudioFeedbackService } from './audio-feedback.service';
 
 export interface DriverPassNotification {
@@ -79,6 +79,7 @@ export interface ReceptionAlertNotification {
 export class RfNotificationService {
   private readonly audioFeedback = inject(AudioFeedbackService);
   private readonly authState = inject(AuthState);
+  private readonly stompService = inject(StompClientService);
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
   private readonly platformId = inject(PLATFORM_ID);
@@ -142,6 +143,7 @@ export class RfNotificationService {
     this.initDismissedTokens();
     this.initRouteTracking();
     this.initCrossTabSync();
+    this.initStompSubscriptions();
     this.loadInitialPasses();
     this.startBackgroundSync();
   }
@@ -416,29 +418,138 @@ export class RfNotificationService {
     }
   }
 
+  /**
+   * Suscripciones en tiempo real mediante STOMP WebSocket conforme a ADR-012, ADR-014 y ADR-018.
+   * Elimina el sondeo agresivo por polling y garantiza reconexión inmediata con Catch-Up.
+   */
+  private initStompSubscriptions(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    // 1. Patrón Catch-Up Reconciliation (ADR-012):
+    // Cuando el socket se conecta o restablece conexión tras una zona ciega Wi-Fi en patio/almacén,
+    // reconciliar el estado completo desde la API REST.
+    this.stompService.connected$.subscribe(() => {
+      this.loadInitialPasses();
+    });
+
+    // 2. Tópico de Caseta / Pases de Acceso (/topic/org/{orgId}/branch/{branchId}/gate)
+    this.stompService.watchBranchDriverPasses().subscribe({
+      next: (event: any) => {
+        if (!event) return;
+        const type = event.eventType;
+
+        if (type === 'DRIVER_PRE_CHECKIN_SUBMITTED' || event.status === 'SUBMITTED') {
+          const token = event.token || event.folio || 'PASS-QR';
+          if (this.dismissedTokens.has(token)) return;
+
+          this.addSubmittedDriverPass({
+            id: event.preCheckinId || event.id || token,
+            token: token,
+            carrierName: event.carrierName || 'Transportista',
+            driverName: event.driverName || 'Operador',
+            driverPhone: event.driverPhone,
+            tractorPlates: event.tractorPlates || 'S/P',
+            boxPlates: event.boxPlates || '',
+            ecoNumber: event.ecoNumber,
+            boxDimensions: event.boxDimensions,
+            transportType: event.transportType,
+            operationType: (event.operationType === 'CARGA' || event.operationType === 'OUTBOUND') ? 'OUTBOUND' : 'INBOUND',
+            documentNumber: event.docNumber || event.folio || '',
+            clientName: event.clientName || 'Cliente',
+            rampNumber: event.rampNumber,
+            sealNumbers: event.sealNumbers || [],
+            status: 'SUBMITTED',
+            submittedAt: new Date(event.timestamp || Date.now()),
+            time: new Date(event.timestamp || Date.now()).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+          });
+        } else if (type === 'GUARD_CHECKIN_COMPLETED') {
+          // El chofer ya fue validado en caseta: quitar de pases pendientes
+          if (event.token) {
+            this.pendingDriverPasses.update(list => list.filter(p => p.token !== event.token));
+          }
+          if (this.isSecurityContext()) {
+            this.fetchInYardPassesFromBackend();
+          }
+        } else if (type === 'GUARD_CHECKOUT_COMPLETED') {
+          // Check-Out finalizado: descartar de cola de unidades listas para salida
+          const key = event.token || event.folio;
+          if (key) {
+            this.dismissExitPass(key);
+          }
+        }
+      },
+      error: (err) => console.error('[RF-STOMP] Error en canal de Caseta:', err)
+    });
+
+    // 3. Tópico de Rampas y Andenes (/topic/org/{orgId}/branch/{branchId}/ramps)
+    this.stompService.watchBranchRamps().subscribe({
+      next: (event: any) => {
+        if (!event) return;
+        const type = event.eventType;
+
+        if (type === 'RAMP_ASSIGNED') {
+          this.addRampAssignment({
+            id: event.rampId || event.currentFolio || `ramp-${Date.now()}`,
+            folio: String(event.currentFolio || 'S/F'),
+            rampNumber: event.rampNumber || (event.rampCode ? event.rampCode.replace(/[^0-9]/g, '') : 'Andén'),
+            client: event.clientName || 'Cliente',
+            driverName: event.driverName || 'Chofer',
+            tractorPlates: event.tractorPlates || 'S/P',
+            time: new Date(event.timestamp || Date.now()).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+          });
+        } else if (type === 'RAMP_RELEASED') {
+          if (event.currentFolio) {
+            this.dismissRamp(String(event.currentFolio));
+          }
+        }
+      },
+      error: (err) => console.error('[RF-STOMP] Error en canal de Rampas:', err)
+    });
+
+    // 4. Tópico de Misiones de Montacargas e Inbound (/topic/org/{orgId}/branch/{branchId}/missions)
+    this.stompService.watchBranchMissions().subscribe({
+      next: (event: any) => {
+        if (!event) return;
+        const type = event.eventType || event.missionType || event.status;
+
+        if (type === 'INBOUND_DISCHARGE' || type === 'ASSIGNED') {
+          this.addReceptionAlert({
+            id: event.missionId || event.folio || `rec-${Date.now()}`,
+            folio: event.folio || 'REC-S/F',
+            client: event.clientName || 'Cliente',
+            carrier: event.carrierName || 'Transportista',
+            rampNumber: event.rampCode || event.rampNumber,
+            docNumber: event.docNumber,
+            driverName: event.driverName,
+            time: new Date(event.timestamp || Date.now()).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+            pieces: event.totalPieces || 48
+          });
+        }
+      },
+      error: (err) => console.error('[RF-STOMP] Error en canal de Misiones:', err)
+    });
+  }
+
+  /**
+   * Sondeo de contingencia en background.
+   * Al contar con WebSocket STOMP reactivo, este proceso pasa a baja prioridad (cada 30s)
+   * únicamente si el cliente pierde conexión o se encuentra en modo offline fallback.
+   */
   private startBackgroundSync(): void {
     if (!isPlatformBrowser(this.platformId)) return;
+
     this.pollIntervalId = setInterval(() => {
-      // 1. Solo sondeos en Caseta / Seguridad (no montacargas ni almacén)
       if (!this.isSecurityContext()) return;
 
-      // 2. Si el backend está caído (ECONNREFUSED / 502), no saturar la consola cada 4s
       if (this.backendFailureCount >= 3) {
-        // En modo offline, leemos de storage local
         this.loadPassesFromStorageFallback();
         return;
       }
 
+      // Chequeo de baja frecuencia para asegurar convergencia eventual
       this.fetchActivePassesFromBackend();
       this.fetchInYardPassesFromBackend();
-    }, 4000);
-
-    // Sondeo lento cada 60s para auto-recuperar si el backend vuelve a estar en línea
-    setInterval(() => {
-      if (this.backendFailureCount >= 3 && this.isSecurityContext()) {
-        this.fetchActivePassesFromBackend();
-      }
-    }, 60000);
+    }, 30000);
   }
 
   private getOrgId(): string {

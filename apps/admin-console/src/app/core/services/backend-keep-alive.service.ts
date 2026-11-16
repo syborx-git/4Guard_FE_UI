@@ -7,6 +7,7 @@
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 const PUBLIC_PATHS = ['/carrier-checkin', '/driver-checkin', '/public/checkin', '/security/check-in', '/login', '/forgot-password'];
 
@@ -15,16 +16,19 @@ const PUBLIC_PATHS = ['/carrier-checkin', '/driver-checkin', '/public/checkin', 
 })
 export class BackendKeepAliveService {
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly authService = inject(AuthService);
   private pingIntervalId: any = null;
 
   constructor() {
-    if (isPlatformBrowser(this.platformId)) {
+    // Solo se requiere en servidores serverless/free-tier con hibernación (Render develop).
+    // En Hetzner (producción) y Local, los contenedores Docker se mantienen siempre activos.
+    if (isPlatformBrowser(this.platformId) && environment.envName === 'develop') {
       this.startHeartbeat();
     }
   }
 
   private get pingUrl(): string {
-    const apiBase = environment.apiBaseUrl || 'https://fourguard-be-huzh.onrender.com';
+    const apiBase = environment.apiBaseUrl ?? '';
     return `${apiBase}/api/v1/warehouse-receptions?organizationId=a53f0907-9fa5-4bdf-87db-2eb5e7683935&limit=1`;
   }
 
@@ -51,6 +55,10 @@ export class BackendKeepAliveService {
   }
 
   private sendPing(): void {
+    // Si no hay token de sesión, no enviar la petición para no disparar 401 innecesarios
+    if (!this.authService.getAccessToken()) {
+      return;
+    }
     try {
       // Usar fetch nativo fuera de HttpClient para jamás disparar authInterceptor (401 -> redirect /login)
       if (typeof fetch === 'function') {
