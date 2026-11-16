@@ -10,8 +10,10 @@
  * - Salidas / Outbound: Carga concluida y lista para despacho en caseta.
  */
 
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, OnDestroy } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { catchError, of } from 'rxjs';
 import { StompClientService } from '@4guard/shared-core';
 import { AuthState } from '../auth/auth.state';
 import { ToastService } from './toast.service';
@@ -39,11 +41,15 @@ export interface SmartNotification {
 @Injectable({
   providedIn: 'root'
 })
-export class SmartNotificationService {
+export class SmartNotificationService implements OnDestroy {
   private readonly authState = inject(AuthState);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly stompService = inject(StompClientService);
+  private readonly http = inject(HttpClient);
+
+  private pollIntervalId: any = null;
+  private readonly knownNotifiedFolios = new Set<string>();
 
   // ── Historial y Cola Reactiva de Notificaciones ──
   private readonly _notifications = signal<SmartNotification[]>([]);
@@ -132,6 +138,7 @@ export class SmartNotificationService {
 
   constructor() {
     this.initStompSubscriptions();
+    this.startBackupPolling();
     if (typeof window !== 'undefined') {
       if ('BroadcastChannel' in window) {
         try {
@@ -249,11 +256,13 @@ export class SmartNotificationService {
           this.hasNewRampAssignment.set(true);
 
           this.dispatch({
-            category: 'SECURITY',
+            category: 'RECEIVING',
             title: '🚦 Rampa Asignada',
-            message: `Folio ${event.currentFolio} asignado a Rampa ${rampNum}.`,
+            message: `Folio #${event.currentFolio} (${event.clientName || 'Cliente'}) asignado a Rampa ${rampNum}.`,
             referenceFolio: String(event.currentFolio),
-            route: '/security',
+            route: '/receiving',
+            targetRoles: ['ADMIN', 'OPERATIONS_MANAGER', 'WAREHOUSE_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER', 'OPERATIONS_SUPERVISOR', 'SECURITY_GUARD', 'VIGILANCIA'],
+            targetRoutes: ['/receiving', '/warehouse-movements', '/security'],
             severity: 'INFO',
             data: event
           });
@@ -309,14 +318,14 @@ export class SmartNotificationService {
     const currentRole = (user.role || '').toUpperCase();
     const currentRoute = this.router.url;
 
-    // El Gerente de Operaciones no debe recibir alertas ni notificaciones de Caseta ni Calidad
+    // El Gerente de Operaciones / Almacén recibe recepciones, salidas y asignaciones operativas
     if (
       currentRole === 'OPERATIONS_MANAGER' ||
       currentRole === 'ROLE_OPERATIONS_MANAGER' ||
       currentRole === 'WAREHOUSE_MANAGER' ||
       currentRole === 'ROLE_WAREHOUSE_MANAGER'
     ) {
-      if (notif.category === 'SECURITY' || notif.category === 'QUALITY') {
+      if (notif.category === 'SECURITY' && !notif.targetRoutes?.includes('/receiving') && !notif.targetRoles?.includes(currentRole)) {
         return false;
       }
     }
@@ -335,7 +344,7 @@ export class SmartNotificationService {
       currentRole.includes('MANAGER') ||
       (user.roleLevel && user.roleLevel >= 3)
     ) {
-      if (notif.category === 'SECURITY' || notif.category === 'QUALITY') {
+      if (notif.category === 'SECURITY' && !notif.targetRoutes?.includes('/receiving') && !notif.targetRoles?.includes(currentRole)) {
         return false;
       }
       return true;
@@ -566,5 +575,110 @@ export class SmartNotificationService {
   public clearAll(): void {
     this._notifications.set([]);
     this.hasNewDriverSubmission.set(false);
+  }
+
+  /**
+   * Sondeo de respaldo en segundo plano (cada 10 segundos).
+   * Garantiza que la Consola de Recepción y Caseta reciban nuevos arribos y pases
+   * incluso si el WebSocket STOMP parpadea o la red se interrumpe momentáneamente.
+   */
+  private startBackupPolling(): void {
+    if (typeof window === 'undefined') return;
+
+    this.pollIntervalId = setInterval(() => {
+      if (!this.authState.isAuthenticated()) return;
+
+      const user = this.authState.currentUser();
+      const orgId = user?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+      const branchId = user?.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+
+      // 1. Polling de Choferes QR en Caseta (/api/v1/security-gate/passes/active)
+      this.http.get<any>('/api/v1/security-gate/passes/active', {
+        params: { organizationId: orgId, branchId }
+      }).pipe(
+        catchError(() => of(null))
+      ).subscribe(res => {
+        const passes = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(passes) && passes.length > 0) {
+          const submitted = passes.filter((p: any) => p && (p.status === 'SUBMITTED' || p.status === 'PENDING_DRIVER'));
+          submitted.forEach((p: any) => {
+            const token = p.token || p.id;
+            if (token && !this.knownNotifiedFolios.has(`driver-${token}`)) {
+              this.knownNotifiedFolios.add(`driver-${token}`);
+              this.pendingDriverPasses.update(list => [p, ...list.filter((item: any) => (item.token || item.id) !== token)]);
+              this.hasNewDriverSubmission.set(true);
+              this.dispatch({
+                category: 'SECURITY',
+                title: '🚛 Chofer Completó Registro QR',
+                message: `Pase #${token} (${p.driverName || 'Chofer'} - ${p.carrierLine || 'Transportista'}) listo para inspección en Caseta.`,
+                referenceFolio: String(token),
+                route: '/security',
+                targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
+                targetRoutes: ['/security'],
+                severity: 'SUCCESS',
+                data: p
+              });
+            }
+          });
+        }
+      });
+
+      // 2. Polling de Arribos y Asignación de Rampas (/api/v1/warehouse/receptions)
+      this.http.get<any>('/api/v1/warehouse/receptions', {
+        params: { organizationId: orgId, branchId }
+      }).pipe(
+        catchError(() => of(null))
+      ).subscribe(res => {
+        const recs = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(recs) && recs.length > 0) {
+          recs.forEach((rec: any) => {
+            const fol = String(rec.folio || rec.id || '');
+            if (fol && !this.knownNotifiedFolios.has(`rec-${fol}`)) {
+              this.knownNotifiedFolios.add(`rec-${fol}`);
+              const rampNum = rec.rampNumber || rec.checkIn?.rampNumber;
+              const rDisplay = rampNum ? `Rampa ${rampNum}` : (rec.rampCode || rec.checkIn?.rampCode || 'Andén');
+
+              if (rampNum) {
+                const rampAlert = {
+                  id: rec.id || `ramp-${fol}`,
+                  folio: fol,
+                  rampNumber: rampNum,
+                  client: rec.clientName || rec.client || rec.checkIn?.client || 'Cliente',
+                  driverName: rec.driverName || rec.checkIn?.driverName || 'Chofer Transportista',
+                  tractorPlates: rec.tractorPlates || rec.checkIn?.tractorPlates || 'S/P',
+                  docNumber: rec.docNumber || rec.checkIn?.docNumber || fol,
+                  carrierLine: rec.carrierLine || rec.checkIn?.carrierLine || '',
+                  time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+                  timestamp: new Date()
+                };
+                this.pendingRampAssignments.update(list => [rampAlert, ...list.filter((item: any) => item.folio !== fol)]);
+                this.hasNewRampAssignment.set(true);
+              }
+
+              this.dispatch({
+                category: 'RECEIVING',
+                title: '🚛 Arribo Validado en Caseta',
+                message: `Folio #${fol} (${rec.clientName || rec.client || 'Cliente'}) arribó a patio · ${rDisplay}.`,
+                referenceFolio: fol,
+                route: '/receiving',
+                targetRoles: ['ADMIN', 'OPERATIONS_MANAGER', 'WAREHOUSE_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER', 'OPERATIONS_SUPERVISOR', 'SECURITY_GUARD'],
+                targetRoutes: ['/receiving', '/warehouse-movements', '/security'],
+                severity: 'SUCCESS',
+                data: rec
+              });
+            }
+          });
+        }
+      });
+    }, 10000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollIntervalId) {
+      clearInterval(this.pollIntervalId);
+    }
+    if (this.broadcastChannel) {
+      this.broadcastChannel.close();
+    }
   }
 }

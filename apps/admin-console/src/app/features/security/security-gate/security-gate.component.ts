@@ -29,6 +29,7 @@ import {
 import { PrintService } from '../../../core/services/print.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { SmartNotificationService } from '../../../core/services/smart-notification.service';
+import { StompClientService } from '@4guard/shared-core';
 import { ShiftContextService } from '../../../core/services/shift-context.service';
 import {
   PrintTransportChecklistLayoutComponent,
@@ -98,6 +99,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
   private readonly movementsService = inject(WarehouseMovementsService);
   protected readonly smartNotification = inject(SmartNotificationService);
+  private readonly stompService = inject(StompClientService);
   protected readonly shiftContext = inject(ShiftContextService);
 
   // ── Modos de Historial: Turno Activo vs Consulta Histórica General ──
@@ -2843,6 +2845,39 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.lastCompletedPrintItem.set(printSnapshot);
           this.resetForm();
 
+          // ── Disparo en Tiempo Real STOMP hacia Salidas / Operaciones ──
+          const userOrg = this.movementsService.movementsApi.getSessionOrg();
+          const orgIdOut = userOrg.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+          const branchIdOut = userOrg.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+
+          if (rNum || rDisplay) {
+            const rampWsMsg = {
+              eventType: 'RAMP_ASSIGNED',
+              currentFolio: outbound.folio,
+              rampNumber: rNum,
+              rampCode: rDisplay,
+              clientName: formVal.client,
+              driverName: formVal.driverName,
+              tractorPlates: formVal.tractorPlates,
+              carrierName: formVal.carrierLine,
+              docNumber: formVal.docNumber,
+              timestamp: new Date().toISOString()
+            };
+            this.stompService.publish(`/topic/org/${orgIdOut}/branch/${branchIdOut}/ramps`, rampWsMsg);
+          }
+
+          this.smartNotification.dispatch({
+            category: 'OUTBOUND',
+            title: '🚛 Salida Arribada a Caseta',
+            message: `Folio #${outbound.folio} (${formVal.client || 'Cliente'}) en patio para carga.`,
+            referenceFolio: String(outbound.folio),
+            route: '/warehouse-movements/outbound',
+            targetRoles: ['ADMIN', 'OPERATIONS_MANAGER', 'WAREHOUSE_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER'],
+            targetRoutes: ['/warehouse-movements/outbound', '/security'],
+            severity: 'SUCCESS',
+            data: { ...outbound, checkIn: formVal, rampNumber: rNum, folio: outbound.folio }
+          });
+
           // Notificación flotante del sistema y scroll al menú superior
           this.toast.success(`¡Datos enviados a Operaciones! Folio #${outbound.folio} · Unidad en patio en espera de asignación de rampa.`, 4500);
           this.scrollToTop();
@@ -2906,6 +2941,60 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           };
           this.lastCompletedPrintItem.set(printSnapshot);
           this.resetForm();
+
+          // ── Disparo en Tiempo Real STOMP + Smart Notification hacia Recepción / Operaciones ──
+          const userOrg = this.movementsService.movementsApi.getSessionOrg();
+          const orgIdIn = userOrg.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+          const branchIdIn = userOrg.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+
+          if (rNum || rDisplay) {
+            const rampWsMsg = {
+              eventType: 'RAMP_ASSIGNED',
+              currentFolio: header.folio,
+              rampNumber: rNum,
+              rampCode: rDisplay,
+              clientName: formVal.client,
+              driverName: formVal.driverName,
+              tractorPlates: formVal.tractorPlates,
+              carrierName: formVal.carrierLine,
+              docNumber: formVal.docNumber,
+              timestamp: new Date().toISOString()
+            };
+            this.stompService.publish(`/topic/org/${orgIdIn}/branch/${branchIdIn}/ramps`, rampWsMsg);
+          }
+
+          const gateWsMsg = {
+            eventType: 'GUARD_CHECKIN_COMPLETED',
+            folio: header.folio,
+            token: currentPassToken,
+            driverName: formVal.driverName,
+            carrierName: formVal.carrierLine,
+            rampNumber: rNum,
+            timestamp: new Date().toISOString()
+          };
+          this.stompService.publish(`/topic/org/${orgIdIn}/branch/${branchIdIn}/gate`, gateWsMsg);
+
+          const missionWsMsg = {
+            eventType: 'INBOUND_DISCHARGE',
+            folio: header.folio,
+            client: formVal.client,
+            rampNumber: rNum,
+            driverName: formVal.driverName,
+            timestamp: new Date().toISOString()
+          };
+          this.stompService.publish(`/topic/org/${orgIdIn}/branch/${branchIdIn}/missions`, missionWsMsg);
+
+          this.smartNotification.dispatch({
+            category: 'RECEIVING',
+            title: '🚛 Arribo Validado en Caseta',
+            message: `Folio #${header.folio} (${formVal.client || 'Cliente'}) arribó a patio · ${rDisplay ? 'Asignado a ' + rDisplay : 'Pendiente de rampa'}.`,
+            referenceFolio: String(header.folio),
+            route: '/receiving',
+            targetRoles: ['ADMIN', 'OPERATIONS_MANAGER', 'WAREHOUSE_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER', 'OPERATIONS_SUPERVISOR', 'SECURITY_GUARD'],
+            targetRoutes: ['/receiving', '/warehouse-movements', '/security'],
+            severity: 'SUCCESS',
+            data: { ...header, checkIn: formVal, rampNumber: rNum, folio: header.folio }
+          });
 
           // Notificación flotante del sistema y scroll al menú superior
           this.toast.success(`¡Datos enviados a Operaciones! Folio #${header.folio} · Unidad en patio en espera de asignación de rampa.`, 4500);

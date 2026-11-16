@@ -190,12 +190,12 @@
             </div>
           </div>
         }
-        @if (hasNewRampAssignment() && isSecurityContext()) {
+        @if (hasNewRampAssignment()) {
           <div class="op-notif__arrival-banner op-notif__arrival-banner--emerald">
             <span class="material-symbols-outlined text-[18px] text-emerald-400 animate-bounce">dock</span>
             <div class="flex-1 text-left">
-              <div class="font-bold">¡Almacén asignó rampa de descarga!</div>
-              <div class="text-[11px] opacity-90">Indique al operador avanzar a la rampa asignada.</div>
+              <div class="font-bold">¡Rampa de descarga asignada!</div>
+              <div class="text-[11px] opacity-90">{{ isSecurityContext() ? 'Indique al operador avanzar a la rampa asignada.' : 'Unidad en andén lista para operación.' }}</div>
             </div>
           </div>
         }
