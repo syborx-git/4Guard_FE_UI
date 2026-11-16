@@ -71,7 +71,7 @@ export interface GateQrPosterPrintData {
           <!-- BLOQUE IZQUIERDO: NORMAS EPP Y PATIO -->
           <section class="side-panel">
             <div class="panel-box safety-panel">
-              <div class="panel-title text-amber-800">
+              <div class="panel-title" style="color: #845d17;">
                 <span class="panel-icon">⚠️</span>
                 <span>NORMAS EN PATIO (EPP)</span>
               </div>
@@ -331,13 +331,13 @@ export interface GateQrPosterPrintData {
     .poster-corp-tag {
       font-size: 7pt;
       font-weight: 800;
-      color: #b45309;
+      color: #845d17;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      background: #fef3c7;
+      background: rgba(197, 168, 107, 0.14);
       padding: 0.5mm 2mm;
       border-radius: 1mm;
-      border: 1px solid #fde68a;
+      border: 1px solid rgba(197, 168, 107, 0.45);
     }
 
     .poster-subtitle-sys {
@@ -356,10 +356,11 @@ export interface GateQrPosterPrintData {
     .meta-tag {
       font-size: 6pt;
       font-weight: 900;
-      background: #0f172a;
-      color: #f8fafc;
+      background: #172033;
+      color: #dfb76c;
       padding: 0.6mm 2mm;
       border-radius: 1mm;
+      border: 1px solid #c5a86b;
       letter-spacing: 0.08em;
       display: inline-block;
     }
@@ -368,7 +369,7 @@ export interface GateQrPosterPrintData {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 7.2pt;
       font-weight: 800;
-      color: #0f172a;
+      color: #172033;
       margin-top: 0.6mm;
       letter-spacing: 0.02em;
     }
@@ -394,9 +395,9 @@ export interface GateQrPosterPrintData {
       display: inline-flex;
       align-items: center;
       gap: 1.5mm;
-      background: #fef3c7;
-      border: 1px solid #fde68a;
-      color: #92400e;
+      background: rgba(197, 168, 107, 0.14);
+      border: 1px solid rgba(197, 168, 107, 0.45);
+      color: #845d17;
       font-size: 6pt;
       font-weight: 800;
       letter-spacing: 0.08em;
@@ -410,13 +411,13 @@ export interface GateQrPosterPrintData {
       width: 1.4mm;
       height: 1.4mm;
       border-radius: 50%;
-      background: #d97706;
+      background: #c5a86b;
     }
 
     .poster-headline {
       font-size: 13pt;
       font-weight: 900;
-      color: #0f172a;
+      color: #172033;
       margin: 0.3mm 0;
       letter-spacing: 0.01em;
       line-height: 1.15;
@@ -455,8 +456,8 @@ export interface GateQrPosterPrintData {
     }
 
     .safety-panel {
-      background: #fffbeb;
-      border: 1.2px solid #fde68a;
+      background: #fdfaf3;
+      border: 1.2px solid rgba(197, 168, 107, 0.5);
     }
 
     .hint-panel {
@@ -465,9 +466,9 @@ export interface GateQrPosterPrintData {
     }
 
     .branch-panel {
-      background: #0f172a;
+      background: #172033;
       color: #f8fafc;
-      border: 1.2px solid #d0af67;
+      border: 1.2px solid #c5a86b;
     }
 
     .contact-panel {
@@ -550,7 +551,7 @@ export interface GateQrPosterPrintData {
 
     .data-val-gold {
       font-weight: 900;
-      color: #fbbf24;
+      color: #dfb76c;
       letter-spacing: 0.03em;
     }
 
@@ -591,12 +592,12 @@ export interface GateQrPosterPrintData {
       display: inline-flex;
       align-items: center;
       gap: 1.5mm;
-      background: #0f172a;
-      color: #fbbf24;
+      background: #172033;
+      color: #dfb76c;
       font-size: 7.2pt;
       padding: 1mm 2.5mm;
       border-radius: 1.5mm;
-      border: 1px solid #d0af67;
+      border: 1px solid #c5a86b;
     }
 
     /* ── SECCIÓN CENTRAL: CÓDIGO QR GIGANTE (PROTAGONISTA) ── */
@@ -754,15 +755,15 @@ export interface GateQrPosterPrintData {
       width: 6.5mm;
       height: 6.5mm;
       border-radius: 50%;
-      background: #0f172a;
-      color: #d0af67;
+      background: #172033;
+      color: #dfb76c;
       font-size: 8.5pt;
       font-weight: 900;
       display: flex;
       align-items: center;
       justify-content: center;
-      shrink: 0;
-      border: 1.2px solid #d0af67;
+      flex-shrink: 0;
+      border: 1.2px solid #c5a86b;
     }
 
     .step-info {

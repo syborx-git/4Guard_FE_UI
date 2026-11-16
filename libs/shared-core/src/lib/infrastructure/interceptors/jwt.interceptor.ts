@@ -8,7 +8,7 @@
  */
 
 import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpErrorResponse } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { inject, isDevMode } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
@@ -66,8 +66,19 @@ export const jwtInterceptor: HttpInterceptorFn = (
 
   return next(authRequest).pipe(
     catchError((error: HttpErrorResponse) => {
-      // 401 Unauthorized: intentar refrescar el token real
+      // 401 Unauthorized: intentar refrescar solo si no estamos en dev o con token local/mock
       if (error.status === 401 && !request.url.includes('/auth/refresh')) {
+        const isMockOrDevToken =
+          isDevMode() ||
+          token.startsWith('mock-') ||
+          token.startsWith('rf-') ||
+          token.startsWith('local-') ||
+          token.includes('mock-signature-4guard');
+
+        if (isMockOrDevToken) {
+          return throwError(() => error);
+        }
+
         return authService.refreshToken().pipe(
           switchMap((newToken) => {
             const retryRequest = addAuthorizationHeader(request, newToken);

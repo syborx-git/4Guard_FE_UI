@@ -39,70 +39,141 @@ function saveState(state) {
   }
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-organization-id, x-branch-id, ngrok-skip-browser-warning'
+};
+
 function sendJson(res, statusCode, payload) {
+  if (!res || res.writableEnded || res.headersSent) return;
   res.writeHead(statusCode, {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-organization-id, x-branch-id'
+    ...CORS_HEADERS
   });
   res.end(JSON.stringify(payload));
 }
 
-const PROXY_CONFIG = {
-  "/api": {
-    "target": target,
-    "secure": false,
-    "changeOrigin": true,
-    "logLevel": "info",
-    "bypass": function(req, res, proxyOptions) {
+function readBody(req, callback) {
+  if (req.body) {
+    return callback(typeof req.body === 'object' ? JSON.stringify(req.body) : String(req.body));
+  }
+  if (req.readableEnded) {
+    return callback('{}');
+  }
+  let body = '';
+  let done = false;
+  const finish = () => {
+    if (!done) {
+      done = true;
+      callback(body || '{}');
+    }
+  };
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', finish);
+  req.on('error', finish);
+  if (typeof req.resume === 'function') {
+    req.resume();
+  }
+  setTimeout(finish, 800);
+}
+
+/**
+ * Maneja los endpoints interceptados para el puente compartido Caseta <-> Admin <-> Terminal RF.
+ * Se invoca dentro de proxy.web (antes de que Vite/http-proxy toque el stream o envíe a Render),
+ * evitando que Vite ignore el bypass y asegurando lectura íntegra del body y respuestas asíncronas limpias.
+ * @returns {boolean} true si la petición fue atendida localmente; false si debe reenviarse al backend remoto.
+ */
+function handleSharedBridge(req, res) {
       const url = req.url || '';
       const cleanUrl = url.split('?')[0];
 
       // Manejar preflight CORS
       if (req.method === 'OPTIONS') {
-        res.writeHead(204, {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-organization-id, x-branch-id'
-        });
+        res.writeHead(204, CORS_HEADERS);
         res.end();
+        return true;
+      }
+
+      // 0.0 SSE Keep-Alive para Terminal RF (evita spam de reconexión si el backend remoto está fuera de línea)
+      if (req.method === 'GET' && cleanUrl.includes('/notifications/rf-stream')) {
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.write(': 4guard-rf-stream-connected\n\n');
+        const hb = setInterval(() => {
+          if (!res.writableEnded) {
+            res.write(': keepalive\n\n');
+          } else {
+            clearInterval(hb);
+          }
+        }, 25000);
+        req.on('close', () => clearInterval(hb));
         return true;
       }
 
       // 0. AUTH LOGIN INTERCEPTOR (Garantiza login instantáneo en Dev / Tablet)
       if (req.method === 'POST' && (cleanUrl.endsWith('/auth/login') || cleanUrl.includes('/auth/login'))) {
-        let body = '';
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
+        readBody(req, (body) => {
           try {
             const data = JSON.parse(body || '{}');
-            const identifier = (data.identifier || data.email || data.username || '').trim().toLowerCase();
+            const identifier = (data.identifier || data.email || data.username || 'enrique@4guard.com').trim().toLowerCase();
+            const localPart = identifier.split('@')[0] || identifier;
 
-            let role = 'ROLE_OPERATOR';
-            let fullName = 'Alex Gabriel Perez Garduño';
+            let role = 'ROLE_ADMIN';
+            let fullName = 'Enrique Archite (Gerente de Operaciones)';
 
-            if (identifier.includes('admin') || identifier.includes('enrique')) {
+            if (localPart.includes('enrique')) {
               role = 'ROLE_ADMIN';
-              fullName = 'Carlos Herrera (Admin)';
-            } else if (identifier.includes('guard') || identifier.includes('caseta') || identifier.includes('seguridad')) {
+              fullName = 'Enrique Archite (Gerente de Operaciones)';
+            } else if (localPart.includes('admin') || localPart.includes('carlos') || localPart.includes('ceo') || localPart.includes('director')) {
+              role = 'ROLE_ADMIN';
+              fullName = 'Carlos Herrera (Director General)';
+            } else if (localPart.includes('guard') || localPart.includes('caseta') || localPart.includes('seguridad') || localPart.includes('vigilancia')) {
               role = 'ROLE_SECURITY_GUARD';
               fullName = 'Oficial Vigilancia Caseta';
-            } else if (identifier.includes('supervisor') || identifier.includes('lider')) {
+            } else if (localPart.includes('supervisor') || localPart.includes('lider')) {
               role = 'ROLE_SUPERVISOR';
               fullName = 'Supervisor de Patio y Andén';
+            } else if (
+              localPart.includes('mc-') ||
+              localPart.includes('montacarga') ||
+              localPart.includes('oper') ||
+              !identifier.includes('@')
+            ) {
+              role = 'ROLE_OPERATOR';
+              fullName = 'Alex Gabriel Perez Garduño (Montacargas)';
             }
 
-            const token = `mock-jwt-token-${Date.now()}`;
+            const nowSec = Math.floor(Date.now() / 1000);
+            const expSec = nowSec + (30 * 24 * 3600);
+            const headerB64 = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+            const payloadB64 = Buffer.from(JSON.stringify({
+              sub: identifier || 'enrique@4guard.com',
+              userId: role === 'ROLE_OPERATOR' ? 'u-operator-01' : 'u-admin-01',
+              email: identifier.includes('@') ? identifier : `${identifier}@4guard.mx`,
+              fullName: fullName,
+              role: role,
+              permissions: ['*'],
+              iat: nowSec,
+              exp: expSec
+            })).toString('base64url');
+            const token = `${headerB64}.${payloadB64}.mock-signature-4guard`;
+            const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+
             const userPayload = {
-              id: 'u-operator-01',
+              id: role === 'ROLE_OPERATOR' ? 'u-operator-01' : 'u-admin-01',
               fullName: fullName,
               name: fullName,
               email: identifier.includes('@') ? identifier : `${identifier}@4guard.mx`,
-              username: identifier || 'operator',
+              username: identifier || 'enrique@4guard.com',
               role: role,
-              employeeCode: 'MC-001',
-              forkliftOperatorId: 'op-alex-01',
+              roleLevel: 1,
+              employeeCode: role === 'ROLE_OPERATOR' ? 'MC-001' : 'ADM-001',
+              forkliftOperatorId: role === 'ROLE_OPERATOR' ? 'op-alex-01' : undefined,
               organizationId: 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
               branchId: 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
               branchName: 'CENTRO DE DISTRIBUCION CDMX',
@@ -118,7 +189,8 @@ const PROXY_CONFIG = {
                 token: token,
                 accessToken: token,
                 refreshToken: token,
-                expiresIn: 86400,
+                expiresIn: 2592000,
+                expiresAt: expiresAt,
                 user: userPayload
               }
             });
@@ -129,11 +201,47 @@ const PROXY_CONFIG = {
         return true;
       }
 
+      // 0.1 AUTH REFRESH INTERCEPTOR
+      if (req.method === 'POST' && (cleanUrl.endsWith('/auth/refresh') || cleanUrl.includes('/auth/refresh'))) {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const expSec = nowSec + (30 * 24 * 3600);
+        const headerB64 = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+        const payloadB64 = Buffer.from(JSON.stringify({
+          sub: 'enrique@4guard.com',
+          userId: 'u-admin-01',
+          email: 'enrique@4guard.com',
+          fullName: 'Enrique Archite (Gerente de Operaciones)',
+          role: 'ROLE_ADMIN',
+          permissions: ['*'],
+          iat: nowSec,
+          exp: expSec
+        })).toString('base64url');
+        const token = `${headerB64}.${payloadB64}.mock-signature-4guard`;
+        const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+
+        sendJson(res, 200, {
+          success: true,
+          message: 'Token refrescado con éxito',
+          data: {
+            token: token,
+            accessToken: token,
+            refreshToken: token,
+            expiresIn: 2592000,
+            expiresAt: expiresAt
+          }
+        });
+        return true;
+      }
+
+      // 0.2 AUTH LOGOUT INTERCEPTOR
+      if (req.method === 'POST' && (cleanUrl.endsWith('/auth/logout') || cleanUrl.includes('/auth/logout'))) {
+        sendJson(res, 200, { success: true, message: 'Sesión cerrada exitosamente' });
+        return true;
+      }
+
       // 1.1 POST /api/v1/warehouse-receptions/check-in
       if (req.method === 'POST' && url.includes('/warehouse-receptions/check-in')) {
-        let body = '';
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
+        readBody(req, (body) => {
           try {
             const data = JSON.parse(body || '{}');
             const state = loadState();
@@ -141,8 +249,8 @@ const PROXY_CONFIG = {
             const recId = data.id || `rec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
             const clientName = data.clientName || data.client || 'Cliente General';
             const carrierLine = data.carrierLine || data.carrierName || 'Transportista';
-            const rampNum = Number(data.rampNumber || 1);
-            const rampCode = data.rampCode || `LOC-RAMP-${String(rampNum).padStart(2, '0')}`;
+            const rampNum = Number(data.rampNumber) > 0 ? Number(data.rampNumber) : null;
+            const rampCode = data.rampCode || (rampNum ? `LOC-RAMP-${String(rampNum).padStart(2, '0')}` : null);
             const driverName = data.driverName || 'Chofer Transportista';
             const tractorPlates = (data.tractorPlates || '').toUpperCase();
             const boxPlates = (data.boxPlates || '').toUpperCase();
@@ -230,9 +338,9 @@ const PROXY_CONFIG = {
       }
 
       // 1.3 POST /api/v1/warehouse-receptions/:id/complete
-      if (req.method === 'POST' && url.includes('/warehouse-receptions/') && url.endsWith('/complete')) {
-        const parts = url.split('/');
-        const id = parts[parts.length - 2];
+      if (req.method === 'POST' && cleanUrl.includes('/warehouse-receptions/') && cleanUrl.endsWith('/complete')) {
+        const parts = cleanUrl.split('/');
+        const id = decodeURIComponent(parts[parts.length - 2] || '');
         const state = loadState();
         let targetRec = state.receptions[id];
         if (!targetRec) {
@@ -255,9 +363,9 @@ const PROXY_CONFIG = {
       }
 
       // 1.4 POST /api/v1/warehouse-receptions/:id/cancel
-      if (req.method === 'POST' && url.includes('/warehouse-receptions/') && url.endsWith('/cancel')) {
-        const parts = url.split('/');
-        const id = parts[parts.length - 2];
+      if (req.method === 'POST' && cleanUrl.includes('/warehouse-receptions/') && cleanUrl.endsWith('/cancel')) {
+        const parts = cleanUrl.split('/');
+        const id = decodeURIComponent(parts[parts.length - 2] || '');
         const state = loadState();
         let targetRec = state.receptions[id];
         if (!targetRec) {
@@ -280,12 +388,10 @@ const PROXY_CONFIG = {
       }
 
       // 1.5 PUT /api/v1/warehouse-receptions/:id/parameters
-      if (req.method === 'PUT' && url.includes('/warehouse-receptions/') && url.endsWith('/parameters')) {
-        const parts = url.split('/');
-        const id = parts[parts.length - 2];
-        let body = '';
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
+      if (req.method === 'PUT' && cleanUrl.includes('/warehouse-receptions/') && cleanUrl.endsWith('/parameters')) {
+        const parts = cleanUrl.split('/');
+        const id = decodeURIComponent(parts[parts.length - 2] || '');
+        readBody(req, (body) => {
           try {
             const data = JSON.parse(body || '{}');
             const state = loadState();
@@ -324,7 +430,7 @@ const PROXY_CONFIG = {
       }
 
       // 1.5.1 GET /api/v1/warehouse-receptions/next-pallet-number
-      if (req.method === 'GET' && url.includes('/warehouse-receptions/next-pallet-number')) {
+      if (req.method === 'GET' && cleanUrl.includes('/warehouse-receptions/next-pallet-number')) {
         sendJson(res, 200, {
           success: true,
           message: 'Siguiente número de pallet generado',
@@ -334,12 +440,10 @@ const PROXY_CONFIG = {
       }
 
       // 1.5.2 POST /api/v1/warehouse-receptions/:id/pallets
-      if (req.method === 'POST' && url.includes('/warehouse-receptions/') && url.endsWith('/pallets')) {
-        const parts = url.split('/');
-        const id = parts[parts.length - 2];
-        let body = '';
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
+      if (req.method === 'POST' && cleanUrl.includes('/warehouse-receptions/') && cleanUrl.endsWith('/pallets')) {
+        const parts = cleanUrl.split('/');
+        const id = decodeURIComponent(parts[parts.length - 2] || '');
+        readBody(req, (body) => {
           try {
             const data = JSON.parse(body || '{}');
             const state = loadState();
@@ -358,7 +462,15 @@ const PROXY_CONFIG = {
               }
               const newPallets = Array.isArray(data.pallets) ? data.pallets : [data];
               for (const p of newPallets) {
-                targetRec.pallets.push(p);
+                const key = p.uaCode || p.sscc || p.palletCode || p.id;
+                const existingIdx = key
+                  ? targetRec.pallets.findIndex(ep => (ep.uaCode || ep.sscc || ep.palletCode || ep.id) === key)
+                  : -1;
+                if (existingIdx >= 0) {
+                  targetRec.pallets[existingIdx] = { ...targetRec.pallets[existingIdx], ...p };
+                } else {
+                  targetRec.pallets.push(p);
+                }
               }
               targetRec.totalPallets = targetRec.pallets.length;
               targetRec.totalPieces = targetRec.pallets.reduce((s, p) => s + Number(p.pieces || 0), 0);
@@ -374,10 +486,60 @@ const PROXY_CONFIG = {
         return true;
       }
 
+      // 1.5.3 PUT /api/v1/warehouse-receptions/:id/pallets/:palletId
+      if (req.method === 'PUT' && cleanUrl.includes('/warehouse-receptions/') && cleanUrl.includes('/pallets/')) {
+        const parts = cleanUrl.split('/');
+        const palletsIdx = parts.indexOf('pallets');
+        const id = palletsIdx > 0 ? decodeURIComponent(parts[palletsIdx - 1] || '') : '';
+        const palletId = decodeURIComponent(parts[palletsIdx + 1] || '');
+        readBody(req, (body) => {
+          try {
+            const data = JSON.parse(body || '{}');
+            const state = loadState();
+            let targetRec = state.receptions[id];
+            if (!targetRec) {
+              for (const item of Object.values(state.receptions || {})) {
+                if (item.id === id || item.folio === id) {
+                  targetRec = item;
+                  break;
+                }
+              }
+            }
+            if (targetRec && Array.isArray(targetRec.pallets)) {
+              const idx = targetRec.pallets.findIndex(p => p.id === palletId || p.palletCode === palletId || p.uaCode === palletId || p.sscc === palletId);
+              if (idx >= 0) {
+                targetRec.pallets[idx] = { ...targetRec.pallets[idx], ...data };
+                targetRec.totalPieces = targetRec.pallets.reduce((s, p) => s + Number(p.pieces || 0), 0);
+                if (targetRec.id) state.receptions[targetRec.id] = targetRec;
+                if (targetRec.folio) state.receptions[targetRec.folio] = targetRec;
+                saveState(state);
+              }
+            }
+            sendJson(res, 200, { success: true, message: 'Pallet actualizado', data: data });
+          } catch (e) {
+            sendJson(res, 400, { success: false, message: 'JSON malformado' });
+          }
+        });
+        return true;
+      }
+
+      // 1.5.4 POST /api/v1/warehouse-receptions/:id/lots
+      if (req.method === 'POST' && cleanUrl.includes('/warehouse-receptions/') && cleanUrl.endsWith('/lots')) {
+        readBody(req, (body) => {
+          try {
+            const data = JSON.parse(body || '{}');
+            sendJson(res, 200, { success: true, message: 'Lote registrado', data });
+          } catch (e) {
+            sendJson(res, 400, { success: false, message: 'JSON malformado' });
+          }
+        });
+        return true;
+      }
+
       // 1.6 GET /api/v1/warehouse-receptions/:id (Detalle individual)
-      if (req.method === 'GET' && url.includes('/warehouse-receptions/') && !url.includes('/detect-return') && !url.includes('/next-pallet-number')) {
-        const parts = url.split('/');
-        const id = parts[parts.length - 1].split('?')[0];
+      if (req.method === 'GET' && cleanUrl.includes('/warehouse-receptions/') && !cleanUrl.includes('/detect-return') && !cleanUrl.includes('/next-pallet-number')) {
+        const parts = cleanUrl.split('/');
+        const id = decodeURIComponent(parts[parts.length - 1] || '');
         const state = loadState();
         let rec = state.receptions[id];
         for (const item of Object.values(state.receptions || {})) {
@@ -395,10 +557,8 @@ const PROXY_CONFIG = {
 
       // ─── 2. INTERCEPTAR OUTBOUNDS (SALIDAS DE ALMACÉN) ─────────────────────────
       // 2.1 POST /api/v1/warehouse-outbounds/check-in o POST /api/v1/warehouse-outbounds
-      if (req.method === 'POST' && (url.includes('/warehouse-outbounds/check-in') || url === '/api/v1/warehouse-outbounds' || url.startsWith('/api/v1/warehouse-outbounds?'))) {
-        let body = '';
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
+      if (req.method === 'POST' && (cleanUrl.includes('/warehouse-outbounds/check-in') || cleanUrl === '/api/v1/warehouse-outbounds')) {
+        readBody(req, (body) => {
           try {
             const data = JSON.parse(body || '{}');
             const state = loadState();
@@ -411,8 +571,8 @@ const PROXY_CONFIG = {
               status: 'REGISTERED',
               clientName: data.clientName || data.client || 'Cliente General',
               carrierName: data.carrierName || data.carrierLine || 'Transportista',
-              rampNumber: data.rampNumber || 1,
-              rampCode: data.rampCode || `LOC-RAMP-${String(data.rampNumber || 1).padStart(2, '0')}`,
+              rampNumber: Number(data.rampNumber) > 0 ? Number(data.rampNumber) : null,
+              rampCode: data.rampCode || (Number(data.rampNumber) > 0 ? `LOC-RAMP-${String(data.rampNumber).padStart(2, '0')}` : null),
               driverName: data.driverName || 'Chofer Transportista',
               tractorPlates: data.tractorPlates || '',
               boxPlates: data.boxPlates || '',
@@ -439,7 +599,7 @@ const PROXY_CONFIG = {
       }
 
       // 2.2 GET /api/v1/warehouse-outbounds (Listado)
-      if (req.method === 'GET' && (url === '/api/v1/warehouse-outbounds' || url.startsWith('/api/v1/warehouse-outbounds?'))) {
+      if (req.method === 'GET' && cleanUrl === '/api/v1/warehouse-outbounds') {
         const state = loadState();
         const unique = [];
         const seen = new Set();
@@ -452,6 +612,54 @@ const PROXY_CONFIG = {
         }
         sendJson(res, 200, { success: true, message: 'Listado de salidas', data: unique });
         return true;
+      }
+
+      // 2.3 GET y PUT /api/v1/warehouse-outbounds/:id
+      if (cleanUrl.includes('/warehouse-outbounds/') && !cleanUrl.endsWith('/check-in')) {
+        const parts = cleanUrl.split('/');
+        const id = decodeURIComponent(parts[parts.length - 1] || '');
+        if (req.method === 'GET') {
+          const state = loadState();
+          let out = state.outbounds[id];
+          if (!out) {
+            for (const item of Object.values(state.outbounds || {})) {
+              if (item.id === id || item.folio === id) {
+                out = item;
+                break;
+              }
+            }
+          }
+          if (out) {
+            sendJson(res, 200, { success: true, data: out });
+            return true;
+          }
+        } else if (req.method === 'PUT') {
+          readBody(req, (body) => {
+            try {
+              const data = JSON.parse(body || '{}');
+              const state = loadState();
+              let targetOut = state.outbounds[id];
+              if (!targetOut) {
+                for (const item of Object.values(state.outbounds || {})) {
+                  if (item.id === id || item.folio === id) {
+                    targetOut = item;
+                    break;
+                  }
+                }
+              }
+              if (targetOut) {
+                Object.assign(targetOut, data);
+                if (targetOut.id) state.outbounds[targetOut.id] = targetOut;
+                if (targetOut.folio) state.outbounds[targetOut.folio] = targetOut;
+                saveState(state);
+              }
+              sendJson(res, 200, { success: true, message: 'Salida actualizada', data: targetOut || data });
+            } catch (e) {
+              sendJson(res, 400, { success: false, message: 'JSON malformado' });
+            }
+          });
+          return true;
+        }
       }
 
       // ─── 3. INTERCEPTAR PASES DE CASETA (CHOFERES QR Y CONTROL DE PATIO) ──────
@@ -488,9 +696,7 @@ const PROXY_CONFIG = {
 
       // 3.0 POST /api/v1/security-gate/passes/generate
       if (req.method === 'POST' && cleanUrl.includes('/security-gate/passes/generate')) {
-        let body = '';
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
+        readBody(req, (body) => {
           try {
             const data = JSON.parse(body || '{}');
             const state = loadState();
@@ -518,9 +724,7 @@ const PROXY_CONFIG = {
         const parts = cleanUrl.split('/');
         const submitIdx = parts.indexOf('submit');
         const token = submitIdx > 0 ? parts[submitIdx - 1] : parts[parts.length - 2];
-        let body = '';
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
+        readBody(req, (body) => {
           try {
             const data = JSON.parse(body || '{}');
             const state = loadState();
@@ -709,9 +913,9 @@ const PROXY_CONFIG = {
       }
 
       // 3.6 POST Salida de Planta (Check-Out): /api/v1/security-gate/passes/:token/exit o /checkout
-      if (req.method === 'POST' && url.includes('/security-gate/passes/') && (url.endsWith('/exit') || url.endsWith('/checkout'))) {
-        const parts = url.split('/');
-        const token = parts[parts.length - 2];
+      if (req.method === 'POST' && cleanUrl.includes('/security-gate/passes/') && (cleanUrl.endsWith('/exit') || cleanUrl.endsWith('/checkout'))) {
+        const parts = cleanUrl.split('/');
+        const token = decodeURIComponent(parts[parts.length - 2] || '');
         const state = loadState();
         let targetItem = null;
         for (const item of Object.values(state.receptions || {})) {
@@ -741,10 +945,8 @@ const PROXY_CONFIG = {
       if (req.method === 'POST' && cleanUrl.includes('/security-gate/passes/') && cleanUrl.endsWith('/complete')) {
         const parts = cleanUrl.split('/');
         const compIdx = parts.indexOf('complete');
-        const token = compIdx > 0 ? parts[compIdx - 1] : parts[parts.length - 2];
-        let body = '';
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
+        const token = decodeURIComponent((compIdx > 0 ? parts[compIdx - 1] : parts[parts.length - 2]) || '');
+        readBody(req, (body) => {
           try {
             const data = JSON.parse(body || '{}');
             const state = loadState();
@@ -780,9 +982,9 @@ const PROXY_CONFIG = {
       }
 
       // 3.8 DELETE de pases: /api/v1/security-gate/passes/:token
-      if (req.method === 'DELETE' && url.includes('/security-gate/passes/')) {
-        const parts = url.split('/');
-        const idOrToken = parts[parts.length - 1].split('?')[0];
+      if (req.method === 'DELETE' && cleanUrl.includes('/security-gate/passes/')) {
+        const parts = cleanUrl.split('/');
+        const idOrToken = decodeURIComponent(parts[parts.length - 1] || '');
         const state = loadState();
         delete state.passes[idOrToken];
         for (const [k, v] of Object.entries(state.passes || {})) {
@@ -795,19 +997,37 @@ const PROXY_CONFIG = {
         return true;
       }
 
-      // 3.6 Interceptar PURGE / RESET TOTAL de entorno (Dev & QA): POST o DELETE /api/v1/dev/purge-all
-      if ((req.method === 'POST' || req.method === 'DELETE') && (url.includes('/dev/purge-all') || url.includes('/security-gate/purge-all'))) {
-        inMemoryPasses.clear();
-        inMemoryReceptions.clear();
-        inMemoryOutbounds.clear();
-        nextReceptionFolioSeq = 26510;
-        nextOutboundFolioSeq = 1;
+      // 3.9 PURGE / RESET TOTAL de entorno (Dev & QA): POST o DELETE /api/v1/dev/purge-all
+      if ((req.method === 'POST' || req.method === 'DELETE') && (cleanUrl.includes('/dev/purge-all') || cleanUrl.includes('/security-gate/purge-all'))) {
+        saveState({
+          receptions: {},
+          outbounds: {},
+          passes: {},
+          nextReceptionFolioSeq: 26510,
+          nextOutboundFolioSeq: 1
+        });
         sendJson(res, 200, { success: true, message: 'Entorno de pruebas y pases reiniciados en ceros' });
         return true;
       }
 
-      // Para el resto de peticiones (catálogos, auth, etc.), retornar undefined para que el proxy continúe hacia target
-      return undefined;
+      // No interceptado por el puente local -> reenviar al backend remoto
+      return false;
+}
+
+const PROXY_CONFIG = {
+  "/api": {
+    "target": target,
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "info",
+    "configure": function(proxy) {
+      const originalWeb = proxy.web.bind(proxy);
+      proxy.web = function(req, res, options, callback) {
+        if (handleSharedBridge(req, res)) {
+          return;
+        }
+        return originalWeb(req, res, options, callback);
+      };
     },
     "onError": (err, req, res) => {
       if (res && res.writeHead && !res.headersSent) {

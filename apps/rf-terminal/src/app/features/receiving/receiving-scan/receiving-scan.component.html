@@ -139,20 +139,33 @@
   <!-- ── 3. BARRA DE PARÁMETROS ACTIVOS (TACTICAL CONTROL BAR) ────── -->
   <section class="rf-active-params-section">
     <div class="params-header">
-      <div class="flex items-center gap-2">
-        <span class="material-symbols-outlined text-amber-400 text-lg">tune</span>
-        <h2 class="params-title">Parámetros Activos de la Tarima en Curso</h2>
+      <div class="flex items-center gap-2.5">
+        <div class="params-icon-pill">
+          <span class="material-symbols-outlined text-amber-400 text-lg">tune</span>
+        </div>
+        <div>
+          <h2 class="params-title">Parámetros Activos de la Tarima en Curso</h2>
+          <span class="params-sub">Se asignarán automáticamente a cada tarima que descargues</span>
+        </div>
       </div>
-      <span class="params-sub">Se asignarán automáticamente a cada tarima que descargues</span>
+      <div class="params-live-badge">
+        <span class="status-pulse-dot"></span>
+        <span>MODO DESCARGA ACTIVO</span>
+      </div>
     </div>
 
     <div class="params-grid">
       <!-- 1. Producto (SKU) Activo -->
       <div class="param-box param-sku">
-        <label class="param-label">
-          <span class="material-symbols-outlined text-xs text-amber-400">inventory_2</span>
-          <span>Producto (SKU) Activo</span>
-        </label>
+        <div class="param-box-top">
+          <label class="param-label">
+            <span class="material-symbols-outlined text-sm text-cyan-400">inventory_2</span>
+            <span>Producto (SKU) Activo</span>
+          </label>
+          <span class="param-status-pill pill-cyan">
+            <span class="pill-dot"></span>SKU MAESTRO
+          </span>
+        </div>
         <div class="custom-select-wrap">
           <select
             [ngModel]="selectedSku()"
@@ -170,12 +183,14 @@
 
       <!-- 2. Piezas por Tarima -->
       <div class="param-box param-pieces">
-        <div class="flex items-center justify-between">
+        <div class="param-box-top">
           <label class="param-label">
-            <span class="material-symbols-outlined text-xs text-amber-400">pin</span>
+            <span class="material-symbols-outlined text-sm text-amber-400">pin</span>
             <span>Piezas por Tarima</span>
           </label>
-          <span class="text-[11px] font-mono font-bold text-amber-400">{{ piecesPerPallet() }} PZAS</span>
+          <span class="param-status-pill pill-amber">
+            {{ piecesPerPallet() }} PZAS
+          </span>
         </div>
         
         <div class="pieces-stepper-row">
@@ -204,10 +219,15 @@
 
       <!-- 3. Tipo de Tarima -->
       <div class="param-box param-type">
-        <label class="param-label">
-          <span class="material-symbols-outlined text-xs text-amber-400">pallet</span>
-          <span>Tipo de Tarima</span>
-        </label>
+        <div class="param-box-top">
+          <label class="param-label">
+            <span class="material-symbols-outlined text-sm text-emerald-400">pallet</span>
+            <span>Tipo de Tarima</span>
+          </label>
+          <span class="param-status-pill pill-emerald">
+            <span class="pill-dot"></span>TARIMA FÍSICA
+          </span>
+        </div>
         <div class="custom-select-wrap">
           <select
             [ngModel]="selectedPalletType()"
@@ -223,9 +243,9 @@
 
       <!-- 4. Lote Activo + Botón (+ Lote) -->
       <div class="param-box param-lot">
-        <div class="flex items-center justify-between">
+        <div class="param-box-top">
           <label class="param-label">
-            <span class="material-symbols-outlined text-xs text-amber-400">sell</span>
+            <span class="material-symbols-outlined text-sm text-purple-400">sell</span>
             <span>Lote Activo</span>
           </label>
           <button
@@ -260,23 +280,43 @@
       
       <!-- Barra de Control del Lector -->
       <div class="scanner-control-bar">
-        <div class="flex items-center gap-2">
-          <span class="material-symbols-outlined text-lg" [class.text-emerald-400]="cameraActive()" [class.text-slate-400]="!cameraActive()">
+        <div class="scanner-status-indicator">
+          <span class="scanner-pulse-dot" [class.scanner-pulse-dot--active]="cameraActive()"></span>
+          <span class="material-symbols-outlined text-lg" [class.text-emerald-400]="cameraActive()" [class.text-amber-400]="!cameraActive()">
             {{ cameraActive() ? 'photo_camera' : 'barcode_scanner' }}
           </span>
-          <span class="scanner-mode-text">
-            {{ cameraActive() ? (currentFacingMode() === 'environment' ? 'Cámara Trasera Activa' : 'Cámara Frontal Activa') : 'Sensor de Escaneo en Espera' }}
-          </span>
+          <div class="flex flex-col">
+            <span class="scanner-mode-title">
+              {{ cameraActive() ? (currentFacingMode() === 'environment' ? 'Cámara Trasera HD Activa' : 'Cámara Frontal HD Activa') : 'Sensor de Escaneo en Espera' }}
+            </span>
+            <span class="scanner-mode-sub">
+              {{ cameraActive() ? 'Lectura óptica continua en tiempo real' : 'Lector láser 2D listo • Apunta o enciende cámara' }}
+            </span>
+          </div>
         </div>
 
         <div class="scanner-actions-group">
+          <!-- Botón de Orientación de Escaneo: Horizontal / Vertical -->
+          <button
+            type="button"
+            (click)="toggleScanOrientation()"
+            class="btn-scanner-action btn-scanner-orientation"
+            [class.btn-scanner-action--vertical]="scanOrientation() === 'vertical'"
+            [title]="scanOrientation() === 'vertical' ? 'Cambiar a haz horizontal' : 'Cambiar a haz vertical'">
+            <span class="material-symbols-outlined text-base">
+              {{ scanOrientation() === 'vertical' ? 'swap_vert' : 'swap_horiz' }}
+            </span>
+            <span>{{ scanOrientation() === 'vertical' ? 'Láser Vertical' : 'Láser Horizontal' }}</span>
+          </button>
+
           @if (cameraActive()) {
             <button
               type="button"
               (click)="switchCamera()"
               class="btn-scanner-action"
               title="Alternar cámara frontal/trasera">
-              <span class="material-symbols-outlined text-sm">flip_camera_ios</span>
+              <span class="material-symbols-outlined text-base">flip_camera_ios</span>
+              <span>Girar</span>
             </button>
           }
 
@@ -286,7 +326,7 @@
             class="btn-scanner-action"
             [class.btn-scanner-action--active]="cameraActive()"
             [title]="cameraActive() ? 'Apagar cámara' : 'Encender cámara de tableta'">
-            <span class="material-symbols-outlined text-sm">{{ cameraActive() ? 'videocam_off' : 'photo_camera' }}</span>
+            <span class="material-symbols-outlined text-base">{{ cameraActive() ? 'videocam_off' : 'photo_camera' }}</span>
             <span>{{ cameraActive() ? 'Pausar Cámara' : 'Activar Cámara' }}</span>
           </button>
         </div>
@@ -295,8 +335,18 @@
       <!-- Cuadro Retícula de Cámara (Viewfinder) -->
       <div
         class="scanner-reticle"
+        [class.scanner-reticle--active]="cameraActive()"
+        [class.scanner-reticle--vertical]="scanOrientation() === 'vertical'"
         (click)="onCameraFeedTapped()"
         title="Tocar para escanear código en pantalla">
+
+        <!-- Fondo HUD con Anillos Holográficos y Retícula -->
+        <div class="reticle-hud-bg">
+          <div class="hud-circle-outer"></div>
+          <div class="hud-circle-inner"></div>
+          <div class="hud-crosshair-h"></div>
+          <div class="hud-crosshair-v"></div>
+        </div>
 
         <!-- Video en Vivo de la Cámara -->
         <video
@@ -312,9 +362,18 @@
         @if (!cameraActive()) {
           <div class="camera-off-overlay">
             <div class="camera-radar-pulse"></div>
-            <span class="material-symbols-outlined text-5xl text-amber-400">qr_code_scanner</span>
-            <div class="camera-off-title">Apunta el lector láser o activa la cámara</div>
-            <div class="camera-off-sub">El sistema detectará el código de barras GS1/SSCC automáticamente</div>
+
+            <div class="scanner-center-graphic">
+              <div class="scanner-icon-halo"></div>
+              <span class="material-symbols-outlined scanner-icon-glyph">qr_code_scanner</span>
+            </div>
+
+            <div class="camera-off-title">
+              {{ scanOrientation() === 'vertical' ? 'Láser en Modo Vertical Listo' : 'Apunta el lector láser o activa la cámara' }}
+            </div>
+            <div class="camera-off-sub">
+              {{ scanOrientation() === 'vertical' ? 'Haz orientado a 90° para etiquetas verticales GS1/SSCC' : 'El sistema detectará el código de barras GS1/SSCC automáticamente' }}
+            </div>
 
             @if (cameraError()) {
               <div class="p-2.5 px-3.5 my-1 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-semibold max-w-sm flex items-center gap-2">
@@ -329,11 +388,12 @@
               class="btn-turn-on-cam"
               [disabled]="cameraLoading()"
             >
+              <div class="btn-shimmer"></div>
               @if (cameraLoading()) {
                 <span class="material-symbols-outlined text-lg animate-spin">progress_activity</span>
                 <span>Iniciando Cámara...</span>
               } @else {
-                <span class="material-symbols-outlined text-lg">photo_camera</span>
+                <span class="material-symbols-outlined text-xl">photo_camera</span>
                 <span>Abrir Cámara de la Tablet</span>
               }
             </button>
@@ -341,9 +401,10 @@
         }
 
         <!-- Haz Láser Animado de Escaneo -->
-        @if (cameraActive()) {
-          <div class="laser-sweep-line"></div>
-        }
+        <div
+          class="laser-sweep-line"
+          [class.laser-sweep-line--vertical]="scanOrientation() === 'vertical'"
+          [class.laser-sweep-line--active]="cameraActive()"></div>
 
         <!-- Esquinas fluorescentes tácticas -->
         <div class="corner-bracket corner-tl"></div>
@@ -352,9 +413,9 @@
         <div class="corner-bracket corner-br"></div>
 
         <!-- Badge Flotante Superior -->
-        <div class="reticle-floating-badge">
+        <div class="reticle-floating-badge" [class.badge-vertical]="scanOrientation() === 'vertical'">
           <span class="reticle-dot"></span>
-          <span>Enfoca la etiqueta de la tarima (SSCC / GS1)</span>
+          <span>{{ scanOrientation() === 'vertical' ? 'Escaneo Vertical (90°) • SSCC / GS1' : 'Enfoca la etiqueta de la tarima (SSCC / GS1)' }}</span>
         </div>
 
         <!-- Badge Flotante Inferior -->
@@ -375,7 +436,9 @@
           title="Generar y registrar tarima completa estándar">
           <div class="cyber-btn-glow"></div>
           <div class="cyber-btn-content">
-            <span class="material-symbols-outlined text-2xl text-emerald-400">pallet</span>
+            <div class="cyber-icon-wrap emerald-icon">
+              <span class="material-symbols-outlined text-2xl">pallet</span>
+            </div>
             <div class="flex flex-col text-left">
               <span class="cyber-btn-title">+ Simular Tarima Completa</span>
               <span class="cyber-btn-sub">{{ piecesPerPallet() }} Pzas • Lote {{ activeLot() }}</span>
@@ -390,7 +453,9 @@
           title="Registrar tarima pico">
           <div class="cyber-btn-glow"></div>
           <div class="cyber-btn-content">
-            <span class="material-symbols-outlined text-2xl text-sky-400">pie_chart</span>
+            <div class="cyber-icon-wrap sky-icon">
+              <span class="material-symbols-outlined text-2xl">pie_chart</span>
+            </div>
             <div class="flex flex-col text-left">
               <span class="cyber-btn-title">+ Simular Tarima Pico</span>
               <span class="cyber-btn-sub">48 Pzas Incompletas</span>

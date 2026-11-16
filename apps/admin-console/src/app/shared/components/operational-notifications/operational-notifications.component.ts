@@ -174,6 +174,7 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     return this.hasNewUnseenPreReception() || this.hasNewUnseenOutbound();
   });
 
+  private static readonly AUTO_CLOSE_MS = 900;
   private autoCloseTimeoutId: any = null;
 
   constructor() {
@@ -181,6 +182,7 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
       if (this.smartNotification.isDropdownOpenRequested()) {
         this.isOpen.set(true);
         this.smartNotification.clearDropdownOpenRequest();
+        this.scheduleQuickAutoClose();
       }
     }, { allowSignalWrites: true });
   }
@@ -226,7 +228,23 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
       this.hasNewUnseenOutbound.set(false);
       this.smartNotification.hasNewDriverSubmission.set(false);
       this.smartNotification.hasNewRampAssignment.set(false);
-    }, 2500);
+    }, OperationalNotificationsComponent.AUTO_CLOSE_MS);
+  }
+
+  private scheduleQuickAutoClose(): void {
+    if (this.autoCloseTimeoutId) clearTimeout(this.autoCloseTimeoutId);
+    this.autoCloseTimeoutId = setTimeout(() => {
+      this.isOpen.set(false);
+      this.smartNotification.hasNewDriverSubmission.set(false);
+    }, OperationalNotificationsComponent.AUTO_CLOSE_MS);
+  }
+
+  /** Cancela el auto-cierre (hover del usuario sobre el popover). */
+  public pauseAutoClose(): void {
+    if (this.autoCloseTimeoutId) {
+      clearTimeout(this.autoCloseTimeoutId);
+      this.autoCloseTimeoutId = null;
+    }
   }
 
   // ── Control de Apertura y Cierre ──
