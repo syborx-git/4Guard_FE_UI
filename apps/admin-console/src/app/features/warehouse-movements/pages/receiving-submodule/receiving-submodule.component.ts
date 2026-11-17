@@ -38,6 +38,7 @@ import { StarBorderDirective } from '../../../../shared/directives/star-border.d
 import { SpecularGlowDirective } from '../../../../shared/directives/specular-glow.directive';
 import { QualityStateService } from '../../../quality/services/quality-state.service';
 import { WarehouseLayoutService } from '../../../catalogs/services/warehouse-layout.service';
+import { ReceivingExcelExportService } from '../../services/receiving-excel-export.service';
 import { UnitOfMeasure } from '@4guard/shared-core';
 
 export type ReceptionDetailSubTab = 'descarga' | 'caseta' | 'trazabilidad';
@@ -91,6 +92,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   private readonly printService = inject(PrintService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly excelExportService = inject(ReceivingExcelExportService);
 
   // ── MODO OPERATIVO TABLET / MONTACARGAS ──
   isTabletModeActive = signal<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('4g_tablet_receiving_mode') !== 'false' : true);
@@ -206,6 +208,70 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
   goToManageCarriers(): void {
     this.router.navigate(['/admin/carriers']);
+  }
+
+  exportPalletsToExcel(rec?: ReceptionHeader): void {
+    const targetRec = rec || this.selectedReception();
+    if (!targetRec) {
+      this.toast.error('No hay una recepción activa seleccionada.');
+      return;
+    }
+    const pallets = this.palletStream().length > 0 ? this.palletStream() : (targetRec.pallets || []);
+    if (!pallets || pallets.length === 0) {
+      this.toast.info('No hay tarimas capturadas en esta recepción para exportar.');
+      return;
+    }
+    this.excelExportService.exportInventarioExcel(targetRec, pallets);
+    this.toast.success(`Archivo Excel 'INVENTARIOS 4GUARD .XLSX' descargado con ${pallets.length} tarimas.`);
+  }
+
+  isImportingExcel = signal<boolean>(false);
+
+  onExcelFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const targetRec = this.selectedReception();
+    if (!targetRec) {
+      this.toast.error('No hay una recepción activa seleccionada.');
+      input.value = '';
+      return;
+    }
+
+    this.isImportingExcel.set(true);
+    this.excelExportService.parseInventarioExcel(file, targetRec)
+      .then((importedPallets) => {
+        if (!importedPallets || importedPallets.length === 0) {
+          this.toast.warning('No se encontraron filas de tarimas válidas en el archivo Excel.');
+          return;
+        }
+
+        // Cargar las tarimas en el flujo de la recepción
+        this.palletStream.set(importedPallets);
+
+        // Sincronizar en el modelo de la recepción activa
+        const totalPzas = importedPallets.reduce((acc, p) => acc + p.pieces, 0);
+        const updatedRec: ReceptionHeader = {
+          ...targetRec,
+          pallets: [...importedPallets],
+          totalPallets: importedPallets.length,
+          totalPieces: totalPzas
+        };
+        this.selectedReception.set(updatedRec);
+
+        // Notificación de éxito
+        const skusCount = new Set(importedPallets.map(p => p.productId)).size;
+        this.toast.success(`✅ Se importaron ${importedPallets.length} tarimas (${skusCount} SKUs, ${totalPzas} piezas) desde el Excel.`);
+      })
+      .catch((err) => {
+        console.error('Error al importar Excel:', err);
+        this.toast.error(err?.message || 'Error al procesar el archivo Excel. Verifica el formato.');
+      })
+      .finally(() => {
+        this.isImportingExcel.set(false);
+        input.value = '';
+      });
   }
 
   protected formatShiftTime(value: string | null): string {
@@ -452,7 +518,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       this.movementsService.addReceptionAudit(currentRec.folio, {
         id: `aud-caseta-${Date.now()}`,
         action: 'FICHA_CASETA_MODIFICADA',
-        actionLabel: 'Modificación de Ficha Operativa de Arribo',
+        actionLabel: 'Modificación de Check List de Transporte',
         username: 'Operador Caseta / Administrador',
         timestamp: new Date().toLocaleString('es-MX'),
         details: auditDetails,
@@ -476,13 +542,13 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
         };
         this.selectedReception.set(merged);
         this.showEditCasetaModal.set(false);
-        this.toast.success('Ficha operativa de arribo actualizada y guardada correctamente.');
+        this.toast.success('Check list de transporte actualizado y guardado correctamente.');
         this.loadAuditLogs(persisted.id || persisted.folio);
 
         this.smartNotification.dispatch({
           category: 'SECURITY',
-          title: '🎯 Ficha de Arribo Actualizada',
-          message: `Ficha de transporte actualizada para Folio #${persisted.folio} (${updatedCheckIn.client || 'Cliente'}) — Chofer: ${updatedCheckIn.driverName || 'Transportista'}`,
+          title: '🎯 Check List de Transporte Actualizado',
+          message: `Check list de transporte actualizado para Folio #${persisted.folio} (${updatedCheckIn.client || 'Proveedor'}) — Chofer: ${updatedCheckIn.driverName || 'Transportista'}`,
           referenceFolio: persisted.folio,
           route: '/security',
           targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
@@ -494,12 +560,12 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       error: () => {
         this.selectedReception.set(updatedReception);
         this.showEditCasetaModal.set(false);
-        this.toast.success('Ficha operativa actualizada.');
+        this.toast.success('Check list de transporte actualizado.');
 
         this.smartNotification.dispatch({
           category: 'SECURITY',
-          title: '🎯 Ficha de Arribo Actualizada',
-          message: `Ficha de transporte actualizada para Folio #${currentRec.folio} (${updatedCheckIn.client || 'Cliente'}) — Chofer: ${updatedCheckIn.driverName || 'Transportista'}`,
+          title: '🎯 Check List de Transporte Actualizado',
+          message: `Check list de transporte actualizado para Folio #${currentRec.folio} (${updatedCheckIn.client || 'Proveedor'}) — Chofer: ${updatedCheckIn.driverName || 'Transportista'}`,
           referenceFolio: currentRec.folio,
           route: '/security',
           targetRoles: ['ADMIN', 'SECURITY_GUARD', 'VIGILANCIA'],
@@ -628,7 +694,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       rampNumber: rNum,
       rampCode: rCode,
       forkliftOperator: operator,
-      storageLocation: `STAGING-R${String(rNum).padStart(2, '0')}`,
+      storageLocation: 'ALMACÉN A - POS-TEMPORAL',
       clientCode: current.checkIn.clientCode || 'GENERIC',
       supplierName: current.supplierName || current.checkIn.client || 'Cliente General',
       productId: current.productId || this.products()[0]?.id || 'PROD-001',
@@ -1213,6 +1279,26 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     return t ? `${d} · ${t}` : d;
   }
 
+  formatLocationDisplay(loc?: string | null): string {
+    if (!loc) return 'ALMACÉN A - POS-TEMPORAL';
+    const trimmed = loc.trim();
+    const upper = trimmed.toUpperCase();
+    if (upper.startsWith('STAGING') || upper.includes('BUFFER') || upper === 'POS-A-001') {
+      return 'ALMACÉN A - POS-TEMPORAL';
+    }
+    if (upper.includes('TEMPORAL')) {
+      return upper.includes('ALMACEN') || upper.includes('ALMACÉN') ? trimmed.toUpperCase() : `ALMACÉN A - ${trimmed.toUpperCase()}`;
+    }
+    if (/^[A-Z]\d+$/i.test(upper)) {
+      return `ALMACÉN ${upper.charAt(0)} - POS-${upper}`;
+    }
+    if (/^POS-[A-Z]\d+$/i.test(upper)) {
+      const letter = upper.replace('POS-', '').charAt(0);
+      return `ALMACÉN ${letter} - ${upper}`;
+    }
+    return trimmed;
+  }
+
   closeReceptionDetail(): void {
     this.selectedReception.set(null);
     this.formMode.set('idle');
@@ -1727,8 +1813,8 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
     const rNum = (assignedRampNum != null && Number(assignedRampNum) > 0) ? Number(assignedRampNum) : null;
     let bayLoc = rec.storageLocation || rec.storageLocationCode;
-    if (!bayLoc || bayLoc === 'POS-A-001') {
-      bayLoc = rNum ? `STAGING-R${String(rNum).padStart(2, '0')}` : 'STAGING-BUFFER';
+    if (!bayLoc || bayLoc === 'POS-A-001' || bayLoc.startsWith('STAGING')) {
+      bayLoc = 'ALMACÉN A - POS-TEMPORAL';
     }
     this.selectedBayName.set(bayLoc);
     if (rec.storageLocation !== bayLoc) {
@@ -2414,7 +2500,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       case 'RECEPCION_REABIERTA':  return 'Reapertura Extraordinaria con Autorización';
       case 'BAHIA_REUBICADA':      return 'Reubicación a Posición Fija Definitiva';
       case 'BAHIA_MODIFICADA':     return 'Cambio de Bahía de Almacenamiento';
-      case 'FICHA_CASETA_MODIFICADA': return 'Modificación de Ficha Operativa de Arribo';
+      case 'FICHA_CASETA_MODIFICADA': return 'Modificación de Check List de Transporte';
       case 'REENTRY_COMPLETED':    return 'Reingreso Formal / Devolución Concluida F01-R';
       case 'REINGRESO_REGISTRADO': return 'Arribo de Reingreso en Caseta';
       case 'REENTRY_SCANNED':      return 'UA Reingresada Escaneada en Andén';
@@ -2821,7 +2907,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       expirationDate: pallet.expirationDate || this.altaForm.value.expirationDate || '',
       docNumber: (pallet as any).docNumber || currentRec?.checkIn?.docNumber || this.checkInForm.value.docNumber || '',
       status: pallet.status || 'SCANNED',
-      locationCode: pallet.locationCode || 'STAGING-R01',
+      locationCode: pallet.locationCode || 'ALMACÉN A - POS-TEMPORAL',
     });
     this.showEditPalletModal.set(true);
   }
@@ -2869,7 +2955,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
             expirationDate: (formVals.expirationDate || item.expirationDate) ?? undefined,
             docNumber: (formVals.docNumber || item.docNumber) ?? undefined,
             status: formVals.status || item.status || 'SCANNED',
-            locationCode: formVals.locationCode || item.locationCode || 'STAGING-R01',
+            locationCode: formVals.locationCode || item.locationCode || 'ALMACÉN A - POS-TEMPORAL',
           };
         }
         return item;
@@ -2930,7 +3016,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   }
 
   openReallocationModal(rec: ReceptionHeader): void {
-    const bay = rec.storageLocation || rec.storageLocationCode || this.selectedBayName() || 'STAGING-R01';
+    const bay = rec.storageLocation || rec.storageLocationCode || this.selectedBayName() || 'ALMACÉN A - POS-TEMPORAL';
     this.isReallocatingMode.set(true);
     this.reallocatingSourceBay.set(bay);
     this.showBaySelectorModal.set(true);
@@ -2963,7 +3049,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
   onBaySelected(res: BaySelectionResult): void {
     const isReallocation = this.isReallocatingMode();
-    const sourceBay = this.reallocatingSourceBay() || this.selectedBayName() || 'STAGING-R01';
+    const sourceBay = this.reallocatingSourceBay() || this.selectedBayName() || 'ALMACÉN A - POS-TEMPORAL';
     const targetBay = res.locationCode;
 
     this.selectedBayName.set(targetBay);
@@ -3786,7 +3872,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
           let assignedBay = formVals.storageLocation || (formVals as any)?.storageLocationCode || this.selectedBayName();
           if (assignedBay && (assignedBay.startsWith('LOC-RAMP') || assignedBay.startsWith('R-') || assignedBay.startsWith('RAMP'))) {
             const m = assignedBay.match(/\d+/);
-            assignedBay = m ? `STAGING-R${String(m[0]).padStart(2, '0')}` : 'STAGING-R01';
+            assignedBay = 'ALMACÉN A - POS-TEMPORAL';
           }
           if (assignedBay && assignedBay !== 'Buffer Temporal') {
             const skuName = formVals.productName || rec.productName || 'Mercancía Recepcionada';
@@ -3975,7 +4061,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     }
     this.altaForm.patchValue({ rampNumber: rm.rampNumber });
     this.rampSearchQuery.set(rm.name);
-    const bayLoc = `STAGING-R${String(rm.rampNumber).padStart(2, '0')}`;
+    const bayLoc = 'ALMACÉN A - POS-TEMPORAL';
     this.selectedBayName.set(bayLoc);
     this.altaForm.patchValue({ storageLocation: bayLoc, storageLocationCode: bayLoc } as any);
     this.isRampDropdownOpen.set(false);
@@ -4441,7 +4527,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       totalPallets: enrichedPallets.length,
       lots: (rec.lots && rec.lots.length > 0) ? rec.lots : (currentLots.length > 0 ? [...currentLots] : undefined),
       observations: rec.observations || formVals.observations || undefined,
-      storageLocation: this.selectedBayName() || formVals.storageLocation || rec.storageLocation || 'STAGING-R01',
+      storageLocation: this.selectedBayName() || formVals.storageLocation || rec.storageLocation || 'ALMACÉN A - POS-TEMPORAL',
     };
 
     this.selectedPrintReception.set(recToPrint);

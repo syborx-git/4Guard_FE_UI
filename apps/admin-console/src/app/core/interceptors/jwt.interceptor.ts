@@ -8,6 +8,7 @@ import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 import { SessionStorageService } from '../services/session-storage.service';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const sessionStorageService = inject(SessionStorageService);
@@ -44,6 +45,9 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
         !router.url.includes('/carrier-checkin') &&
         !router.url.includes('/driver-checkin')
       ) {
+        if (!environment.production) {
+          return throwError(() => error);
+        }
         sessionStorageService.clearSession();
         router.navigate(['/login'], { queryParams: { reason: 'session_expired' } });
       }

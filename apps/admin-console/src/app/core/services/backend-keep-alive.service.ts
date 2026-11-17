@@ -6,15 +6,15 @@
 
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
+
+const PUBLIC_PATHS = ['/carrier-checkin', '/driver-checkin', '/public/checkin', '/security/check-in', '/login', '/forgot-password'];
 
 @Injectable({
   providedIn: 'root'
 })
 export class BackendKeepAliveService {
-  private readonly http = inject(HttpClient);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly authService = inject(AuthService);
   private pingIntervalId: any = null;
@@ -32,15 +32,25 @@ export class BackendKeepAliveService {
     return `${apiBase}/api/v1/warehouse-receptions?organizationId=a53f0907-9fa5-4bdf-87db-2eb5e7683935&limit=1`;
   }
 
+  private isPublicRoute(): boolean {
+    if (typeof window === 'undefined') return false;
+    const path = (window.location.pathname || '').toLowerCase();
+    return PUBLIC_PATHS.some((p) => path.startsWith(p));
+  }
+
   public startHeartbeat(): void {
     if (this.pingIntervalId) return;
 
-    // Solo enviar latidos si el usuario ya inició sesión para evitar 401 Unauthorized
-    this.sendPing();
+    // En rutas públicas (ej. portal QR /carrier-checkin del chofer) no disparar pings protegidos al arrancar
+    if (!this.isPublicRoute()) {
+      this.sendPing();
+    }
 
     // Latido continuo cada 3 minutos (180,000 ms) para que Render nunca hiberne
     this.pingIntervalId = setInterval(() => {
-      this.sendPing();
+      if (!this.isPublicRoute()) {
+        this.sendPing();
+      }
     }, 180000);
   }
 
@@ -50,10 +60,10 @@ export class BackendKeepAliveService {
       return;
     }
     try {
-      this.http.get(this.pingUrl).subscribe({
-        next: () => {},
-        error: () => {}
-      });
+      // Usar fetch nativo fuera de HttpClient para jamás disparar authInterceptor (401 -> redirect /login)
+      if (typeof fetch === 'function') {
+        fetch(this.pingUrl, { method: 'GET' }).catch(() => {});
+      }
     } catch (_) {}
   }
 }

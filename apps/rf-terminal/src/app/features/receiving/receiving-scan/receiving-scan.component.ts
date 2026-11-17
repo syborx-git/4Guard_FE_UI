@@ -25,6 +25,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient, HttpParams } from '@angular/common/http';
+import { timeout } from 'rxjs';
 import { ToastService, AuthState } from '@4guard/shared-core';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
 import { environment } from '../../../../environments/environment';
@@ -192,9 +193,11 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
   protected readonly cameraError = signal<string | null>(null);
   protected readonly currentFacingMode = signal<'environment' | 'user'>('environment');
   protected readonly availableCamerasCount = signal<number>(1);
+  protected readonly scanOrientation = signal<'horizontal' | 'vertical'>('horizontal');
   private mediaStream: MediaStream | null = null;
   private barcodeDetectorTimer: any = null;
   private zxingReader: any = null;
+  private offscreenCanvas: HTMLCanvasElement | null = null;
 
   // ─── Escáner Láser / Manual ───────────────────────────────────────────────
   protected readonly manualInput = signal<string>('');
@@ -265,7 +268,9 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
     const orgId = user?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
     const params = new HttpParams().set('organizationId', orgId);
 
-    this.http.get<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions`, { params }).subscribe({
+    this.http.get<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions`, { params }).pipe(
+      timeout(3000)
+    ).subscribe({
       next: (res) => {
         if (!silent) {
           this.isLoadingReceptions.set(false);
@@ -582,6 +587,32 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
     }
   }
 
+  toggleScanOrientation(): void {
+    const next = this.scanOrientation() === 'horizontal' ? 'vertical' : 'horizontal';
+    this.scanOrientation.set(next);
+    this.audioService.playSuccess();
+    if (navigator.vibrate) navigator.vibrate(30);
+    this.toast.info(next === 'vertical' ? 'Escaneo Vertical activo (haz rotado 90°)' : 'Escaneo Horizontal activo (haz estándar)');
+  }
+
+  private getRotatedCanvas(video: HTMLVideoElement): HTMLCanvasElement | null {
+    if (!video.videoWidth || !video.videoHeight) return null;
+    if (!this.offscreenCanvas) {
+      this.offscreenCanvas = document.createElement('canvas');
+    }
+    const canvas = this.offscreenCanvas;
+    canvas.width = video.videoHeight;
+    canvas.height = video.videoWidth;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(video, -video.videoWidth / 2, -video.videoHeight / 2);
+    ctx.restore();
+    return canvas;
+  }
+
   async switchCamera(): Promise<void> {
     const newMode = this.currentFacingMode() === 'environment' ? 'user' : 'environment';
     this.audioService.playSuccess();
@@ -608,7 +639,15 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
           if (!video || video.readyState < 2) return;
 
           try {
-            const barcodes = await detector.detect(video);
+            let barcodes = await detector.detect(video);
+            // Si no detectó y estamos en modo vertical, rotar frame 90° para decodificar códigos 1D verticales
+            if ((!barcodes || barcodes.length === 0) && this.scanOrientation() === 'vertical') {
+              const rotated = this.getRotatedCanvas(video);
+              if (rotated) {
+                barcodes = await detector.detect(rotated);
+              }
+            }
+
             if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
               const code = barcodes[0].rawValue.trim();
               if (code) {
@@ -616,7 +655,7 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
               }
             }
           } catch (_) {}
-        }, 300);
+        }, 280);
         return;
       } catch (e) {
         console.warn('BarcodeDetector native init error:', e);

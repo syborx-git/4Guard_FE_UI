@@ -29,6 +29,7 @@ import {
 import { PrintService } from '../../../core/services/print.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { SmartNotificationService } from '../../../core/services/smart-notification.service';
+import { StompClientService } from '@4guard/shared-core';
 import { ShiftContextService } from '../../../core/services/shift-context.service';
 import {
   PrintTransportChecklistLayoutComponent,
@@ -98,6 +99,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
   private readonly movementsService = inject(WarehouseMovementsService);
   protected readonly smartNotification = inject(SmartNotificationService);
+  private readonly stompService = inject(StompClientService);
   protected readonly shiftContext = inject(ShiftContextService);
 
   // ── Modos de Historial: Turno Activo vs Consulta Histórica General ──
@@ -118,6 +120,17 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   });
   protected readonly pendingRampAssignments = this.smartNotification.pendingRampAssignments;
   protected readonly pendingRampAssignmentsCount = this.smartNotification.pendingRampAssignmentsCount;
+
+  /** Rampa asignada por Operaciones (Pablo) pendiente de dar acceso en Caseta (solo lectura). */
+  protected readonly opsAssignedRamp = computed<number | null>(() => {
+    const first = this.smartNotification.pendingRampAssignments()[0];
+    const n = Number(first?.rampNumber);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  });
+
+  protected isOpsRamp(rampNumber: number): boolean {
+    return this.opsAssignedRamp() === Number(rampNumber);
+  }
   private readonly printService = inject(PrintService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
@@ -639,6 +652,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected readonly posterZoomPercent = computed<string>(() => `${Math.round(this.posterZoom() * 100)}%`);
 
   protected openPosterPrintModal(): void {
+    if (this.isLocalEnvironment()) {
+      this.autoDetectNgrok();
+    }
     this.showPosterModal.set(true);
     // Calcular automáticamente la escala óptima una vez renderizado el canvas
     requestAnimationFrame(() => {
@@ -656,9 +672,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const canvas = document.getElementById('poster-canvas-container');
     if (!canvas) return;
 
-    // Medidas útiles del canvas restando márgenes y paddings
-    const paddingX = window.innerWidth < 640 ? 16 : 40;
-    const paddingY = window.innerWidth < 640 ? 16 : 40;
+    // Medidas útiles del canvas restando paddings y margen visual
+    const paddingX = window.innerWidth < 640 ? 24 : 48;
+    const paddingY = window.innerWidth < 640 ? 24 : 48;
     const availableWidth = Math.max(100, canvas.clientWidth - paddingX);
     const availableHeight = Math.max(100, canvas.clientHeight - paddingY);
 
@@ -669,9 +685,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const scaleX = availableWidth / baseWidth;
     const scaleY = availableHeight / baseHeight;
     // Escala que permite ver la hoja COMPLETA sin scroll con margen confortable
-    const optimalScale = Math.min(scaleX, scaleY) * 0.96;
+    const optimalScale = Math.min(scaleX, scaleY) * 0.95;
 
-    const safeScale = Math.min(1.0, Math.max(0.35, Math.round(optimalScale * 100) / 100));
+    const safeScale = Math.min(1.0, Math.max(0.35, Math.floor(optimalScale * 100) / 100));
     this.posterZoom.set(safeScale);
     this.isFitToScreen.set(true);
   }
@@ -1200,23 +1216,23 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     cleaned = cleaned.replace(/^(https?:\/\/)+/gi, '');
     cleaned = cleaned.split('/carrier-checkin')[0];
     cleaned = cleaned.replace(/\/+$/, '');
-    // Auto-corregir extensión desactualizada .ngrok-free.app a la extensión activa .ngrok-free.dev
-    cleaned = cleaned.replace(/\.ngrok-free\.app$/i, '.ngrok-free.dev');
     if (!cleaned) return '';
-    return `https://${cleaned}`;
+    const protocol = cleaned.includes('localhost') || /^\d+\.\d+\.\d+\.\d+/.test(cleaned) ? 'http' : 'https';
+    return `${protocol}://${cleaned}`;
   }
 
   protected autoDetectNgrok(): void {
     if (typeof window === 'undefined') return;
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 600);
+      const timeoutId = setTimeout(() => controller.abort(), 1200);
       fetch('http://127.0.0.1:4040/api/tunnels', { signal: controller.signal })
         .then(res => res.json())
         .then(data => {
           clearTimeout(timeoutId);
           if (data && data.tunnels && data.tunnels.length > 0) {
-            const publicUrl = data.tunnels[0].public_url;
+            const httpsTunnel = data.tunnels.find((t: any) => t.proto === 'https') || data.tunnels[0];
+            const publicUrl = httpsTunnel?.public_url;
             if (publicUrl) {
               const cleaned = this.cleanTunnelUrl(publicUrl);
               this.tunnelUrl.set(cleaned);
@@ -1225,45 +1241,53 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
                 localStorage.setItem('4g_security_tunnel_url', cleaned);
               }
               this.updateQrModalUrl();
+              this.toast.info(`Túnel ngrok detectado: ${cleaned}`);
             }
           }
         })
         .catch(() => {
           clearTimeout(timeoutId);
-          // ngrok no detectado localmente — fallback normal a URL local
         });
     } catch (_) {}
   }
 
+  private isLocalEnvironment(): boolean {
+    if (typeof window === 'undefined' || !window.location) return true;
+    const h = window.location.hostname || '';
+    return (
+      h === 'localhost' ||
+      h === '127.0.0.1' ||
+      h.startsWith('192.168.') ||
+      h.startsWith('10.') ||
+      h.includes('ngrok')
+    );
+  }
+
   protected getPublicBaseUrl(): string {
-    // 1. En Producción / Netlify (cualquier host público que no sea localhost):
-    // Usar automáticamente el dominio público de la app sin requerir ngrok ni configuración manual
-    if (typeof window !== 'undefined' && window.location && window.location.origin) {
-      const origin = window.location.origin;
-      const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
-      if (!isLocal) {
-        return origin;
-      }
+    const isLocalEnv = this.isLocalEnvironment();
+
+    // 1. En servidor público / Hetzner / Netlify: usar automáticamente el origen público real del servidor
+    if (!isLocalEnv && typeof window !== 'undefined' && window.location && window.location.origin) {
+      return window.location.origin;
     }
 
-    // 2. En Desarrollo Local (localhost):
-    // Priorizar el túnel de ngrok activo para permitir pruebas desde dispositivos móviles
+    // 2. En desarrollo local / ngrok: priorizar el túnel ngrok activo
     const localTunnel = this.tunnelUrl();
     if (localTunnel && localTunnel.trim()) {
       return this.cleanTunnelUrl(localTunnel);
     }
 
-    // 3. Fallback: URL pública configurada en environment
+    // 3. Fallback: URL pública configurada en environment o túnel ngrok de la sucursal
     const envUrl = (environment as any).publicAppUrl;
-    if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    if (envUrl && typeof envUrl === 'string' && envUrl.trim() && !envUrl.includes('localhost')) {
       return this.cleanTunnelUrl(envUrl);
     }
 
-    // 4. Fallback final local
-    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    if (typeof window !== 'undefined' && window.location && window.location.origin && !window.location.origin.includes('localhost')) {
       return window.location.origin;
     }
-    return '';
+
+    return 'https://faster-treadmill-oppose.ngrok-free.dev';
   }
 
   protected getEncodedQrDataUrl(): string {
@@ -1276,16 +1300,30 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    const isLocalEnv = this.isLocalEnvironment();
+
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('4g_local_passes');
       localStorage.removeItem('4g_exited_passes');
       localStorage.removeItem('4g_deleted_passes');
-      const savedTunnel = localStorage.getItem('4g_security_tunnel_url');
-      if (savedTunnel && savedTunnel.trim()) {
-        const cleaned = this.cleanTunnelUrl(savedTunnel);
-        this.tunnelUrl.set(cleaned);
-        this.tunnelInputUrl.set(cleaned);
+      if (isLocalEnv) {
+        const savedTunnel = localStorage.getItem('4g_security_tunnel_url');
+        if (savedTunnel && savedTunnel.trim()) {
+          const cleaned = this.cleanTunnelUrl(savedTunnel);
+          this.tunnelUrl.set(cleaned);
+          this.tunnelInputUrl.set(cleaned);
+        } else {
+          this.tunnelUrl.set('https://faster-treadmill-oppose.ngrok-free.dev');
+          this.tunnelInputUrl.set('https://faster-treadmill-oppose.ngrok-free.dev');
+        }
+      } else if (typeof window !== 'undefined' && window.location?.origin) {
+        this.tunnelUrl.set(window.location.origin);
+        this.tunnelInputUrl.set(window.location.origin);
       }
+    }
+
+    if (isLocalEnv) {
+      this.autoDetectNgrok();
     }
 
     this.shiftContext.loadActiveShift();
@@ -1554,12 +1592,14 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected updateQrModalUrl(): void {
     const token = this.qrModalToken();
     const baseUrl = this.getPublicBaseUrl();
+    const isNgrok = baseUrl.includes('ngrok');
+    const skipParam = isNgrok ? '&ngrok-skip-browser-warning=true' : '';
     const session = this.movementsService.movementsApi.getSessionOrg();
     const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
     if (token && token !== 'PORTAL-DIRECTO') {
-      this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}&${orgQuery}`);
+      this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}&${orgQuery}${skipParam}`);
     } else {
-      this.qrModalUrl.set(`${baseUrl}/carrier-checkin?${orgQuery}`);
+      this.qrModalUrl.set(`${baseUrl}/carrier-checkin?${orgQuery}${skipParam}`);
     }
   }
 
@@ -1612,8 +1652,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         const token = res.token || res.generatedFolio || ('PASS-4G-' + Date.now());
         this.qrModalToken.set(token);
         const baseUrl = this.getPublicBaseUrl();
+        const isNgrok = baseUrl.includes('ngrok');
+        const skipParam = isNgrok ? '&ngrok-skip-browser-warning=true' : '';
         const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
-        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}&${orgQuery}`);
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${token}&${orgQuery}${skipParam}`);
         this.showQrModal.set(true);
         this.reloadActivePasses();
       },
@@ -1622,8 +1664,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         const fallbackToken = 'PASS-4G-' + Date.now();
         this.qrModalToken.set(fallbackToken);
         const baseUrl = this.getPublicBaseUrl();
+        const isNgrok = baseUrl.includes('ngrok');
+        const skipParam = isNgrok ? '&ngrok-skip-browser-warning=true' : '';
         const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
-        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${fallbackToken}&${orgQuery}`);
+        this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${fallbackToken}&${orgQuery}${skipParam}`);
         this.showQrModal.set(true);
         this.reloadActivePasses();
       }
@@ -2164,18 +2208,23 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     if (!pass || !pass.token) return;
     const session = this.movementsService.movementsApi.getSessionOrg();
     const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
+    const baseUrl = this.getPublicBaseUrl();
+    const isNgrok = baseUrl.includes('ngrok');
+    const skipParam = isNgrok ? '&ngrok-skip-browser-warning=true' : '';
     this.qrModalToken.set(pass.token);
-    this.qrModalUrl.set(`${this.getPublicBaseUrl()}/carrier-checkin?token=${pass.token}&view=pass&${orgQuery}`);
+    this.qrModalUrl.set(`${baseUrl}/carrier-checkin?token=${pass.token}&view=pass&${orgQuery}${skipParam}`);
     this.showQrModal.set(true);
   }
 
   protected openQrModal(): void {
     const baseUrl = this.getPublicBaseUrl();
+    const isNgrok = baseUrl.includes('ngrok');
+    const skipParam = isNgrok ? '&ngrok-skip-browser-warning=true' : '';
     const session = this.movementsService.movementsApi.getSessionOrg();
     const orgQuery = `org=${session.organizationId}&branch=${session.branchId}`;
     // Código QR permanente y estático por defecto apuntando a /carrier-checkin con contexto de sucursal
     this.qrModalToken.set('PORTAL-DIRECTO');
-    this.qrModalUrl.set(`${baseUrl}/carrier-checkin?${orgQuery}`);
+    this.qrModalUrl.set(`${baseUrl}/carrier-checkin?${orgQuery}${skipParam}`);
     this.showQrModal.set(true);
   }
 
@@ -2796,8 +2845,41 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.lastCompletedPrintItem.set(printSnapshot);
           this.resetForm();
 
+          // ── Disparo en Tiempo Real STOMP hacia Salidas / Operaciones ──
+          const userOrg = this.movementsService.movementsApi.getSessionOrg();
+          const orgIdOut = userOrg.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+          const branchIdOut = userOrg.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+
+          if (rNum || rDisplay) {
+            const rampWsMsg = {
+              eventType: 'RAMP_ASSIGNED',
+              currentFolio: outbound.folio,
+              rampNumber: rNum,
+              rampCode: rDisplay,
+              clientName: formVal.client,
+              driverName: formVal.driverName,
+              tractorPlates: formVal.tractorPlates,
+              carrierName: formVal.carrierLine,
+              docNumber: formVal.docNumber,
+              timestamp: new Date().toISOString()
+            };
+            this.stompService.publish(`/topic/org/${orgIdOut}/branch/${branchIdOut}/ramps`, rampWsMsg);
+          }
+
+          this.smartNotification.dispatch({
+            category: 'OUTBOUND',
+            title: '🚛 Salida Arribada a Caseta',
+            message: `Folio #${outbound.folio} (${formVal.client || 'Cliente'}) en patio para carga.`,
+            referenceFolio: String(outbound.folio),
+            route: '/warehouse-movements/outbound',
+            targetRoles: ['ADMIN', 'OPERATIONS_MANAGER', 'WAREHOUSE_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER'],
+            targetRoutes: ['/warehouse-movements/outbound', '/security'],
+            severity: 'SUCCESS',
+            data: { ...outbound, checkIn: formVal, rampNumber: rNum, folio: outbound.folio }
+          });
+
           // Notificación flotante del sistema y scroll al menú superior
-          this.toast.success(`¡Acceso a Planta Autorizado para Carga! Folio #${outbound.folio} · ${rDisplay}`, 4500);
+          this.toast.success(`¡Datos enviados a Operaciones! Folio #${outbound.folio} · Unidad en patio en espera de asignación de rampa.`, 4500);
           this.scrollToTop();
 
           this.reloadAllData();
@@ -2860,8 +2942,62 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           this.lastCompletedPrintItem.set(printSnapshot);
           this.resetForm();
 
+          // ── Disparo en Tiempo Real STOMP + Smart Notification hacia Recepción / Operaciones ──
+          const userOrg = this.movementsService.movementsApi.getSessionOrg();
+          const orgIdIn = userOrg.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+          const branchIdIn = userOrg.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+
+          if (rNum || rDisplay) {
+            const rampWsMsg = {
+              eventType: 'RAMP_ASSIGNED',
+              currentFolio: header.folio,
+              rampNumber: rNum,
+              rampCode: rDisplay,
+              clientName: formVal.client,
+              driverName: formVal.driverName,
+              tractorPlates: formVal.tractorPlates,
+              carrierName: formVal.carrierLine,
+              docNumber: formVal.docNumber,
+              timestamp: new Date().toISOString()
+            };
+            this.stompService.publish(`/topic/org/${orgIdIn}/branch/${branchIdIn}/ramps`, rampWsMsg);
+          }
+
+          const gateWsMsg = {
+            eventType: 'GUARD_CHECKIN_COMPLETED',
+            folio: header.folio,
+            token: currentPassToken,
+            driverName: formVal.driverName,
+            carrierName: formVal.carrierLine,
+            rampNumber: rNum,
+            timestamp: new Date().toISOString()
+          };
+          this.stompService.publish(`/topic/org/${orgIdIn}/branch/${branchIdIn}/gate`, gateWsMsg);
+
+          const missionWsMsg = {
+            eventType: 'INBOUND_DISCHARGE',
+            folio: header.folio,
+            client: formVal.client,
+            rampNumber: rNum,
+            driverName: formVal.driverName,
+            timestamp: new Date().toISOString()
+          };
+          this.stompService.publish(`/topic/org/${orgIdIn}/branch/${branchIdIn}/missions`, missionWsMsg);
+
+          this.smartNotification.dispatch({
+            category: 'RECEIVING',
+            title: '🚛 Arribo Validado en Caseta',
+            message: `Folio #${header.folio} (${formVal.client || 'Cliente'}) arribó a patio · ${rDisplay ? 'Asignado a ' + rDisplay : 'Pendiente de rampa'}.`,
+            referenceFolio: String(header.folio),
+            route: '/receiving',
+            targetRoles: ['ADMIN', 'OPERATIONS_MANAGER', 'WAREHOUSE_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER', 'OPERATIONS_SUPERVISOR', 'SECURITY_GUARD'],
+            targetRoutes: ['/receiving', '/warehouse-movements', '/security'],
+            severity: 'SUCCESS',
+            data: { ...header, checkIn: formVal, rampNumber: rNum, folio: header.folio }
+          });
+
           // Notificación flotante del sistema y scroll al menú superior
-          this.toast.success(`¡Acceso a Planta Autorizado para Descarga! Folio #${header.folio} · ${rDisplay}`, 4500);
+          this.toast.success(`¡Datos enviados a Operaciones! Folio #${header.folio} · Unidad en patio en espera de asignación de rampa.`, 4500);
           this.scrollToTop();
 
           this.reloadAllData();

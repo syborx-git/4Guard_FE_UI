@@ -6,7 +6,9 @@
  * Autenticación real contra el backend (/api/v1/auth/login) y base de datos PostgreSQL.
  */
 
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { FacialRecognitionService, FaceOperatorProfile } from '../../../core/services/facial-recognition.service';
+import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthState, AuthService, BiometricAuthService, UserRole, User } from '@4guard/shared-core';
@@ -21,7 +23,23 @@ export type LoginMode = 'pin' | 'face-id';
   templateUrl: './rf-login.component.html',
   styleUrl: './rf-login.component.css',
 })
-export class RfLoginComponent implements OnInit {
+export class RfLoginComponent implements OnInit, OnDestroy {
+  private readonly face             = inject(FacialRecognitionService);
+  private readonly audio            = inject(AudioFeedbackService);
+  @ViewChild('faceVideo') private faceVideoRef?: ElementRef<HTMLVideoElement>;
+
+  // ── Reconocimiento facial multi-operador (cámara frontal) ──
+  protected readonly showFaceModal   = signal(false);
+  protected readonly faceMode        = signal<'login' | 'enroll-pick' | 'enroll-capture'>('login');
+  protected readonly faceStatus      = signal<'loading' | 'scanning' | 'matched' | 'error'>('loading');
+  protected readonly faceMessage     = signal<string>('');
+  protected readonly faceMatched     = signal<FaceOperatorProfile | null>(null);
+  protected readonly faceConfidence  = signal<number>(0);
+  protected readonly enrollProgress  = signal<number>(0);
+  protected readonly faceProfiles    = this.face.profiles;
+  protected readonly hasEnrolledFaces = computed(() => this.face.profiles().some((p) => p.descriptors.length > 0));
+  private faceLoopTimer: any = null;
+  private faceRunId = 0;
   private readonly authState        = inject(AuthState);
   private readonly authService      = inject(AuthService);
   private readonly biometricService = inject(BiometricAuthService);
@@ -372,6 +390,203 @@ export class RfLoginComponent implements OnInit {
     if (user) {
       this.navigateToUserLanding(user);
     }
+  }
+
+  // ─── RECONOCIMIENTO FACIAL MULTI-OPERADOR (CÁMARA FRONTAL) ─────────────────
+
+  ngOnDestroy(): void {
+    this.closeFaceModal();
+  }
+
+  /** Abre el visor. Si aún no hay rostros enrolados, ofrece primero el enrolamiento. */
+  protected async openFaceScan(): Promise<void> {
+    this.error.set(null);
+    this.faceMatched.set(null);
+    this.showFaceModal.set(true);
+    if (!this.face.hasAnyEnrolled()) {
+      this.faceMode.set('enroll-pick');
+      this.faceStatus.set('scanning');
+      this.faceMessage.set('Aún no hay rostros registrados en esta tablet. Elige tu nombre para enrolarte.');
+      return;
+    }
+    this.faceMode.set('login');
+    await this.runFaceLogin();
+  }
+
+  protected openFaceEnrollPicker(): void {
+    this.stopFaceLoop();
+    this.face.stopCamera();
+    this.faceMatched.set(null);
+    this.faceMode.set('enroll-pick');
+    this.faceStatus.set('scanning');
+    this.faceMessage.set('Elige tu nombre para registrar tu rostro en esta tablet.');
+  }
+
+  protected closeFaceModal(): void {
+    this.stopFaceLoop();
+    this.face.stopCamera();
+    this.showFaceModal.set(false);
+    this.faceMatched.set(null);
+  }
+
+  private stopFaceLoop(): void {
+    this.faceRunId++;
+    if (this.faceLoopTimer) {
+      clearTimeout(this.faceLoopTimer);
+      this.faceLoopTimer = null;
+    }
+  }
+
+  private async prepareCamera(): Promise<boolean> {
+    this.faceStatus.set('loading');
+    this.faceMessage.set('Preparando cámara y motor facial…');
+    try {
+      await this.face.loadModels();
+      await new Promise((r) => setTimeout(r, 60));
+      const video = this.faceVideoRef?.nativeElement;
+      if (!video) throw new Error('No se encontró el visor de cámara.');
+      await this.face.startCamera(video);
+      return true;
+    } catch (e: any) {
+      this.faceStatus.set('error');
+      this.faceMessage.set(e?.message || 'No se pudo iniciar el reconocimiento facial.');
+      this.audio.playError();
+      return false;
+    }
+  }
+
+  private async runFaceLogin(): Promise<void> {
+    this.stopFaceLoop();
+    const runId = this.faceRunId;
+    if (!(await this.prepareCamera())) return;
+    this.faceStatus.set('scanning');
+    this.faceMessage.set('Mira de frente a la cámara…');
+    const startedAt = Date.now();
+
+    const tick = async () => {
+      if (runId !== this.faceRunId) return;
+      const video = this.faceVideoRef?.nativeElement;
+      if (!video) return;
+      try {
+        const desc = await this.face.captureDescriptor(video);
+        if (runId !== this.faceRunId) return;
+        if (desc) {
+          const match = this.face.identify(desc);
+          if (match) {
+            this.faceMatched.set(match.profile);
+            this.faceConfidence.set(match.confidence);
+            this.faceStatus.set('matched');
+            this.faceMessage.set(`¡Hola ${match.profile.fullName.split(' ')[0]}!`);
+            this.audio.playSuccess();
+            if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+            this.stopFaceLoop();
+            this.face.stopCamera();
+            setTimeout(() => {
+              this.showFaceModal.set(false);
+              this.loginAsProfile(match.profile);
+            }, 1100);
+            return;
+          }
+          this.faceMessage.set('Rostro no reconocido. Reintentando…');
+        }
+      } catch {}
+      if (Date.now() - startedAt > 25000) {
+        this.faceStatus.set('error');
+        this.faceMessage.set('No se logró identificar el rostro. Reintenta o usa tu PIN.');
+        this.audio.playError();
+        this.face.stopCamera();
+        return;
+      }
+      this.faceLoopTimer = setTimeout(tick, 350);
+    };
+    tick();
+  }
+
+  protected retryFaceLogin(): void {
+    this.faceMode.set('login');
+    this.runFaceLogin();
+  }
+
+  /** Enrolamiento: toma 3 muestras del rostro y las guarda en el padrón local de la tablet. */
+  protected async startFaceEnroll(profile: FaceOperatorProfile): Promise<void> {
+    this.stopFaceLoop();
+    const runId = this.faceRunId;
+    this.faceMatched.set(profile);
+    this.faceMode.set('enroll-capture');
+    this.enrollProgress.set(0);
+    if (!(await this.prepareCamera())) return;
+    this.faceStatus.set('scanning');
+    this.faceMessage.set(`Registrando a ${profile.fullName}. Mira de frente y mueve ligeramente la cabeza.`);
+
+    const samples: Float32Array[] = [];
+    let photo: string | undefined;
+    const startedAt = Date.now();
+
+    const tick = async () => {
+      if (runId !== this.faceRunId) return;
+      const video = this.faceVideoRef?.nativeElement;
+      if (!video) return;
+      try {
+        const desc = await this.face.captureDescriptor(video);
+        if (runId !== this.faceRunId) return;
+        if (desc) {
+          samples.push(desc);
+          if (!photo) photo = this.face.captureThumbnail(video);
+          this.enrollProgress.set(Math.round((samples.length / 3) * 100));
+          if (navigator.vibrate) navigator.vibrate(30);
+        }
+      } catch {}
+      if (samples.length >= 3) {
+        this.face.saveEnrollment(profile.id, samples, photo);
+        this.faceStatus.set('matched');
+        this.faceMessage.set(`✔ Rostro de ${profile.fullName} registrado en esta tablet.`);
+        this.audio.playSuccess();
+        this.face.stopCamera();
+        return;
+      }
+      if (Date.now() - startedAt > 25000) {
+        this.faceStatus.set('error');
+        this.faceMessage.set('No se detectó un rostro claro. Acércate y verifica la iluminación.');
+        this.audio.playError();
+        this.face.stopCamera();
+        return;
+      }
+      this.faceLoopTimer = setTimeout(tick, 700);
+    };
+    tick();
+  }
+
+  protected removeFaceEnrollment(profile: FaceOperatorProfile): void {
+    this.face.removeEnrollment(profile.id);
+  }
+
+  /** Inicia sesión con el operador identificado por su rostro. */
+  private loginAsProfile(p: FaceOperatorProfile): void {
+    const isAdmin = p.role === 'ADMIN';
+    const user: User = {
+      id: p.id,
+      fullName: isAdmin ? `${p.fullName} (${p.title})` : `${p.fullName} (${p.title})`,
+      email: p.employeeCode.toLowerCase() + '@4guard.mx',
+      username: p.employeeCode,
+      employeeCode: p.employeeCode,
+      forkliftOperatorId: isAdmin ? undefined : p.id,
+      role: isAdmin ? UserRole.ADMIN : UserRole.WAREHOUSE_OPERATOR,
+      organizationId: 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
+      branchId: 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
+      branchName: 'CENTRO DE DISTRIBUCION CDMX',
+      organizationName: '4GUARD LOGISTICS CORP',
+      changePasswordRequired: false,
+      active: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.authService.saveSession({
+      accessToken: 'mock-rf-jwt-' + Date.now(),
+      refreshToken: 'mock-rf-jwt-' + Date.now(),
+      expiresIn: 86400,
+      user
+    });
+    this.navigateToUserLanding(user);
   }
 
   /**

@@ -36,6 +36,7 @@
     "@stomp/rx-stomp": "^2.4.0",
     "@stomp/stompjs": "^7.5.0",
     "@types/three": "^0.185.4",
+    "@vladmandic/face-api": "^1.7.15",
     "chart.js": "^4.4.0",
     "dexie": "^3.2.7",
     "driver.js": "^1.8.0",

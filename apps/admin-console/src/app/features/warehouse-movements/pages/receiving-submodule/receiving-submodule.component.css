@@ -352,9 +352,9 @@ h6 {
   --c-success: #208457;
   --c-success-bg: rgba(32, 132, 87, 0.10);
   --c-success-bdr: rgba(32, 132, 87, 0.22);
-  --c-warning: #b45309;
-  --c-warning-bg: rgba(217, 119, 6, 0.10);
-  --c-warning-bdr: rgba(217, 119, 6, 0.25);
+  --c-warning: #8c6d23;
+  --c-warning-bg: rgba(197, 168, 107, 0.12);
+  --c-warning-bdr: rgba(197, 168, 107, 0.30);
   --c-danger: #c84949;
   --c-danger-bg: rgba(200, 73, 73, 0.09);
   --c-danger-bdr: rgba(200, 73, 73, 0.20);
@@ -397,9 +397,9 @@ h6 {
   --c-success: #67c78b;
   --c-success-bg: rgba(76, 175, 112, 0.12);
   --c-success-bdr: rgba(76, 175, 112, 0.24);
-  --c-warning: #e0aa4f;
-  --c-warning-bg: rgba(224, 170, 79, 0.12);
-  --c-warning-bdr: rgba(224, 170, 79, 0.24);
+  --c-warning: #dfb76c;
+  --c-warning-bg: rgba(208, 175, 103, 0.16);
+  --c-warning-bdr: rgba(208, 175, 103, 0.35);
   --c-danger: #ef7773;
   --c-danger-bg: rgba(239, 83, 80, 0.12);
   --c-danger-bdr: rgba(239, 83, 80, 0.24);
@@ -468,6 +468,143 @@ h6 {
     align-items: center;
     justify-content: space-between;
   }
+}
+
+.receiving-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  max-width: 660px;
+}
+
+.header-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 36px;
+  padding: 0 0.95rem;
+  border-radius: 10px;
+  font-size: 0.74rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header-action-btn .material-symbols-outlined {
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+
+/* 1. Primario Dorado 4GUARD */
+.header-action-btn--gold {
+  background: linear-gradient(135deg, #dfb76c 0%, #c5a86b 50%, #a88734 100%) !important;
+  color: #0b1320 !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 3px 12px rgba(184, 147, 74, 0.32) !important;
+  font-weight: 850 !important;
+}
+
+.header-action-btn--gold:hover {
+  background: linear-gradient(135deg, #ebd08d 0%, #d4b372 50%, #b38f3c 100%) !important;
+  box-shadow: 0 5px 16px rgba(184, 147, 74, 0.45) !important;
+  transform: translateY(-1px);
+}
+
+.header-action-btn--gold:active {
+  transform: scale(0.97);
+}
+
+:host-context(.dark) .header-action-btn--gold,
+:host-context(.theme-dark) .header-action-btn--gold {
+  background: linear-gradient(135deg, #dfb76c 0%, #c5a86b 50%, #9e7d2e 100%) !important;
+  color: #050a12 !important;
+  border: 1px solid rgba(208, 175, 103, 0.5) !important;
+  box-shadow: 0 3px 14px rgba(208, 175, 103, 0.3) !important;
+}
+
+/* 2. Calidad (PNC) */
+.header-action-btn--pnc {
+  background: rgba(197, 168, 107, 0.12) !important;
+  color: #8c6d23 !important;
+  border: 1px solid rgba(197, 168, 107, 0.40) !important;
+}
+
+.header-action-btn--pnc:hover {
+  background: rgba(197, 168, 107, 0.22) !important;
+  border-color: var(--gold, #c5a86b) !important;
+  transform: translateY(-1px);
+}
+
+:host-context(.dark) .header-action-btn--pnc,
+:host-context(.theme-dark) .header-action-btn--pnc {
+  background: rgba(208, 175, 103, 0.16) !important;
+  color: #dfb76c !important;
+  border-color: rgba(208, 175, 103, 0.45) !important;
+}
+
+:host-context(.dark) .header-action-btn--pnc:hover,
+:host-context(.theme-dark) .header-action-btn--pnc:hover {
+  background: rgba(208, 175, 103, 0.28) !important;
+  border-color: #dfb76c !important;
+}
+
+/* 3. Secundario Ejecutivo (Cambiar Remisión / Imprimir) */
+.header-action-btn--secondary {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.header-action-btn--secondary:hover {
+  background: rgba(197, 168, 107, 0.08) !important;
+  border-color: var(--gold, #c5a86b) !important;
+  color: #8c6d23 !important;
+  transform: translateY(-1px);
+}
+
+:host-context(.dark) .header-action-btn--secondary,
+:host-context(.theme-dark) .header-action-btn--secondary {
+  background: rgba(30, 41, 59, 0.85) !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+:host-context(.dark) .header-action-btn--secondary:hover,
+:host-context(.theme-dark) .header-action-btn--secondary:hover {
+  background: rgba(208, 175, 103, 0.15) !important;
+  border-color: #dfb76c !important;
+  color: #dfb76c !important;
+}
+
+/* 4. Cancelar / Peligro Sutil */
+.header-action-btn--danger {
+  background: rgba(239, 68, 68, 0.06) !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(239, 68, 68, 0.28) !important;
+}
+
+.header-action-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: #dc2626 !important;
+  transform: translateY(-1px);
+}
+
+:host-context(.dark) .header-action-btn--danger,
+:host-context(.theme-dark) .header-action-btn--danger {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+:host-context(.dark) .header-action-btn--danger:hover,
+:host-context(.theme-dark) .header-action-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.22) !important;
+  border-color: #f87171 !important;
 }
 
 .receiving-breadcrumb-bar__path {
@@ -5312,9 +5449,9 @@ h6 {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #f59e0b;
+  background: var(--gold, #c5a86b);
   display: inline-block;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+  box-shadow: 0 0 8px rgba(197, 168, 107, 0.65);
 }
 
 .directory-header-title {
@@ -5338,16 +5475,16 @@ h6 {
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 750;
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  background: rgba(197, 168, 107, 0.12);
+  color: #8c6d23;
+  border: 1px solid rgba(197, 168, 107, 0.32);
 }
 
 :host-context(.theme-dark) .directory-count-pill,
 :host-context(.dark) .directory-count-pill {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(208, 175, 103, 0.18);
+  color: #dfb76c;
+  border-color: rgba(208, 175, 103, 0.36);
 }
 
 .directory-header-hint {
@@ -5513,8 +5650,8 @@ h6 {
 }
 
 .dot--amber {
-  background: #f59e0b;
-  box-shadow: 0 0 4px rgba(245, 158, 11, 0.5);
+  background: var(--gold, #c5a86b);
+  box-shadow: 0 0 4px rgba(197, 168, 107, 0.6);
 }
 
 .dot--purple {
@@ -5647,16 +5784,16 @@ h6 {
 }
 
 .badge--caseta {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
+  background: rgba(197, 168, 107, 0.14);
+  color: #8c6d23;
+  border: 1px solid rgba(197, 168, 107, 0.35);
 }
 
 :host-context(.theme-dark) .badge--caseta,
 :host-context(.dark) .badge--caseta {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(208, 175, 103, 0.18);
+  color: #dfb76c;
+  border-color: rgba(208, 175, 103, 0.38);
 }
 
 .badge--anden {
@@ -5821,18 +5958,18 @@ h6 {
   font-family: var(--font-mono, monospace);
   font-size: 0.75rem;
   font-weight: 750;
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  background: rgba(197, 168, 107, 0.12);
+  color: #8c6d23;
+  border: 1px solid rgba(197, 168, 107, 0.32);
   padding: 2px 8px;
   border-radius: 6px;
 }
 
 :host-context(.theme-dark) .executive-folio-badge,
 :host-context(.dark) .executive-folio-badge {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(208, 175, 103, 0.18);
+  color: #dfb76c;
+  border-color: rgba(208, 175, 103, 0.36);
 }
 
 .executive-time-text {
@@ -5943,14 +6080,14 @@ h6 {
 
 .executive-progress-fill {
   height: 100%;
-  background: #f59e0b;
+  background: var(--gold, #c5a86b);
   border-radius: 9999px;
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .fill--amber {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+  background: linear-gradient(90deg, #dfb76c, #c5a86b) !important;
+  box-shadow: 0 0 6px rgba(197, 168, 107, 0.45);
 }
 
 .fill--blue {
@@ -5976,6 +6113,74 @@ h6 {
 .fill--rose {
   background: linear-gradient(90deg, #e11d48, #fb7185) !important;
   box-shadow: 0 0 6px rgba(225, 29, 72, 0.4);
+}
+
+/* Prestige Gold Action Button (Asignar Rampa 1 Clic) */
+.btn-gold-action {
+  background: linear-gradient(135deg, #dfb76c 0%, #c5a86b 50%, #a88734 100%) !important;
+  color: #0b1320 !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 4px 14px rgba(184, 147, 74, 0.30) !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.01em;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-gold-action:hover {
+  background: linear-gradient(135deg, #ebd08d 0%, #d4b372 50%, #b38f3c 100%) !important;
+  box-shadow: 0 6px 18px rgba(184, 147, 74, 0.45) !important;
+  transform: translateY(-1px);
+}
+
+.btn-gold-action:active {
+  transform: scale(0.98);
+}
+
+:host-context(.dark) .btn-gold-action,
+:host-context(.theme-dark) .btn-gold-action {
+  background: linear-gradient(135deg, #dfb76c 0%, #c5a86b 50%, #9e7d2e 100%) !important;
+  color: #050a12 !important;
+  border: 1px solid rgba(208, 175, 103, 0.5) !important;
+  box-shadow: 0 4px 16px rgba(208, 175, 103, 0.3) !important;
+}
+
+.text-gold-count {
+  color: #8c6d23 !important;
+  font-weight: 800;
+}
+
+:host-context(.dark) .text-gold-count,
+:host-context(.theme-dark) .text-gold-count {
+  color: #dfb76c !important;
+}
+
+/* PNC Action Button */
+.btn-pnc-action {
+  background: rgba(197, 168, 107, 0.12) !important;
+  color: #8c6d23 !important;
+  border: 1px solid rgba(197, 168, 107, 0.35) !important;
+  font-weight: 750;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-pnc-action:hover {
+  background: rgba(197, 168, 107, 0.22) !important;
+  border-color: var(--gold, #c5a86b) !important;
+  transform: translateY(-1px);
+}
+
+:host-context(.dark) .btn-pnc-action,
+:host-context(.theme-dark) .btn-pnc-action {
+  background: rgba(208, 175, 103, 0.16) !important;
+  color: #dfb76c !important;
+  border-color: rgba(208, 175, 103, 0.40) !important;
+}
+
+:host-context(.dark) .btn-pnc-action:hover,
+:host-context(.theme-dark) .btn-pnc-action:hover {
+  background: rgba(208, 175, 103, 0.26) !important;
+  border-color: #dfb76c !important;
 }
 
 /* Card Footer */
@@ -6009,17 +6214,17 @@ h6 {
 .executive-link {
   font-size: 0.74rem;
   font-weight: 750;
-  color: #b45309;
+  color: #8c6d23;
   transition: all 0.15s ease;
 }
 
 :host-context(.theme-dark) .executive-link,
 :host-context(.dark) .executive-link {
-  color: #fbbf24;
+  color: #dfb76c;
 }
 
 .executive-card:hover .executive-link {
-  color: #d97706;
+  color: #a88734;
   text-decoration: underline;
 }
 
@@ -6374,16 +6579,16 @@ h6 {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
+  background: rgba(197, 168, 107, 0.14);
+  color: #8c6d23;
+  border: 1px solid rgba(197, 168, 107, 0.35);
 }
 
 :host-context(.dark) .ops-auth-icon-badge,
 :host-context(.theme-dark) .ops-auth-icon-badge {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(208, 175, 103, 0.18);
+  color: #dfb76c;
+  border-color: rgba(208, 175, 103, 0.40);
 }
 
 .ops-auth-title {
@@ -6404,17 +6609,17 @@ h6 {
   font-weight: 700;
   padding: 0.2rem 0.55rem;
   border-radius: 6px;
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  background: rgba(197, 168, 107, 0.14);
+  color: #8c6d23;
+  border: 1px solid rgba(197, 168, 107, 0.35);
   white-space: nowrap;
 }
 
 :host-context(.dark) .ops-auth-pill,
 :host-context(.theme-dark) .ops-auth-pill {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fde68a;
-  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(208, 175, 103, 0.18);
+  color: #dfb76c;
+  border-color: rgba(208, 175, 103, 0.40);
 }
 
 .ops-auth-desc {

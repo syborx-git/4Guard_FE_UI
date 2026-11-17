@@ -836,40 +836,28 @@
                       Asignación de Andén en Caseta
                     </h3>
                     <p class="text-[11px] text-slate-500 dark:text-slate-400">
-                      Asigne la rampa física para atraque directo o ingrese la unidad a patio si los andenes están ocupados.
+                      Monitor de Andenes · Operaciones asigna la rampa. Caseta solo visualiza.
                     </p>
                   </div>
                 </div>
 
-                <!-- Selector de Modo de Asignación (Pill Toggle) -->
-                <div class="inline-flex p-1 rounded-xl bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-xs font-bold">
-                  <button
-                    type="button"
-                    (click)="setAssignmentType('RAMP')"
-                    class="assignment-mode-btn"
-                    [class.assignment-mode-btn--active-gold]="checkInForm.get('assignmentType')?.value === 'RAMP'"
-                  >
-                    <span class="material-symbols-outlined text-sm">dock</span>
-                    <span>Rampa Física (1-12)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    (click)="setAssignmentType('PATIO')"
-                    class="assignment-mode-btn"
-                    [class.assignment-mode-btn--active-patio]="checkInForm.get('assignmentType')?.value === 'PATIO'"
-                  >
-                    <span class="material-symbols-outlined text-sm">local_parking</span>
-                    <span>En Espera en Patio</span>
-                  </button>
-                </div>
+                <!-- Estado de la asignación (solo lectura; la rampa la asigna Operaciones) -->
+                @if (opsAssignedRamp(); as opsRamp) {
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black animate-pulse">
+                    🟢 METER A RAMPA R-{{ opsRamp < 10 ? '0' + opsRamp : opsRamp }}
+                  </span>
+                } @else {
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-xs font-bold">
+                    ⏳ En espera de asignación de rampa en Operaciones (Pablo)
+                  </span>
+                }
               </div>
 
-              <!-- CONTENIDO CONDICIONAL: 1. MODO RAMPA FÍSICA (1-12) -->
-              @if (checkInForm.get('assignmentType')?.value === 'RAMP') {
+              <!-- MONITOR DE ANDENES (SOLO LECTURA) -->
+              @if (true) {
                 <div class="space-y-3 animate-fade-in">
                   <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                    <span class="font-semibold">Seleccione el andén físico asignado (Monitoreo de ocupación en vivo):</span>
+                    <span class="font-semibold">Monitoreo de andenes en vivo (solo lectura · la rampa la asigna Operaciones):</span>
                     <div class="flex items-center gap-3 text-[10px]">
                       <span class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Libre
@@ -882,14 +870,13 @@
 
                   <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                     @for (rm of STANDARD_WAREHOUSE_RAMPS; track rm.rampNumber) {
-                      <button
-                        type="button"
-                        (click)="selectRamp(rm)"
-                        class="p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[68px]"
+                      <div
+                        class="p-2.5 rounded-xl border text-left transition-all cursor-default select-none flex flex-col justify-between min-h-[68px]"
                         [ngClass]="{
-                          'border-[#b8860b] bg-[#d4af37]/15 ring-2 ring-[#b8860b] shadow-md': isRampSelected(rm.rampNumber),
-                          'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/60 hover:bg-emerald-500/10': !isRampSelected(rm.rampNumber) && isRampAvailable(rm.rampNumber),
-                          'border-slate-300 dark:border-slate-700 bg-slate-100/60 dark:bg-slate-800/40 hover:border-[#b8860b]/50': !isRampSelected(rm.rampNumber) && !isRampAvailable(rm.rampNumber)
+                          'border-emerald-500 bg-emerald-500/25 ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/30 animate-pulse': isOpsRamp(rm.rampNumber),
+                          'opacity-40': opsAssignedRamp() && !isOpsRamp(rm.rampNumber),
+                          'border-emerald-500/30 bg-emerald-500/5': !isOpsRamp(rm.rampNumber) && isRampAvailable(rm.rampNumber),
+                          'border-slate-300 dark:border-slate-700 bg-slate-100/60 dark:bg-slate-800/40': !isOpsRamp(rm.rampNumber) && !isRampAvailable(rm.rampNumber)
                         }"
                         [title]="getRampOccupancyInfo(rm.rampNumber) ? (getRampOccupancyInfo(rm.rampNumber)?.statusLabel + ' - Folio #' + (getRampOccupancyInfo(rm.rampNumber)?.operationFolio || 'S/N')) : 'Rampa Libre'"
                       >
@@ -897,8 +884,8 @@
                           <span class="font-mono font-black text-xs sm:text-sm text-slate-900 dark:text-slate-100">
                             R-{{ rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber }}
                           </span>
-                          @if (isRampSelected(rm.rampNumber)) {
-                            <span class="material-symbols-outlined text-sm text-[#b8860b]">check_circle</span>
+                          @if (isOpsRamp(rm.rampNumber)) {
+                            <span class="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
                           } @else if (!isRampAvailable(rm.rampNumber)) {
                             <span class="material-symbols-outlined text-xs text-amber-600 dark:text-amber-400" title="Rampa ocupada">lock</span>
                           } @else {
@@ -907,7 +894,9 @@
                         </div>
 
                         <div class="mt-1">
-                          @if (!isRampAvailable(rm.rampNumber)) {
+                          @if (isOpsRamp(rm.rampNumber)) {
+                            <span class="text-[10px] font-black text-emerald-700 dark:text-emerald-300 block">METER AQUÍ</span>
+                          } @else if (!isRampAvailable(rm.rampNumber)) {
                             <span class="text-[10px] font-mono text-amber-600 dark:text-amber-400 block truncate font-bold">
                               #{{ getRampOccupancyInfo(rm.rampNumber)?.operationFolio || 'Ocupada' }}
                             </span>
@@ -917,38 +906,8 @@
                             </span>
                           }
                         </div>
-                      </button>
-                    }
-                  </div>
-
-                  @if (checkInForm.get('rampNumber')?.value) {
-                    <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
-                      <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-base text-amber-500">check_circle</span>
-                        <span>
-                          Unidad asignada directamente a <strong>Rampa R-{{ checkInForm.get('rampNumber')?.value < 10 ? '0' + checkInForm.get('rampNumber')?.value : checkInForm.get('rampNumber')?.value }}</strong>.
-                          La orden operativa se vinculará directamente a este andén.
-                        </span>
                       </div>
-                      <button
-                        type="button"
-                        (click)="setAssignmentType('PATIO')"
-                        class="text-[11px] underline font-bold hover:text-amber-600 cursor-pointer"
-                      >
-                        Cambiar a Espera en Patio
-                      </button>
-                    </div>
-                  }
-                </div>
-              }
-
-              <!-- CONTENIDO CONDICIONAL: 2. MODO EN ESPERA EN PATIO -->
-              @if (checkInForm.get('assignmentType')?.value === 'PATIO') {
-                <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-100/50 dark:bg-slate-800/30 flex items-center gap-3 animate-fade-in">
-                  <span class="material-symbols-outlined text-slate-500 text-2xl">local_parking</span>
-                  <div class="text-xs text-slate-600 dark:text-slate-400">
-                    <strong class="text-slate-800 dark:text-slate-200">Ingreso a Estacionamiento / Patio de Maniobras:</strong>
-                    La unidad ingresará al patio en espera de que se desocupe una rampa física. Podrá asignarse andén en cualquier momento desde el listado de unidades en planta.
+                    }
                   </div>
                 </div>
               }
@@ -1434,7 +1393,7 @@
             <div class="flex items-center gap-2.5">
               <span class="material-symbols-outlined text-emerald-500 text-xl">verified_user</span>
               <div class="flex flex-col">
-                <span class="form-floating-footer__title">Autorización y Control de Acceso</span>
+                <span class="form-floating-footer__title">Envío de Inspección a Operaciones</span>
                 <span class="form-floating-footer__subtitle font-mono">
                   {{ activeToken() ? 'Pase vinculado: #' + activeToken() : 'Check-In Inmediato Caseta de Seguridad' }}
                 </span>
@@ -1455,7 +1414,7 @@
                 class="btn-primary-gold px-6 py-2.5 text-sm shadow-md hover:shadow-lg transition-all"
               >
                 <span class="material-symbols-outlined text-base">check_circle</span>
-                <span>{{ isSaving() ? 'Autorizando Ingreso...' : 'Autorizar Ingreso a Planta' }}</span>
+                <span>{{ isSaving() ? 'Enviando datos a Operaciones...' : 'Mandar datos a Operaciones para asignación de rampa' }}</span>
               </button>
             </div>
           </div>
@@ -2460,94 +2419,97 @@
      MODAL VISOR DE IMPRESIÓN — CARTEL OFICIAL QR TAMAÑO CARTA HORIZONTAL (F01-PO-CP-7.1.3-03-QR)
      ══════════════════════════════════════════════════════════════════════════════ -->
 @if (showPosterModal()) {
-  <div 
-    class="print-modal-overlay fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden animate-fade-in"
+  <div
+    class="print-modal-overlay poster-viewer-overlay animate-fade-in"
     (click)="closePosterPrintModal()"
     aria-modal="true"
     role="dialog"
   >
-    <!-- Contenedor Modal de Alta Definición (Landscape Optimizado) -->
-    <div 
-      class="print-modal-card w-[96vw] max-w-[1160px] h-[86vh] max-h-[740px] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden text-slate-100 animate-scale-in my-auto"
+    <!-- Contenedor Modal Homologado 4GUARD Prestige Gold (11" x 8.5" Paisaje) -->
+    <div
+      class="print-modal-card poster-viewer-card animate-scale-in"
       (click)="$event.stopPropagation()"
     >
-      <!-- Top Bar / Acciones de Impresión y Controles de Zoom -->
-      <div class="px-4 py-2.5 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0 flex-wrap sm:flex-nowrap">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400">
-            <span class="material-symbols-outlined text-lg">qr_code_2</span>
+      <!-- Accent Gold Top Bar -->
+      <div class="poster-viewer__gold-bar"></div>
+
+      <!-- Top Bar Principal: Título & Acciones -->
+      <div class="poster-viewer__header">
+        <div class="poster-viewer__title-group">
+          <div class="poster-viewer__icon-box">
+            <span class="material-symbols-outlined">qr_code_2</span>
           </div>
           <div class="min-w-0">
-            <div class="flex items-center gap-2">
-              <h3 class="text-xs sm:text-sm font-bold text-white uppercase tracking-wide truncate">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="poster-viewer__title">
                 Cartel Oficial de Entrada — Auto-Registro
               </h3>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold shrink-0">
+              <span class="poster-viewer__size-badge">
                 11" × 8.5" Paisaje
               </span>
             </div>
-            <p class="text-[10px] text-slate-400 truncate mt-0.5">
-              Formato Apaisado F01-PO-CP-7.1.3-03-QR • Escaneable a 3 metros
+            <p class="poster-viewer__subtitle">
+              Formato Homologado F01-PO-CP-7.1.3-03-QR • Escaneable a 3 metros
             </p>
           </div>
         </div>
 
-        <!-- Controles Centrales de Zoom y Escala Responsiva -->
-        <div class="flex items-center gap-1.5 bg-slate-950/70 border border-slate-800 px-2 py-1 rounded-xl shrink-0">
-          <button
-            type="button"
-            (click)="zoomOutPoster()"
-            class="w-7 h-7 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
-            title="Alejar (-)"
-            aria-label="Alejar"
-          >
-            <span class="material-symbols-outlined text-base">remove</span>
-          </button>
+        <div class="poster-viewer__actions-group">
+          <!-- Controles de Zoom -->
+          <div class="poster-viewer__zoom-pill">
+            <button
+              type="button"
+              (click)="zoomOutPoster()"
+              class="poster-viewer__zoom-icon-btn"
+              title="Alejar (-)"
+              aria-label="Alejar"
+            >
+              <span class="material-symbols-outlined text-base">remove</span>
+            </button>
 
-          <span class="text-[11px] font-mono font-bold text-slate-200 min-w-[42px] text-center select-none">
-            {{ posterZoomPercent() }}
-          </span>
+            <span class="poster-viewer__zoom-val">
+              {{ posterZoomPercent() }}
+            </span>
 
-          <button
-            type="button"
-            (click)="zoomInPoster()"
-            class="w-7 h-7 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer"
-            title="Acercar (+)"
-            aria-label="Acercar"
-          >
-            <span class="material-symbols-outlined text-base">add</span>
-          </button>
+            <button
+              type="button"
+              (click)="zoomInPoster()"
+              class="poster-viewer__zoom-icon-btn"
+              title="Acercar (+)"
+              aria-label="Acercar"
+            >
+              <span class="material-symbols-outlined text-base">add</span>
+            </button>
 
-          <div class="w-px h-4 bg-slate-800 mx-0.5"></div>
+            <div class="poster-viewer__zoom-sep"></div>
 
-          <button
-            type="button"
-            (click)="toggleFitToScreen()"
-            [ngClass]="isFitToScreen() ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'text-slate-300 hover:text-white hover:bg-slate-800 border-transparent'"
-            class="text-[10px] font-semibold px-2 py-1 rounded-lg border flex items-center gap-1 transition-colors cursor-pointer"
-            title="Ajustar automáticamente al tamaño de la pantalla"
-          >
-            <span class="material-symbols-outlined text-sm">fit_screen</span>
-            <span class="hidden md:inline">Ajustar</span>
-          </button>
+            <button
+              type="button"
+              (click)="toggleFitToScreen()"
+              class="poster-viewer__zoom-mode-btn"
+              [class.poster-viewer__zoom-mode-btn--active]="isFitToScreen()"
+              title="Ajustar automáticamente a pantalla"
+            >
+              <span class="material-symbols-outlined text-sm">fit_screen</span>
+              <span>Ajustar</span>
+            </button>
 
-          <button
-            type="button"
-            (click)="resetPosterZoom()"
-            [ngClass]="(!isFitToScreen() && posterZoom() === 1) ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'text-slate-300 hover:text-white hover:bg-slate-800 border-transparent'"
-            class="text-[10px] font-semibold px-2 py-1 rounded-lg border transition-colors cursor-pointer"
-            title="Ver al 100% de tamaño físico"
-          >
-            100%
-          </button>
-        </div>
+            <button
+              type="button"
+              (click)="resetPosterZoom()"
+              class="poster-viewer__zoom-mode-btn"
+              [class.poster-viewer__zoom-mode-btn--active]="!isFitToScreen() && posterZoom() === 1"
+              title="Ver al 100% de tamaño físico"
+            >
+              100%
+            </button>
+          </div>
 
-        <!-- Action Buttons -->
-        <div class="flex items-center gap-2 shrink-0">
+          <!-- Botones de Acción Homologados -->
           <button
             type="button"
             (click)="printPoster()"
-            class="btn-primary-gold text-[11px] px-3.5 py-1.5 flex items-center gap-1.5 font-bold shadow-sm cursor-pointer"
+            class="poster-viewer__btn-gold"
           >
             <span class="material-symbols-outlined text-sm">print</span>
             <span>Imprimir Cartel</span>
@@ -2556,7 +2518,7 @@
           <button
             type="button"
             (click)="downloadPosterPdf()"
-            class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition-colors cursor-pointer"
+            class="poster-viewer__btn-outline"
           >
             <span class="material-symbols-outlined text-sm">download</span>
             <span>Descargar PDF</span>
@@ -2565,52 +2527,84 @@
           <button
             type="button"
             (click)="closePosterPrintModal()"
-            class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center text-sm font-bold transition-colors cursor-pointer ml-1"
+            class="poster-viewer__close-btn"
             aria-label="Cerrar visor Cartel"
             title="Cerrar y volver a Caseta (Esc)"
           >
-            ✕
+            <span class="material-symbols-outlined text-base">close</span>
           </button>
         </div>
       </div>
 
-      <!-- Lienzo con el Cartel Centrado en Hoja Carta Horizontal -->
-      <div 
-        id="poster-canvas-container" 
-        class="flex-1 min-h-0 overflow-auto bg-[#070b14] p-3 sm:p-5 flex items-center justify-center relative select-none"
+      <!-- Barra Secundaria Compacta: URL / Túnel Ngrok para QR -->
+      <div class="poster-viewer__tunnel-bar">
+        <div class="poster-viewer__tunnel-label">
+          <span class="material-symbols-outlined text-sm poster-viewer__gold-text">cell_tower</span>
+          <span>URL Pública del QR (Móviles):</span>
+        </div>
+        <div class="poster-viewer__tunnel-controls">
+          <input
+            type="text"
+            [ngModel]="tunnelInputUrl()"
+            (ngModelChange)="tunnelInputUrl.set($event)"
+            (keyup.enter)="saveTunnelUrl()"
+            placeholder="https://tu-tunel.ngrok-free.dev o http://IP-LOCAL:4200"
+            class="poster-viewer__tunnel-input"
+          />
+          <button
+            type="button"
+            (click)="saveTunnelUrl()"
+            class="poster-viewer__btn-gold-xs"
+            title="Guardar URL del túnel"
+          >
+            Guardar
+          </button>
+          <button
+            type="button"
+            (click)="autoDetectNgrok()"
+            class="poster-viewer__btn-outline-xs"
+            title="Detectar ngrok activo automáticamente"
+          >
+            Detectar ngrok
+          </button>
+        </div>
+      </div>
+
+      <!-- Lienzo Centrado con Hoja Carta Horizontal -->
+      <div
+        id="poster-canvas-container"
+        class="poster-viewer__canvas"
       >
-        <!-- Envoltorio escalado responsivo centrado -->
-        <div 
-          class="poster-scalable-wrapper flex items-center justify-center m-auto transition-all duration-150 ease-out"
+        <div
+          class="poster-scalable-wrapper"
           [style.width.px]="1056 * posterZoom()"
           [style.height.px]="816 * posterZoom()"
-          style="flex-shrink: 0;"
         >
-          <div 
-            id="gate-qr-poster-target" 
-            class="origin-center transition-transform duration-150 ease-out flex items-center justify-center"
+          <div
+            id="gate-qr-poster-target"
+            class="poster-target-sheet"
             [style.width.px]="1056"
             [style.height.px]="816"
             [style.transform]="'scale(' + posterZoom() + ')'"
-            style="flex-shrink: 0;"
           >
             <fg-print-gate-qr-poster-layout [data]="posterPrintData()"></fg-print-gate-qr-poster-layout>
           </div>
         </div>
       </div>
 
-      <!-- Footer Info Bar -->
-      <div class="px-4 py-2 bg-slate-900 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-1.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-          <span>Vigencia: <strong>{{ posterPrintData().periodLabel }}</strong> • Sucursal: <strong>{{ posterPrintData().branchName }}</strong> ({{ posterPrintData().branchCode }})</span>
+      <!-- Footer Homologado -->
+      <div class="poster-viewer__footer">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+          <span class="truncate">
+            Vigencia: <strong>{{ posterPrintData().periodLabel }}</strong> • Sucursal: <strong>{{ posterPrintData().branchName }}</strong> ({{ posterPrintData().branchCode }})
+          </span>
         </div>
-        <div class="flex items-center gap-3">
-          <span class="text-[9px] text-slate-400">Clic fuera o tecla <strong>Esc</strong> para volver</span>
-          <span class="font-mono text-slate-500 text-[9px]">4GUARD WMS • SEGURIDAD PATRIMONIAL</span>
+        <div class="flex items-center gap-3 shrink-0">
+          <span class="hidden sm:inline opacity-80">Clic fuera o tecla <strong>Esc</strong> para volver</span>
+          <span class="font-mono font-bold opacity-75">4GUARD WMS • SEGURIDAD PATRIMONIAL</span>
         </div>
       </div>
-
     </div>
   </div>
 }

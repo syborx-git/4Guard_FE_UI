@@ -16,6 +16,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, catchError, filter, switchMap, take, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 let isRefreshing = false;
 const refreshTokenSubject = new BehaviorSubject<string | null>(null);
@@ -27,6 +28,11 @@ function handle401Error(
   router: Router,
   originalError: HttpErrorResponse
 ) {
+  // En entorno local o desarrollo, un 401 del backend remoto no debe botar al usuario al login
+  if (!environment.production) {
+    return throwError(() => originalError);
+  }
+
   if (!isRefreshing) {
     isRefreshing = true;
     refreshTokenSubject.next(null);
@@ -75,8 +81,19 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const url = req.url.toLowerCase();
 
+  const browserPath = typeof window !== 'undefined' ? (window.location.pathname || '').toLowerCase() : '';
+  const currentUrl = `${browserPath} ${(router.url || '').toLowerCase()}`;
+  const isOnPublicView =
+    currentUrl.includes('/carrier-checkin') ||
+    currentUrl.includes('/driver-checkin') ||
+    currentUrl.includes('/public/checkin') ||
+    currentUrl.includes('/security/check-in') ||
+    currentUrl.includes('/login') ||
+    currentUrl.includes('/forgot-password');
+
   // Excluir endpoints públicos o de autenticación base (login, refresh, logout, portal chofer)
   const isAuthOrPublic =
+    isOnPublicView ||
     url.includes('/auth/login') ||
     url.includes('/auth/refresh') ||
     url.includes('/auth/logout') ||
@@ -88,6 +105,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   let activeReq = req;
 
+  if (typeof window !== 'undefined' && window.location?.hostname?.includes('ngrok')) {
+    activeReq = activeReq.clone({
+      headers: activeReq.headers.set('ngrok-skip-browser-warning', 'true')
+    });
+  }
+
   if (!isAuthOrPublic) {
     const token = authService.getAccessToken();
     if (token) {
@@ -96,14 +119,19 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         return handle401Error(req, next, authService, router, new HttpErrorResponse({ status: 401, statusText: 'Token Expired' }));
       }
 
-      activeReq = req.clone({
-        headers: req.headers.set('Authorization', `Bearer ${token}`)
+      activeReq = activeReq.clone({
+        headers: activeReq.headers.set('Authorization', `Bearer ${token}`)
       });
     }
   }
 
   return next(activeReq).pipe(
     catchError((error: HttpErrorResponse) => {
+      // En entorno local/desarrollo, no cerrar sesión si una llamada HTTP remota devuelve 401/403
+      if (!environment.production) {
+        return throwError(() => error);
+      }
+
       const isExpiredForbidden =
         error.status === 403 &&
         error.error &&
