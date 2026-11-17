@@ -92,6 +92,39 @@
         </button>
       </div>
     }
+
+    <!-- 4ta Tarjeta (Espacio señalado por Chris): Simulador de Notificación Acústica y Visual -->
+    <div class="rf-module-card rf-module-card--sim group" (click)="simulateArrivalNotification()">
+      <div class="rf-card-gold-glow"></div>
+      <div class="rf-module-card__top">
+        <div class="rf-module-icon-wrap rf-module-icon-wrap--emerald">
+          <span class="material-symbols-outlined rf-module-icon" [class.animate-bounce]="isSimulatingSound()">notifications_active</span>
+        </div>
+        <span class="rf-module-badge rf-module-badge--emerald">
+          <span class="badge-dot"></span>
+          <span>{{ isSimulatingSound() ? '¡Sonando!' : 'Prueba de Sonido' }}</span>
+        </span>
+      </div>
+
+      <div class="rf-module-card__body">
+        <h3 class="rf-module-title">Simular Llegada de Tráiler</h3>
+        <p class="rf-module-desc">
+          Dispara la alerta sonora y visual que suena en la tablet cuando Caseta o Mesa de Control te asigna un camión a tu rampa.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        (click)="$event.stopPropagation(); simulateArrivalNotification()"
+        class="btn-module-action"
+        [class.border-emerald-500]="isSimulatingSound()">
+        <span class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-xl text-emerald-400">volume_up</span>
+          <span>Probar Sonido</span>
+        </span>
+        <span class="material-symbols-outlined text-xl text-emerald-400">play_arrow</span>
+      </button>
+    </div>
   </div>
 
   <!-- ── 3. BARRA DE UTILIDADES TÁCTILES Y TELEMETRÍA INDUSTRIAL ──── -->
