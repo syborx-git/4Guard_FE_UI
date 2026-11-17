@@ -256,16 +256,13 @@ export class AuthState {
       return true;
     }
 
-    // 1. Gerente de Operaciones y Almacén: Acceso total operativo y administrativo, EXCEPTO Calidad (SoD estricto Nestlé)
+    // 1. Gerente de Operaciones y Almacén: Acceso total operativo, administrativo y de calidad
     if (
       normRole === 'OPERATIONS_MANAGER' ||
       normRole === 'ROLE_OPERATIONS_MANAGER' ||
       normRole === 'WAREHOUSE_MANAGER' ||
       normRole === 'ROLE_WAREHOUSE_MANAGER'
     ) {
-      if (module === 'quality') {
-        return false;
-      }
       return true;
     }
 

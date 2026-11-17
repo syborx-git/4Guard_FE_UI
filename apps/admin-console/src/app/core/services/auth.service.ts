@@ -75,9 +75,12 @@ export class AuthService {
         const identifier = (credentials.identifier || '').trim().toLowerCase();
         const localPart = identifier.split('@')[0] || identifier;
         let role = 'ROLE_ADMIN';
-        let fullName = 'Alejandro Morales (Director General)';
+        let fullName = 'Enrique Architect (Director General)';
 
-        if (localPart.includes('pablo') || localPart.includes('enrique') || localPart.includes('operacion') || localPart.includes('gerente')) {
+        if (localPart.includes('enrique') || localPart.includes('norma') || localPart.includes('alejandro') || localPart.includes('admin')) {
+          role = 'ROLE_ADMIN';
+          fullName = localPart.includes('norma') ? 'Norma (Dirección General)' : 'Enrique Architect (Director General)';
+        } else if (localPart.includes('pablo') || localPart.includes('operacion') || localPart.includes('gerente')) {
           role = 'ROLE_OPERATIONS_MANAGER';
           fullName = 'Pablo Gerente (Gerente de Operaciones)';
         } else if (localPart.includes('coord') || localPart.includes('coordinador')) {

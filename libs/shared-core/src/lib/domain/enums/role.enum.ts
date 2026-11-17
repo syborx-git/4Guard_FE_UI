@@ -76,7 +76,7 @@ export const MODULE_PERMISSIONS: Record<string, UserRole[]> = {
   'security':             [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_SUPERVISOR, UserRole.SECURITY_GUARD, UserRole.SECURITY_ASSISTANT],
   'warehouse-movements':  [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.OPERATIONS_SUPERVISOR, UserRole.CONTROL_DESK, UserRole.SHIFT_LEADER, UserRole.WAREHOUSE_OPERATOR],
   'receiving':            [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.OPERATIONS_SUPERVISOR, UserRole.CONTROL_DESK, UserRole.SHIFT_LEADER, UserRole.WAREHOUSE_OPERATOR],
-  'quality':              [UserRole.ADMIN, UserRole.QM_INSPECTOR, UserRole.QUALITY_ASSISTANT], // Estricto SoD: Gerente de Operaciones NO accede a Calidad
+  'quality':              [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.QM_INSPECTOR, UserRole.QUALITY_ASSISTANT], // Acceso total para Dirección y Gerencia de Operaciones
   'performance':          [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR],
   'catalogs':             [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.OPERATIONS_SUPERVISOR, UserRole.CONTROL_DESK, UserRole.SHIFT_LEADER],
   'layout':               [UserRole.ADMIN, UserRole.OPERATIONS_MANAGER, UserRole.OPERATIONS_COORDINATOR, UserRole.CONTROL_DESK],
