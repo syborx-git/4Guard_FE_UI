@@ -69,7 +69,7 @@
 
     <!-- Modal Dropdown Flotante con las Notificaciones Operativas -->
     @if (isOpen()) {
-      <div class="op-notif__dropdown shadow-2xl animate-fade-up" (mouseenter)="pauseAutoClose()">
+      <div class="op-notif__dropdown shadow-2xl animate-fade-up" (mouseenter)="pauseAutoClose()" (mouseleave)="resumeAutoClose()">
         
         <!-- Header del Dropdown -->
         <div class="op-notif__header">

@@ -101,6 +101,10 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     return url.includes('/warehouse-movements/transfers') || url.includes('/transfers');
   });
 
+  public readonly isCurrentlyOnAdminPage = computed(() => {
+    return this.currentUrl().startsWith('/admin');
+  });
+
   public readonly isSecurityUser = computed(() => {
     const role = (this.authState.role() || '').toUpperCase();
     return (
@@ -128,8 +132,8 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     ) || this.isCurrentlyOnQualityPage();
   });
 
-  public readonly isSecurityContext = computed(() => this.isCurrentlyOnSecurityPage() || (this.isSecurityUser() && !this.isCurrentlyOnReceivingPage() && !this.isCurrentlyOnOutboundPage() && !this.isCurrentlyOnQualityPage()));
-  public readonly isQualityContext = computed(() => this.isCurrentlyOnQualityPage() || (this.isQualityUser() && !this.isCurrentlyOnReceivingPage() && !this.isCurrentlyOnOutboundPage() && !this.isCurrentlyOnSecurityPage()));
+  public readonly isSecurityContext = computed(() => this.isCurrentlyOnSecurityPage() || (this.isSecurityUser() && !this.isCurrentlyOnReceivingPage() && !this.isCurrentlyOnOutboundPage() && !this.isCurrentlyOnQualityPage() && !this.isCurrentlyOnAdminPage()));
+  public readonly isQualityContext = computed(() => this.isCurrentlyOnQualityPage() || (this.isQualityUser() && !this.isCurrentlyOnReceivingPage() && !this.isCurrentlyOnOutboundPage() && !this.isCurrentlyOnSecurityPage() && !this.isCurrentlyOnAdminPage()));
   public readonly isOutboundContext = computed(() => this.isCurrentlyOnOutboundPage());
   public readonly isReceivingContext = computed(() => this.isCurrentlyOnReceivingPage());
   public readonly isGeneralContext = computed(() =>
@@ -174,7 +178,7 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     return this.hasNewUnseenPreReception() || this.hasNewUnseenOutbound();
   });
 
-  private static readonly AUTO_CLOSE_MS = 900;
+  private static readonly AUTO_CLOSE_MS = 3000;
   private autoCloseTimeoutId: any = null;
 
   constructor() {
@@ -245,6 +249,18 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
       clearTimeout(this.autoCloseTimeoutId);
       this.autoCloseTimeoutId = null;
     }
+  }
+
+  /** Reanuda el auto-cierre cuando el cursor sale del popover. */
+  public resumeAutoClose(): void {
+    if (this.autoCloseTimeoutId) clearTimeout(this.autoCloseTimeoutId);
+    this.autoCloseTimeoutId = setTimeout(() => {
+      this.isOpen.set(false);
+      this.hasNewUnseenPreReception.set(false);
+      this.hasNewUnseenOutbound.set(false);
+      this.smartNotification.hasNewDriverSubmission.set(false);
+      this.smartNotification.hasNewRampAssignment.set(false);
+    }, 2000);
   }
 
   // ── Control de Apertura y Cierre ──
