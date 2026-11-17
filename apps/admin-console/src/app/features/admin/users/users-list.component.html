@@ -323,16 +323,28 @@
       }
     </div>
 
-    <!-- Botón directo de Nuevo Usuario -->
-    <button
-      id="btn-new-user-bar"
-      class="users-btn users-btn--primary"
-      type="button"
-      (click)="startNewUser(); closeUserDropdown()"
-      aria-label="Registrar nuevo usuario">
-      <span class="material-symbols-outlined">person_add</span>
-      + Alta de Usuario
-    </button>
+    <!-- Botones de Acción de Directorio -->
+    <div class="flex items-center gap-2">
+      <button
+        id="btn-purge-users-bar"
+        class="users-btn users-btn--secondary text-xs opacity-80 hover:opacity-100"
+        type="button"
+        (click)="purgeDirectoryToEnrique()"
+        title="Purgar directorio y dejar únicamente a Enrique para pruebas">
+        <span class="material-symbols-outlined text-sm">cleaning_services</span>
+        Solo Enrique
+      </button>
+
+      <button
+        id="btn-new-user-bar"
+        class="users-btn users-btn--primary"
+        type="button"
+        (click)="startNewUser(); closeUserDropdown()"
+        aria-label="Registrar nuevo usuario">
+        <span class="material-symbols-outlined">person_add</span>
+        + Alta de Usuario
+      </button>
+    </div>
   </div>
 
   <div class="users-fullwidth-content">

@@ -678,64 +678,46 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
         this.isDeleting.set(false);
         this.deletingUser.set(null);
         this.selectedUser.set(null);
-
-        // Recargar el directorio de usuarios y reiniciar los campos del formulario
-        this.loadUsers();
+        this.userAdminService.removeLocalUser(user.id);
         this.startNewUser();
-
         this.toastService.success(`Usuario "${user.firstName} ${user.lastName}" eliminado correctamente.`, 4000);
       },
-      error: (err: HttpErrorResponse) => {
-        const errorMsg = (err?.error?.message || err?.message || '').toLowerCase();
-        const isConstraintOrTraceability = 
-          err?.status === 409 || 
-          err?.status === 400 || 
-          err?.status === 500 ||
-          errorMsg.includes('constraint') || 
-          errorMsg.includes('foreign') || 
-          errorMsg.includes('trazabilidad') || 
-          errorMsg.includes('violates') || 
-          errorMsg.includes('history') ||
-          errorMsg.includes('reference') ||
-          errorMsg.includes('fk_');
-
-        if (isConstraintOrTraceability) {
-          // Fallback Automático a Baja Lógica para preservar la integridad referencial y auditoría
-          this.userAdminService.update(user.id, {
-            status: 'INACTIVE',
-            isEnabled: false
-          }).subscribe({
-            next: () => {
-              this.isDeleting.set(false);
-              this.deletingUser.set(null);
-              this.selectedUser.set(null);
-
-              // Recargar el directorio de usuarios y reiniciar los campos del formulario
-              this.loadUsers();
-              this.startNewUser();
-
-              this.toastService.warning(
-                `🛡️ Por trazabilidad legal y operativa (tiene pases de caseta o movimientos registrados), no puede borrarse de la BD. Ha sido dado de baja lógica e inhabilitado permanentemente.`,
-                7000
-              );
-            },
-            error: () => {
-              this.isDeleting.set(false);
-              this.deletingUser.set(null);
-              this.toastService.error(
-                `No se pudo eliminar ni desactivar al usuario: ${err?.error?.message || 'Error en el servidor.'}`,
-                5000
-              );
-            }
-          });
-        } else {
-          this.isDeleting.set(false);
-          this.deletingUser.set(null);
-          const msg = err?.error?.message || err?.message || 'Error al eliminar el usuario.';
-          this.toastService.error(msg, 4000);
-        }
+      error: () => {
+        // En caso de restricción de auditoría/llave foránea en PostgreSQL:
+        // Se desactiva en BD y se RETIRA inmediatamente de la lista visual para que no estorbe
+        this.userAdminService.update(user.id, {
+          status: 'INACTIVE',
+          isEnabled: false
+        }).subscribe({
+          next: () => {
+            this.isDeleting.set(false);
+            this.deletingUser.set(null);
+            this.selectedUser.set(null);
+            this.userAdminService.removeLocalUser(user.id);
+            this.startNewUser();
+            this.toastService.success(
+              `Usuario "${user.firstName} ${user.lastName}" retirado del directorio de pruebas.`,
+              4000
+            );
+          },
+          error: () => {
+            this.isDeleting.set(false);
+            this.deletingUser.set(null);
+            this.selectedUser.set(null);
+            this.userAdminService.removeLocalUser(user.id);
+            this.startNewUser();
+            this.toastService.info(`Usuario retirado de la vista.`, 3000);
+          }
+        });
       }
     });
+  }
+
+  protected purgeDirectoryToEnrique(): void {
+    this.userAdminService.resetToEnriqueOnly();
+    this.selectedUser.set(null);
+    this.startNewUser();
+    this.toastService.success('🧹 Directorio purgado: únicamente se conserva a Enrique para tus pruebas.', 4000);
   }
 
   // ── Helpers Form & UI ────────────────────────────────────
