@@ -35,7 +35,7 @@
           <span>Movimientos Unificados</span>
         </div>
         <h1 class="cockpit-title">Panel de Movimientos Unificados</h1>
-        <p class="cockpit-subtitle">Gestión integral de descargas Inbound, reubicaciones Putaway y cargas de salida.</p>
+        <p class="cockpit-subtitle">Gestión de descargas en andén, acomodo en racks y cargas de salida.</p>
       </div>
     </div>
 
@@ -77,15 +77,15 @@
     </div>
   </header>
 
-  <!-- ── 2. BARRA DE COLA SECUENCIAL CONTINUA (FLUJO FIFO) ─ -->
+  <!-- ── 2. BARRA DE COLA SECUENCIAL CONTINUA ───────────── -->
   <div class="fifo-telemetry-bar" role="toolbar" aria-label="Cola de Trabajo Secuencial">
     <div class="fifo-telemetry-left">
       <div class="fifo-badge">
         <span class="material-symbols-outlined fifo-icon">alt_route</span>
-        <span class="fifo-title">Flujo Secuencial Continuo (FIFO)</span>
+        <span class="fifo-title">Por Orden de Llegada</span>
       </div>
       <span class="fifo-queue-summary">
-        Atendiendo remisiones y movimientos en orden de arribo • <strong>{{ counts().all }}</strong> asignadas
+        Atendiendo remisiones y maniobras en orden de arribo • <strong>{{ counts().all }}</strong> asignadas
       </span>
     </div>
 
@@ -117,7 +117,7 @@
       class="filter-pill"
       [class.active]="activeFilter() === 'ALL'"
       (click)="setFilter('ALL')"
-      title="Ver todas las misiones en secuencia FIFO">
+      title="Ver todas las misiones por orden de llegada">
       <span class="material-symbols-outlined text-base">format_list_bulleted</span>
       <span>Todas en Cola</span>
       <span class="pill-count">{{ counts().all }}</span>
@@ -128,9 +128,9 @@
       class="filter-pill"
       [class.active]="activeFilter() === 'INBOUND'"
       (click)="setFilter('INBOUND')"
-      title="Descargas de Tráiler en Rampa Inbound">
+      title="Descargas de Tráiler en Rampa">
       <span class="material-symbols-outlined text-base text-amber-400">move_to_inbox</span>
-      <span>Descargas Inbound</span>
+      <span>Descargas (Entrada)</span>
       <span class="pill-count text-amber-300 font-bold">{{ counts().inbound }}</span>
     </button>
 
@@ -139,9 +139,9 @@
       class="filter-pill"
       [class.active]="activeFilter() === 'INTERNAL'"
       (click)="setFilter('INTERNAL')"
-      title="Cambio de Almacén, Reubicaciones y Putaway de Tarimas">
+      title="Cambio de Almacén y Acomodo en Racks">
       <span class="material-symbols-outlined text-base text-cyan-400">compare_arrows</span>
-      <span>Reubicaciones / Putaway</span>
+      <span>Acomodo en Racks</span>
       <span class="pill-count text-cyan-300 font-bold">{{ counts().internal }}</span>
     </button>
 
@@ -152,7 +152,7 @@
       (click)="setFilter('OUTBOUND')"
       title="Cargas de Salida y Embarques">
       <span class="material-symbols-outlined text-base text-emerald-400">local_shipping</span>
-      <span>Cargas Salida</span>
+      <span>Cargas (Salida)</span>
       <span class="pill-count text-emerald-300 font-bold">{{ counts().outbound }}</span>
     </button>
 
@@ -178,7 +178,7 @@
         <div class="preemption-info">
           <div class="preemption-tags">
             <span class="badge-urgent-flash">🚨 PRIORIDAD URGENTE DETECTADA</span>
-            <span class="badge-sla-tag">SLA: {{ urgent.slaCountdownMinutes }} min restantes</span>
+            <span class="badge-sla-tag">Tiempo restante: {{ urgent.slaCountdownMinutes }} min</span>
           </div>
           <h2 class="preemption-heading">
             {{ urgent.folio }} • {{ urgent.originLocation }}
@@ -340,12 +340,12 @@
           @if (mission.priority === 'URGENT') {
             <div class="sla-urgent-badge">
               <span class="sla-pulse-dot"></span>
-              <span>SLA: {{ mission.slaCountdownMinutes }} MIN RESTANTES</span>
+              <span>TIEMPO RESTANTE: {{ mission.slaCountdownMinutes }} MIN</span>
             </div>
           } @else {
             <div class="sla-normal-badge">
               <span class="material-symbols-outlined text-xs">timer</span>
-              <span>SLA: {{ mission.slaCountdownMinutes }}m</span>
+              <span>Tiempo: {{ mission.slaCountdownMinutes }}m</span>
             </div>
           }
 
@@ -627,7 +627,7 @@
                     <span>🚨 URGENTE ({{ m.slaCountdownMinutes }}m)</span>
                   </span>
                 } @else {
-                  <span class="queue-sla-pill">SLA: {{ m.slaCountdownMinutes }}m</span>
+                  <span class="queue-sla-pill">Tiempo: {{ m.slaCountdownMinutes }}m</span>
                 }
               </div>
             </div>
@@ -860,7 +860,7 @@
                 <span class="spec-card-lbl">Horario & Ventana SLA</span>
               </div>
               <div class="spec-card-val">Llegada: {{ detail.arrivalTime }}</div>
-              <div class="spec-card-sub text-emerald-600 dark:text-emerald-400 font-bold">SLA: {{ detail.slaCountdownMinutes }} min restantes</div>
+              <div class="spec-card-sub text-emerald-600 dark:text-emerald-400 font-bold">Tiempo restante: {{ detail.slaCountdownMinutes }} min</div>
             </div>
           </div>
 

@@ -132,23 +132,50 @@ export class RfShellComponent implements OnInit, OnDestroy {
 
   protected readonly currentUrl = signal<string>(this.router.url);
 
-  // ─── Área / Módulo Asignado (Caseta 4GUARD / Módulo Activo) ───────────────
+  // ─── Área / Módulo Asignado (Módulo Activo en Header) ────────────────────
   protected readonly activeZoneName = computed(() => {
     const url = this.currentUrl();
-    if (url.includes('/security')) return 'Caseta 4GUARD';
-    if (url.includes('/quality')) return 'Control Calidad QM';
-    if (url.includes('/cockpit')) return 'Cockpit Montacargas';
-    if (url.includes('/counting')) return 'Conteo Físico';
-    return 'Caseta 4GUARD';
+    const role = this.authState.role();
+
+    if (url.includes('/security')) return 'Caseta de Vigilancia';
+    if (url.includes('/quality')) return 'Control de Calidad';
+    if (url.includes('/receiving')) return 'Descarga en Andén';
+    if (url.includes('/picking')) return 'Carga en Andén';
+    if (url.includes('/putaway')) return 'Acomodo en Racks';
+    if (url.includes('/cockpit')) return 'Mis Maniobras';
+    if (url.includes('/counting')) return 'Revisión de Inventario';
+    if (url.includes('/sync')) return 'Sincronización';
+
+    // Si está en /menu o inicio, mostrar área acorde al rol activo
+    if (role === UserRole.SECURITY_GUARD || role === UserRole.SECURITY_ASSISTANT) {
+      return 'Caseta de Vigilancia';
+    }
+    if (role === UserRole.QM_INSPECTOR || role === UserRole.QUALITY_ASSISTANT) {
+      return 'Estación de Calidad';
+    }
+    return 'Terminal Montacargas';
   });
 
   protected readonly leaseIcon = computed(() => {
     const url = this.currentUrl();
-    if (url.includes('/security')) return 'shield';
+    const role = this.authState.role();
+
+    if (url.includes('/security')) return 'local_police';
     if (url.includes('/quality')) return 'verified_user';
+    if (url.includes('/receiving')) return 'move_to_inbox';
+    if (url.includes('/picking')) return 'local_shipping';
+    if (url.includes('/putaway')) return 'inventory_2';
     if (url.includes('/cockpit')) return 'forklift';
     if (url.includes('/counting')) return 'checklist_rtl';
-    return 'shield';
+    if (url.includes('/sync')) return 'sync';
+
+    if (role === UserRole.SECURITY_GUARD || role === UserRole.SECURITY_ASSISTANT) {
+      return 'local_police';
+    }
+    if (role === UserRole.QM_INSPECTOR || role === UserRole.QUALITY_ASSISTANT) {
+      return 'verified_user';
+    }
+    return 'forklift';
   });
 
   protected readonly leaseBadgeTooltip = computed(() => {
@@ -161,11 +188,14 @@ export class RfShellComponent implements OnInit, OnDestroy {
 
   // ─── Catálogo Maestro de Accesos de Piso ─────────────────────────────────────
   private readonly allNavItems: NavItem[] = [
-    { path: '/menu', icon: 'grid_view', label: 'Menú' },
-    { path: '/cockpit', icon: 'forklift', label: 'Cockpit' },
-    { path: '/counting', icon: 'checklist_rtl', label: 'Conteo' },
+    { path: '/menu', icon: 'grid_view', label: 'Inicio' },
+    { path: '/receiving', icon: 'move_to_inbox', label: 'Descargar' },
+    { path: '/picking', icon: 'local_shipping', label: 'Cargar' },
+    { path: '/putaway', icon: 'inventory_2', label: 'Acomodar' },
+    { path: '/cockpit', icon: 'forklift', label: 'Maniobras' },
+    { path: '/counting', icon: 'checklist_rtl', label: 'Inventario' },
     { path: '/quality', icon: 'verified_user', label: 'Calidad' },
-    { path: '/security', icon: 'local_police', label: 'Seguridad' },
+    { path: '/security', icon: 'local_police', label: 'Caseta' },
     { path: '/sync', icon: 'sync', label: 'Sync' },
   ];
 
@@ -174,27 +204,43 @@ export class RfShellComponent implements OnInit, OnDestroy {
     const role = this.authState.role();
     if (!role) return this.allNavItems;
 
-    // Regla 1: Guardia de Seguridad -> Solo Menú, Caseta/Seguridad y Sync
-    if (role === UserRole.SECURITY_GUARD) {
-      return this.allNavItems.filter(item => item.path === '/menu' || item.path === '/security' || item.path === '/sync');
+    // Regla 1: Guardia y Ayudante de Seguridad -> Inicio y Caseta
+    if (role === UserRole.SECURITY_GUARD || role === UserRole.SECURITY_ASSISTANT) {
+      return [
+        { path: '/menu', icon: 'grid_view', label: 'Inicio' },
+        { path: '/security', icon: 'local_police', label: 'Caseta' },
+      ];
     }
 
-    // Regla 2: Calidad QM -> Solo Menú, Calidad, Conteo y Sync
-    if (role === UserRole.QM_INSPECTOR) {
-      return this.allNavItems.filter(item => item.path === '/menu' || item.path === '/quality' || item.path === '/counting' || item.path === '/sync');
+    // Regla 2: Calidad QM y Ayudante -> Inicio y Calidad
+    if (role === UserRole.QM_INSPECTOR || role === UserRole.QUALITY_ASSISTANT) {
+      return [
+        { path: '/menu', icon: 'grid_view', label: 'Inicio' },
+        { path: '/quality', icon: 'verified_user', label: 'Calidad' },
+      ];
     }
 
-    // Regla 3: Montacarguista (M) -> Menú, Cockpit, Conteo y Sync (sin Caseta ni Calidad)
+    // Regla 3: Montacarguista -> Acciones directas y claras de almacén
     if (role === UserRole.WAREHOUSE_OPERATOR) {
-      return this.allNavItems.filter(item => item.path === '/menu' || item.path === '/cockpit' || item.path === '/counting' || item.path === '/sync');
+      return [
+        { path: '/menu', icon: 'grid_view', label: 'Inicio' },
+        { path: '/receiving', icon: 'move_to_inbox', label: 'Descargar' },
+        { path: '/picking', icon: 'local_shipping', label: 'Cargar' },
+        { path: '/putaway', icon: 'inventory_2', label: 'Acomodar' },
+      ];
     }
 
-    // Regla 4: Líder de Turno (LT) -> Menú, Cockpit, Conteo y Sync
+    // Regla 4: Líder de Turno (LT)
     if (role === UserRole.SHIFT_LEADER) {
-      return this.allNavItems.filter(item => item.path === '/menu' || item.path === '/cockpit' || item.path === '/counting' || item.path === '/sync');
+      return [
+        { path: '/menu', icon: 'grid_view', label: 'Inicio' },
+        { path: '/receiving', icon: 'move_to_inbox', label: 'Descargar' },
+        { path: '/picking', icon: 'local_shipping', label: 'Cargar' },
+        { path: '/putaway', icon: 'inventory_2', label: 'Acomodar' },
+      ];
     }
 
-    // Mesa de Control (MC), Supervisor (SO), Coordinador (CO), Gerente (GO) y Director General (DG): Supervisión completa
+    // Mesa de Control, Supervisores y Admins: Navegación completa
     return this.allNavItems;
   });
 

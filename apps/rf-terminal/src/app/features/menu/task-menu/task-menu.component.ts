@@ -55,10 +55,10 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
     role: UserRole.WAREHOUSE_OPERATOR,
     roleLabel: 'Montacarguista',
     terminalBadge: 'Terminal Montacarguista #07',
-    terminalTitle: 'Menú de Operaciones',
-    terminalDesc: 'Selecciona un módulo de trabajo o continúa con tu asignación activa en andén.',
-    priorityTag: 'Nivel 4G: Máxima Prioridad',
-    leaseTag: 'Arrendamiento Activo',
+    terminalTitle: 'Operaciones de Montacargas',
+    terminalDesc: 'Elige la maniobra que vas a realizar o continúa con tu descarga activa en andén.',
+    priorityTag: 'Operación en Piso',
+    leaseTag: 'Andén Activo',
     activeTask: {
       folio: 'SIN TAREA ACTIVA',
       statusBadge: 'Al Día',
@@ -67,11 +67,11 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
       operatorName: 'Operador',
       elapsedMinutes: 0,
       icon: 'task_alt',
-      actionLabel: 'VER COCKPIT',
-      route: '/cockpit',
+      actionLabel: 'VER ANDÉN',
+      route: '/receiving',
       bannerTheme: 'inbound',
     },
-    allowedModuleIds: ['mod-receiving', 'mod-cockpit', 'mod-counting', 'mod-print'],
+    allowedModuleIds: ['mod-receiving', 'mod-picking', 'mod-putaway'],
   },
 
   [UserRole.SECURITY_GUARD]: {
@@ -329,21 +329,41 @@ export class TaskMenuComponent {
     {
       id: 'mod-receiving',
       icon: 'move_to_inbox',
-      title: 'Recepción y Descarga en Andén',
-      description: 'Lectura de tarimas con cámara/láser, parámetros activos de SKU y lotes, y conclusión de descarga física F01.',
-      badgeText: 'Andén en Vivo',
+      title: 'Descargar Camión (Entrada)',
+      description: 'Lectura de tarimas con escáner o cámara, validación rápida de lotes y conclusión de descarga del tráiler.',
+      badgeText: 'Andén de Recibo',
       badgeType: 'amber',
       actionLabel: 'Abrir Descarga',
       route: '/receiving',
     },
     {
+      id: 'mod-picking',
+      icon: 'local_shipping',
+      title: 'Cargar Camión (Salida)',
+      description: 'Escaneo y verificación de tarimas al subir a la caja del tráiler para embarques a clientes.',
+      badgeText: 'Embarques',
+      badgeType: 'sky',
+      actionLabel: 'Abrir Carga',
+      route: '/picking',
+    },
+    {
+      id: 'mod-putaway',
+      icon: 'inventory_2',
+      title: 'Acomodar en Racks',
+      description: 'Mover tarimas del andén temporal a las posiciones y pasillos asignados en el almacén.',
+      badgeText: 'Acomodo',
+      badgeType: 'purple',
+      actionLabel: 'Acomodar',
+      route: '/putaway',
+    },
+    {
       id: 'mod-cockpit',
       icon: 'forklift',
-      title: 'Cockpit Montacarguista (Unificado)',
-      description: 'Gestión integral de movimientos: Descargas Inbound, Reubicaciones Putaway y Cargas de Salida en cola FIFO dinámica.',
+      title: 'Mis Maniobras en Andén',
+      description: 'Gestión unificada de maniobras asignadas: descargas, acomodo y cargas en secuencia.',
       badgeText: '0 en Cola • Al día',
       badgeType: 'amber',
-      actionLabel: 'Abrir Cockpit',
+      actionLabel: 'Ver Maniobras',
       route: '/cockpit',
     },
     {
@@ -456,34 +476,37 @@ export class TaskMenuComponent {
         const totalExpected = active.totalExpectedPallets || 24;
         const statusLabel = active.status === 'PARTIAL_DISCHARGED'
           ? 'Descarga Parcial'
-          : (active.status === 'ACTIVE_PICK' || active.status === 'ACTIVE_DROP' ? 'En Progreso' : 'En Cola FIFO');
+          : (active.status === 'ACTIVE_PICK' || active.status === 'ACTIVE_DROP' ? 'En Progreso' : 'Por Orden de Arribo');
+
+        const targetRoute = active.type === 'OUTBOUND_DISPATCH' ? '/picking' : (active.type === 'INTERNAL_PUTAWAY' ? '/putaway' : '/receiving');
 
         return {
           folio: active.folio,
           statusBadge: statusLabel,
           title: `${active.typeLabel} • Tarima ${palletCount} de ${totalExpected} • ${active.originLocation}`,
-          subtitle: `Asignado a: ${this.authState.userFullName() || 'Montacarguista'} • ${active.slaCountdownMinutes} min SLA restante`,
+          subtitle: `Asignado a: ${this.authState.userFullName() || 'Montacarguista'} • Tiempo restante: ${active.slaCountdownMinutes} min`,
           operatorName: this.authState.userFullName() || 'Montacarguista',
           elapsedMinutes: 5,
           icon: 'forklift',
-          actionLabel: 'REANUDAR TAREA',
-          route: '/cockpit',
+          actionLabel: active.type === 'OUTBOUND_DISPATCH' ? 'CONTINUAR CARGA' : 'CONTINUAR DESCARGA',
+          route: targetRoute,
           bannerTheme: 'inbound',
         };
       }
 
       const nextInQueue = this.missionService.queuedMissions()[0];
       if (nextInQueue) {
+        const nextRoute = nextInQueue.type === 'OUTBOUND_DISPATCH' ? '/picking' : (nextInQueue.type === 'INTERNAL_PUTAWAY' ? '/putaway' : '/receiving');
         return {
           folio: nextInQueue.folio,
-          statusBadge: 'Asignada a tu Perfil',
+          statusBadge: 'Rampa Asignada',
           title: `${nextInQueue.typeLabel} • ${nextInQueue.totalExpectedPallets || 1} Tarima(s) • ${nextInQueue.originLocation}`,
           subtitle: `Asignado a: ${this.authState.userFullName() || 'Montacarguista'} • Rampa lista para maniobra`,
           operatorName: this.authState.userFullName() || 'Montacarguista',
           elapsedMinutes: 1,
           icon: 'forklift',
-          actionLabel: 'INICIAR MANIOBRA',
-          route: '/cockpit',
+          actionLabel: nextInQueue.type === 'OUTBOUND_DISPATCH' ? 'INICIAR CARGA' : 'INICIAR DESCARGA',
+          route: nextRoute,
           bannerTheme: 'inbound',
         };
       }
@@ -492,13 +515,13 @@ export class TaskMenuComponent {
       return {
         folio: 'SIN ASIGNACIONES',
         statusBadge: 'Al Día',
-        title: 'Cola Personal Despejada • Sin Maniobras Asignadas',
-        subtitle: 'Esperando que Mesa de Control o Caseta te asigne una rampa.',
+        title: 'Cola de Trabajo Despejada • Sin Maniobras Pendientes',
+        subtitle: 'Esperando que Caseta o Coordinación te asigne una rampa de descarga o carga.',
         operatorName: this.authState.userFullName() || 'Montacarguista',
         elapsedMinutes: 0,
         icon: 'task_alt',
-        actionLabel: 'ABRIR COCKPIT',
-        route: '/cockpit',
+        actionLabel: 'VER ANDÉN',
+        route: '/receiving',
         bannerTheme: 'inbound',
       };
     }
