@@ -99,6 +99,20 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly tempPassword = signal<string | null>(null);
   protected readonly tempPasswordUser = signal<UserAdminItem | null>(null);
 
+  // ── Notificación de Usuario Recién Creado con Contraseña Temporal ──
+  protected readonly justCreatedUserData = signal<{ fullName: string; username: string; email: string; tempPass: string } | null>(null);
+
+  protected copyToClipboard(text: string): void {
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(text);
+      this.toastService.info('📋 Contraseña temporal copiada al portapapeles: ' + text, 3000);
+    }
+  }
+
+  protected dismissCreatedNotice(): void {
+    this.justCreatedUserData.set(null);
+  }
+
   // ── Estado: Establecer Contraseña Definitiva ───────────────
   protected readonly showSetPasswordModal = signal(false);
 
@@ -195,9 +209,11 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
       { id: 'OPERATIONS_COORDINATOR', name: 'OPERATIONS_COORDINATOR', label: 'Coordinador de Operaciones' },
       { id: 'OPERATIONS_SUPERVISOR', name: 'OPERATIONS_SUPERVISOR', label: 'Supervisor de Operaciones' },
       { id: 'CONTROL_DESK', name: 'CONTROL_DESK', label: 'Mesa de Control' },
-      { id: 'QM_INSPECTOR', name: 'QM_INSPECTOR', label: 'Inspector de Calidad' },
       { id: 'SHIFT_LEADER', name: 'SHIFT_LEADER', label: 'Líder de Turno' },
+      { id: 'QM_INSPECTOR', name: 'QM_INSPECTOR', label: 'Inspector de Calidad' },
+      { id: 'QUALITY_ASSISTANT', name: 'QUALITY_ASSISTANT', label: 'Ayudante de Calidad' },
       { id: 'SECURITY_GUARD', name: 'SECURITY_GUARD', label: 'Guardia de Seguridad' },
+      { id: 'SECURITY_ASSISTANT', name: 'SECURITY_ASSISTANT', label: 'Ayudante de Seguridad' },
     ];
   });
 
@@ -489,13 +505,19 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
           this.isSaving.set(false);
           this.saveSuccess.set(true);
           const fullName = `${raw.firstName.trim()} ${raw.lastName.trim()}`;
-          this.toastService.success(`⚡ Usuario "${fullName}" creado y registrado con éxito en el sistema.`, 4000);
+          this.justCreatedUserData.set({
+            fullName,
+            username: raw.username.trim(),
+            email: raw.email.trim().toLowerCase(),
+            tempPass: 'admin123'
+          });
+          this.toastService.success(`⚡ Usuario "${fullName}" creado y registrado con éxito. Contraseña temporal: admin123`, 6000);
           
           this.loadUsers();
-          // Limpiar el formulario para evitar que los datos se queden estáticos y permitir nueva captura
+          // Limpiar inmediatamente el formulario a un estado fresco y limpio
           this.startNewUser();
           this.saveSuccess.set(true);
-          setTimeout(() => this.saveSuccess.set(false), 4000);
+          setTimeout(() => this.saveSuccess.set(false), 5000);
         },
         error: (err: HttpErrorResponse) => {
           this.isSaving.set(false);
@@ -743,9 +765,11 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
       'OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
       'CONTROL_DESK': 'Mesa de Control',
       'QM_INSPECTOR': 'Inspector de Calidad',
+      'QUALITY_ASSISTANT': 'Ayudante de Calidad',
       'SHIFT_LEADER': 'Líder de Turno',
       'WAREHOUSE_OPERATOR': 'Operario de Almacén',
       'SECURITY_GUARD': 'Guardia de Seguridad',
+      'SECURITY_ASSISTANT': 'Ayudante de Seguridad',
       'WAREHOUSE_MANAGER': 'Gerente de Almacén',
       'DOCK_SUPERVISOR': 'Supervisor de Andén',
       'MANEUVER_OPERATOR': 'Operador de Maniobras',
@@ -773,9 +797,11 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
       'SHIFT_LEADER': 'Líder de Turno',
       'CONTROL_DESK': 'Mesa de Control',
       'QM_INSPECTOR': 'Inspector Calidad',
+      'QUALITY_ASSISTANT': 'Ayudante Calidad',
       'WAREHOUSE_OPERATOR': 'Operario Almacén',
       'MANEUVER_OPERATOR': 'Operador Maniobras',
       'SECURITY_GUARD': 'Guardia de Seguridad',
+      'SECURITY_ASSISTANT': 'Ayudante Seguridad',
       'AUDITOR': 'Auditor WMS',
       'CLIENT': 'Cliente 3PL',
     };

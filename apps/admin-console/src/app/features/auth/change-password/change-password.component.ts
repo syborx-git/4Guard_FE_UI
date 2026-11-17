@@ -101,6 +101,16 @@ export class ChangePasswordComponent {
   /** Indica si la contraseña cumple al 100% con todos los requisitos de seguridad (3 de 3) */
   protected readonly isPasswordFullyValid = computed(() => this.passwordStrength() === 3);
 
+  protected readonly missingRequirementText = computed(() => {
+    const val = this.newPwdValue() || '';
+    if (!val) return null;
+    const missing: string[] = [];
+    if (!this.hasMinLength()) missing.push('al menos 8 caracteres');
+    if (!this.hasUpperCase()) missing.push('una letra mayúscula (A-Z)');
+    if (!this.hasNumberOrSpecial()) missing.push('un número o símbolo (0-9 o !@#$%^&*)');
+    return missing.length > 0 ? `Falta: ${missing.join(', ')}.` : null;
+  });
+
   protected readonly strengthLabel = computed(() => {
     const s = this.passwordStrength();
     if (s === 0) return '';
@@ -124,7 +134,30 @@ export class ChangePasswordComponent {
    * Envía la nueva contraseña al backend y navega al dashboard en caso de éxito.
    */
   protected onSubmit(): void {
-    if (this.form.invalid || !this.isPasswordFullyValid() || this.isLoading()) return;
+    if (this.isLoading()) return;
+
+    if (!this.newPasswordCtrl.value) {
+      this.form.markAllAsTouched();
+      this.serverError.set('Por favor ingresa tu nueva contraseña.');
+      return;
+    }
+
+    if (!this.isPasswordFullyValid()) {
+      this.form.markAllAsTouched();
+      const detail = this.missingRequirementText() || 'La contraseña no cumple con los requisitos de seguridad.';
+      this.serverError.set(`${detail} Ejemplo válido: Admin12345`);
+      return;
+    }
+
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      if (this.form.hasError('passwordsMismatch')) {
+        this.serverError.set('Las contraseñas no coinciden. Por favor verifícalas.');
+      } else {
+        this.serverError.set('Por favor completa los campos correctamente.');
+      }
+      return;
+    }
 
     this.serverError.set(null);
     this.isLoading.set(true);

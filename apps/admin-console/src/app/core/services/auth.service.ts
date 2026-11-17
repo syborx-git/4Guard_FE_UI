@@ -75,11 +75,35 @@ export class AuthService {
         const identifier = (credentials.identifier || '').trim().toLowerCase();
         const localPart = identifier.split('@')[0] || identifier;
         let role = 'ROLE_ADMIN';
-        let fullName = 'Enrique Archite (Gerente de Operaciones)';
+        let fullName = 'Alejandro Morales (Director General)';
 
-        if (localPart.includes('guard') || localPart.includes('caseta') || localPart.includes('seguridad')) {
+        if (localPart.includes('pablo') || localPart.includes('enrique') || localPart.includes('operacion') || localPart.includes('gerente')) {
+          role = 'ROLE_OPERATIONS_MANAGER';
+          fullName = 'Pablo Gerente (Gerente de Operaciones)';
+        } else if (localPart.includes('coord') || localPart.includes('coordinador')) {
+          role = 'ROLE_OPERATIONS_COORDINATOR';
+          fullName = 'Coordinador de Operaciones';
+        } else if (localPart.includes('supervisor')) {
+          role = 'ROLE_OPERATIONS_SUPERVISOR';
+          fullName = 'Supervisor de Operaciones';
+        } else if (localPart.includes('mesa') || localPart.includes('control')) {
+          role = 'ROLE_CONTROL_DESK';
+          fullName = 'Mesa de Control';
+        } else if (localPart.includes('lider') || localPart.includes('turno')) {
+          role = 'ROLE_SHIFT_LEADER';
+          fullName = 'Líder de Turno';
+        } else if (localPart.includes('calidad_ayud') || localPart.includes('ayudante_calidad')) {
+          role = 'ROLE_QUALITY_ASSISTANT';
+          fullName = 'Ayudante de Calidad';
+        } else if (localPart.includes('calidad') || localPart.includes('qm') || localPart.includes('inspector') || localPart.includes('auditor')) {
+          role = 'ROLE_QM_INSPECTOR';
+          fullName = 'Inspector de Calidad';
+        } else if (localPart.includes('seguridad_ayud') || localPart.includes('ayudante_seguridad')) {
+          role = 'ROLE_SECURITY_ASSISTANT';
+          fullName = 'Ayudante de Seguridad';
+        } else if (localPart.includes('guard') || localPart.includes('caseta') || localPart.includes('seguridad') || localPart.includes('vigilan') || localPart.includes('jp')) {
           role = 'ROLE_SECURITY_GUARD';
-          fullName = 'Oficial Vigilancia Caseta';
+          fullName = 'Juan Pablo Vigilancia (Caseta)';
         } else if (localPart.includes('mc-') || localPart.includes('montacarga') || localPart.includes('oper')) {
           role = 'ROLE_WAREHOUSE_OPERATOR';
           fullName = 'Alex Gabriel Perez Garduño (Montacargas)';

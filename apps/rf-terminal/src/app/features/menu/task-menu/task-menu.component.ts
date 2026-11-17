@@ -257,6 +257,52 @@ export const ROLE_PROFILES: Record<UserRole, RoleProfileConfig> = {
     },
     allowedModuleIds: ['mod-receiving', 'mod-cockpit', 'mod-counting', 'mod-print'],
   },
+
+  [UserRole.QUALITY_ASSISTANT]: {
+    role: UserRole.QUALITY_ASSISTANT,
+    roleLabel: 'Ayudante de Calidad',
+    terminalBadge: 'Estación Auxiliar de Calidad QM',
+    terminalTitle: 'Toma de Evidencias & Checklists',
+    terminalDesc: 'Inspección preliminar de tarimas, checklist de temperatura y levantamiento de fotos de daño.',
+    priorityTag: 'Auxiliar QM Activo',
+    leaseTag: 'Andén de Muestreo',
+    activeTask: {
+      folio: 'AY-QM-2026',
+      statusBadge: 'Toma de Datos',
+      title: 'Checklist Físico • Muestreo Preliminar',
+      subtitle: 'Captura de fotos y reporte de no conformidad',
+      operatorName: 'Auxiliar de Calidad',
+      elapsedMinutes: 3,
+      icon: 'fact_check',
+      actionLabel: 'VER CALIDAD',
+      route: '/quality',
+      bannerTheme: 'quality',
+    },
+    allowedModuleIds: ['mod-quality', 'mod-counting'],
+  },
+
+  [UserRole.SECURITY_ASSISTANT]: {
+    role: UserRole.SECURITY_ASSISTANT,
+    roleLabel: 'Ayudante de Seguridad',
+    terminalBadge: 'Caseta Exterior de Seguridad',
+    terminalTitle: 'Control de Carril de Ingreso',
+    terminalDesc: 'Escaneo de QR de choferes, captura de placas exteriores y apoyo en checklist físico de unidad.',
+    priorityTag: 'Auxiliar de Caseta',
+    leaseTag: 'Carril Exterior',
+    activeTask: {
+      folio: 'AY-SEC-2026',
+      statusBadge: 'En Carril',
+      title: 'Validación de Acceso • Lectura QR Chofer',
+      subtitle: 'Toma de datos y verificación física exterior',
+      operatorName: 'Auxiliar de Seguridad',
+      elapsedMinutes: 1,
+      icon: 'badge',
+      actionLabel: 'VER CASETA',
+      route: '/security?tab=REGISTRATION',
+      bannerTheme: 'security',
+    },
+    allowedModuleIds: ['mod-sec-entry', 'mod-sec-qr'],
+  },
 };
 
 @Component({

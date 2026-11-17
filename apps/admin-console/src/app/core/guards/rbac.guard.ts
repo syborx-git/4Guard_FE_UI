@@ -20,7 +20,9 @@ export const rbacGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
 
   const fallbackUrl = authState.canAccessModule('security') && !authState.canAccessModule('dashboard')
     ? '/security'
-    : '/dashboard';
+    : authState.canAccessModule('quality') && !authState.canAccessModule('dashboard')
+      ? '/quality'
+      : '/dashboard';
 
   // Si hay roles explícitos en la ruta, verificarlos primero
   if (requiredRoles && requiredRoles.length > 0) {

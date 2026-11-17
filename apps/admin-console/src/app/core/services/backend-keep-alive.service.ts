@@ -9,7 +9,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
 
-const PUBLIC_PATHS = ['/carrier-checkin', '/driver-checkin', '/public/checkin', '/security/check-in', '/login', '/forgot-password'];
+const PUBLIC_PATHS = ['/carrier-checkin', '/driver-checkin', '/public/checkin', '/security/check-in', '/login', '/forgot-password', '/change-password'];
 
 @Injectable({
   providedIn: 'root'
@@ -29,7 +29,7 @@ export class BackendKeepAliveService {
 
   private get pingUrl(): string {
     const apiBase = environment.apiBaseUrl ?? '';
-    return `${apiBase}/api/v1/warehouse-receptions?organizationId=a53f0907-9fa5-4bdf-87db-2eb5e7683935&limit=1`;
+    return `${apiBase}/actuator/health`;
   }
 
   private isPublicRoute(): boolean {

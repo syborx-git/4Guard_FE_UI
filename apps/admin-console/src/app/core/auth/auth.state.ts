@@ -225,13 +225,18 @@ export class AuthState {
       if (!currentUrl.startsWith('/security')) {
         this.router.navigate(['/security']);
       }
+    } else if (this.canAccessModule('quality') && !this.canAccessModule('dashboard')) {
+      const currentUrl = this.router.url;
+      if (!currentUrl.startsWith('/quality')) {
+        this.router.navigate(['/quality']);
+      }
     }
 
     return true;
   }
 
   /**
-   * Verifica si el usuario actual tiene acceso a un módulo específico (Compatibilidad).
+   * Verifica si el usuario actual tiene acceso a un módulo específico (Compatibilidad y SoD).
    */
   canAccessModule(module: string): boolean {
     const rawRole = this.role();
@@ -239,7 +244,7 @@ export class AuthState {
 
     const normRole = String(rawRole).trim().toUpperCase();
 
-    // 0. Director General / Administradores: Acceso total e irrestricto a todos los modulos
+    // 0. Director General / Administradores: Acceso total e irrestricto a todos los módulos
     if (
       normRole === 'SUPER_ADMIN' ||
       normRole === 'ROLE_SUPER_ADMIN' ||
@@ -251,7 +256,7 @@ export class AuthState {
       return true;
     }
 
-    // 1. Gerente de Operaciones y Almacén: Acceso total operativo EXCEPTO Calidad (SoD estricto según V51)
+    // 1. Gerente de Operaciones y Almacén: Acceso total operativo y administrativo, EXCEPTO Calidad (SoD estricto Nestlé)
     if (
       normRole === 'OPERATIONS_MANAGER' ||
       normRole === 'ROLE_OPERATIONS_MANAGER' ||
@@ -264,72 +269,68 @@ export class AuthState {
       return true;
     }
 
-    // 2. Coordinadores y Supervisores de Operaciones: Acceso total operativo EXCEPTO Calidad (SoD)
+    // 2. Coordinador de Operaciones: Enlace táctico entre gerencia y supervisión
+    // Módulos: Dashboard, Recepción (movimientos), Rendimiento, Almacén/Topología, Consulta Inventario
     if (
       normRole === 'OPERATIONS_COORDINATOR' ||
-      normRole === 'ROLE_OPERATIONS_COORDINATOR' ||
+      normRole === 'ROLE_OPERATIONS_COORDINATOR'
+    ) {
+      return (
+        module === 'dashboard' ||
+        module === 'warehouse-movements' ||
+        module === 'receiving' ||
+        module === 'shipping' ||
+        module === 'transfers' ||
+        module === 'performance' ||
+        module === 'catalogs' ||
+        module === 'layout' ||
+        module === 'inventory' ||
+        module === 'inventory-query'
+      );
+    }
+
+    // 3. Supervisor de Operaciones: Supervisión en piso, andenes, patio e inventarios
+    if (
       normRole === 'OPERATIONS_SUPERVISOR' ||
       normRole === 'ROLE_OPERATIONS_SUPERVISOR' ||
       normRole === 'WAREHOUSE_SUPERVISOR' ||
       normRole === 'ROLE_WAREHOUSE_SUPERVISOR'
     ) {
-      if (module === 'quality') {
-        return false;
-      }
-      return true;
+      return (
+        module === 'dashboard' ||
+        module === 'warehouse-movements' ||
+        module === 'receiving' ||
+        module === 'shipping' ||
+        module === 'transfers' ||
+        module === 'catalogs' ||
+        module === 'layout' ||
+        module === 'inventory' ||
+        module === 'inventory-query' ||
+        module === 'security'
+      );
     }
 
-    // 3. Guardia de Seguridad: acceso EXCLUSIVO a Caseta (security) y Dashboard
-    if (
-      normRole === 'SECURITY_GUARD' ||
-      normRole === 'ROLE_SECURITY_GUARD' ||
-      normRole === 'GUARD' ||
-      normRole === 'ROLE_GUARD' ||
-      normRole.includes('VIGILAN') ||
-      normRole.includes('GUARD') ||
-      normRole.includes('CASETA')
-    ) {
-      return module === 'security' || module === 'dashboard';
-    }
-
-    // 4. Control de Calidad: acceso EXCLUSIVO a Calidad (quality) y Dashboard
-    if (
-      normRole === 'QM_INSPECTOR' ||
-      normRole === 'ROLE_QM_INSPECTOR' ||
-      normRole === 'QUALITY_AUDITOR' ||
-      normRole === 'ROLE_QUALITY_AUDITOR' ||
-      normRole.includes('QUALITY') ||
-      normRole.includes('INSPECTOR')
-    ) {
-      return module === 'quality' || module === 'dashboard';
-    }
-
-    // 5. Mesa de Control: Mismos accesos de módulos que Gerente de Operaciones, quitándole Rendimiento ('performance') y Administrar ('admin')
+    // 4. Mesa de Control: Planeación y validación F01, balanceo y stock
     if (
       normRole === 'CONTROL_DESK' ||
       normRole === 'ROLE_CONTROL_DESK' ||
       normRole.includes('CONTROL_DESK') ||
       normRole.includes('MESA')
     ) {
-      if (
-        module === 'security' ||
-        module === 'quality' ||
-        module === 'performance' ||
-        module === 'admin' ||
-        module === 'sessions' ||
-        module === 'user-activity' ||
-        module === 'carriers' ||
-        module === 'suppliers' ||
-        module === 'shifts' ||
-        module === 'business-rules' ||
-        module === 'alerts-config'
-      ) {
-        return false;
-      }
-      return true;
+      return (
+        module === 'dashboard' ||
+        module === 'warehouse-movements' ||
+        module === 'receiving' ||
+        module === 'shipping' ||
+        module === 'transfers' ||
+        module === 'catalogs' ||
+        module === 'layout' ||
+        module === 'inventory' ||
+        module === 'inventory-query'
+      );
     }
 
-    // 6. Líder de Turno: Dashboard + Recepción + Almacén/Topología + Inventarios
+    // 5. Líder de Turno: Cuadrillas de montacargas, supervisión de descarga y stock
     if (
       normRole === 'SHIFT_LEADER' ||
       normRole === 'ROLE_SHIFT_LEADER' ||
@@ -340,15 +341,45 @@ export class AuthState {
         module === 'warehouse-movements' ||
         module === 'receiving' ||
         module === 'shipping' ||
+        module === 'transfers' ||
         module === 'catalogs' ||
         module === 'layout' ||
-        module === 'sections' ||
         module === 'inventory' ||
         module === 'inventory-query'
       );
     }
 
-    // 7. Montacarguista / Operador de Almacén: Recepción, Movimientos, Inventario y Dashboard
+    // 6. Guardia de Seguridad y Ayudante de Seguridad: Acceso exclusivo a Caseta (security)
+    if (
+      normRole === 'SECURITY_GUARD' ||
+      normRole === 'ROLE_SECURITY_GUARD' ||
+      normRole === 'SECURITY_ASSISTANT' ||
+      normRole === 'ROLE_SECURITY_ASSISTANT' ||
+      normRole === 'GUARD' ||
+      normRole === 'ROLE_GUARD' ||
+      normRole.includes('VIGILAN') ||
+      normRole.includes('GUARD') ||
+      normRole.includes('CASETA')
+    ) {
+      return module === 'security';
+    }
+
+    // 7. Inspector de Calidad y Ayudante de Calidad: Acceso exclusivo a Calidad (quality)
+    if (
+      normRole === 'QM_INSPECTOR' ||
+      normRole === 'ROLE_QM_INSPECTOR' ||
+      normRole === 'QUALITY_ASSISTANT' ||
+      normRole === 'ROLE_QUALITY_ASSISTANT' ||
+      normRole === 'QUALITY_AUDITOR' ||
+      normRole === 'ROLE_QUALITY_AUDITOR' ||
+      normRole.includes('QUALITY') ||
+      normRole.includes('CALIDAD') ||
+      normRole.includes('INSPECT')
+    ) {
+      return module === 'quality';
+    }
+
+    // 8. Montacarguista / Operador de Almacén: (Operan en RF Terminal)
     if (
       normRole === 'WAREHOUSE_OPERATOR' ||
       normRole === 'ROLE_WAREHOUSE_OPERATOR' ||
@@ -360,7 +391,6 @@ export class AuthState {
         module === 'dashboard' ||
         module === 'warehouse-movements' ||
         module === 'receiving' ||
-        module === 'shipping' ||
         module === 'inventory' ||
         module === 'inventory-query'
       );

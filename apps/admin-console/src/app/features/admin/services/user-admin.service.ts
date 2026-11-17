@@ -81,26 +81,50 @@ export class UserAdminService {
   }
 
   create(user: Omit<UserAdminItem, 'id' | 'lastLoginAt'> & { password?: string }): Observable<ApiResponse<UserProfileDto>> {
-    // 1. Resolver roleId buscando en roles cargados de la BD o en usuarios existentes
+    // 1. Resolver roleId buscando en roles cargados de la BD o en roles canónicos con coincidencia semántica
     const rawRole = (user.role || '').toString();
     const roleClean = rawRole.replace('ROLE_', '').toUpperCase();
-    const foundDbRole = this.roleService.roles().find(r => 
+
+    let foundDbRole = this.roleService.roles().find(r => 
       r.name?.toUpperCase() === roleClean || 
       r.name?.toUpperCase() === rawRole.toUpperCase() ||
       r.name?.toUpperCase() === `ROLE_${roleClean}`
     );
-    let roleId = foundDbRole ? foundDbRole.id : '';
 
+    if (!foundDbRole) {
+      if (roleClean.includes('QUALITY_ASSIST') || roleClean.includes('AYUDANTE_CALIDAD')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('QUALITY_ASSISTANT') || r.id === '88888888-8888-8888-8888-88888888888a');
+      } else if (roleClean.includes('QM') || roleClean.includes('QUALIT') || roleClean.includes('CALIDAD') || roleClean.includes('INSPECT')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('QM_INSPECTOR') || r.name?.includes('QUALITY') || r.id === '88888888-8888-8888-8888-888888888888');
+      } else if (roleClean.includes('SECURITY_ASSIST') || roleClean.includes('AYUDANTE_SEGURIDAD')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('SECURITY_ASSISTANT') || r.id === '99999999-9999-9999-9999-99999999999a');
+      } else if (roleClean.includes('SECURITY') || roleClean.includes('VIGILAN') || roleClean.includes('GUARD') || roleClean.includes('CASETA')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('SECURITY_GUARD') || r.id === '99999999-9999-9999-9999-999999999999');
+      } else if (roleClean.includes('OPERATIONS_MANAGER') || roleClean.includes('GERENTE')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('OPERATIONS_MANAGER') || r.id === '22222222-2222-2222-2222-222222222222');
+      } else if (roleClean.includes('COORDINAT') || roleClean.includes('COORDINADOR')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('OPERATIONS_COORDINATOR') || r.id === '33333333-3333-3333-3333-333333333333');
+      } else if (roleClean.includes('SUPERVIS')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('OPERATIONS_SUPERVISOR') || r.id === '44444444-4444-4444-4444-444444444444');
+      } else if (roleClean.includes('CONTROL_DESK') || roleClean.includes('MESA')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('CONTROL_DESK') || r.id === '55555555-5555-5555-5555-555555555555');
+      } else if (roleClean.includes('SHIFT') || roleClean.includes('LIDER')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('SHIFT_LEADER') || r.id === '66666666-6666-6666-6666-666666666666');
+      } else if (roleClean.includes('ADMIN') || roleClean.includes('DIRECTOR')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('ADMIN') || r.id === '11111111-1111-1111-1111-111111111111');
+      }
+    }
+
+    let roleId = foundDbRole ? foundDbRole.id : '';
     if (!roleId) {
-      const matchingRoleUser = Array.from(this.originalDtos.values()).find(dto => 
-        dto.roleName?.toUpperCase() === roleClean || 
-        dto.roleName?.toUpperCase() === rawRole.toUpperCase()
-      );
-      if (matchingRoleUser && matchingRoleUser.roleId) {
-        roleId = matchingRoleUser.roleId;
+      if (roleClean.includes('QUALIT') || roleClean.includes('QM') || roleClean.includes('CALIDAD')) {
+        roleId = '88888888-8888-8888-8888-888888888888';
+      } else if (roleClean.includes('SECURITY') || roleClean.includes('GUARD') || roleClean.includes('VIGILAN')) {
+        roleId = '99999999-9999-9999-9999-999999999999';
+      } else if (roleClean.includes('OPERATIONS_MANAGER') || roleClean.includes('GERENTE')) {
+        roleId = '22222222-2222-2222-2222-222222222222';
       } else {
-        const firstRole = this.roleService.roles()[0];
-        roleId = firstRole ? firstRole.id : '88888888-8888-8888-8888-888888888888';
+        roleId = '11111111-1111-1111-1111-111111111111';
       }
     }
 
@@ -312,7 +336,7 @@ export class UserAdminService {
   private getDefaultSeedUsers(): UserAdminItem[] {
     return [
       {
-        id: 'usr-ale-01',
+        id: 'a1111111-1111-4111-8111-111111111111',
         username: 'alejandro.director',
         email: 'alejandro@4guard.com',
         firstName: 'Alejandro',
@@ -331,7 +355,7 @@ export class UserAdminService {
         lastLoginAt: new Date()
       },
       {
-        id: 'usr-nor-02',
+        id: 'a2222222-2222-4222-8222-222222222222',
         username: 'norma.directora',
         email: 'norma@4guard.com',
         firstName: 'Norma',
@@ -350,7 +374,7 @@ export class UserAdminService {
         lastLoginAt: new Date()
       },
       {
-        id: 'usr-pab-03',
+        id: 'a3333333-3333-4333-8333-333333333333',
         username: 'pablo.ruiz',
         email: 'pablo.ruiz@4guard.com',
         firstName: 'Pablo',
@@ -369,11 +393,11 @@ export class UserAdminService {
         lastLoginAt: new Date()
       },
       {
-        id: 'usr-jp-04',
+        id: 'a4444444-4444-4444-8444-444444444444',
         username: 'jp.caseta',
         email: 'jp.seguridad@4guard.com',
         firstName: 'Juan Pablo',
-        lastName: 'Caseta (Vigilancia)',
+        lastName: 'Caseta (Guardia Titular)',
         orgId: 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
         orgName: '4GUARD LOGISTICS CORP',
         branchId: 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
@@ -388,7 +412,26 @@ export class UserAdminService {
         lastLoginAt: new Date()
       },
       {
-        id: 'usr-alex-05',
+        id: 'a4444444-4444-4444-8444-44444444444a',
+        username: 'ayudante.seguridad',
+        email: 'ayudante.seguridad@4guard.com',
+        firstName: 'Carlos',
+        lastName: 'Auxiliar (Ayudante Caseta)',
+        orgId: 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
+        orgName: '4GUARD LOGISTICS CORP',
+        branchId: 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
+        branchName: 'CEDIS Toluca',
+        role: UserRole.SECURITY_ASSISTANT,
+        status: 'ACTIVE',
+        isEnabled: true,
+        changePasswordRequired: false,
+        failedAttempts: 0,
+        lockedUntil: null,
+        permanentlyLocked: false,
+        lastLoginAt: new Date()
+      },
+      {
+        id: 'a5555555-5555-4555-8555-555555555555',
         username: 'alex.perez',
         email: 'alex.perez@4guard.com',
         firstName: 'Alex Gabriel',
@@ -407,7 +450,7 @@ export class UserAdminService {
         lastLoginAt: new Date()
       },
       {
-        id: 'usr-qm-06',
+        id: 'a6666666-6666-4666-8666-666666666666',
         username: 'maria.calidad',
         email: 'calidad@4guard.com',
         firstName: 'María Fernanda',
@@ -426,7 +469,26 @@ export class UserAdminService {
         lastLoginAt: new Date()
       },
       {
-        id: 'usr-ch-07',
+        id: 'a6666666-6666-4666-8666-66666666666a',
+        username: 'ayudante.calidad',
+        email: 'ayudante.calidad@4guard.com',
+        firstName: 'Roberto',
+        lastName: 'Muñoz (Ayudante Calidad)',
+        orgId: 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
+        orgName: '4GUARD LOGISTICS CORP',
+        branchId: 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',
+        branchName: 'CEDIS Toluca',
+        role: UserRole.QUALITY_ASSISTANT,
+        status: 'ACTIVE',
+        isEnabled: true,
+        changePasswordRequired: false,
+        failedAttempts: 0,
+        lockedUntil: null,
+        permanentlyLocked: false,
+        lastLoginAt: new Date()
+      },
+      {
+        id: 'a7777777-7777-4777-8777-777777777777',
         username: 'christian.duran',
         email: 'cduran@4guard.com',
         firstName: 'Christian',

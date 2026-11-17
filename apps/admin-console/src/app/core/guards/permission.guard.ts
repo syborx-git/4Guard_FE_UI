@@ -27,7 +27,9 @@ export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) =>
 
   const defaultHome = authState.canAccessModule('security') && !authState.canAccessModule('dashboard')
     ? '/security'
-    : '/dashboard';
+    : authState.canAccessModule('quality') && !authState.canAccessModule('dashboard')
+      ? '/quality'
+      : '/dashboard';
 
   // Si no tiene permisos, redirigir al Dashboard o Caseta
   return router.createUrlTree([defaultHome]);
