@@ -322,9 +322,6 @@ export class TaskMenuComponent {
   protected readonly toast          = inject(ToastService);
   private readonly router           = inject(Router);
 
-  // ─── Estado de Simulación Sonora ─────────────────────────────────────────────
-  protected readonly isSimulatingSound = signal(false);
-
   // ─── Modal de Reportar Incidencia ────────────────────────────────────────────
   protected readonly showIncidentModal = signal(false);
 
@@ -641,36 +638,5 @@ export class TaskMenuComponent {
   protected confirmIncidentRedirect(): void {
     this.showIncidentModal.set(false);
     this.navigate('/anomaly');
-  }
-
-  /** Simular Alerta Acústica y Notificación en Andén */
-  protected simulateArrivalNotification(): void {
-    this.isSimulatingSound.set(true);
-
-    // 1. Chime armónico en vivo (Tríada Mayor D5 -> F#5 -> A5 + D6 Shimmer)
-    this.audioService.playFriendlyArrivalChime(1.5);
-
-    // 2. Disparar asignación de rampa en el centro de notificaciones superior
-    const nowTime = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-    this.notifService.addRampAssignment({
-      id: 'sim-' + Date.now(),
-      folio: 'REM-NESTLE-08',
-      rampNumber: '08',
-      client: 'Nestlé México S.A. de C.V.',
-      driverName: 'Carlos Mendoza (Transporte Gola)',
-      tractorPlates: '44-BB-9K',
-      time: nowTime,
-    });
-
-    // 3. Banner / Toast visual elegante en pantalla
-    this.toast.success(
-      'Tráiler en Rampa 08: 24 Tarimas listas para descarga • Chofer: Carlos Mendoza.',
-      '🚚 ¡NUEVA ASIGNACIÓN DE ANDÉN!',
-      5000
-    );
-
-    setTimeout(() => {
-      this.isSimulatingSound.set(false);
-    }, 2500);
   }
 }
