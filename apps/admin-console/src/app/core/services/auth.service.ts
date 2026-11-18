@@ -43,7 +43,7 @@ export class AuthService {
     const expSec = nowSec + 30 * 24 * 3600; // 30 días de vigencia en local
     const payload = toBase64({
       sub: identifier,
-      userId: 'u-admin-01',
+      userId: 'f33f0907-9fa5-4bdf-87db-2eb5e7683937',
       email: identifier.includes('@') ? identifier : `${identifier}@4guard.mx`,
       fullName: fullName,
       role: role,
@@ -121,7 +121,7 @@ export class AuthService {
             refreshToken: validJwt,
             expiresAt: expiresAt,
             user: {
-              id: 'u-admin-01',
+              id: 'f33f0907-9fa5-4bdf-87db-2eb5e7683937',
               username: credentials.identifier,
               fullName: fullName,
               email: credentials.identifier.includes('@') ? credentials.identifier : `${credentials.identifier}@4guard.mx`,
@@ -188,37 +188,8 @@ export class AuthService {
   refreshToken(): Observable<any> {
     const refreshToken = localStorage.getItem('4g_refresh') || this.getRefreshToken();
     if (!refreshToken) {
-      if (environment.production) {
-        this.clearSessionAndRedirect('session_expired');
-      }
+      this.clearSessionAndRedirect('session_expired');
       return throwError(() => new Error('No refresh token available'));
-    }
-
-    // En desarrollo o pruebas locales, refrescar la sesión localmente sin cerrar sesión
-    if (!environment.production) {
-      const validJwt = this.createDevJwtToken('enrique@4guard.com', 'ROLE_ADMIN', 'Enrique Archite (Gerente de Operaciones)');
-      const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
-      const devSession: JwtSession = {
-        accessToken: validJwt,
-        refreshToken: validJwt,
-        expiresAt: expiresAt,
-        user: this.getCurrentUser() || {
-          id: 'u-admin-01',
-          fullName: 'Enrique Archite (Gerente de Operaciones)',
-          username: 'enrique@4guard.com',
-          email: 'enrique@4guard.com',
-          role: 'ROLE_ADMIN',
-          roleLevel: 1,
-          permissions: ['*'],
-          changePasswordRequired: false
-        }
-      };
-      this.handleAuthentication(devSession);
-      return of({
-        success: true,
-        message: 'Token refrescado localmente',
-        data: devSession
-      });
     }
 
     return this.http.post<any>(`${this.API_URL}/refresh`, { refreshToken }).pipe(
@@ -256,13 +227,13 @@ export class AuthService {
       accessToken: token,
       refreshToken: refresh,
       expiresAt: expiresAt,
-      user: authResponse.user || {
-        id: 'u-admin-01',
-        fullName: 'Enrique Archite (Gerente de Operaciones)',
+      user: authResponse.user || this.getCurrentUser() || {
+        id: 'f33f0907-9fa5-4bdf-87db-2eb5e7683937',
+        fullName: 'Enrique Architect (Gerente de Operaciones)',
         username: 'enrique@4guard.com',
         email: 'enrique@4guard.com',
-        role: 'ROLE_ADMIN',
-        roleLevel: 1,
+        role: 'ROLE_OPERATIONS_MANAGER',
+        roleLevel: 6,
         permissions: ['*'],
         changePasswordRequired: false
       }

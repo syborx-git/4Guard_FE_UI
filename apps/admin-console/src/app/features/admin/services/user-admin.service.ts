@@ -100,39 +100,47 @@ export class UserAdminService {
     );
 
     if (!foundDbRole) {
-      if (roleClean.includes('QUALITY_ASSIST') || roleClean.includes('AYUDANTE_CALIDAD')) {
-        foundDbRole = this.roleService.roles().find(r => r.name?.includes('QUALITY_ASSISTANT') || r.id === '88888888-8888-8888-8888-88888888888a');
-      } else if (roleClean.includes('QM') || roleClean.includes('QUALIT') || roleClean.includes('CALIDAD') || roleClean.includes('INSPECT')) {
-        foundDbRole = this.roleService.roles().find(r => r.name?.includes('QM_INSPECTOR') || r.name?.includes('QUALITY') || r.id === '88888888-8888-8888-8888-888888888888');
-      } else if (roleClean.includes('SECURITY_ASSIST') || roleClean.includes('AYUDANTE_SEGURIDAD')) {
-        foundDbRole = this.roleService.roles().find(r => r.name?.includes('SECURITY_ASSISTANT') || r.id === '99999999-9999-9999-9999-99999999999a');
-      } else if (roleClean.includes('SECURITY') || roleClean.includes('VIGILAN') || roleClean.includes('GUARD') || roleClean.includes('CASETA')) {
-        foundDbRole = this.roleService.roles().find(r => r.name?.includes('SECURITY_GUARD') || r.id === '99999999-9999-9999-9999-999999999999');
+      if (roleClean.includes('ADMIN') || roleClean.includes('DIRECTOR') || roleClean.includes('CEO')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('ADMIN') || r.name?.includes('CEO') || r.id === '66666666-6666-6666-6666-666666666666');
       } else if (roleClean.includes('OPERATIONS_MANAGER') || roleClean.includes('GERENTE')) {
-        foundDbRole = this.roleService.roles().find(r => r.name?.includes('OPERATIONS_MANAGER') || r.id === '22222222-2222-2222-2222-222222222222');
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('OPERATIONS_MANAGER') || r.id === '88888888-8888-8888-8888-888888888888');
       } else if (roleClean.includes('COORDINAT') || roleClean.includes('COORDINADOR')) {
-        foundDbRole = this.roleService.roles().find(r => r.name?.includes('OPERATIONS_COORDINATOR') || r.id === '33333333-3333-3333-3333-333333333333');
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('OPERATIONS_COORDINATOR') || r.id === 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
       } else if (roleClean.includes('SUPERVIS')) {
-        foundDbRole = this.roleService.roles().find(r => r.name?.includes('OPERATIONS_SUPERVISOR') || r.id === '44444444-4444-4444-4444-444444444444');
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('OPERATIONS_SUPERVISOR') || r.id === '55555555-5555-5555-5555-555555555555');
       } else if (roleClean.includes('CONTROL_DESK') || roleClean.includes('MESA')) {
-        foundDbRole = this.roleService.roles().find(r => r.name?.includes('CONTROL_DESK') || r.id === '55555555-5555-5555-5555-555555555555');
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('CONTROL_DESK') || r.id === '44444444-4444-4444-4444-444444444444');
       } else if (roleClean.includes('SHIFT') || roleClean.includes('LIDER')) {
-        foundDbRole = this.roleService.roles().find(r => r.name?.includes('SHIFT_LEADER') || r.id === '66666666-6666-6666-6666-666666666666');
-      } else if (roleClean.includes('ADMIN') || roleClean.includes('DIRECTOR')) {
-        foundDbRole = this.roleService.roles().find(r => r.name?.includes('ADMIN') || r.id === '11111111-1111-1111-1111-111111111111');
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('SHIFT_LEADER') || r.id === '33333333-3333-3333-3333-333333333333');
+      } else if (roleClean.includes('QM') || roleClean.includes('QUALIT') || roleClean.includes('CALIDAD') || roleClean.includes('INSPECT')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('QM_INSPECTOR') || r.name?.includes('QUALITY') || r.id === 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+      } else if (roleClean.includes('SECURITY') || roleClean.includes('VIGILAN') || roleClean.includes('GUARD') || roleClean.includes('CASETA')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('SECURITY_GUARD') || r.id === '77777777-7777-7777-7777-777777777777');
+      } else if (roleClean.includes('OPERAT') || roleClean.includes('ALMACEN')) {
+        foundDbRole = this.roleService.roles().find(r => r.name?.includes('WAREHOUSE_OPERATOR') || r.id === '22222222-2222-2222-2222-222222222222');
       }
     }
 
     let roleId = foundDbRole ? foundDbRole.id : '';
     if (!roleId) {
-      if (roleClean.includes('QUALIT') || roleClean.includes('QM') || roleClean.includes('CALIDAD')) {
-        roleId = '88888888-8888-8888-8888-888888888888';
-      } else if (roleClean.includes('SECURITY') || roleClean.includes('GUARD') || roleClean.includes('VIGILAN')) {
-        roleId = '99999999-9999-9999-9999-999999999999';
+      if (roleClean.includes('ADMIN') || roleClean.includes('DIRECTOR') || roleClean.includes('CEO')) {
+        roleId = '66666666-6666-6666-6666-666666666666';
       } else if (roleClean.includes('OPERATIONS_MANAGER') || roleClean.includes('GERENTE')) {
-        roleId = '22222222-2222-2222-2222-222222222222';
+        roleId = '88888888-8888-8888-8888-888888888888';
+      } else if (roleClean.includes('COORDINAT') || roleClean.includes('COORDINADOR')) {
+        roleId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+      } else if (roleClean.includes('SUPERVIS')) {
+        roleId = '55555555-5555-5555-5555-555555555555';
+      } else if (roleClean.includes('CONTROL_DESK') || roleClean.includes('MESA')) {
+        roleId = '44444444-4444-4444-4444-444444444444';
+      } else if (roleClean.includes('SHIFT') || roleClean.includes('LIDER')) {
+        roleId = '33333333-3333-3333-3333-333333333333';
+      } else if (roleClean.includes('QM') || roleClean.includes('QUALIT') || roleClean.includes('CALIDAD')) {
+        roleId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+      } else if (roleClean.includes('SECURITY') || roleClean.includes('GUARD') || roleClean.includes('VIGILAN') || roleClean.includes('CASETA')) {
+        roleId = '77777777-7777-7777-7777-777777777777';
       } else {
-        roleId = '11111111-1111-1111-1111-111111111111';
+        roleId = '88888888-8888-8888-8888-888888888888'; // Fallback a Gerente de Operaciones
       }
     }
 
@@ -155,6 +163,12 @@ export class UserAdminService {
     // 4. Resolver username si no viene especificado
     const username = user.username || user.email.split('@')[0];
 
+    // 5. Normalizar status a formato Enum WMS Backend (ACTIVE / INACTIVE / PENDING / SUSPENDED)
+    const rawStatus = (user.status || 'ACTIVE').toString().toUpperCase();
+    const finalStatus = rawStatus.includes('ACT') ? 'ACTIVE' : 
+                        (rawStatus.includes('SUSP') ? 'SUSPENDED' : 
+                        (rawStatus.includes('PEND') ? 'PENDING' : 'INACTIVE'));
+
     const payload: CreateUserRequest = {
       username,
       email: user.email,
@@ -164,7 +178,7 @@ export class UserAdminService {
       organizationId,
       branchId,
       roleId,
-      status: user.status || 'ACTIVE',
+      status: finalStatus,
       isEnabled: user.isEnabled !== undefined ? user.isEnabled : true
     };
 

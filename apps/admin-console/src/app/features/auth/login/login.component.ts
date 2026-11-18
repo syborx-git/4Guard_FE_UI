@@ -86,6 +86,9 @@ export class LoginComponent implements OnInit, OnDestroy {
         if (process) {
           this.savedProcessName.set(process);
         }
+      } else {
+        // Al acceder a /login directamente o cambiar de usuario, purgar cualquier sesión previa en memoria/storage
+        this.authState.clearSession();
       }
       this.viewState.set('login');
       this.attemptsRemaining.set(null);

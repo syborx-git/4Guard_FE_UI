@@ -46,17 +46,16 @@ export type {
 };
 
 const CANONICAL_SYSTEM_ROLES: Role[] = [
-  { id: '11111111-1111-1111-1111-111111111111', name: 'ROLE_ADMIN', level: 1, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
-  { id: '22222222-2222-2222-2222-222222222222', name: 'ROLE_OPERATIONS_MANAGER', level: 2, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
-  { id: '33333333-3333-3333-3333-333333333333', name: 'ROLE_OPERATIONS_COORDINATOR', level: 2, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
-  { id: '44444444-4444-4444-4444-444444444444', name: 'ROLE_OPERATIONS_SUPERVISOR', level: 3, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
-  { id: '55555555-5555-5555-5555-555555555555', name: 'ROLE_CONTROL_DESK', level: 3, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
-  { id: '66666666-6666-6666-6666-666666666666', name: 'ROLE_SHIFT_LEADER', level: 3, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
-  { id: '77777777-7777-7777-7777-777777777777', name: 'ROLE_WAREHOUSE_OPERATOR', level: 4, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
-  { id: '88888888-8888-8888-8888-888888888888', name: 'ROLE_QM_INSPECTOR', level: 3, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
-  { id: '88888888-8888-8888-8888-88888888888a', name: 'ROLE_QUALITY_ASSISTANT', level: 4, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
-  { id: '99999999-9999-9999-9999-999999999999', name: 'ROLE_SECURITY_GUARD', level: 3, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
-  { id: '99999999-9999-9999-9999-99999999999a', name: 'ROLE_SECURITY_ASSISTANT', level: 4, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
+  { id: '66666666-6666-6666-6666-666666666666', name: 'ROLE_ADMIN', level: 7, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
+  { id: '88888888-8888-8888-8888-888888888888', name: 'ROLE_OPERATIONS_MANAGER', level: 6, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
+  { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', name: 'ROLE_OPERATIONS_COORDINATOR', level: 5, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
+  { id: '55555555-5555-5555-5555-555555555555', name: 'ROLE_OPERATIONS_SUPERVISOR', level: 5, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
+  { id: '44444444-4444-4444-4444-444444444444', name: 'ROLE_CONTROL_DESK', level: 4, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
+  { id: '33333333-3333-3333-3333-333333333333', name: 'ROLE_SHIFT_LEADER', level: 3, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
+  { id: '22222222-2222-2222-2222-222222222222', name: 'ROLE_WAREHOUSE_OPERATOR', level: 2, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
+  { id: '11111111-1111-1111-1111-111111111111', name: 'ROLE_MANEUVER_OPERATOR', level: 1, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
+  { id: '77777777-7777-7777-7777-777777777777', name: 'ROLE_SECURITY_GUARD', level: 2, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
+  { id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', name: 'ROLE_QM_INSPECTOR', level: 4, isSystem: true, permissions: [], version: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', createdBy: 'Sistema', updatedBy: 'Sistema' },
 ];
 
 @Injectable({
