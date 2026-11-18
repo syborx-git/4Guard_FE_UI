@@ -828,6 +828,8 @@ export class ShellComponent implements OnInit, OnDestroy {
         const msg = err.error?.message;
         if (err.status === 0) {
           this.profileError.set('Sin conexión al servidor. Verifica la red.');
+        } else if (err.status === 401 || (typeof msg === 'string' && (msg.toLowerCase().includes('expirado') || msg.toLowerCase().includes('no autenticado')))) {
+          this.profileError.set('Tu sesión ha expirado. Por favor, vuelve a ingresar con tus credenciales.');
         } else {
           this.profileError.set(msg || 'Ocurrió un error al cargar el perfil.');
         }
