@@ -281,18 +281,22 @@ export class ForkliftMissionService {
       ''
     ).trim().toLowerCase();
 
-    // Regla estricta: si la misión no tiene ningún montacarguista asignado, no mostrarla
+    // Si la misión no tiene un montacarguista explícito, mostrarla a cualquier operador activo en andén
     if (!recOpId && !recOpCode && !recOpName) {
-      return false;
+      return true;
     }
 
     if (operatorId && (recOpId === operatorId || recOpCode === operatorId)) {
       return true;
     }
-    if (code && (recOpCode === code || recOpId === code || recOpName === code || recOpName.includes(code))) {
+    if (code && (recOpCode === code || recOpId === code || recOpName === code || recOpName.includes(code) || code.includes(recOpName))) {
       return true;
     }
     if (fullName && recOpName && (recOpName === fullName || recOpName.includes(fullName) || fullName.includes(recOpName))) {
+      return true;
+    }
+    // En entorno de pruebas/tablet, si el código del operador coincide parcialmente (ej. 'jp', 'pablo', 'alex')
+    if (code && recOpName && (recOpName.includes(code) || code.includes(recOpName))) {
       return true;
     }
     return false;

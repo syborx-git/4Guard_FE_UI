@@ -265,14 +265,15 @@ export class RfLoginComponent implements OnInit, OnDestroy {
 
   public quickLogin(role: 'operator' | 'admin' = 'operator'): void {
     const isOperator = role === 'operator';
-    const code = isOperator ? (this.operatorCode()?.trim() || 'MC-001') : 'ADMIN';
+    const code = isOperator ? (this.operatorCode()?.trim().toUpperCase() || 'OP-01') : 'ADMIN';
+    const cleanName = code === 'JP' ? 'Juan Pablo' : (code === 'ALEX' ? 'Alex Gabriel' : code);
     const user: User = {
-      id: isOperator ? 'u-operator-01' : 'u-admin-01',
-      fullName: isOperator ? 'Alex Gabriel Perez Garduño (Montacargas)' : 'Carlos Herrera (Director General)',
+      id: isOperator ? `u-op-${code.toLowerCase()}` : 'u-admin-01',
+      fullName: isOperator ? `${cleanName} (Montacargas)` : 'Carlos Herrera (Director General)',
       email: isOperator ? (code.toLowerCase() + '@4guard.mx') : 'admin@4guard.mx',
-      username: isOperator ? code : 'admin',
+      username: isOperator ? code.toLowerCase() : 'admin',
       employeeCode: isOperator ? code : 'ADM-001',
-      forkliftOperatorId: isOperator ? 'op-alex-01' : undefined,
+      forkliftOperatorId: isOperator ? `op-${code.toLowerCase()}` : undefined,
       role: isOperator ? UserRole.WAREHOUSE_OPERATOR : UserRole.ADMIN,
       organizationId: 'a53f0907-9fa5-4bdf-87db-2eb5e7683935',
       branchId: 'b73f0907-9fa5-4bdf-87db-2eb5e7683936',

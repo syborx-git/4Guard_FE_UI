@@ -4038,20 +4038,20 @@
     (locationSelected)="onBaySelected($event)" (closed)="closeBaySelectorModal()"></fg-bay-occupancy-selector>
   }
 
-  <!-- MODAL: CAMBIO SELECTIVO DE UAS (SSCC GS1-128) -->
+  <!-- MODAL: CAMBIO / REEMPLAZO DE UAS (ETIQUETA FÍSICA NESTLÉ SSCC GS1-128) -->
   @if (showRelabelModal()) {
   <div class="modal-overlay p-4 animate-fade-in" (click)="closeRelabelModal()">
-    <div class="modal-card max-w-xl w-full flex flex-col max-h-[85vh] overflow-hidden"
+    <div class="modal-card max-w-3xl w-full flex flex-col max-h-[90vh] overflow-hidden"
       (click)="$event.stopPropagation()">
 
       <div class="modal-header flex items-center justify-between px-6 py-4 border-b">
         <div class="flex items-center gap-3">
           <div class="relabel-modal-icon-wrap">
-            <span class="material-symbols-outlined text-xl">qr_code_2</span>
+            <span class="material-symbols-outlined text-xl text-amber-600 dark:text-amber-400">qr_code_scanner</span>
           </div>
           <div>
-            <h3 class="relabel-modal-title">Cambio Selectivo de UAs (SSCC GS1-128)</h3>
-            <p class="relabel-modal-subtitle">Preserva la UA original del proveedor en la bitácora inmutable</p>
+            <h3 class="relabel-modal-title">Reemplazo de UAs · Etiqueta Física Nestlé / Proveedor</h3>
+            <p class="relabel-modal-subtitle">Escanea con pistola de códigos o captura el SSCC de la etiqueta física recibida</p>
           </div>
         </div>
         <button (click)="closeRelabelModal()" class="relabel-modal-close-btn" title="Cerrar modal">
@@ -4060,37 +4060,109 @@
       </div>
 
       <div class="modal-body p-6 overflow-y-auto flex-1 space-y-4 text-xs">
-        <div class="flex items-center justify-between pb-2 border-b border-subtle">
-          <span class="relabel-section-title">Tarimas Recibidas ({{ palletStream().length }})</span>
+        <!-- Selector de Modo -->
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-800 dark:text-slate-200">
+              <input type="radio" name="relabelMode" [checked]="relabelMode() === 'NESTLE_SCAN'" (change)="relabelMode.set('NESTLE_SCAN')" class="text-amber-600" />
+              <span>🏷️ Escaneo de Etiqueta Física (Nestlé / GS1-128)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-600 dark:text-slate-400">
+              <input type="radio" name="relabelMode" [checked]="relabelMode() === 'AUTO_SSCC'" (change)="relabelMode.set('AUTO_SSCC')" class="text-amber-600" />
+              <span>⚡ Generar SSCC 4Guard Automático</span>
+            </label>
+          </div>
           <button type="button" (click)="toggleSelectAllPalletsForRelabel()" class="relabel-toggle-all-btn">
-            {{ selectedPalletIdsForRelabel().size === palletStream().length ? 'Deseleccionar Todas' : 'Seleccionar
-            Todas' }}
+            {{ selectedPalletIdsForRelabel().size === palletStream().length ? 'Deseleccionar Todas' : 'Seleccionar Todas' }}
           </button>
         </div>
 
-        <div class="relabel-pallet-list max-h-60 overflow-y-auto space-y-2">
-          @for (pallet of palletStream(); track pallet.id) {
-          <label class="relabel-pallet-item flex items-center justify-between p-3 rounded-xl cursor-pointer"
-            [class.is-selected]="selectedPalletIdsForRelabel().has(pallet.id)">
-            <div class="flex items-center gap-3">
-              <input type="checkbox" [checked]="selectedPalletIdsForRelabel().has(pallet.id)"
-                (change)="togglePalletRelabelSelection(pallet.id)" class="relabel-checkbox" />
-              <div>
-                <div class="relabel-pallet-code">Tarima #{{ pallet.palletNumber }}: {{ pallet.palletCode }}</div>
-                @if (pallet.isUaRelabelled) {
-                <span class="relabel-already-badge">Ya Re-etiquetada</span>
-                }
-              </div>
-            </div>
-            <span class="relabel-pallet-pieces">{{ pallet.pieces }} PZAS</span>
-          </label>
-          }
+        @if (relabelMode() === 'NESTLE_SCAN') {
+        <!-- Caja de Entrada Rápida para Pistola de Código de Barras -->
+        <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-900 dark:text-amber-200 text-xs flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm">barcode_scanner</span>
+              <span>Disparar Pistola de Código de Barras</span>
+            </span>
+            <span class="text-[10px] text-amber-800 dark:text-amber-300">Soporta (00) SSCC, (10) Lote y (15) Caducidad</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="text" [ngModel]="relabelScanInput()" (ngModelChange)="relabelScanInput.set($event)"
+              (keydown.enter)="applyScanToFirstUnedited(relabelScanInput())"
+              placeholder="Apunta la pistola y dispara aquí... Ej: (00)376130419099070669"
+              class="fg-input flex-1 font-mono uppercase font-bold text-xs py-2 px-3 border-amber-400 focus:border-amber-600" />
+            <button type="button" (click)="applyScanToFirstUnedited(relabelScanInput())"
+              class="btn-primary-gold px-4 py-2 text-xs font-bold flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">done</span>
+              <span>Vincular</span>
+            </button>
+          </div>
+        </div>
+        }
+
+        <!-- Lista Detallada de Tarimas -->
+        <div class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase font-black text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-700">
+              <tr>
+                <th class="p-2.5 w-8 text-center">Sel.</th>
+                <th class="p-2.5 w-12 text-center">#</th>
+                <th class="p-2.5">UA Original</th>
+                <th class="p-2.5">Nueva UA (Etiqueta Física Nestlé)</th>
+                <th class="p-2.5 w-24">Lote</th>
+                <th class="p-2.5 w-24">Caducidad</th>
+                <th class="p-2.5 w-16 text-right">Pzas</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              @for (pallet of palletStream(); track pallet.id) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                [class.is-selected]="selectedPalletIdsForRelabel().has(pallet.id)">
+                <td class="p-2.5 text-center">
+                  <input type="checkbox" [checked]="selectedPalletIdsForRelabel().has(pallet.id)"
+                    (change)="togglePalletRelabelSelection(pallet.id)" class="relabel-checkbox">
+                </td>
+                <td class="p-2.5 text-center font-bold text-slate-500">
+                  {{ pallet.palletNumber }}
+                </td>
+                <td class="p-2.5 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                  {{ pallet.originalPalletCode || pallet.palletCode }}
+                </td>
+                <td class="p-2.5">
+                  <input type="text"
+                    [value]="relabelPalletMap().get(pallet.id)?.newCode || pallet.palletCode"
+                    (input)="onRelabelCodeInput(pallet.id, $event)"
+                    placeholder="Escanear SSCC (00)..."
+                    class="fg-input font-mono uppercase text-xs w-full font-bold px-2 py-1">
+                </td>
+                <td class="p-2.5">
+                  <input type="text"
+                    [value]="relabelPalletMap().get(pallet.id)?.newLot || pallet.lotNumber || ''"
+                    (input)="onRelabelLotInput(pallet.id, $event)"
+                    placeholder="Lote"
+                    class="fg-input font-mono uppercase text-xs w-full px-2 py-1">
+                </td>
+                <td class="p-2.5">
+                  <input type="text"
+                    [value]="relabelPalletMap().get(pallet.id)?.newExp || pallet.expirationDate || ''"
+                    (input)="onRelabelExpInput(pallet.id, $event)"
+                    placeholder="YYYY-MM-DD"
+                    class="fg-input font-mono text-xs w-full px-2 py-1">
+                </td>
+                <td class="p-2.5 text-right font-bold text-slate-700 dark:text-slate-300">
+                  {{ pallet.pieces }}
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
         </div>
 
         <div class="space-y-1">
-          <label class="relabel-section-title">Motivo del Re-etiquetado</label>
+          <label class="relabel-section-title">Motivo del Re-etiquetado en Bitácora</label>
           <input type="text" [ngModel]="relabelReason()" (ngModelChange)="relabelReason.set($event)"
-            placeholder="Ej. Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128"
+            placeholder="Ej. Sustitución de etiqueta de proveedor por etiqueta física oficial Nestlé SSCC GS1-128"
             class="fg-input relabel-reason-input w-full mt-1" />
         </div>
       </div>
@@ -4103,10 +4175,10 @@
             class="btn-primary-gold text-xs px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 disabled:opacity-40">
             @if (isRelabelling()) {
             <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-            <span>Generando SSCC...</span>
+            <span>Guardando UAs...</span>
             } @else {
-            <span class="material-symbols-outlined text-sm">qr_code</span>
-            <span>Aplicar Re-etiquetado</span>
+            <span class="material-symbols-outlined text-sm">save</span>
+            <span>Aplicar y Guardar UAs Nestlé</span>
             }
           </button>
         </div>

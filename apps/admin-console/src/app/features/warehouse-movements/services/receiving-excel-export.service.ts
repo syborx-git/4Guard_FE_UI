@@ -274,7 +274,7 @@ export class ReceivingExcelExportService {
     const defaultLot = rec?.lotNumber || (rec?.checkIn as any)?.lotNumber || 'LOT-2026-01';
     const defaultDoc = rec?.folio || rec?.checkIn?.docNumber || 'REM-INBOUND';
     const defaultSupplier = rec?.checkIn?.client || rec?.supplierName || 'Proveedor General';
-    const defaultLocation = (rec?.checkIn as any)?.bayWmsAssigned || rec?.storageLocation || 'ALMACÉN A - POS-TEMPORAL';
+    const defaultLocation = (rec?.checkIn as any)?.bayWmsAssigned || rec?.storageLocation || 'BAHÍA-RECEPCIÓN';
 
     const pallets: ReceptionPalletItem[] = [];
     const rows = rawRows.slice(headerRowIdx + 1);

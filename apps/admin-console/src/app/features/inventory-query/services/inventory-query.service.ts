@@ -3,21 +3,25 @@
  * @description Servicio reactivo unificado basado en Angular Signals para la Consulta de Inventarios WMS.
  */
 
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject, effect } from '@angular/core';
 import {
   InventoryRecord,
   InventoryFilterCriteria,
   InventoryKpiSummary,
   InventoryAnalyticsPoint,
-  ExpirationBadgeStatus
+  ExpirationBadgeStatus,
+  PalletType
 } from '../models/inventory-query.models';
+import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class InventoryQueryService {
-  /** Registros crudos en stock (Muestra oficial completa de 4GUARD WMS) */
-  private readonly _rawInventory = signal<InventoryRecord[]>(this.buildMockInventory());
+  private readonly movementsService = inject(WarehouseMovementsService);
+
+  /** Registros reales en stock vinculados a las recepciones y tarimas del WMS */
+  private readonly _rawInventory = signal<InventoryRecord[]>([]);
 
   /** Criterios de filtrado activo */
   private readonly _activeFilters = signal<InventoryFilterCriteria>({
@@ -30,6 +34,13 @@ export class InventoryQueryService {
 
   constructor() {
     this.refreshInventory();
+
+    // Sincronización reactiva con las recepciones de almacén
+    effect(() => {
+      const _recs = this.movementsService.receptions();
+      this.refreshInventory();
+    }, { allowSignalWrites: true });
+
     if (typeof window !== 'undefined') {
       window.addEventListener('storage', (e) => {
         if (e.key === '4guard_receptions_cache' || e.key === '4guard_simulated_positions') {
@@ -40,7 +51,7 @@ export class InventoryQueryService {
   }
 
   public refreshInventory(): void {
-    this._rawInventory.set(this.buildMockInventory());
+    this._rawInventory.set(this.buildRealInventory());
   }
 
   /**
@@ -246,263 +257,75 @@ export class InventoryQueryService {
   }
 
   /**
-   * Generar Muestra Oficial de Datos de Inventario 4GUARD WMS
+   * Generar Inventario Real 4GUARD WMS derivado de las recepciones y tarimas reales en almacén.
+   * Si no hay existencias en el sistema, permanece limpio (0 registros) sin mocks.
    */
-  private buildMockInventory(): InventoryRecord[] {
+  private buildRealInventory(): InventoryRecord[] {
+    const receptions = this.movementsService.receptions() || [];
     const today = new Date();
-    
-    const records: InventoryRecord[] = [
-      {
-        id: 563633,
-        entryDate: '2026-02-10',
-        elaborationDate: '2025-11-01',
-        expirationDate: '2026-03-01', // Próximo 30 días (<16 días)
-        usefulLifeDays: 120,
-        remision: 'REM-89201',
-        manufacturerBatch: 'LOTE-NEST-2025A',
-        ssccBarcode: '750100982390192837',
-        sku: 'SKU-NEST-001',
-        productDescription: 'Fórmula Láctea Infantil Gold Pack 800g',
-        receptionFolio: 'REC-2026-0045',
-        measuredQuantity: 1440,
-        palletsCount: 1.0,
-        stayDays: 3,
-        warehouse: 'Bodega A',
-        location: 'A-02-14',
-        entryNumber: 'ENT-2026-901',
-        palletType: 'TARIMA CHEP NACIONAL',
-        labeledStatus: 'ETIQUETADO',
-        supplier: 'Nestlé México S.A. de C.V.',
-        remainingLifeDays: 16,
-        client: 'Comercializadora Alpura S.A.',
-        expirationStatus: 'PROXIMO_30_DIAS'
-      },
-      {
-        id: 563634,
-        entryDate: '2026-01-15',
-        elaborationDate: '2025-08-10',
-        expirationDate: '2026-02-05', // Caduco
-        usefulLifeDays: 180,
-        remision: 'REM-88120',
-        manufacturerBatch: 'LOTE-BIM-991',
-        ssccBarcode: '750100982390192838',
-        sku: 'SKU-BIM-004',
-        productDescription: 'Pan Dulce Nito Choco Pack 12PZ',
-        receptionFolio: 'REC-2026-0012',
-        measuredQuantity: 960,
-        palletsCount: 1.0,
-        stayDays: 29,
-        warehouse: 'Bodega B',
-        location: 'B-05-08',
-        entryNumber: 'ENT-2026-812',
-        palletType: 'MADERA ESTANDAR',
-        labeledStatus: 'ETIQUETADO',
-        supplier: 'Grupo Bimbo S.A.B. de C.V.',
-        remainingLifeDays: -8,
-        client: 'Walmart de México VIPS',
-        expirationStatus: 'CADUCO'
-      },
-      {
-        id: 563635,
-        entryDate: '2026-02-01',
-        elaborationDate: '2025-12-01',
-        expirationDate: '2026-12-01', // En tiempo
-        usefulLifeDays: 365,
-        remision: 'REM-90112',
-        manufacturerBatch: 'LOTE-LIV-401',
-        ssccBarcode: '750100982390192839',
-        sku: 'SKU-LIV-010',
-        productDescription: 'Aceite de Oliva Extra Virgen 1L',
-        receptionFolio: 'REC-2026-0089',
-        measuredQuantity: 720,
-        palletsCount: 1.0,
-        stayDays: 12,
-        warehouse: 'Bodega APC',
-        location: 'APC-01-02',
-        entryNumber: 'ENT-2026-950',
-        palletType: 'PLASTICO AZUL',
-        labeledStatus: 'ETIQUETADO',
-        supplier: 'Aceites y Grasas Liverpool S.A.',
-        remainingLifeDays: 291,
-        client: 'Soriana Supermercados',
-        expirationStatus: 'EN_TIEMPO'
-      },
-      {
-        id: 563636,
-        entryDate: '2026-02-08',
-        elaborationDate: '2025-10-15',
-        expirationDate: '2026-03-05', // Próximo 30 días (20 días)
-        usefulLifeDays: 140,
-        remision: 'REM-91040',
-        manufacturerBatch: 'LOTE-KOF-772',
-        ssccBarcode: '750100982390192840',
-        sku: 'SKU-KOF-002',
-        productDescription: 'Refresco Coca-Cola Sin Azúcar 600ml NR',
-        receptionFolio: 'REC-2026-0102',
-        measuredQuantity: 1800,
-        palletsCount: 1.0,
-        stayDays: 5,
-        warehouse: 'Bodega AT',
-        location: 'AT-04-19',
-        entryNumber: 'ENT-2026-988',
-        palletType: 'MADERA OWENS',
-        labeledStatus: 'PENDIENTE',
-        supplier: 'Coca-Cola FEMSA S.A.B. de C.V.',
-        remainingLifeDays: 20,
-        client: 'Chedraui Logística 3PL',
-        expirationStatus: 'PROXIMO_30_DIAS'
-      },
-      {
-        id: 563637,
-        entryDate: '2025-11-20',
-        elaborationDate: '2025-05-10',
-        expirationDate: '2025-12-30', // Caduco
-        usefulLifeDays: 200,
-        remision: 'REM-77210',
-        manufacturerBatch: 'LOTE-HER-119',
-        ssccBarcode: '750100982390192841',
-        sku: 'SKU-HER-005',
-        productDescription: 'Cereal Avena Con Miel y Nueces 500g',
-        receptionFolio: 'REC-2025-0912',
-        measuredQuantity: 1200,
-        palletsCount: 1.0,
-        stayDays: 85,
-        warehouse: 'Bodega BPC',
-        location: 'BPC-02-05',
-        entryNumber: 'ENT-2025-720',
-        palletType: 'TARIMA CHEP EXPORTACION',
-        labeledStatus: 'OBSOLETO',
-        supplier: 'Herdez Del Fuerte S.A.',
-        remainingLifeDays: -45,
-        client: 'La Comer Central 4G',
-        expirationStatus: 'CADUCO'
-      },
-      {
-        id: 563638,
-        entryDate: '2026-02-12',
-        elaborationDate: '2026-01-20',
-        expirationDate: '2027-01-20', // En tiempo
-        usefulLifeDays: 365,
-        remision: 'REM-92100',
-        manufacturerBatch: 'LOTE-ALN-330',
-        ssccBarcode: '750100982390192842',
-        sku: 'SKU-ALN-008',
-        productDescription: 'Atún en Agua Lomo Entero 140g Pack 4PZ',
-        receptionFolio: 'REC-2026-0130',
-        measuredQuantity: 2400,
-        palletsCount: 1.0,
-        stayDays: 1,
-        warehouse: 'Bodega BT',
-        location: 'BT-01-01',
-        entryNumber: 'ENT-2026-999',
-        palletType: 'PLASTICO NEGRO OWENS',
-        labeledStatus: 'ETIQUETADO',
-        supplier: 'Alimentos Marinos S.A.',
-        remainingLifeDays: 341,
-        client: 'Comercializadora Alpura S.A.',
-        expirationStatus: 'EN_TIEMPO'
-      },
-      {
-        id: 563639,
-        entryDate: '2026-02-05',
-        elaborationDate: '2025-09-01',
-        expirationDate: '2026-03-02', // Próximo 30 días (17 días)
-        usefulLifeDays: 180,
-        remision: 'REM-89912',
-        manufacturerBatch: 'LOTE-LAL-882',
-        ssccBarcode: '750100982390192843',
-        sku: 'SKU-LAL-003',
-        productDescription: 'Leche Entera UHT 1L Caja 12PZ',
-        receptionFolio: 'REC-2026-0062',
-        measuredQuantity: 1080,
-        palletsCount: 1.0,
-        stayDays: 8,
-        warehouse: 'Bodega A',
-        location: 'A-03-22',
-        entryNumber: 'ENT-2026-922',
-        palletType: 'TARIMA PLASTICO NEGRO ESTANDAR',
-        labeledStatus: 'ETIQUETADO',
-        supplier: 'Grupo Lala S.A.B. de C.V.',
-        remainingLifeDays: 17,
-        client: 'Walmart de México VIPS',
-        expirationStatus: 'PROXIMO_30_DIAS'
-      },
-      {
-        id: 563640,
-        entryDate: '2026-02-14',
-        elaborationDate: '2026-01-10',
-        expirationDate: '2026-11-20',
-        usefulLifeDays: 300,
-        remision: 'REM-93400',
-        manufacturerBatch: 'LOTE-NES-1044',
-        ssccBarcode: '750100982390192844',
-        sku: 'SKU-12448910',
-        productDescription: 'NESCAFE CLASICO FRASCO 12X200G N1',
-        receptionFolio: 'REC-2026-0155',
-        measuredQuantity: 1680,
-        palletsCount: 1.0,
-        stayDays: 2,
-        warehouse: 'Bodega A',
-        location: 'A-01-05',
-        entryNumber: 'ENT-2026-1020',
-        palletType: 'TARIMA CHEP NACIONAL',
-        labeledStatus: 'ETIQUETADO',
-        supplier: 'Nestlé México S.A. de C.V.',
-        remainingLifeDays: 280,
-        client: 'Nestlé México',
-        expirationStatus: 'EN_TIEMPO'
-      },
-      {
-        id: 563641,
-        entryDate: '2026-02-11',
-        elaborationDate: '2025-10-01',
-        expirationDate: '2026-03-08',
-        usefulLifeDays: 150,
-        remision: 'REM-93401',
-        manufacturerBatch: 'LOTE-NES-8500',
-        ssccBarcode: '750100982390192845',
-        sku: 'SKU-8500297',
-        productDescription: 'NESCAFE CLASICO 5KG MX GRAGAS',
-        receptionFolio: 'REC-2026-0156',
-        measuredQuantity: 720,
-        palletsCount: 1.0,
-        stayDays: 4,
-        warehouse: 'Bodega APC',
-        location: 'APC-02-10',
-        entryNumber: 'ENT-2026-1021',
-        palletType: 'MADERA ESTANDAR',
-        labeledStatus: 'ETIQUETADO',
-        supplier: 'Nestlé México S.A. de C.V.',
-        remainingLifeDays: 23,
-        client: 'Nestlé México',
-        expirationStatus: 'PROXIMO_30_DIAS'
-      },
-      {
-        id: 563642,
-        entryDate: '2026-01-20',
-        elaborationDate: '2025-07-15',
-        expirationDate: '2026-01-10',
-        usefulLifeDays: 180,
-        remision: 'REM-86500',
-        manufacturerBatch: 'LOTE-CARN-994',
-        ssccBarcode: '750100982390192846',
-        sku: 'SKU-12984711',
-        productDescription: 'CARNATION CLAVEL EVAPORADA 24X360G',
-        receptionFolio: 'REC-2026-0008',
-        measuredQuantity: 1920,
-        palletsCount: 1.0,
-        stayDays: 24,
-        warehouse: 'Bodega B',
-        location: 'B-04-12',
-        entryNumber: 'ENT-2026-805',
-        palletType: 'PLASTICO AZUL',
-        labeledStatus: 'OBSOLETO',
-        supplier: 'Nestlé México S.A. de C.V.',
-        remainingLifeDays: -34,
-        client: 'Nestlé México',
-        expirationStatus: 'CADUCO'
+    const records: InventoryRecord[] = [];
+    let counter = 500000;
+
+    for (const rec of receptions) {
+      // Omitir canceladas y las que solo están registradas en caseta sin descarga física
+      if (rec.status === 'CANCELLED' || rec.status === 'REGISTERED') continue;
+
+      const pallets = rec.pallets || [];
+      const entryDate = rec.checkIn?.docDate || (rec as any).createdAt?.slice(0, 10) || today.toISOString().slice(0, 10);
+      const stayDays = Math.max(0, Math.floor((today.getTime() - new Date(entryDate).getTime()) / (1000 * 60 * 60 * 24)));
+
+      for (let i = 0; i < pallets.length; i++) {
+        counter++;
+        const p = pallets[i];
+        const expDate = p.expirationDate || rec.expirationDate || '';
+        let remainingDays = 180;
+        let expStatus: 'EN_TIEMPO' | 'PROXIMO_30_DIAS' | 'CADUCO' = 'EN_TIEMPO';
+
+        if (expDate) {
+          const expTime = new Date(expDate).getTime();
+          remainingDays = Math.ceil((expTime - today.getTime()) / (1000 * 60 * 60 * 24));
+          if (remainingDays <= 0) {
+            expStatus = 'CADUCO';
+          } else if (remainingDays <= 30) {
+            expStatus = 'PROXIMO_30_DIAS';
+          } else {
+            expStatus = 'EN_TIEMPO';
+          }
+        }
+
+        const loc = p.locationCode || rec.storageLocation || rec.storageLocationCode || 'STAGING-01';
+        let warehouse = 'Bodega A';
+        if (loc.startsWith('B') || loc.includes('BODEGA B')) warehouse = 'Bodega B';
+        else if (loc.includes('APC')) warehouse = 'Bodega APC';
+        else if (loc.includes('AT')) warehouse = 'Bodega AT';
+
+        records.push({
+          id: counter,
+          entryDate,
+          elaborationDate: (p as any).elaborationDate || rec.elaborationDate || entryDate,
+          expirationDate: expDate,
+          usefulLifeDays: 365,
+          remision: rec.checkIn?.docNumber || rec.folio,
+          manufacturerBatch: p.lotNumber || rec.lotNumber || 'S/L',
+          ssccBarcode: p.palletCode,
+          sku: p.productId || rec.productId || rec.skuCode || 'SKU-GEN',
+          productDescription: p.description || rec.productName || 'Mercancía en Almacén',
+          receptionFolio: rec.folio,
+          measuredQuantity: p.pieces || rec.piecesPerPallet || 0,
+          palletsCount: 1.0,
+          stayDays,
+          warehouse,
+          location: loc,
+          entryNumber: `ENT-${rec.folio}`,
+          palletType: ((p.palletTypeLabel || rec.selectedPalletType || 'MADERA ESTANDAR').toUpperCase()) as PalletType,
+          labeledStatus: p.isUaRelabelled ? 'ETIQUETADO' : 'PENDIENTE',
+          supplier: p.supplierName || rec.supplierName || rec.checkIn?.client || 'Nestlé México',
+          remainingLifeDays: remainingDays,
+          client: rec.checkIn?.client || 'Nestlé México',
+          expirationStatus: expStatus
+        });
       }
-    ];
+    }
 
     return records;
   }

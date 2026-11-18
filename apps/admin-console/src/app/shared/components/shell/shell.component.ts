@@ -586,8 +586,8 @@ export class ShellComponent implements OnInit, OnDestroy {
 
 
 
-  /** Conteo de alertas criticas (demo: 2) */
-  protected readonly criticalCount = signal(2);
+  /** Conteo de alertas críticas en vivo (0 por defecto, limpio sin datos mock) */
+  protected readonly criticalCount = signal(0);
   protected readonly showCriticalAlertsModal = signal(false);
 
   protected toggleCriticalAlertsModal(event?: MouseEvent): void {

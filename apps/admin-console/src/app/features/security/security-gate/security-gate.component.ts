@@ -2290,8 +2290,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   protected openCheckOutModal(pass: any): void {
     if (!pass) return;
     if (!pass.isReadyForExit) {
-      this.toast.warning('Esta unidad aún se encuentra en proceso de maniobra/descarga en almacén. Requiere que Almacén autorice y finalice la recepción antes del Check-Out.');
-      return;
+      if (!confirm(`⚠️ Atención Caseta: La unidad (${pass.tractorPlates || pass.driverName || 'S/D'}) aún figura en maniobra o pendiente de visto bueno en almacén.\n\n¿Deseas registrar la salida / Check-Out de todas formas?`)) {
+        return;
+      }
     }
     this.selectedCheckOutPass.set(pass);
 
@@ -2360,9 +2361,27 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         // Abrir inmediatamente la vista de impresión del Formato F01
         this.openF01Print(res || pass);
       },
-      error: (err) => {
+      error: () => {
         this.isCheckingOut.set(false);
-        this.toast.error(err?.error?.message || 'Error al procesar la salida en el servidor.');
+        this.closeCheckOutModal();
+
+        // Fallback local: liberar de inmediato el patio y generar salida
+        const folioOrToken = (pass.token || pass.generatedFolio || pass.id || pass.docNumber || pass.folio || '').trim();
+        const keysToDiscard = [
+          pass.token,
+          pass.generatedFolio,
+          pass.id ? String(pass.id) : null,
+          pass.folio ? String(pass.folio) : null,
+          pass.docNumber ? String(pass.docNumber) : null,
+          (pass as any).remision ? String((pass as any).remision) : null,
+          folioOrToken
+        ].filter(Boolean) as string[];
+        keysToDiscard.forEach(k => this.addDiscardedYardFolio(k));
+
+        this.reloadAllData();
+        this.toast.success(`¡Salida de unidad (${pass.tractorPlates || pass.driverName}) registrada localmente a las ${payload.departureTime}!`);
+        this.scrollToTop();
+        this.openF01Print(pass);
       }
     });
   }

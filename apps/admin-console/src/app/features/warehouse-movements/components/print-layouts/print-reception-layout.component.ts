@@ -101,7 +101,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
 
           <div class="flex justify-between items-start gap-1 border-b border-slate-200 pb-0.5">
             <span class="font-bold text-slate-700 shrink-0">MONTACARGUISTA:</span>
-            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight uppercase">{{ reception.checkIn.forkliftOperator || 'Alan Huerta Perez' }}</span>
+            <span class="font-bold text-black text-right break-words flex-1 min-w-0 leading-tight uppercase">{{ reception.checkIn.forkliftOperator || 'POR ASIGNAR' }}</span>
           </div>
 
           <!-- Badge Resaltado: Rampa de Andén -->
@@ -229,7 +229,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         </div>
         <div class="text-center">
           <div class="border-b border-black w-full mb-1"></div>
-          <p class="font-bold text-slate-900 truncate">{{ (reception.checkIn.forkliftOperator || 'Alan Huerta Perez').toUpperCase() }}</p>
+          <p class="font-bold text-slate-900 truncate">{{ (reception.checkIn.forkliftOperator || 'POR ASIGNAR').toUpperCase() }}</p>
           <p class="text-[7.5px] text-slate-500 uppercase tracking-wide">Montacarguista: Descarga en Andén</p>
         </div>
         <div class="text-right">

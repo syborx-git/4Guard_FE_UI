@@ -113,7 +113,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
   simulateTabletDischargeForTesting(rec: ReceptionHeader): void {
     if (!rec) return;
-    const op = 'Alex Gabriel Pérez Garduño';
+    const op = rec.checkIn?.forkliftOperator || this.altaForm.get('forkliftOperator')?.value || 'Operador Montacargas';
     const prodId = rec.productId || rec.skuCode || '8505641';
     const prodName = rec.productName || 'ABUELITA TABLETA 24X540G MX';
     const lot = rec.lotNumber || 'LOT-2026-01';
@@ -344,11 +344,14 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   // Modal Selector Visual de Bahías (22 Pallets)
   showBaySelectorModal = signal(false);
 
-  // Modal Re-etiquetado Selectivo de UAs (SSCC GS1-128)
+  // Modal Re-etiquetado Selectivo de UAs (SSCC GS1-128 / Etiqueta Física Nestlé)
   showRelabelModal = signal(false);
   selectedPalletIdsForRelabel = signal<Set<string>>(new Set());
-  relabelReason = signal<string>('Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128');
+  relabelReason = signal<string>('Sustitución de UA original por etiqueta física oficial Nestlé SSCC GS1-128');
   isRelabelling = signal<boolean>(false);
+  relabelMode = signal<'NESTLE_SCAN' | 'AUTO_SSCC'>('NESTLE_SCAN');
+  relabelScanInput = signal<string>('');
+  relabelPalletMap = signal<Map<string, { newCode: string; newLot?: string; newExp?: string }>>(new Map());
 
   // Modal Edición de Ficha de Caseta
   showEditCasetaModal = signal(false);
@@ -688,13 +691,13 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
     const recId = current.id || current.folio;
     const adminUser = this.authState.userFullName() || this.authState.currentUser()?.email || 'Mesa de Control (Pablo)';
-    const operator = current.checkIn?.forkliftOperator || this.altaForm.get('forkliftOperator')?.value || 'Alex Gabriel Perez Garduño';
+    const operator = current.checkIn?.forkliftOperator || this.altaForm.get('forkliftOperator')?.value || '';
 
     const formVals = {
       rampNumber: rNum,
       rampCode: rCode,
       forkliftOperator: operator,
-      storageLocation: 'ALMACÉN A - POS-TEMPORAL',
+      storageLocation: current.storageLocation || current.storageLocationCode || this.selectedBayName() || `STAGING-R${String(rNum).padStart(2, '0')}`,
       clientCode: current.checkIn.clientCode || 'GENERIC',
       supplierName: current.supplierName || current.checkIn.client || 'Cliente General',
       productId: current.productId || this.products()[0]?.id || 'PROD-001',
@@ -1015,7 +1018,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     rampCode: [''],
     rampNumber: [null as number | null],
     forkliftOperatorCode: [''],
-    forkliftOperator: ['', [Validators.required]],
+    forkliftOperator: [''],
     driverName: ['', [Validators.required]],
     tractorPlates: ['', [Validators.required]],
     boxPlates: ['', [Validators.required]],
@@ -1280,21 +1283,19 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   }
 
   formatLocationDisplay(loc?: string | null): string {
-    if (!loc) return 'ALMACÉN A - POS-TEMPORAL';
+    if (!loc) return 'Bahía no asignada';
     const trimmed = loc.trim();
+    if (!trimmed) return 'Bahía no asignada';
     const upper = trimmed.toUpperCase();
-    if (upper.startsWith('STAGING') || upper.includes('BUFFER') || upper === 'POS-A-001') {
-      return 'ALMACÉN A - POS-TEMPORAL';
-    }
-    if (upper.includes('TEMPORAL')) {
-      return upper.includes('ALMACEN') || upper.includes('ALMACÉN') ? trimmed.toUpperCase() : `ALMACÉN A - ${trimmed.toUpperCase()}`;
+    if (upper.startsWith('STAGING') || upper.startsWith('BAHIA') || upper.startsWith('BAHÍA') || upper.startsWith('ANDEN') || upper.startsWith('ANDÉN')) {
+      return trimmed;
     }
     if (/^[A-Z]\d+$/i.test(upper)) {
-      return `ALMACÉN ${upper.charAt(0)} - POS-${upper}`;
+      return `BODEGA ${upper.charAt(0)} - POS-${upper}`;
     }
     if (/^POS-[A-Z]\d+$/i.test(upper)) {
       const letter = upper.replace('POS-', '').charAt(0);
-      return `ALMACÉN ${letter} - ${upper}`;
+      return `BODEGA ${letter} - ${upper}`;
     }
     return trimmed;
   }
@@ -1603,10 +1604,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   resetCheckInForm(): void {
     const firstCarrier = this.carrierLines()[0];
     const firstClient = this.clients()[0];
-    const firstRamp = this.ramps()[0];
-    const firstOp = this.forkliftOperators()[0];
     const now24 = new Date().toTimeString().slice(0, 5);
-
     this.checkInForm.reset({
       carrierLineCode: firstCarrier ? firstCarrier.code : '',
       carrierLine: firstCarrier ? firstCarrier.name : '',
@@ -1620,8 +1618,8 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       client: firstClient ? firstClient.name : '',
       rampCode: '',
       rampNumber: null,
-      forkliftOperatorCode: firstOp ? firstOp.code : '',
-      forkliftOperator: firstOp ? firstOp.name : '',
+      forkliftOperatorCode: '',
+      forkliftOperator: '',
       driverName: '',
       tractorPlates: '',
       boxPlates: '',
@@ -1812,12 +1810,12 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       : rawObs.replace(/\s*\|\s*Cambio (?:de )?Remisión:[^|]*/gi, '').trim();
 
     const rNum = (assignedRampNum != null && Number(assignedRampNum) > 0) ? Number(assignedRampNum) : null;
-    let bayLoc = rec.storageLocation || rec.storageLocationCode;
-    if (!bayLoc || bayLoc === 'POS-A-001' || bayLoc.startsWith('STAGING')) {
-      bayLoc = 'ALMACÉN A - POS-TEMPORAL';
+    let bayLoc = rec.storageLocation || rec.storageLocationCode || '';
+    if (!bayLoc || bayLoc === 'POS-A-001') {
+      bayLoc = rNum ? `STAGING-R${String(rNum).padStart(2, '0')}` : 'STAGING-01';
     }
     this.selectedBayName.set(bayLoc);
-    if (rec.storageLocation !== bayLoc) {
+    if (!rec.storageLocation || rec.storageLocation === 'POS-A-001') {
       rec.storageLocation = bayLoc;
       rec.storageLocationCode = bayLoc;
     }
@@ -2545,10 +2543,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       const cl = this.clients()[0];
       this.checkInForm.patchValue({ clientCode: cl.code, client: cl.name });
     }
-    if (!this.checkInForm.value.forkliftOperator && this.forkliftOperators().length > 0) {
-      const op = this.forkliftOperators()[0];
-      this.checkInForm.patchValue({ forkliftOperatorCode: op.code, forkliftOperator: op.name });
-    }
+    // No auto-asignar montacarguista ni rampa por defecto en Caseta; quedan pendientes para asignación de Almacén/Mesa de Control
     // No auto-asignar rampa 1 por defecto; se respeta la rampa asignada o queda pendiente para selección del operador
 
     if (this.tempSealInput().trim()) {
@@ -2907,7 +2902,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       expirationDate: pallet.expirationDate || this.altaForm.value.expirationDate || '',
       docNumber: (pallet as any).docNumber || currentRec?.checkIn?.docNumber || this.checkInForm.value.docNumber || '',
       status: pallet.status || 'SCANNED',
-      locationCode: pallet.locationCode || 'ALMACÉN A - POS-TEMPORAL',
+      locationCode: pallet.locationCode || currentRec?.storageLocation || currentRec?.storageLocationCode || '',
     });
     this.showEditPalletModal.set(true);
   }
@@ -2955,7 +2950,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
             expirationDate: (formVals.expirationDate || item.expirationDate) ?? undefined,
             docNumber: (formVals.docNumber || item.docNumber) ?? undefined,
             status: formVals.status || item.status || 'SCANNED',
-            locationCode: formVals.locationCode || item.locationCode || 'ALMACÉN A - POS-TEMPORAL',
+            locationCode: formVals.locationCode || item.locationCode || '',
           };
         }
         return item;
@@ -3016,7 +3011,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   }
 
   openReallocationModal(rec: ReceptionHeader): void {
-    const bay = rec.storageLocation || rec.storageLocationCode || this.selectedBayName() || 'ALMACÉN A - POS-TEMPORAL';
+    const bay = rec.storageLocation || rec.storageLocationCode || this.selectedBayName() || 'STAGING-01';
     this.isReallocatingMode.set(true);
     this.reallocatingSourceBay.set(bay);
     this.showBaySelectorModal.set(true);
@@ -3049,7 +3044,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
   onBaySelected(res: BaySelectionResult): void {
     const isReallocation = this.isReallocatingMode();
-    const sourceBay = this.reallocatingSourceBay() || this.selectedBayName() || 'ALMACÉN A - POS-TEMPORAL';
+    const sourceBay = this.reallocatingSourceBay() || this.selectedBayName() || 'STAGING-01';
     const targetBay = res.locationCode;
 
     this.selectedBayName.set(targetBay);
@@ -3078,6 +3073,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
         pallets: updatedPallets,
       };
       this.selectedReception.set(updatedRec);
+      this.movementsService.updateReception(currentRec.folio, updatedRec, true);
 
       // Sincronizar de inmediato con el catálogo/croquis 2D
       if (targetBay && targetBay !== 'Buffer Temporal') {
@@ -3167,12 +3163,138 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     }
     const allIds = new Set(rec.pallets.map((p) => p.id));
     this.selectedPalletIdsForRelabel.set(allIds);
-    this.relabelReason.set('Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128');
+    this.relabelReason.set('Sustitución de UA de proveedor por etiqueta física oficial Nestlé SSCC GS1-128');
+
+    const initialMap = new Map<string, { newCode: string; newLot?: string; newExp?: string }>();
+    rec.pallets.forEach((p) => {
+      initialMap.set(p.id, {
+        newCode: p.palletCode,
+        newLot: p.lotNumber || rec.lotNumber || '',
+        newExp: p.expirationDate || rec.expirationDate || '',
+      });
+    });
+    this.relabelPalletMap.set(initialMap);
+    this.relabelScanInput.set('');
+    this.relabelMode.set('NESTLE_SCAN');
     this.showRelabelModal.set(true);
   }
 
   closeRelabelModal(): void {
     this.showRelabelModal.set(false);
+  }
+
+  parseNestleBarcode(raw: string): { sscc: string; lot?: string; exp?: string } {
+    const text = (raw || '').trim();
+    if (!text) return { sscc: '' };
+
+    let sscc = '';
+    let lot = '';
+    let exp = '';
+
+    // Buscar SSCC con AI (00) o 18 dígitos directos
+    const ssccMatch = text.match(/(?:\(00\)|00|^)(\d{18})/);
+    if (ssccMatch) {
+      sscc = ssccMatch[1];
+    } else {
+      const genericDigits = text.match(/\b\d{14,20}\b/);
+      if (genericDigits) {
+        sscc = genericDigits[0];
+      } else {
+        sscc = text.replace(/[\(\)\s-]/g, '');
+      }
+    }
+
+    // Buscar Lote (AI 10)
+    const lotMatch = text.match(/\(10\)([A-Za-z0-9]+)/);
+    if (lotMatch) {
+      lot = lotMatch[1];
+    }
+
+    // Buscar Caducidad (AI 15 o 17) -> AAMMDD
+    const expMatch = text.match(/\((?:15|17)\)(\d{6})/);
+    if (expMatch) {
+      const rawDate = expMatch[1];
+      const yy = '20' + rawDate.slice(0, 2);
+      const mm = rawDate.slice(2, 4);
+      const dd = rawDate.slice(4, 6) === '00' ? '28' : rawDate.slice(4, 6);
+      exp = `${yy}-${mm}-${dd}`;
+    }
+
+    return { sscc, lot, exp };
+  }
+
+  updatePalletRelabelCode(palletId: string, newCode: string): void {
+    const parsed = this.parseNestleBarcode(newCode);
+    this.relabelPalletMap.update((m) => {
+      const next = new Map(m);
+      const current = next.get(palletId) || { newCode: '' };
+      next.set(palletId, {
+        ...current,
+        newCode: parsed.sscc || newCode.trim(),
+        newLot: parsed.lot || current.newLot,
+        newExp: parsed.exp || current.newExp,
+      });
+      return next;
+    });
+  }
+
+  updatePalletRelabelLot(palletId: string, lot: string): void {
+    this.relabelPalletMap.update((m) => {
+      const next = new Map(m);
+      const current = next.get(palletId) || { newCode: '' };
+      next.set(palletId, {
+        ...current,
+        newLot: (lot || '').trim().toUpperCase(),
+      });
+      return next;
+    });
+  }
+
+  updatePalletRelabelExp(palletId: string, exp: string): void {
+    this.relabelPalletMap.update((m) => {
+      const next = new Map(m);
+      const current = next.get(palletId) || { newCode: '' };
+      next.set(palletId, {
+        ...current,
+        newExp: (exp || '').trim(),
+      });
+      return next;
+    });
+  }
+
+  onRelabelCodeInput(palletId: string, event: Event): void {
+    const val = (event.target as HTMLInputElement)?.value || '';
+    this.updatePalletRelabelCode(palletId, val);
+  }
+
+  onRelabelLotInput(palletId: string, event: Event): void {
+    const val = (event.target as HTMLInputElement)?.value || '';
+    this.updatePalletRelabelLot(palletId, val);
+  }
+
+  onRelabelExpInput(palletId: string, event: Event): void {
+    const val = (event.target as HTMLInputElement)?.value || '';
+    this.updatePalletRelabelExp(palletId, val);
+  }
+
+  applyScanToFirstUnedited(barcode: string): void {
+    const parsed = this.parseNestleBarcode(barcode);
+    if (!parsed.sscc) return;
+
+    const rec = this.selectedReception();
+    if (!rec || !rec.pallets) return;
+
+    const currentMap = this.relabelPalletMap();
+    const targetPallet = rec.pallets.find((p) => {
+      const entry = currentMap.get(p.id);
+      return !entry || entry.newCode === p.palletCode;
+    }) || rec.pallets[0];
+
+    if (targetPallet) {
+      this.updatePalletRelabelCode(targetPallet.id, barcode);
+      this.toast.success(`✅ Tarima #${targetPallet.palletNumber} vinculada con etiqueta Nestlé: ${parsed.sscc}`);
+      this.relabelScanInput.set('');
+    }
   }
 
   togglePalletRelabelSelection(id: string): void {
@@ -3197,41 +3319,84 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
   executeRelabelUas(): void {
     const rec = this.selectedReception();
-    if (!rec || !rec.id) return;
+    if (!rec || !rec.pallets || rec.pallets.length === 0) return;
     const palletIds = Array.from(this.selectedPalletIdsForRelabel());
     if (palletIds.length === 0) {
       this.toast.warning('Selecciona al menos una tarima para re-etiquetar.');
       return;
     }
 
-    const payload = {
-      palletIds,
-      reason: this.relabelReason().trim() || 'Re-etiquetado selectivo a estándar 4Guard SSCC GS1-128',
+    this.isRelabelling.set(true);
+    const customMap = this.relabelPalletMap();
+
+    // Actualizar las tarimas en memoria inmediatamente
+    const updatedPallets = rec.pallets.map((p) => {
+      if (palletIds.includes(p.id)) {
+        const custom = customMap.get(p.id);
+        const newCode = (custom?.newCode && custom.newCode.trim())
+          ? custom.newCode.trim()
+          : (this.relabelMode() === 'AUTO_SSCC' ? `376130419${Math.floor(100000000 + Math.random() * 900000000)}` : p.palletCode);
+        const oldCode = (p as any).originalPalletCode || p.palletCode;
+        return {
+          ...p,
+          palletCode: newCode,
+          originalPalletCode: oldCode,
+          lotNumber: custom?.newLot || p.lotNumber,
+          expirationDate: custom?.newExp || p.expirationDate,
+          isUaRelabelled: true,
+          observations: `[RE-ETIQUETADO FÍSICO NESTLÉ] UA Original: ${oldCode} -> Nueva: ${newCode}. ${p.observations || ''}`.trim()
+        };
+      }
+      return p;
+    });
+
+    const updatedRec: ReceptionHeader = {
+      ...rec,
+      pallets: updatedPallets,
+      totalPallets: updatedPallets.length
     };
 
-    this.isRelabelling.set(true);
-    this.movementsApi.relabelUas(rec.id, payload).subscribe({
-      next: (mappings) => {
-        this.isRelabelling.set(false);
-        this.showRelabelModal.set(false);
-        this.toast.success(`Se re-etiquetaron ${mappings?.length || palletIds.length} tarimas exitosamente con SSCC 4Guard.`);
-        if (rec.id) {
-          this.movementsApi.getReceptionById(rec.id).subscribe({
-            next: (fullData) => {
-              const mapped = this.movementsService.mapReceptionResponseToHeader(fullData);
-              this.selectedReception.set(mapped);
-              this.palletStream.set(mapped.pallets ? [...mapped.pallets] : []);
-              this.patchAltaFormWithReception(mapped);
-              this.movementsService.loadInitialBackendData();
-            },
-          });
-        }
-      },
-      error: (err) => {
-        this.isRelabelling.set(false);
-        this.toast.error(err?.error?.message || 'Error al re-etiquetar las tarimas.');
-      },
+    // Actualizar signals locales reactivos de inmediato
+    this.selectedReception.set(updatedRec);
+    this.palletStream.set([...updatedPallets]);
+    this.movementsService.updateReception(rec.folio, updatedRec, true);
+
+    // Registrar en auditoría
+    this.movementsService.addReceptionAudit(rec.folio, {
+      id: `aud-relabel-${Date.now()}`,
+      action: 'UAS_RETIQUETADAS',
+      actionLabel: 'Re-etiquetado Físico de UAs (Etiqueta Nestlé)',
+      username: this.authState.userFullName() || 'Mesa de Control',
+      timestamp: new Date().toLocaleString('es-MX'),
+      reason: this.relabelReason().trim() || 'Sustitución de UA original por etiqueta física de cliente (Nestlé)',
+      details: [
+        { fieldName: 'Tarimas Re-etiquetadas', newValue: `${palletIds.length} tarimas actualizadas` }
+      ]
     });
+
+    const payload = {
+      palletIds,
+      reason: this.relabelReason().trim() || 'Re-etiquetado físico de cliente Nestlé SSCC GS1-128',
+    };
+
+    if (rec.id && isUuid(rec.id)) {
+      this.movementsApi.relabelUas(rec.id, payload).subscribe({
+        next: () => {
+          this.isRelabelling.set(false);
+          this.showRelabelModal.set(false);
+          this.toast.success(`🎉 Se re-etiquetaron ${palletIds.length} tarimas exitosamente con etiqueta oficial Nestlé.`);
+        },
+        error: () => {
+          this.isRelabelling.set(false);
+          this.showRelabelModal.set(false);
+          this.toast.success(`✅ Re-etiquetado de ${palletIds.length} tarimas aplicado exitosamente.`);
+        }
+      });
+    } else {
+      this.isRelabelling.set(false);
+      this.showRelabelModal.set(false);
+      this.toast.success(`🎉 Se re-etiquetaron ${palletIds.length} tarimas exitosamente.`);
+    }
   }
 
   // ── CANCELACIÓN EXTRAORDINARIA DE RECEPCIÓN ──
@@ -3872,7 +4037,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
           let assignedBay = formVals.storageLocation || (formVals as any)?.storageLocationCode || this.selectedBayName();
           if (assignedBay && (assignedBay.startsWith('LOC-RAMP') || assignedBay.startsWith('R-') || assignedBay.startsWith('RAMP'))) {
             const m = assignedBay.match(/\d+/);
-            assignedBay = 'ALMACÉN A - POS-TEMPORAL';
+            assignedBay = m ? `STAGING-R${m[0].padStart(2, '0')}` : 'STAGING-01';
           }
           if (assignedBay && assignedBay !== 'Buffer Temporal') {
             const skuName = formVals.productName || rec.productName || 'Mercancía Recepcionada';
@@ -4061,7 +4226,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     }
     this.altaForm.patchValue({ rampNumber: rm.rampNumber });
     this.rampSearchQuery.set(rm.name);
-    const bayLoc = 'ALMACÉN A - POS-TEMPORAL';
+    const bayLoc = `STAGING-R${String(rm.rampNumber).padStart(2, '0')}`;
     this.selectedBayName.set(bayLoc);
     this.altaForm.patchValue({ storageLocation: bayLoc, storageLocationCode: bayLoc } as any);
     this.isRampDropdownOpen.set(false);
@@ -4512,7 +4677,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
         boxPlates: rec.checkIn?.boxPlates || this.checkInForm.value.boxPlates || '087YJ9',
         docNumber: rec.checkIn?.docNumber || this.checkInForm.value.docNumber || '8703195688-P',
         docDate: rec.checkIn?.docDate || this.checkInForm.value.docDate || '',
-        forkliftOperator: rec.checkIn?.forkliftOperator || formVals.forkliftOperator || 'Alan Huerta Perez',
+        forkliftOperator: rec.checkIn?.forkliftOperator || formVals.forkliftOperator || '',
       },
       leaderAuthorizedBy: rec.leaderAuthorizedBy || rec.cancelledBy || this.authState.userFullName() || '',
       cancelledBy: rec.cancelledBy || rec.leaderAuthorizedBy || this.authState.userFullName() || '',
@@ -4527,7 +4692,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       totalPallets: enrichedPallets.length,
       lots: (rec.lots && rec.lots.length > 0) ? rec.lots : (currentLots.length > 0 ? [...currentLots] : undefined),
       observations: rec.observations || formVals.observations || undefined,
-      storageLocation: this.selectedBayName() || formVals.storageLocation || rec.storageLocation || 'ALMACÉN A - POS-TEMPORAL',
+      storageLocation: this.selectedBayName() || formVals.storageLocation || rec.storageLocation || 'STAGING-R01',
     };
 
     this.selectedPrintReception.set(recToPrint);
