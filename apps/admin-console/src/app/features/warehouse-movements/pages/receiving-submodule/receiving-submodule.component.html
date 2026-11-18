@@ -506,44 +506,38 @@
           </button>
           }
           @if (rec.status !== 'CANCELLED') {
-          <button type="button" (click)="reportPalletToQuality()"
-            class="header-action-btn header-action-btn--pnc"
+          <button type="button" (click)="reportPalletToQuality()" class="header-action-btn header-action-btn--pnc"
             title="Reportar anomalía o producto no conforme a Calidad (PNC)">
             <span class="material-symbols-outlined">warning</span>
             <span>Reportar Producto No Conforme (Calidad)</span>
           </button>
           <button type="button" (click)="openChangeRemisionModal()"
-            class="header-action-btn header-action-btn--secondary"
-            title="Modificar folio de remisión SAP">
+            class="header-action-btn header-action-btn--secondary" title="Modificar folio de remisión SAP">
             <span class="material-symbols-outlined">edit_document</span>
             <span>Cambiar Remisión</span>
           </button>
           }
           @if (rec.status === 'COMPLETED') {
-          <button type="button" (click)="openPrintPreview(rec)"
-            class="header-action-btn header-action-btn--secondary"
+          <button type="button" (click)="openPrintPreview(rec)" class="header-action-btn header-action-btn--secondary"
             title="Imprimir Documento F01 Oficial">
             <span class="material-symbols-outlined">print</span>
             <span>Imprimir F01</span>
           </button>
-          <button type="button" (click)="openReopenModal()"
-            class="header-action-btn header-action-btn--gold"
+          <button type="button" (click)="openReopenModal()" class="header-action-btn header-action-btn--gold"
             title="Gestión de cambios con autorización de supervisor: Retarimado físico en andén, descarga complementaria de tarimas omitidas o corrección de ficha">
             <span class="material-symbols-outlined">lock_open</span>
             <span>Reabrir Recepción</span>
           </button>
           }
           @if (rec.status === 'CANCELLED') {
-          <button type="button" (click)="openPrintPreview(rec)"
-            class="header-action-btn header-action-btn--danger"
+          <button type="button" (click)="openPrintPreview(rec)" class="header-action-btn header-action-btn--danger"
             title="Imprimir Hoja de Cancelación Oficial">
             <span class="material-symbols-outlined">print</span>
             <span>Imprimir Cancelación</span>
           </button>
           }
           @if (rec.status !== 'COMPLETED' && rec.status !== 'CANCELLED') {
-          <button type="button" (click)="openCancelModal()"
-            class="header-action-btn header-action-btn--danger"
+          <button type="button" (click)="openCancelModal()" class="header-action-btn header-action-btn--danger"
             title="Cancelar recepción">
             <span class="material-symbols-outlined">cancel</span>
             <span>Cancelar</span>
@@ -725,7 +719,8 @@
                 class="logistics-command-bay-text truncate"
                 [class.cursor-pointer]="rec.status !== 'COMPLETED' || isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)"
                 [title]="(rec.status !== 'COMPLETED' || isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)) ? 'Haga clic para seleccionar bahía' : 'Posición fija definitiva'">
-                {{ formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation) }}
+                {{ formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value ||
+                rec.storageLocation) }}
               </span>
 
               @if (isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)) {
@@ -1307,8 +1302,8 @@
             <label class="fg-label fg-label--required">Producto (SKU)</label>
             <div class="relative flex items-center">
               <input type="text" [value]="skuSearchQuery()" (input)="onSkuInput($any($event.target).value)"
-                (focus)="isSkuDropdownOpen.set(true); $any($event.target).select()" (click)="isSkuDropdownOpen.set(true)"
-                (keyup.enter)="onSkuEnter()"
+                (focus)="isSkuDropdownOpen.set(true); $any($event.target).select()"
+                (click)="isSkuDropdownOpen.set(true)" (keyup.enter)="onSkuEnter()"
                 placeholder="Seleccionar o escribir SKU (ej. 8500297)..."
                 class="fg-input font-bold w-full pr-14 cursor-pointer" autocomplete="off" />
               <div class="absolute right-1.5 flex items-center gap-0.5">
@@ -1398,7 +1393,8 @@
               <p class="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
                 Rampa <strong>{{ rec.checkIn.rampNumber }}</strong> bloqueada. El operador <strong>{{
                   rec.checkIn.forkliftOperator }}</strong> validará el transporte y comenzará la descarga hacia bahía
-                <strong>{{ formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation ||
+                <strong>{{ formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value ||
+                  rec.storageLocation ||
                   'STAGING-R01') }}</strong>.
               </p>
               <p class="text-[10px] text-blue-600/80 dark:text-blue-400/80 font-normal mt-0.5 flex items-center gap-1">
@@ -1467,7 +1463,8 @@
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
             <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{
-              formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'STAGING-R01')
+              formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation
+              || 'STAGING-R01')
               }}</span>
           </div>
           <div class="reception-readonly-item">
@@ -1696,8 +1693,8 @@
                   </label>
                   <div class="relative flex items-center w-full z-30">
                     <input type="text" [value]="skuSearchQuery()" (input)="onSkuInput($any($event.target).value)"
-                      (focus)="isSkuDropdownOpen.set(true); $any($event.target).select()" (click)="isSkuDropdownOpen.set(true)"
-                      (keyup.enter)="onSkuEnter()"
+                      (focus)="isSkuDropdownOpen.set(true); $any($event.target).select()"
+                      (click)="isSkuDropdownOpen.set(true)" (keyup.enter)="onSkuEnter()"
                       placeholder="Seleccionar o buscar SKU..."
                       class="w-full text-xs font-bold rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 pr-14 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs cursor-pointer"
                       autocomplete="off" />
@@ -1759,10 +1756,10 @@
                       <span>Pzas x Tarima:</span>
                     </span>
                   </label>
-                  <input type="number" [value]="altaForm.get('piecesPerPallet')?.value || 135"
-                    (input)="altaForm.patchValue({ piecesPerPallet: $any($event.target).value })"
+                  <input type="number" [value]="altaForm.get('piecesPerPallet')?.value ?? ''"
+                    (input)="onPiecesPerPalletInput($any($event.target).value)"
                     class="w-full text-xs font-mono font-black text-center rounded-xl px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-amber-700 dark:text-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs"
-                    placeholder="135" />
+                    placeholder="0" />
                 </div>
 
                 <!-- 3. Tipo de Tarima (3 cols) con chevron visible -->
@@ -1773,12 +1770,15 @@
                   </label>
                   <div class="relative flex items-center w-full">
                     <select [ngModel]="altaForm.get('selectedPalletType')?.value || 'MADERA_ESTANDAR'"
-                      (ngModelChange)="altaForm.patchValue({ selectedPalletType: $event }); palletTypeSearchQuery.set(getPalletTypeLabel($event))"
+                      (ngModelChange)="onPalletTypeChange($event)"
                       class="w-full text-xs font-bold rounded-xl px-3 py-2 pr-8 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs appearance-none cursor-pointer">
                       <option value="MADERA_ESTANDAR">Madera Estándar</option>
-                      <option value="TARIMA_CHEP_NACIONAL">Tarima CHEP</option>
-                      <option value="TARIMA_OWENS_CORNING">Madera Owens</option>
-                      <option value="TARIMA_PLASTICA_HIGIENICA">Tarima Plástica</option>
+                      <option value="MADERA_OWENS">Madera Owens</option>
+                      <option value="TARIMA_CHEP_NACIONAL">Tarima CHEP Nacional</option>
+                      <option value="TARIMA_CHEP_EXPORTACION">Tarima CHEP Exportación</option>
+                      <option value="PLASTICO_NEGRO_OWENS">Plástico Negro Owens</option>
+                      <option value="PLASTICO_AZUL">Plástico Azul</option>
+                      <option value="TARIMA_PLASTICO_NEGRO_ESTANDAR">Tarima Plástica</option>
                       <option value="SIN_TARIMA">Sin Tarima / A Granel</option>
                     </select>
                     <span
@@ -2008,7 +2008,8 @@
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
             <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{
-              formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'STAGING-R01')
+              formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation
+              || 'STAGING-R01')
               }}</span>
           </div>
           <div class="reception-readonly-item">
@@ -2086,7 +2087,8 @@
           </div>
           <div class="flex items-center gap-2">
             <!-- Selector oculto de archivo Excel -->
-            <input #excelFileInput type="file" accept=".xlsx,.xls,.csv" (change)="onExcelFileSelected($event)" class="hidden" />
+            <input #excelFileInput type="file" accept=".xlsx,.xls,.csv" (change)="onExcelFileSelected($event)"
+              class="hidden" />
 
             <!-- Botón Cargar / Importar Excel -->
             <button type="button" (click)="excelFileInput.click()" [disabled]="isImportingExcel()"
@@ -2202,7 +2204,7 @@
               </td>
               <td class="tarimas-cell-desc font-bold text-slate-900 dark:text-slate-100">{{ pallet.description }}</td>
               <td class="tarimas-cell-supplier">{{ pallet.supplierName || '-' }}</td>
-              <td class="tarimas-cell-type">{{ pallet.palletTypeLabel }}</td>
+              <td class="tarimas-cell-type">{{ getPalletTypeLabel(pallet.palletTypeLabel || pallet.palletTypeId) }}</td>
               <td class="tarimas-cell-pieces">
                 <span
                   class="font-black font-mono text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
@@ -4060,7 +4062,8 @@
           </div>
           <div>
             <h3 class="relabel-modal-title">Reemplazo de UAs · Etiqueta Física Nestlé / Proveedor</h3>
-            <p class="relabel-modal-subtitle">Escanea con pistola de códigos o captura el SSCC de la etiqueta física recibida</p>
+            <p class="relabel-modal-subtitle">Escanea con pistola de códigos o captura el SSCC de la etiqueta física
+              recibida</p>
           </div>
         </div>
         <button (click)="closeRelabelModal()" class="relabel-modal-close-btn" title="Cerrar modal">
@@ -4070,19 +4073,23 @@
 
       <div class="modal-body p-6 overflow-y-auto flex-1 space-y-4 text-xs">
         <!-- Selector de Modo -->
-        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+        <div
+          class="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
           <div class="flex items-center gap-4">
             <label class="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-800 dark:text-slate-200">
-              <input type="radio" name="relabelMode" [checked]="relabelMode() === 'NESTLE_SCAN'" (change)="relabelMode.set('NESTLE_SCAN')" class="text-amber-600" />
+              <input type="radio" name="relabelMode" [checked]="relabelMode() === 'NESTLE_SCAN'"
+                (change)="relabelMode.set('NESTLE_SCAN')" class="text-amber-600" />
               <span>🏷️ Escaneo de Etiqueta Física (Nestlé / GS1-128)</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-600 dark:text-slate-400">
-              <input type="radio" name="relabelMode" [checked]="relabelMode() === 'AUTO_SSCC'" (change)="relabelMode.set('AUTO_SSCC')" class="text-amber-600" />
+              <input type="radio" name="relabelMode" [checked]="relabelMode() === 'AUTO_SSCC'"
+                (change)="relabelMode.set('AUTO_SSCC')" class="text-amber-600" />
               <span>⚡ Generar SSCC 4Guard Automático</span>
             </label>
           </div>
           <button type="button" (click)="toggleSelectAllPalletsForRelabel()" class="relabel-toggle-all-btn">
-            {{ selectedPalletIdsForRelabel().size === palletStream().length ? 'Deseleccionar Todas' : 'Seleccionar Todas' }}
+            {{ selectedPalletIdsForRelabel().size === palletStream().length ? 'Deseleccionar Todas' : 'Seleccionar
+            Todas' }}
           </button>
         </div>
 
@@ -4094,7 +4101,8 @@
               <span class="material-symbols-outlined text-sm">barcode_scanner</span>
               <span>Disparar Pistola de Código de Barras</span>
             </span>
-            <span class="text-[10px] text-amber-800 dark:text-amber-300">Soporta (00) SSCC, (10) Lote y (15) Caducidad</span>
+            <span class="text-[10px] text-amber-800 dark:text-amber-300">Soporta (00) SSCC, (10) Lote y (15)
+              Caducidad</span>
           </div>
           <div class="flex items-center gap-2">
             <input type="text" [ngModel]="relabelScanInput()" (ngModelChange)="relabelScanInput.set($event)"
@@ -4113,7 +4121,8 @@
         <!-- Lista Detallada de Tarimas -->
         <div class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
           <table class="w-full text-left text-xs border-collapse">
-            <thead class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase font-black text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-700">
+            <thead
+              class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase font-black text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th class="p-2.5 w-8 text-center">Sel.</th>
                 <th class="p-2.5 w-12 text-center">#</th>
@@ -4139,24 +4148,18 @@
                   {{ pallet.originalPalletCode || pallet.palletCode }}
                 </td>
                 <td class="p-2.5">
-                  <input type="text"
-                    [value]="relabelPalletMap().get(pallet.id)?.newCode || pallet.palletCode"
-                    (input)="onRelabelCodeInput(pallet.id, $event)"
-                    placeholder="Escanear SSCC (00)..."
+                  <input type="text" [value]="relabelPalletMap().get(pallet.id)?.newCode || pallet.palletCode"
+                    (input)="onRelabelCodeInput(pallet.id, $event)" placeholder="Escanear SSCC (00)..."
                     class="fg-input font-mono uppercase text-xs w-full font-bold px-2 py-1">
                 </td>
                 <td class="p-2.5">
-                  <input type="text"
-                    [value]="relabelPalletMap().get(pallet.id)?.newLot || pallet.lotNumber || ''"
-                    (input)="onRelabelLotInput(pallet.id, $event)"
-                    placeholder="Lote"
+                  <input type="text" [value]="relabelPalletMap().get(pallet.id)?.newLot || pallet.lotNumber || ''"
+                    (input)="onRelabelLotInput(pallet.id, $event)" placeholder="Lote"
                     class="fg-input font-mono uppercase text-xs w-full px-2 py-1">
                 </td>
                 <td class="p-2.5">
-                  <input type="text"
-                    [value]="relabelPalletMap().get(pallet.id)?.newExp || pallet.expirationDate || ''"
-                    (input)="onRelabelExpInput(pallet.id, $event)"
-                    placeholder="YYYY-MM-DD"
+                  <input type="text" [value]="relabelPalletMap().get(pallet.id)?.newExp || pallet.expirationDate || ''"
+                    (input)="onRelabelExpInput(pallet.id, $event)" placeholder="YYYY-MM-DD"
                     class="fg-input font-mono text-xs w-full px-2 py-1">
                 </td>
                 <td class="p-2.5 text-right font-bold text-slate-700 dark:text-slate-300">

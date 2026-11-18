@@ -4345,6 +4345,22 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     this.isPalletTypeDropdownOpen.set(false);
   }
 
+  onPalletTypeChange(type: string): void {
+    const label = this.getPalletTypeLabel(type);
+    this.altaForm.patchValue({ selectedPalletType: type as any });
+    this.palletTypeSearchQuery.set(label);
+  }
+
+  onPiecesPerPalletInput(val: string): void {
+    const trimmed = (val ?? '').toString().trim();
+    if (trimmed === '') {
+      this.altaForm.patchValue({ piecesPerPallet: '' as any });
+      return;
+    }
+    const num = Number(trimmed);
+    this.altaForm.patchValue({ piecesPerPallet: isNaN(num) ? ('' as any) : num });
+  }
+
   clearPalletTypeSelection(): void {
     this.altaForm.patchValue({ selectedPalletType: '' as any });
     this.palletTypeSearchQuery.set('');
@@ -4389,7 +4405,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (!vals.piecesPerPallet || Number(vals.piecesPerPallet) <= 0) {
+    if (vals.piecesPerPallet === null || vals.piecesPerPallet === undefined) {
       this.altaForm.patchValue({ piecesPerPallet: 135 });
     }
 
@@ -4456,8 +4472,6 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     this.duplicateUaError.set(null);
     this.expirationWarningAlert.set(null);
 
-    this.ensureScanDefaults();
-
     if (!this.altaForm.value.productId) {
       this.toast.warning('Por favor selecciona un Producto (SKU) antes de escanear tarimas.');
       return;
@@ -4470,8 +4484,11 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       this.toast.warning('Por favor selecciona un Proveedor antes de escanear tarimas.');
       return;
     }
-    if (!this.altaForm.value.piecesPerPallet || Number(this.altaForm.value.piecesPerPallet) <= 0) {
-      this.toast.warning('Por favor especifica las Piezas por Tarima (> 0) antes de escanear tarimas.');
+
+    const rawPzas = this.altaForm.value.piecesPerPallet;
+    const pzas = Number(rawPzas);
+    if (rawPzas === null || rawPzas === undefined || String(rawPzas).trim() === '' || isNaN(pzas) || pzas <= 0) {
+      this.toast.warning('⚠️ Por favor especifica las Piezas por Tarima (> 0) antes de escanear o agregar tarimas.');
       return;
     }
 
@@ -4505,8 +4522,8 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       }
     }
 
-    const pzas = Number(this.altaForm.value.piecesPerPallet) || 480;
     const pType = (this.altaForm.value.selectedPalletType as PalletType) || 'MADERA_ESTANDAR';
+    const label = this.getPalletTypeLabel(pType);
     const prodId = this.altaForm.value.productId || '';
     const prodName = this.altaForm.value.productName || this.altaForm.value.productId || '';
     const suppName = this.altaForm.value.supplierName || '';
@@ -4527,7 +4544,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       pieces: pzas,
       observations: this.uaObsInput().trim() || undefined,
       palletTypeId: pType,
-      palletTypeLabel: PALLET_TYPE_LABELS[pType] || 'Madera Estándar',
+      palletTypeLabel: label,
       lotNumber: activeLotNum || undefined,
       expirationDate: activeExpDate || undefined,
       docNumber: currentDoc || undefined,
@@ -4829,6 +4846,15 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
   getPalletTypeLabel(type?: string): string {
     if (!type) return 'Madera Estándar';
+    const upper = type.toUpperCase().trim();
+    if (upper.includes('OWENS') && upper.includes('PLAST')) return 'Plástico Negro Owens';
+    if (upper.includes('OWENS')) return 'Madera Owens';
+    if (upper.includes('CHEP') && upper.includes('EXP')) return 'Tarima CHEP Exportación';
+    if (upper.includes('CHEP')) return 'Tarima CHEP Nacional';
+    if (upper.includes('PLAST') && upper.includes('AZUL')) return 'Plástico Azul';
+    if (upper.includes('PLAST')) return 'Tarima Plástica';
+    if (upper.includes('GRANEL') || upper.includes('SIN_TARIMA')) return 'Sin Tarima / A Granel';
+    if (upper.includes('ESTANDAR') || upper.includes('STANDARD') || upper.includes('WOOD')) return 'Madera Estándar';
     return (PALLET_TYPE_LABELS as Record<string, string>)[type] || type;
   }
 }
