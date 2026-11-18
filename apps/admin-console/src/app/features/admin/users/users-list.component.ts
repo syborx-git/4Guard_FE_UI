@@ -521,9 +521,14 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
         },
         error: (err: HttpErrorResponse) => {
           this.isSaving.set(false);
-          const msg = err?.error?.message || err?.message || 'Error al crear el usuario en la base de datos.';
+          let msg = err?.error?.message || err?.message || 'Error al crear el usuario en la base de datos.';
+          if (err.status === 401 || (typeof msg === 'string' && msg.toLowerCase().includes('token'))) {
+            msg = 'Sesión caducada o no autorizada (Token expirado). Por favor vuelve a iniciar sesión con tu cuenta de Administrador (enrique / admin123).';
+          } else if (err.status === 403) {
+            msg = 'Permisos insuficientes. Se requiere el rol de Administrador para registrar nuevos usuarios.';
+          }
           this.backendError.set(msg);
-          this.toastService.error(`❌ ${msg}`, 5000);
+          this.toastService.error(`❌ ${msg}`, 6500);
         }
       });
     } else if (mode === 'edit' && this.selectedUser()) {
@@ -560,9 +565,14 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
         },
         error: (err: HttpErrorResponse) => {
           this.isSaving.set(false);
-          const msg = err?.error?.message || err?.message || 'Error al actualizar el usuario en la base de datos.';
+          let msg = err?.error?.message || err?.message || 'Error al actualizar el usuario en la base de datos.';
+          if (err.status === 401 || (typeof msg === 'string' && msg.toLowerCase().includes('token'))) {
+            msg = 'Sesión caducada o no autorizada (Token expirado). Por favor vuelve a iniciar sesión con tu cuenta de Administrador (enrique / admin123).';
+          } else if (err.status === 403) {
+            msg = 'Permisos insuficientes. Se requiere el rol de Administrador para actualizar usuarios.';
+          }
           this.backendError.set(msg);
-          this.toastService.error(`❌ ${msg}`, 5000);
+          this.toastService.error(`❌ ${msg}`, 6500);
         }
       });
     } else {

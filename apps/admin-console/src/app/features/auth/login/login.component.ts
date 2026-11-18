@@ -80,7 +80,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     if (!restoredLockout) {
       // Solo mostrar el aviso de inactividad si NO hay bloqueo activo
       const reason = this.route.snapshot.queryParams['reason'];
-      if (reason === 'inactivity') {
+      if (reason === 'inactivity' || reason === 'session_expired') {
         this.inactivityNotice.set(true);
         const process = localStorage.getItem('4g_pending_process_name');
         if (process) {
