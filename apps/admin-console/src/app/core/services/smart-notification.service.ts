@@ -624,13 +624,13 @@ export class SmartNotificationService implements OnDestroy {
         }
       });
 
-      // 2. Polling de Arribos y Asignación de Rampas (/api/v1/warehouse/receptions)
+      // 2. Polling de Arribos y Asignación de Rampas (/api/v1/warehouse-receptions)
       // Solo consultar si el rol tiene permisos operativos de movimientos para evitar 403 en backend
       const userRole = (this.authState.currentUser()?.role || '').toUpperCase();
       const canReadReceptions = !userRole || userRole.includes('ADMIN') || userRole.includes('MANAGER') || userRole.includes('SUPERVISOR') || userRole.includes('LEADER') || userRole.includes('CONTROL_DESK') || userRole.includes('COORDINATOR');
 
       if (canReadReceptions) {
-        this.http.get<any>('/api/v1/warehouse/receptions', {
+        this.http.get<any>('/api/v1/warehouse-receptions', {
           params: { organizationId: orgId, branchId }
         }).pipe(
           catchError(() => of(null))

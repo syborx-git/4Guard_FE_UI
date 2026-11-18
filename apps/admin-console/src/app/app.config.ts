@@ -8,7 +8,7 @@
  * - Animaciones del navegador
  */
 
-import { ApplicationConfig, importProvidersFrom } from '@angular/core';
+import { ApplicationConfig, ErrorHandler, importProvidersFrom } from '@angular/core';
 import {
   provideRouter,
   withComponentInputBinding,
@@ -26,9 +26,16 @@ import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { adminRoutes } from './app.routes';
 import { WAREHOUSE_LAYOUT_REPOSITORY } from './features/catalogs/ports/warehouse-layout.repository.port';
 import { WarehouseLayoutHttpAdapter } from './features/catalogs/services/warehouse-layout-http.adapter';
+import { GlobalErrorHandler } from './core/errors/global-error-handler';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    // ── Global Chunk / Error Handler ─────────────────────────────────────────
+    {
+      provide: ErrorHandler,
+      useClass: GlobalErrorHandler,
+    },
+
     // ── Router ──────────────────────────────────────────────────────────────
     provideRouter(
       adminRoutes,
