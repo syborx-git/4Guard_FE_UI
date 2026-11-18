@@ -323,16 +323,28 @@
       }
     </div>
 
-    <!-- Botón directo de Nuevo Usuario -->
-    <button
-      id="btn-new-user-bar"
-      class="users-btn users-btn--primary"
-      type="button"
-      (click)="startNewUser(); closeUserDropdown()"
-      aria-label="Registrar nuevo usuario">
-      <span class="material-symbols-outlined">person_add</span>
-      + Alta de Usuario
-    </button>
+    <!-- Botones de Acción de Directorio -->
+    <div class="flex items-center gap-2">
+      <button
+        id="btn-purge-users-bar"
+        class="users-btn users-btn--secondary text-xs opacity-80 hover:opacity-100"
+        type="button"
+        (click)="purgeDirectoryToEnrique()"
+        title="Purgar directorio y dejar únicamente a Enrique para pruebas">
+        <span class="material-symbols-outlined text-sm">cleaning_services</span>
+        Solo Enrique
+      </button>
+
+      <button
+        id="btn-new-user-bar"
+        class="users-btn users-btn--primary"
+        type="button"
+        (click)="startNewUser(); closeUserDropdown()"
+        aria-label="Registrar nuevo usuario">
+        <span class="material-symbols-outlined">person_add</span>
+        + Alta de Usuario
+      </button>
+    </div>
   </div>
 
   <div class="users-fullwidth-content">
@@ -398,6 +410,44 @@
                 <strong>Cuenta Inactiva — Acceso Deshabilitado</strong>
                 <span>Este usuario se encuentra inhabilitado en el WMS. No tiene permitido iniciar sesión en caseta ni operar en almacén.</span>
               </div>
+            </div>
+          }
+
+          <!-- Card de Confirmación con Contraseña Temporal para Nuevo Usuario -->
+          @if (justCreatedUserData()) {
+            <div class="mb-5 p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/40 shadow-lg flex items-start justify-between gap-4 animate-fade-in">
+              <div class="flex items-start gap-3">
+                <span class="material-symbols-outlined text-emerald-400 text-2xl mt-0.5">verified_user</span>
+                <div>
+                  <h4 class="text-sm font-semibold text-emerald-200">¡Usuario registrado y activo en el sistema!</h4>
+                  <p class="text-xs text-slate-300 mt-1">
+                    Colaborador: <strong class="text-white">{{ justCreatedUserData()?.fullName }}</strong> (<span class="text-slate-400">&#64;{{ justCreatedUserData()?.username }}</span>)
+                  </p>
+                  <div class="mt-2.5 flex items-center gap-2 flex-wrap">
+                    <span class="text-xs text-emerald-300 font-medium">Contraseña temporal de primer ingreso:</span>
+                    <span class="px-2.5 py-1 rounded bg-black/50 border border-emerald-500/50 font-mono text-xs font-bold text-amber-300 tracking-wider">
+                      {{ justCreatedUserData()?.tempPass }}
+                    </span>
+                    <button
+                      type="button"
+                      class="px-2.5 py-1 text-xs rounded bg-emerald-700/80 hover:bg-emerald-600 text-white font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                      (click)="copyToClipboard(justCreatedUserData()!.tempPass)">
+                      <span class="material-symbols-outlined text-xs">content_copy</span>
+                      Copiar Contraseña
+                    </button>
+                  </div>
+                  <p class="text-[11px] text-slate-400 mt-1.5 italic">
+                    ℹ️ Comparte estas credenciales al colaborador. El sistema le exigirá establecer su propia contraseña permanente al ingresar por primera vez.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="text-slate-400 hover:text-white p-1 transition-colors cursor-pointer"
+                (click)="dismissCreatedNotice()"
+                title="Cerrar notificación">
+                <span class="material-symbols-outlined text-sm">close</span>
+              </button>
             </div>
           }
 

@@ -624,52 +624,58 @@ export class SmartNotificationService implements OnDestroy {
       });
 
       // 2. Polling de Arribos y Asignación de Rampas (/api/v1/warehouse/receptions)
-      this.http.get<any>('/api/v1/warehouse/receptions', {
-        params: { organizationId: orgId, branchId }
-      }).pipe(
-        catchError(() => of(null))
-      ).subscribe(res => {
-        const recs = res?.data || (Array.isArray(res) ? res : []);
-        if (Array.isArray(recs) && recs.length > 0) {
-          recs.forEach((rec: any) => {
-            const fol = String(rec.folio || rec.id || '');
-            if (fol && !this.knownNotifiedFolios.has(`rec-${fol}`)) {
-              this.knownNotifiedFolios.add(`rec-${fol}`);
-              const rampNum = rec.rampNumber || rec.checkIn?.rampNumber;
-              const rDisplay = rampNum ? `Rampa ${rampNum}` : (rec.rampCode || rec.checkIn?.rampCode || 'Andén');
+      // Solo consultar si el rol tiene permisos operativos de movimientos para evitar 403 en backend
+      const userRole = (this.authState.currentUser()?.role || '').toUpperCase();
+      const canReadReceptions = !userRole || userRole.includes('ADMIN') || userRole.includes('MANAGER') || userRole.includes('SUPERVISOR') || userRole.includes('LEADER') || userRole.includes('CONTROL_DESK') || userRole.includes('COORDINATOR');
 
-              if (rampNum) {
-                const rampAlert = {
-                  id: rec.id || `ramp-${fol}`,
-                  folio: fol,
-                  rampNumber: rampNum,
-                  client: rec.clientName || rec.client || rec.checkIn?.client || 'Cliente',
-                  driverName: rec.driverName || rec.checkIn?.driverName || 'Chofer Transportista',
-                  tractorPlates: rec.tractorPlates || rec.checkIn?.tractorPlates || 'S/P',
-                  docNumber: rec.docNumber || rec.checkIn?.docNumber || fol,
-                  carrierLine: rec.carrierLine || rec.checkIn?.carrierLine || '',
-                  time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-                  timestamp: new Date()
-                };
-                this.pendingRampAssignments.update(list => [rampAlert, ...list.filter((item: any) => item.folio !== fol)]);
-                this.hasNewRampAssignment.set(true);
+      if (canReadReceptions) {
+        this.http.get<any>('/api/v1/warehouse/receptions', {
+          params: { organizationId: orgId, branchId }
+        }).pipe(
+          catchError(() => of(null))
+        ).subscribe(res => {
+          const recs = res?.data || (Array.isArray(res) ? res : []);
+          if (Array.isArray(recs) && recs.length > 0) {
+            recs.forEach((rec: any) => {
+              const fol = String(rec.folio || rec.id || '');
+              if (fol && !this.knownNotifiedFolios.has(`rec-${fol}`)) {
+                this.knownNotifiedFolios.add(`rec-${fol}`);
+                const rampNum = rec.rampNumber || rec.checkIn?.rampNumber;
+                const rDisplay = rampNum ? `Rampa ${rampNum}` : (rec.rampCode || rec.checkIn?.rampCode || 'Andén');
+
+                if (rampNum) {
+                  const rampAlert = {
+                    id: rec.id || `ramp-${fol}`,
+                    folio: fol,
+                    rampNumber: rampNum,
+                    client: rec.clientName || rec.client || rec.checkIn?.client || 'Cliente',
+                    driverName: rec.driverName || rec.checkIn?.driverName || 'Chofer Transportista',
+                    tractorPlates: rec.tractorPlates || rec.checkIn?.tractorPlates || 'S/P',
+                    docNumber: rec.docNumber || rec.checkIn?.docNumber || fol,
+                    carrierLine: rec.carrierLine || rec.checkIn?.carrierLine || '',
+                    time: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+                    timestamp: new Date()
+                  };
+                  this.pendingRampAssignments.update(list => [rampAlert, ...list.filter((item: any) => item.folio !== fol)]);
+                  this.hasNewRampAssignment.set(true);
+                }
+
+                this.dispatch({
+                  category: 'RECEIVING',
+                  title: '🚛 Arribo Validado en Caseta',
+                  message: `Folio #${fol} (${rec.clientName || rec.client || 'Cliente'}) arribó a patio · ${rDisplay}.`,
+                  referenceFolio: fol,
+                  route: '/receiving',
+                  targetRoles: ['ADMIN', 'OPERATIONS_MANAGER', 'WAREHOUSE_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER', 'OPERATIONS_SUPERVISOR', 'SECURITY_GUARD'],
+                  targetRoutes: ['/receiving', '/warehouse-movements', '/security'],
+                  severity: 'SUCCESS',
+                  data: rec
+                });
               }
-
-              this.dispatch({
-                category: 'RECEIVING',
-                title: '🚛 Arribo Validado en Caseta',
-                message: `Folio #${fol} (${rec.clientName || rec.client || 'Cliente'}) arribó a patio · ${rDisplay}.`,
-                referenceFolio: fol,
-                route: '/receiving',
-                targetRoles: ['ADMIN', 'OPERATIONS_MANAGER', 'WAREHOUSE_MANAGER', 'CONTROL_DESK', 'SHIFT_LEADER', 'OPERATIONS_SUPERVISOR', 'SECURITY_GUARD'],
-                targetRoutes: ['/receiving', '/warehouse-movements', '/security'],
-                severity: 'SUCCESS',
-                data: rec
-              });
-            }
-          });
-        }
-      });
+            });
+          }
+        });
+      }
     }, 10000);
   }
 
