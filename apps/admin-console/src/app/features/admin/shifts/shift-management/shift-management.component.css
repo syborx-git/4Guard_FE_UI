@@ -2358,3 +2358,519 @@
   background: linear-gradient(135deg, #f87171 0%, #ef4444 100%) !important;
   box-shadow: 0 6px 24px rgba(239, 68, 68, 0.60);
 }
+
+
+/* ==========================================================================
+   SELECTORES DE HORARIO Y DÍAS INTERCALADOS / ROTATIVOS (HU-140)
+   ========================================================================== */
+
+.schedule-mode-selector-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--shift-border-subtle);
+}
+
+.schedule-mode-title {
+  font-family: var(--shift-font-mono);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--shift-gold-primary);
+}
+
+.schedule-mode-pill-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.schedule-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--shift-bg-input);
+  border: 1px solid var(--shift-border-subtle);
+  color: var(--shift-text-secondary);
+  cursor: pointer;
+  transition: var(--shift-transition);
+}
+
+.schedule-mode-btn:hover {
+  background: var(--shift-bg-card-hover);
+  border-color: var(--shift-gold-border);
+  color: var(--shift-text-primary);
+}
+
+.schedule-mode-btn--active {
+  background: var(--shift-gold-accent) !important;
+  border-color: var(--shift-gold-primary) !important;
+  color: var(--shift-gold-primary) !important;
+  box-shadow: 0 2px 8px rgba(184, 142, 56, 0.15);
+}
+
+/* ── Contenedor Input 24H ── */
+.time-picker-24h-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.field-input--24h {
+  padding-right: 4.8rem !important;
+  font-family: var(--shift-font-mono) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+}
+
+.time-picker-24h-trigger {
+  position: absolute;
+  right: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--shift-gold-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.time-picker-24h-trigger:hover {
+  background: var(--shift-gold-accent);
+  transform: scale(1.1);
+}
+
+.badge-24h {
+  position: absolute;
+  right: 0.45rem;
+  padding: 0.12rem 0.35rem;
+  border-radius: 4px;
+  background: var(--shift-bg-subtle);
+  border: 1px solid var(--shift-border-subtle);
+  color: var(--shift-text-muted);
+  font-family: var(--shift-font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.time-picker-24h-input-wrap--sm .field-input--24h {
+  padding: 0.35rem 0.5rem !important;
+  padding-right: 2.2rem !important;
+  font-size: 0.8rem !important;
+  height: 32px;
+}
+
+.time-picker-24h-input-wrap--sm .time-picker-24h-trigger {
+  right: 0.35rem;
+  width: 22px;
+  height: 22px;
+}
+
+/* ── Horarios por Día (Intercalados) ── */
+.per-day-schedule-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.per-day-header-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: var(--shift-bg-muted);
+  border: 1px solid var(--shift-border-subtle);
+  flex-wrap: wrap;
+}
+
+.per-day-total-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  background: var(--shift-gold-accent);
+  border: 1px solid var(--shift-gold-border);
+  color: var(--shift-gold-primary);
+  font-size: 0.75rem;
+  font-family: var(--shift-font-mono);
+}
+
+.day-schedule-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.day-schedule-row-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  background: var(--shift-bg-card);
+  border: 1px solid var(--shift-border-subtle);
+  gap: 0.75rem;
+  transition: var(--shift-transition);
+  flex-wrap: wrap;
+}
+
+.day-schedule-row-card--active {
+  border-color: var(--shift-gold-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.day-schedule-row__col-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 140px;
+}
+
+.day-switch-wrap {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+}
+
+.day-switch-wrap input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.day-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: 0.2s;
+  border-radius: 20px;
+}
+
+.day-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+input:checked + .day-switch-slider {
+  background-color: #059669;
+}
+
+input:checked + .day-switch-slider:before {
+  transform: translateX(14px);
+}
+
+.day-name-block {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.day-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--shift-bg-subtle);
+  border: 1px solid var(--shift-border-subtle);
+  font-family: var(--shift-font-mono);
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--shift-text-muted);
+}
+
+.day-pill-badge--active {
+  background: var(--shift-gold-accent);
+  border-color: var(--shift-gold-border);
+  color: var(--shift-gold-primary);
+}
+
+.day-full-name {
+  font-size: 0.85rem;
+  color: var(--shift-text-primary);
+}
+
+.day-schedule-row__col-times {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.day-time-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.day-time-label {
+  font-size: 0.72rem;
+  color: var(--shift-text-secondary);
+  font-weight: 600;
+}
+
+.time-arrow-sep {
+  font-size: 0.8rem;
+  color: var(--shift-text-muted);
+}
+
+.day-duration-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: var(--shift-bg-muted);
+  border: 1px solid var(--shift-border-subtle);
+  font-family: var(--shift-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--shift-text-primary);
+}
+
+.btn-copy-day-schedule {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px dashed var(--shift-border-subtle);
+  color: var(--shift-text-secondary);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-copy-day-schedule:hover {
+  background: var(--shift-gold-accent);
+  border-color: var(--shift-gold-border);
+  color: var(--shift-gold-primary);
+}
+
+.day-schedule-row__col-disabled {
+  flex: 1;
+  text-align: right;
+  padding: 0.25rem 0;
+}
+
+/* ── Modal Popover 24 Horas ── */
+.timepicker-24h-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.timepicker-24h-modal {
+  width: 100%;
+  max-width: 440px;
+  background: var(--shift-bg-card);
+  border: 1px solid var(--shift-border);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.timepicker-24h-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--shift-border-subtle);
+  padding-bottom: 0.65rem;
+}
+
+.timepicker-btn-close {
+  background: transparent;
+  border: none;
+  color: var(--shift-text-muted);
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 6px;
+}
+
+.timepicker-btn-close:hover {
+  color: var(--shift-text-primary);
+  background: var(--shift-bg-subtle);
+}
+
+.timepicker-24h-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--shift-bg-muted);
+  border: 1px solid var(--shift-border-subtle);
+  border-radius: 10px;
+}
+
+.timepicker-display-val {
+  font-family: var(--shift-font-mono);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--shift-gold-primary);
+  letter-spacing: 0.05em;
+}
+
+.timepicker-display-badge {
+  font-family: var(--shift-font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: var(--shift-gold-accent);
+  color: var(--shift-gold-primary);
+}
+
+.timepicker-section-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 750;
+  font-family: var(--shift-font-mono);
+  text-transform: uppercase;
+  color: var(--shift-text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.timepicker-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+}
+
+.timepicker-preset-chip {
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  background: var(--shift-bg-input);
+  border: 1px solid var(--shift-border-subtle);
+  font-size: 0.72rem;
+  color: var(--shift-text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.timepicker-preset-chip:hover {
+  border-color: var(--shift-gold-primary);
+  background: var(--shift-gold-accent);
+  color: var(--shift-gold-primary);
+}
+
+.timepicker-hours-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.35rem;
+}
+
+.timepicker-minutes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+}
+
+.timepicker-num-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--shift-bg-input);
+  border: 1px solid var(--shift-border-subtle);
+  font-family: var(--shift-font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--shift-text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.timepicker-num-btn:hover {
+  border-color: var(--shift-gold-border);
+  background: var(--shift-bg-subtle);
+}
+
+.timepicker-num-btn--active {
+  background: var(--shift-gold-primary) !important;
+  border-color: var(--shift-gold-primary) !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(184, 142, 56, 0.25);
+}
+
+.timepicker-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  border-top: 1px solid var(--shift-border-subtle);
+  padding-top: 0.75rem;
+}
+
+.btn-timepicker-cancel {
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--shift-border-subtle);
+  color: var(--shift-text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-timepicker-apply {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  background: #059669;
+  border: none;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-timepicker-apply:hover {
+  background: #047857;
+}

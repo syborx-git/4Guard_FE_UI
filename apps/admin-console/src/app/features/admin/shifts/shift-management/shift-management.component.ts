@@ -52,6 +52,26 @@ import {
 
 type FormMode = 'idle' | 'new' | 'edit';
 
+export interface DayScheduleItem {
+  day: OperatingDay;
+  shortLabel: string;
+  fullLabel: string;
+  enabled: boolean;
+  startTime: string; // Formato 24h: '08:00'
+  endTime: string;   // Formato 24h: '17:00'
+  isOvernight: boolean;
+  durationFormatted: string;
+}
+
+export interface TimePicker24hState {
+  targetField: string;
+  currentHour: number;
+  currentMinute: number;
+  label: string;
+  isOpen: boolean;
+  targetDay?: OperatingDay;
+}
+
 /** Validador personalizado: exige al menos un día seleccionado en la lista de días operativos */
 function minOperatingDaysValidator(control: AbstractControl): ValidationErrors | null {
   const days = control.value;
@@ -70,6 +90,39 @@ function distinctStartEndTimeValidator(control: AbstractControl): ValidationErro
     return { identicalStartEndTime: true };
   }
   return null;
+}
+
+function format24hTime(t?: string | null): string {
+  if (!t) return '08:00';
+  const clean = t.trim();
+  const match = clean.match(/^(\d{1,2}):(\d{1,2})/);
+  if (match) {
+    const hh = match[1].padStart(2, '0');
+    const mm = match[2].padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+  return '08:00';
+}
+
+function calculateDayDurationString(startStr: string, endStr: string): { duration: string; isOvernight: boolean } {
+  const [sh, sm] = (startStr || '08:00').split(':').map(Number);
+  const [eh, em] = (endStr || '17:00').split(':').map(Number);
+  const startMin = (sh || 0) * 60 + (sm || 0);
+  const endMin = (eh || 0) * 60 + (em || 0);
+
+  let net = 0;
+  let isOvernight = false;
+  if (endMin <= startMin) {
+    net = (1440 - startMin) + endMin;
+    isOvernight = true;
+  } else {
+    net = endMin - startMin;
+  }
+
+  const hours = Math.floor(net / 60);
+  const mins = net % 60;
+  const formatted = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  return { duration: formatted, isOvernight };
 }
 
 /** Normaliza horas en formato "06:00:00" o "06:00" a exactamente 5 caracteres ("06:00") para inputs <input type="time"> */
@@ -272,6 +325,59 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
   // Constantes de plantilla
   protected readonly daysConfig = OPERATING_DAYS_CONFIG;
   protected readonly statusLabels = SHIFT_STATUS_LABELS;
+
+  // ── Modo de Configuración Horaria (Unificado vs Por Día / Intercalado) ──
+  protected readonly scheduleMode = signal<'UNIFIED' | 'PER_DAY'>('UNIFIED');
+
+  // Configuración de horarios por día de la semana
+  protected readonly daySchedules = signal<DayScheduleItem[]>([
+    { day: 'MONDAY', shortLabel: 'L', fullLabel: 'Lunes', enabled: true, startTime: '08:00', endTime: '17:00', isOvernight: false, durationFormatted: '9h' },
+    { day: 'TUESDAY', shortLabel: 'M', fullLabel: 'Martes', enabled: true, startTime: '08:00', endTime: '17:00', isOvernight: false, durationFormatted: '9h' },
+    { day: 'WEDNESDAY', shortLabel: 'X', fullLabel: 'Miércoles', enabled: true, startTime: '08:00', endTime: '17:00', isOvernight: false, durationFormatted: '9h' },
+    { day: 'THURSDAY', shortLabel: 'J', fullLabel: 'Jueves', enabled: true, startTime: '08:00', endTime: '17:00', isOvernight: false, durationFormatted: '9h' },
+    { day: 'FRIDAY', shortLabel: 'V', fullLabel: 'Viernes', enabled: true, startTime: '08:00', endTime: '17:00', isOvernight: false, durationFormatted: '9h' },
+    { day: 'SATURDAY', shortLabel: 'S', fullLabel: 'Sábado', enabled: false, startTime: '08:00', endTime: '14:00', isOvernight: false, durationFormatted: '6h' },
+    { day: 'SUNDAY', shortLabel: 'D', fullLabel: 'Domingo', enabled: false, startTime: '08:00', endTime: '14:00', isOvernight: false, durationFormatted: '6h' },
+  ]);
+
+  // Total de horas semanales operativas calculadas
+  protected readonly totalWeeklyDuration = computed(() => {
+    const list = this.daySchedules().filter(d => d.enabled);
+    let totalMinutes = 0;
+    list.forEach(item => {
+      const [sh, sm] = item.startTime.split(':').map(Number);
+      const [eh, em] = item.endTime.split(':').map(Number);
+      const s = (sh || 0) * 60 + (sm || 0);
+      const e = (eh || 0) * 60 + (em || 0);
+      totalMinutes += (e <= s) ? (1440 - s + e) : (e - s);
+    });
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  });
+
+  // Estado del selector visual 24 Horas
+  protected readonly timePickerState = signal<TimePicker24hState>({
+    targetField: '',
+    currentHour: 8,
+    currentMinute: 0,
+    label: '',
+    isOpen: false,
+  });
+
+  // Horas para el selector 24h
+  protected readonly hours24 = Array.from({ length: 24 }, (_, i) => i);
+  protected readonly minutesQuarters = [0, 15, 30, 45];
+  protected readonly quickTimePresets = [
+    { label: '06:00 (Matutino)', time: '06:00' },
+    { label: '08:00 (Estándar)', time: '08:00' },
+    { label: '14:00 (Vespertino)', time: '14:00' },
+    { label: '17:00 (Cierre Oficina)', time: '17:00' },
+    { label: '19:00 (Mixto)', time: '19:00' },
+    { label: '20:00 (12 Horas)', time: '20:00' },
+    { label: '22:00 (Nocturno)', time: '22:00' },
+    { label: '03:00 (Madrugada)', time: '03:00' },
+  ];
 
   // Estados locales con Signals
   protected readonly formMode = signal<FormMode>('new');
@@ -522,6 +628,168 @@ protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() =>
   protected isDaySelected(dayValue: OperatingDay): boolean {
     const days: OperatingDay[] = this.shiftForm.get('operatingDays')?.value || [];
     return days.includes(dayValue);
+  }
+
+  
+  // ─── Control de Modo de Horario y Días Intercalados ────────────────────────
+  protected setScheduleMode(mode: 'UNIFIED' | 'PER_DAY'): void {
+    if (this.isShiftLeaderReadOnly()) return;
+    this.scheduleMode.set(mode);
+
+    if (mode === 'PER_DAY') {
+      // Sincronizar días activos desde el formulario hacia daySchedules
+      const formDays: OperatingDay[] = this.shiftForm.get('operatingDays')?.value || [];
+      const startTime = this.shiftForm.get('startTime')?.value || '08:00';
+      const endTime = this.shiftForm.get('endTime')?.value || '17:00';
+
+      this.daySchedules.update(list => list.map(item => {
+        const isEnabled = formDays.includes(item.day);
+        const { duration, isOvernight } = calculateDayDurationString(item.startTime || startTime, item.endTime || endTime);
+        return {
+          ...item,
+          enabled: isEnabled,
+          startTime: item.startTime || startTime,
+          endTime: item.endTime || endTime,
+          isOvernight,
+          durationFormatted: duration
+        };
+      }));
+    } else {
+      // Sincronizar días habilitados de daySchedules hacia operatingDays
+      const activeDays = this.daySchedules().filter(d => d.enabled).map(d => d.day);
+      if (activeDays.length > 0) {
+        this.shiftForm.get('operatingDays')?.setValue(activeDays);
+        this.shiftForm.get('operatingDays')?.markAsDirty();
+      }
+    }
+  }
+
+  protected toggleScheduleDay(day: OperatingDay): void {
+    if (this.isShiftLeaderReadOnly()) return;
+    this.daySchedules.update(list => list.map(item => {
+      if (item.day === day) {
+        return { ...item, enabled: !item.enabled };
+      }
+      return item;
+    }));
+
+    // Sincronizar con operatingDays del form
+    const activeDays = this.daySchedules().filter(d => d.enabled).map(d => d.day);
+    this.shiftForm.get('operatingDays')?.setValue(activeDays);
+    this.shiftForm.get('operatingDays')?.markAsDirty();
+    this.shiftForm.get('operatingDays')?.updateValueAndValidity();
+  }
+
+  protected updateDayTime(day: OperatingDay, field: 'startTime' | 'endTime', time: string): void {
+    if (this.isShiftLeaderReadOnly()) return;
+    const formatted = format24hTime(time);
+    this.daySchedules.update(list => list.map(item => {
+      if (item.day === day) {
+        const newStart = field === 'startTime' ? formatted : item.startTime;
+        const newEnd = field === 'endTime' ? formatted : item.endTime;
+        const { duration, isOvernight } = calculateDayDurationString(newStart, newEnd);
+        return {
+          ...item,
+          [field]: formatted,
+          isOvernight,
+          durationFormatted: duration
+        };
+      }
+      return item;
+    }));
+    this.shiftForm.markAsDirty();
+  }
+
+  protected copyDayScheduleToAll(sourceDay: OperatingDay): void {
+    if (this.isShiftLeaderReadOnly()) return;
+    const source = this.daySchedules().find(d => d.day === sourceDay);
+    if (!source) return;
+
+    this.daySchedules.update(list => list.map(item => {
+      if (item.enabled && item.day !== sourceDay) {
+        const { duration, isOvernight } = calculateDayDurationString(source.startTime, source.endTime);
+        return {
+          ...item,
+          startTime: source.startTime,
+          endTime: source.endTime,
+          isOvernight,
+          durationFormatted: duration
+        };
+      }
+      return item;
+    }));
+    this.shiftForm.markAsDirty();
+    this.toastService.info(`Horario de ${source.fullLabel} (${source.startTime} - ${source.endTime}) copiado a los demás días activos.`);
+  }
+
+  // ─── Selector Visual 24 Horas (TimePicker 24H) ────────────────────────────
+  protected openTimePicker24h(targetField: string, currentVal: string, label: string, targetDay?: OperatingDay): void {
+    if (this.isShiftLeaderReadOnly()) return;
+    const [hh, mm] = (currentVal || '08:00').split(':').map(Number);
+    this.timePickerState.set({
+      targetField,
+      currentHour: isNaN(hh) ? 8 : hh,
+      currentMinute: isNaN(mm) ? 0 : mm,
+      label,
+      isOpen: true,
+      targetDay
+    });
+  }
+
+  protected closeTimePicker24h(): void {
+    this.timePickerState.update(st => ({ ...st, isOpen: false }));
+  }
+
+  protected selectHour24h(hour: number): void {
+    this.timePickerState.update(st => ({ ...st, currentHour: hour }));
+  }
+
+  protected selectMinute24h(minute: number): void {
+    this.timePickerState.update(st => ({ ...st, currentMinute: minute }));
+  }
+
+  protected selectQuickTime24h(timeStr: string): void {
+    const [h, m] = timeStr.split(':').map(Number);
+    this.timePickerState.update(st => ({
+      ...st,
+      currentHour: isNaN(h) ? 8 : h,
+      currentMinute: isNaN(m) ? 0 : m
+    }));
+    this.applyTimePicker24h();
+  }
+
+  protected applyTimePicker24h(): void {
+    const state = this.timePickerState();
+    const formatted = `${state.currentHour.toString().padStart(2, '0')}:${state.currentMinute.toString().padStart(2, '0')}`;
+
+    if (state.targetDay) {
+      const fieldType = state.targetField.includes('start') ? 'startTime' : 'endTime';
+      this.updateDayTime(state.targetDay, fieldType, formatted);
+    } else {
+      const ctrl = this.shiftForm.get(state.targetField);
+      if (ctrl) {
+        ctrl.setValue(formatted);
+        ctrl.markAsDirty();
+        ctrl.markAsTouched();
+        ctrl.updateValueAndValidity();
+      }
+    }
+    this.closeTimePicker24h();
+  }
+
+  protected onTimeInputBlur(controlName: string): void {
+    const ctrl = this.shiftForm.get(controlName);
+    if (!ctrl) return;
+    const formatted = format24hTime(ctrl.value);
+    ctrl.setValue(formatted);
+    ctrl.updateValueAndValidity();
+  }
+
+  protected onDayTimeInputBlur(day: OperatingDay, field: 'startTime' | 'endTime', event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input) {
+      this.updateDayTime(day, field, input.value);
+    }
   }
 
   protected toggleDay(dayValue: OperatingDay): void {

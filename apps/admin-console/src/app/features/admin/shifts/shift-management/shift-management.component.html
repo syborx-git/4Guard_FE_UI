@@ -127,8 +127,8 @@
       <div class="shift-timeline-card__header">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-amber-500 text-lg">calendar_view_day</span>
-          <span class="font-bold text-sm tracking-wide text-slate-200">Mapa Visual de Cobertura 24 Horas</span>
-          <span class="text-xs text-slate-400 font-mono">({{ activeBranchName() }})</span>
+          <span class="font-bold text-sm tracking-wide timeline-header-title">Mapa Visual de Cobertura 24 Horas</span>
+          <span class="text-xs timeline-header-subtitle font-mono">({{ activeBranchName() }})</span>
         </div>
         <button type="button" class="shift-timeline-toggle" (click)="toggle24hTimeline()"
           [title]="show24hTimeline() ? 'Ocultar cronograma' : 'Mostrar cronograma'">
@@ -413,28 +413,65 @@
           <fieldset class="shift-form__fieldset" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
             <legend class="shift-form__legend">Horario y Días de Operación</legend>
 
-            <div class="shift-form-grid">
-              <!-- Hora de Inicio -->
+            <!-- Selector de Modo: Horario Unificado vs Horarios Personalizados por Día -->
+            <div class="schedule-mode-selector-wrap mb-4">
+              <span class="schedule-mode-title">Esquema de Horarios:</span>
+              <div class="schedule-mode-pill-group">
+                <button type="button" class="schedule-mode-btn"
+                  [class.schedule-mode-btn--active]="scheduleMode() === 'UNIFIED'"
+                  (click)="setScheduleMode('UNIFIED')">
+                  <span class="material-symbols-outlined text-sm">schedule</span>
+                  <span>Horario Unificado (Mismo horario todos los días)</span>
+                </button>
+                <button type="button" class="schedule-mode-btn"
+                  [class.schedule-mode-btn--active]="scheduleMode() === 'PER_DAY'"
+                  (click)="setScheduleMode('PER_DAY')">
+                  <span class="material-symbols-outlined text-sm">calendar_month</span>
+                  <span>Horarios por Día (Días intercalados / Rotativo)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- MODO 1: HORARIO UNIFICADO -->
+            @if (scheduleMode() === 'UNIFIED') {
+            <div class="shift-form-grid animate-fade-in">
+              <!-- Hora de Inicio 24H -->
               <div class="field-group col-4">
                 <label class="field-label" for="shift-start-time">
-                  Hora de Inicio <span class="required-star">*</span>
+                  Hora de Inicio (24H) <span class="required-star">*</span>
                 </label>
-                <input id="shift-start-time" type="time" class="field-input"
-                  [class.field-input--error]="isFieldInvalid('startTime') || hasIdenticalTimeError()"
-                  formControlName="startTime" />
+                <div class="time-picker-24h-input-wrap">
+                  <input id="shift-start-time" type="text" maxlength="5" class="field-input field-input--24h"
+                    [class.field-input--error]="isFieldInvalid('startTime') || hasIdenticalTimeError()"
+                    formControlName="startTime" (blur)="onTimeInputBlur('startTime')" placeholder="08:00" />
+                  <button type="button" class="time-picker-24h-trigger"
+                    (click)="openTimePicker24h('startTime', shiftForm.get('startTime')?.value, 'Hora de Inicio (24H)')"
+                    title="Abrir selector de 24 Horas">
+                    <span class="material-symbols-outlined text-sm">schedule</span>
+                  </button>
+                  <span class="badge-24h">24H</span>
+                </div>
                 @if (isFieldInvalid('startTime')) {
                 <span class="field-error">{{ getFieldError('startTime') }}</span>
                 }
               </div>
 
-              <!-- Hora de Fin -->
+              <!-- Hora de Fin 24H -->
               <div class="field-group col-4">
                 <label class="field-label" for="shift-end-time">
-                  Hora de Término <span class="required-star">*</span>
+                  Hora de Término (24H) <span class="required-star">*</span>
                 </label>
-                <input id="shift-end-time" type="time" class="field-input"
-                  [class.field-input--error]="isFieldInvalid('endTime') || hasIdenticalTimeError()"
-                  formControlName="endTime" />
+                <div class="time-picker-24h-input-wrap">
+                  <input id="shift-end-time" type="text" maxlength="5" class="field-input field-input--24h"
+                    [class.field-input--error]="isFieldInvalid('endTime') || hasIdenticalTimeError()"
+                    formControlName="endTime" (blur)="onTimeInputBlur('endTime')" placeholder="17:00" />
+                  <button type="button" class="time-picker-24h-trigger"
+                    (click)="openTimePicker24h('endTime', shiftForm.get('endTime')?.value, 'Hora de Término (24H)')"
+                    title="Abrir selector de 24 Horas">
+                    <span class="material-symbols-outlined text-sm">schedule</span>
+                  </button>
+                  <span class="badge-24h">24H</span>
+                </div>
                 @if (isFieldInvalid('endTime')) {
                 <span class="field-error">{{ getFieldError('endTime') }}</span>
                 }
@@ -486,6 +523,98 @@
                 }
               </div>
             </div>
+            }
+
+            <!-- MODO 2: HORARIOS POR DÍA (DÍAS INTERCALADOS / ROTATIVOS) -->
+            @if (scheduleMode() === 'PER_DAY') {
+            <div class="per-day-schedule-container animate-fade-in">
+              <div class="per-day-header-summary">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-amber-500 text-lg">info</span>
+                  <span class="text-xs text-secondary">
+                    Configure las horas de entrada y salida para cada día. Puede intercalar horarios diferentes (ej. 3 días de 8 a 8 y 1 día de noche).
+                  </span>
+                </div>
+                <div class="per-day-total-badge">
+                  <span class="material-symbols-outlined text-xs">timer</span>
+                  <span>Total Semanal: <strong>{{ totalWeeklyDuration() }}</strong></span>
+                </div>
+              </div>
+
+              <div class="day-schedule-card-list">
+                @for (dItem of daySchedules(); track dItem.day) {
+                <div class="day-schedule-row-card" [class.day-schedule-row-card--active]="dItem.enabled">
+                  <div class="day-schedule-row__col-toggle">
+                    <label class="day-switch-wrap">
+                      <input type="checkbox" [checked]="dItem.enabled" (change)="toggleScheduleDay(dItem.day)" />
+                      <span class="day-switch-slider"></span>
+                    </label>
+                    <div class="day-name-block">
+                      <span class="day-pill-badge" [class.day-pill-badge--active]="dItem.enabled">{{ dItem.shortLabel }}</span>
+                      <strong class="day-full-name">{{ dItem.fullLabel }}</strong>
+                    </div>
+                  </div>
+
+                  @if (dItem.enabled) {
+                  <div class="day-schedule-row__col-times">
+                    <!-- Entrada 24H -->
+                    <div class="day-time-group">
+                      <span class="day-time-label">Inicio (24H):</span>
+                      <div class="time-picker-24h-input-wrap time-picker-24h-input-wrap--sm">
+                        <input type="text" maxlength="5" class="field-input field-input--24h field-input--sm"
+                          [value]="dItem.startTime"
+                          (blur)="onDayTimeInputBlur(dItem.day, 'startTime', $event)" placeholder="08:00" />
+                        <button type="button" class="time-picker-24h-trigger"
+                          (click)="openTimePicker24h('day-start', dItem.startTime, dItem.fullLabel + ': Hora Inicio (24H)', dItem.day)"
+                          title="Selector 24H">
+                          <span class="material-symbols-outlined text-xs">schedule</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <span class="time-arrow-sep">➔</span>
+
+                    <!-- Salida 24H -->
+                    <div class="day-time-group">
+                      <span class="day-time-label">Término (24H):</span>
+                      <div class="time-picker-24h-input-wrap time-picker-24h-input-wrap--sm">
+                        <input type="text" maxlength="5" class="field-input field-input--24h field-input--sm"
+                          [value]="dItem.endTime"
+                          (blur)="onDayTimeInputBlur(dItem.day, 'endTime', $event)" placeholder="17:00" />
+                        <button type="button" class="time-picker-24h-trigger"
+                          (click)="openTimePicker24h('day-end', dItem.endTime, dItem.fullLabel + ': Hora Término (24H)', dItem.day)"
+                          title="Selector 24H">
+                          <span class="material-symbols-outlined text-xs">schedule</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Duración y Nocturno -->
+                    <div class="day-duration-chip">
+                      <span class="material-symbols-outlined text-xs">timelapse</span>
+                      <span>{{ dItem.durationFormatted }}</span>
+                      @if (dItem.isOvernight) {
+                      <span class="material-symbols-outlined text-xs text-purple-400" title="Cruza medianoche">nightlight</span>
+                      }
+                    </div>
+
+                    <!-- Acción Rápida: Copiar a Todos -->
+                    <button type="button" class="btn-copy-day-schedule" (click)="copyDayScheduleToAll(dItem.day)"
+                      title="Copiar este horario a todos los demás días activos">
+                      <span class="material-symbols-outlined text-xs">content_copy</span>
+                      <span>Copiar a activos</span>
+                    </button>
+                  </div>
+                  } @else {
+                  <div class="day-schedule-row__col-disabled">
+                    <span class="text-xs text-muted">Día no operativo (inactivo)</span>
+                  </div>
+                  }
+                </div>
+                }
+              </div>
+            </div>
+            }
           </fieldset>
 
           <fieldset class="shift-form__fieldset" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
@@ -537,7 +666,16 @@
                 <label class="field-label" for="shift-meal-start">
                   Inicio de Comida <span class="required-star">*</span>
                 </label>
-                <input id="shift-meal-start" type="time" class="field-input" formControlName="mealStartTime" />
+                <div class="time-picker-24h-input-wrap">
+                  <input id="shift-meal-start" type="text" maxlength="5" class="field-input field-input--24h"
+                    formControlName="mealStartTime" (blur)="onTimeInputBlur('mealStartTime')" placeholder="13:00" />
+                  <button type="button" class="time-picker-24h-trigger"
+                    (click)="openTimePicker24h('mealStartTime', shiftForm.get('mealStartTime')?.value, 'Inicio de Comida (24H)')"
+                    title="Selector 24H">
+                    <span class="material-symbols-outlined text-sm">schedule</span>
+                  </button>
+                  <span class="badge-24h">24H</span>
+                </div>
               </div>
 
               <!-- Término de Comida -->
@@ -545,7 +683,16 @@
                 <label class="field-label" for="shift-meal-end">
                   Término de Comida <span class="required-star">*</span>
                 </label>
-                <input id="shift-meal-end" type="time" class="field-input" formControlName="mealEndTime" />
+                <div class="time-picker-24h-input-wrap">
+                  <input id="shift-meal-end" type="text" maxlength="5" class="field-input field-input--24h"
+                    formControlName="mealEndTime" (blur)="onTimeInputBlur('mealEndTime')" placeholder="14:00" />
+                  <button type="button" class="time-picker-24h-trigger"
+                    (click)="openTimePicker24h('mealEndTime', shiftForm.get('mealEndTime')?.value, 'Término de Comida (24H)')"
+                    title="Selector 24H">
+                    <span class="material-symbols-outlined text-sm">schedule</span>
+                  </button>
+                  <span class="badge-24h">24H</span>
+                </div>
               </div>
 
               <!-- Ventana de Anticipación para Pausa en RF -->
@@ -844,3 +991,77 @@
   </div>
   }
 </div>
+
+  <!-- ==================== POPUP SELECTOR DE HORA 24 HORAS ==================== -->
+  @if (timePickerState().isOpen) {
+  <div class="timepicker-24h-backdrop animate-fade-in" (click)="closeTimePicker24h()">
+    <div class="timepicker-24h-modal" (click)="$event.stopPropagation()">
+      <div class="timepicker-24h-header">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-amber-500">schedule</span>
+          <span class="font-bold text-sm text-primary">{{ timePickerState().label }}</span>
+        </div>
+        <button type="button" class="timepicker-btn-close" (click)="closeTimePicker24h()">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      </div>
+
+      <!-- Display de Hora Seleccionada -->
+      <div class="timepicker-24h-display">
+        <span class="timepicker-display-val">{{ timePickerState().currentHour.toString().padStart(2, '0') }}:{{ timePickerState().currentMinute.toString().padStart(2, '0') }}</span>
+        <span class="timepicker-display-badge">Formato 24 Horas</span>
+      </div>
+
+      <!-- Presets Rápidos de Turno WMS -->
+      <div class="timepicker-presets-wrap">
+        <span class="timepicker-section-label">Horarios Frecuentes WMS:</span>
+        <div class="timepicker-presets-grid">
+          @for (preset of quickTimePresets; track preset.time) {
+          <button type="button" class="timepicker-preset-chip" (click)="selectQuickTime24h(preset.time)">
+            {{ preset.label }}
+          </button>
+          }
+        </div>
+      </div>
+
+      <!-- Selector de 24 Horas (00 a 23) -->
+      <div class="timepicker-grid-section">
+        <span class="timepicker-section-label">Seleccionar Hora (00 - 23):</span>
+        <div class="timepicker-hours-grid">
+          @for (h of hours24; track h) {
+          <button type="button" class="timepicker-num-btn"
+            [class.timepicker-num-btn--active]="timePickerState().currentHour === h"
+            (click)="selectHour24h(h)">
+            {{ h.toString().padStart(2, '0') }}
+          </button>
+          }
+        </div>
+      </div>
+
+      <!-- Selector de Minutos (00, 15, 30, 45) -->
+      <div class="timepicker-grid-section">
+        <span class="timepicker-section-label">Seleccionar Minutos:</span>
+        <div class="timepicker-minutes-grid">
+          @for (m of minutesQuarters; track m) {
+          <button type="button" class="timepicker-num-btn"
+            [class.timepicker-num-btn--active]="timePickerState().currentMinute === m"
+            (click)="selectMinute24h(m)">
+            :{{ m.toString().padStart(2, '0') }}
+          </button>
+          }
+        </div>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="timepicker-actions">
+        <button type="button" class="btn-timepicker-cancel" (click)="closeTimePicker24h()">
+          Cancelar
+        </button>
+        <button type="button" class="btn-timepicker-apply" (click)="applyTimePicker24h()">
+          <span class="material-symbols-outlined text-sm">check</span>
+          <span>Aplicar Hora</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  }
