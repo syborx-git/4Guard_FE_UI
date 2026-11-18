@@ -108,6 +108,18 @@ export class AuthState {
   }
 
   /**
+   * Actualiza parcialmente el usuario de la sesión actual en memoria y LocalStorage.
+   */
+  updateCurrentUser(userUpdate: Partial<AuthenticatedUser>): void {
+    const current = this._currentUser();
+    if (current) {
+      const updated = { ...current, ...userUpdate };
+      this._currentUser.set(updated);
+      this.sessionStorageService.updateUser(updated);
+    }
+  }
+
+  /**
    * Borra la sesión activa de LocalStorage y resetea las señales.
    */
   clearSession(): void {
@@ -256,14 +268,14 @@ export class AuthState {
       return true;
     }
 
-    // 1. Gerente de Operaciones y Almacén: Acceso total operativo, administrativo y de calidad
+    // 1. Gerente de Operaciones y Almacén: Acceso total operativo y administrativo, EXCEPTO Calidad (SoD)
     if (
       normRole === 'OPERATIONS_MANAGER' ||
       normRole === 'ROLE_OPERATIONS_MANAGER' ||
       normRole === 'WAREHOUSE_MANAGER' ||
       normRole === 'ROLE_WAREHOUSE_MANAGER'
     ) {
-      return true;
+      return module !== 'quality';
     }
 
     // 2. Coordinador de Operaciones: Enlace táctico entre gerencia y supervisión

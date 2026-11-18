@@ -72,7 +72,7 @@ export class ChangePasswordComponent {
       newPassword:     ['', [
         Validators.required,
         Validators.minLength(8),
-        Validators.pattern(/^(?=.*[A-Z])(?=.*[0-9!@#$%^&*]).{8,}$/)
+        Validators.pattern(/^(?=.*[a-zA-Z])(?=.*[0-9!@#$%^&*]).{8,}$/)
       ]],
       confirmPassword: ['', [Validators.required]],
     },
@@ -86,27 +86,30 @@ export class ChangePasswordComponent {
 
   // ── Criterios de validación individuales ─────────────────────
   protected readonly hasMinLength = computed(() => (this.newPwdValue() ?? '').length >= 8);
-  protected readonly hasUpperCase = computed(() => /[A-Z]/.test(this.newPwdValue() ?? ''));
+  protected readonly hasLetters = computed(() => /[a-zA-Z]/.test(this.newPwdValue() ?? ''));
   protected readonly hasNumberOrSpecial = computed(() => /[0-9!@#$%^&*]/.test(this.newPwdValue() ?? ''));
+  protected readonly hasUpperCase = computed(() => /[A-Z]/.test(this.newPwdValue() ?? ''));
 
   /** Fuerza de la contraseña: 0–3 */
   protected readonly passwordStrength = computed(() => {
     let score = 0;
     if (this.hasMinLength()) score++;
-    if (this.hasUpperCase()) score++;
-    if (this.hasNumberOrSpecial()) score++;
+    if (this.hasLetters() && this.hasNumberOrSpecial()) score++;
+    if (this.hasUpperCase() || (this.newPwdValue() ?? '').length >= 12) score++;
     return score;
   });
 
-  /** Indica si la contraseña cumple al 100% con todos los requisitos de seguridad (3 de 3) */
-  protected readonly isPasswordFullyValid = computed(() => this.passwordStrength() === 3);
+  /** Indica si la contraseña cumple con los requisitos obligatorios de seguridad */
+  protected readonly isPasswordFullyValid = computed(() => 
+    this.hasMinLength() && this.hasLetters() && this.hasNumberOrSpecial()
+  );
 
   protected readonly missingRequirementText = computed(() => {
     const val = this.newPwdValue() || '';
     if (!val) return null;
     const missing: string[] = [];
     if (!this.hasMinLength()) missing.push('al menos 8 caracteres');
-    if (!this.hasUpperCase()) missing.push('una letra mayúscula (A-Z)');
+    if (!this.hasLetters()) missing.push('letras');
     if (!this.hasNumberOrSpecial()) missing.push('un número o símbolo (0-9 o !@#$%^&*)');
     return missing.length > 0 ? `Falta: ${missing.join(', ')}.` : null;
   });
@@ -115,7 +118,7 @@ export class ChangePasswordComponent {
     const s = this.passwordStrength();
     if (s === 0) return '';
     if (s === 1) return 'Débil';
-    if (s === 2) return 'Moderada';
+    if (s === 2) return 'Moderada / Segura';
     return 'Fuerte';
   });
 
@@ -144,8 +147,8 @@ export class ChangePasswordComponent {
 
     if (!this.isPasswordFullyValid()) {
       this.form.markAllAsTouched();
-      const detail = this.missingRequirementText() || 'La contraseña no cumple con los requisitos de seguridad.';
-      this.serverError.set(`${detail} Ejemplo válido: Admin12345`);
+      const detail = this.missingRequirementText() || 'La contraseña debe contener al menos 8 caracteres combinando letras y números.';
+      this.serverError.set(`${detail} Ejemplo válido: Admin12345 o admin12345`);
       return;
     }
 
@@ -168,12 +171,8 @@ export class ChangePasswordComponent {
       next: (response) => {
         this.isLoading.set(false);
         if (response.success) {
-          // Actualizar la sesión para marcar changePasswordRequired = false
-          const currentSession = this.authState.currentUser();
-          if (currentSession) {
-            // Forzar recarga de sesión navegando al dashboard.
-            // El guard ya no bloqueará porque changePasswordRequired se actualizó en backend.
-          }
+          // Actualizar inmediatamente la sesión en memoria y LocalStorage
+          this.authState.updateCurrentUser({ changePasswordRequired: false });
           this.router.navigate(['/dashboard']);
         } else {
           this.serverError.set(response.message || 'No se pudo actualizar la contraseña.');
@@ -185,10 +184,12 @@ export class ChangePasswordComponent {
 
         if (err.status === 400) {
           this.serverError.set(backendMessage || 'La contraseña no cumple los requisitos mínimos.');
+        } else if (err.status === 401) {
+          this.serverError.set('Tu sesión ha expirado o no es válida. Por favor inicia sesión nuevamente.');
         } else if (err.status === 0) {
           this.serverError.set('Sin conexión al servidor. Verifica la red e inténtalo de nuevo.');
         } else {
-          this.serverError.set(backendMessage || 'Ocurrió un error. Inténtalo nuevamente.');
+          this.serverError.set(backendMessage || 'Ocurrió un error al actualizar la contraseña. Inténtalo nuevamente.');
         }
       },
     });

@@ -64,6 +64,17 @@ export class SessionStorageService {
   }
 
   /**
+   * Actualiza parcialmente la información del usuario en la sesión activa almacenada.
+   */
+  updateUser(partialUser: Partial<AuthenticatedUser>): void {
+    const session = this.getSession();
+    if (session && session.user) {
+      session.user = { ...session.user, ...partialUser };
+      this.saveSession(session);
+    }
+  }
+
+  /**
    * Obtiene los permisos del usuario actual.
    */
   getPermissions(): string[] {

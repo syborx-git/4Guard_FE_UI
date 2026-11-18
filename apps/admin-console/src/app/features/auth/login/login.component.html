@@ -67,17 +67,17 @@
           }
 
           <form id="login-form" class="login-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate autocomplete="off">
-            <!-- Email -->
+            <!-- Usuario o Email -->
             <div class="field-group">
-              <label class="field__label" for="email">CORREO ELECTRÓNICO</label>
+              <label class="field__label" for="email">USUARIO O CORREO ELECTRÓNICO</label>
               <div class="field__input-wrap" [class.field--error]="emailCtrl.touched && emailCtrl.invalid">
-                <span class="material-symbols-outlined field__icon">mail</span>
-                <input id="email" type="email" class="field__input" formControlName="email" placeholder="correo@4guard.com"
-                  autocomplete="email" aria-required="true" [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid"
+                <span class="material-symbols-outlined field__icon">person</span>
+                <input id="email" type="text" class="field__input" formControlName="email" placeholder="usuario o correo@4guard.com"
+                  autocomplete="username" aria-required="true" [attr.aria-invalid]="emailCtrl.touched && emailCtrl.invalid"
                   aria-describedby="email-error" (keydown.space)="$event.preventDefault()">
               </div>
               @if (emailCtrl.touched && emailCtrl.invalid) {
-                <span id="email-error" class="field__error-msg">Ingresa un correo electrónico válido</span>
+                <span id="email-error" class="field__error-msg">Ingresa un usuario o correo electrónico válido</span>
               }
             </div>
 

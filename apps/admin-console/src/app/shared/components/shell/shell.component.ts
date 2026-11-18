@@ -171,7 +171,12 @@ export class ShellComponent implements OnInit, OnDestroy {
     if (
       role === 'CONTROL_DESK' ||
       role === 'ROLE_CONTROL_DESK' ||
-      role.includes('MESA')
+      role.includes('MESA') ||
+      role === 'OPERATIONS_MANAGER' ||
+      role === 'ROLE_OPERATIONS_MANAGER' ||
+      role === 'WAREHOUSE_MANAGER' ||
+      role === 'ROLE_WAREHOUSE_MANAGER' ||
+      role.includes('OPERATIONS_')
     ) {
       return false;
     }
@@ -180,8 +185,6 @@ export class ShellComponent implements OnInit, OnDestroy {
       role.includes('ADMIN') ||
       role.includes('DIRECTOR') ||
       role.includes('CEO') ||
-      role.includes('MANAGER') ||
-      role.includes('OPERAT') ||
       role.includes('QM') ||
       role.includes('QUALIT') ||
       role.includes('CALIDAD') ||

@@ -376,12 +376,11 @@
           </div>
 
           <!-- ── Banners de estado ── -->
-          @if (saveSuccess()) {
+          @if (saveSuccess() && formMode() === 'edit') {
             <div class="users-alert users-alert--success" role="status" aria-live="polite">
               <span class="material-symbols-outlined">check_circle</span>
               <div class="flex flex-col text-xs leading-relaxed">
-                <span class="font-bold">⚡ Usuario guardado y dado de alta exitosamente en el WMS.</span>
-                <span>Contraseña temporal asignada: <strong class="font-mono text-amber-300 bg-black/30 px-1 py-0.5 rounded">TemporaryPassword123!</strong> (requiere cambio obligatorio en su primer inicio).</span>
+                <span class="font-bold">⚡ Cambios del colaborador actualizados y guardados exitosamente.</span>
               </div>
             </div>
           }
@@ -650,11 +649,11 @@
                   <div class="text-xs space-y-1.5">
                     <strong class="text-amber-400 block text-sm">Contraseña Temporal de Primer Acceso:</strong>
                     <div class="flex items-center gap-2 mt-1">
-                      <code class="px-2.5 py-1 rounded bg-black/40 border border-amber-500/40 text-amber-300 font-mono font-bold text-sm">TemporaryPassword123!</code>
-                      <span class="text-muted text-[11px]">(Clave maestra predeterminada de primer inicio)</span>
+                      <code class="px-2.5 py-1 rounded bg-black/40 border border-amber-500/40 text-amber-300 font-mono font-bold text-sm">admin123</code>
+                      <span class="text-muted text-[11px]">(Clave estándar provisional para el primer inicio)</span>
                     </div>
                     <p class="text-muted leading-relaxed">
-                      El sistema asigna automáticamente esta clave provisional y activa la bandera de seguridad para que el colaborador deba registrar su propia contraseña permanente al ingresar por primera vez.
+                      El sistema asigna automáticamente la clave provisional <strong>admin123</strong> al crear la cuenta. Al iniciar sesión por primera vez con su usuario o correo, el sistema le solicitará obligatoriamente registrar su propia contraseña permanente.
                     </p>
                   </div>
                 </div>
