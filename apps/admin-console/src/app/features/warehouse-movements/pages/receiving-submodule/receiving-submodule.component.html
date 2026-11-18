@@ -1307,7 +1307,8 @@
             <label class="fg-label fg-label--required">Producto (SKU)</label>
             <div class="relative flex items-center">
               <input type="text" [value]="skuSearchQuery()" (input)="onSkuInput($any($event.target).value)"
-                (focus)="isSkuDropdownOpen.set(true)" (click)="isSkuDropdownOpen.set(true)"
+                (focus)="isSkuDropdownOpen.set(true); $any($event.target).select()" (click)="isSkuDropdownOpen.set(true)"
+                (keyup.enter)="onSkuEnter()"
                 placeholder="Seleccionar o escribir SKU (ej. 8500297)..."
                 class="fg-input font-bold w-full pr-14 cursor-pointer" autocomplete="off" />
               <div class="absolute right-1.5 flex items-center gap-0.5">
@@ -1695,10 +1696,18 @@
                   </label>
                   <div class="relative flex items-center w-full z-30">
                     <input type="text" [value]="skuSearchQuery()" (input)="onSkuInput($any($event.target).value)"
-                      (focus)="isSkuDropdownOpen.set(true)" (click)="isSkuDropdownOpen.set(true)"
+                      (focus)="isSkuDropdownOpen.set(true); $any($event.target).select()" (click)="isSkuDropdownOpen.set(true)"
+                      (keyup.enter)="onSkuEnter()"
                       placeholder="Seleccionar o buscar SKU..."
-                      class="w-full text-xs font-bold rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 pr-8 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs cursor-pointer"
+                      class="w-full text-xs font-bold rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 pr-14 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs cursor-pointer"
                       autocomplete="off" />
+                    @if (skuSearchQuery()) {
+                    <button type="button" (click)="clearSkuSelection(); $event.stopPropagation()"
+                      class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded cursor-pointer absolute right-7"
+                      title="Limpiar búsqueda de SKU">
+                      <span class="material-symbols-outlined text-sm">close</span>
+                    </button>
+                    }
                     <button type="button" (click)="toggleSkuDropdown(); $event.stopPropagation()"
                       class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded cursor-pointer absolute right-2"
                       title="Ver catálogo de SKUs">

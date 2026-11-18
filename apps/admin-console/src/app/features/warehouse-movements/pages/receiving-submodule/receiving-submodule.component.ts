@@ -908,29 +908,34 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   skuSearchQuery = signal<string>('');
   isSkuDropdownOpen = signal<boolean>(false);
   filteredProducts = computed(() => {
-    const q = this.skuSearchQuery().toLowerCase().trim();
+    const raw = this.skuSearchQuery();
     const list = this.products();
+    if (!raw) return list;
+
+    // Normalizar texto eliminando acentos/diacríticos y espacios extra
+    const normalize = (str: string) =>
+      str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+    const q = normalize(raw);
     if (!q) return list;
 
-    // Si la búsqueda coincide con el producto actualmente seleccionado, mostrar todo el catálogo
-    const currentCode = (this.altaForm.get('productId')?.value || '').toLowerCase().trim();
-    const currentName = (this.altaForm.get('productName')?.value || '').toLowerCase().trim();
-    const currentFull = `${currentCode} - ${currentName}`.toLowerCase().trim();
-
-    if (
-      q === currentFull ||
-      q === currentCode ||
-      q === currentName ||
-      (currentCode && q.startsWith(currentCode))
-    ) {
+    // Si coincide con el formato completo "CODE - NOMBRE" del producto previamente seleccionado,
+    // y el usuario abrió el desplegable para ver opciones, mostrar catálogo completo
+    const currentCode = normalize(this.altaForm.get('productId')?.value || '');
+    const currentName = normalize(this.altaForm.get('productName')?.value || '');
+    const currentFull = `${currentCode} - ${currentName}`;
+    if (currentFull && q === currentFull) {
       return list;
     }
 
+    // Búsqueda inteligente multi-palabra (todas las palabras escritas deben coincidir con SKU o descripción)
+    const terms = q.split(/\s+/).filter(Boolean);
+
     return list.filter((p) => {
-      const code = (p.code || '').toLowerCase();
-      const name = (p.name || '').toLowerCase();
-      const full = `${code} - ${name}`.toLowerCase();
-      return code.includes(q) || name.includes(q) || full.includes(q) || q.includes(code);
+      const code = normalize(p.code || p.id || '');
+      const name = normalize(p.name || '');
+      const combined = `${code} ${name}`;
+      return terms.every((term) => combined.includes(term));
     });
   });
 
@@ -4120,12 +4125,22 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       if (exact.defaultPieces && (!this.altaForm.get('piecesPerPallet')?.value || this.altaForm.get('piecesPerPallet')?.value === 0)) {
         this.altaForm.patchValue({ piecesPerPallet: exact.defaultPieces });
       }
+    }
+  }
+
+  onSkuEnter(): void {
+    const list = this.filteredProducts();
+    if (list.length > 0) {
+      this.selectProductSku(list[0]);
     } else {
-      // Permite entrada directa manual de cualquier SKU
-      this.altaForm.patchValue({
-        productId: val,
-        productName: `Producto SKU ${val}`,
-      });
+      const val = this.skuSearchQuery().trim();
+      if (val) {
+        this.altaForm.patchValue({
+          productId: val,
+          productName: `Producto SKU ${val}`,
+        });
+        this.isSkuDropdownOpen.set(false);
+      }
     }
   }
 
