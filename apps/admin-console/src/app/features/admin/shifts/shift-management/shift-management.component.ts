@@ -96,7 +96,140 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
   protected readonly authService = inject(AuthService);
   protected readonly activeBranchName = computed(() => {
     const user = this.authService.getCurrentUser();
-    return user?.branchName || 'CDMX-01';
+    return user?.branchName || 'CENTRO DE DISTRIBUCION TOLUCA';
+  });
+
+  protected readonly activeBranchId = computed(() => {
+    const user = this.authService.getCurrentUser();
+    return user?.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
+  });
+
+  protected formatShortTime(time?: string | null): string {
+    if (!time) return '--:--';
+    const parts = time.split(':');
+    if (parts.length >= 2) {
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    }
+    return time;
+  }
+
+  // ── Visualizador de Cobertura 24H (Gantt Operativo) ─────────
+  protected readonly show24hTimeline = signal<boolean>(true);
+
+  protected toggle24hTimeline(): void {
+    this.show24hTimeline.update((v) => !v);
+  }
+
+  protected readonly timelineSegments = computed(() => {
+    const shifts = this.shiftService.filteredShifts().filter(s => s.status === 'ACTIVE');
+    const colorPalette = [
+      { border: '#38bdf8', bg: 'rgba(56, 189, 248, 0.22)', text: '#7dd3fc', tone: 'cyan' },
+      { border: '#34d399', bg: 'rgba(52, 211, 153, 0.22)', text: '#6ee7b7', tone: 'emerald' },
+      { border: '#fbbf24', bg: 'rgba(251, 191, 36, 0.22)', text: '#fde68a', tone: 'amber' },
+      { border: '#a78bfa', bg: 'rgba(167, 139, 250, 0.22)', text: '#c4b5fd', tone: 'purple' },
+      { border: '#f43f5e', bg: 'rgba(244, 63, 94, 0.22)', text: '#fda4af', tone: 'rose' }
+    ];
+
+    const toMinutes = (timeStr?: string) => {
+      if (!timeStr) return 0;
+      const [h, m] = timeStr.split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+
+    const segments: Array<{
+      id: string;
+      code: string;
+      name: string;
+      leftPct: number;
+      widthPct: number;
+      startTime: string;
+      endTime: string;
+      style: any;
+      hasConflict: boolean;
+      daysLabel: string;
+      isOvernight: boolean;
+    }> = [];
+
+    shifts.forEach((shift, index) => {
+      const palette = colorPalette[index % colorPalette.length];
+      const startM = toMinutes(shift.startTime);
+      const endM = toMinutes(shift.endTime);
+      const hasConflict = this.hasConflict(shift.id);
+      const daysLabel = this.getDayShortLabels(shift.operatingDays);
+
+      if (endM <= startM) {
+        // Cruza medianoche: Tramo 1 (Inicio a 24:00)
+        const left1 = (startM / 1440) * 100;
+        const width1 = ((1440 - startM) / 1440) * 100;
+        segments.push({
+          id: shift.id,
+          code: shift.code,
+          name: shift.name,
+          leftPct: left1,
+          widthPct: width1,
+          startTime: this.formatShortTime(shift.startTime),
+          endTime: '24:00',
+          style: {
+            left: `${left1}%`,
+            width: `${width1}%`,
+            borderColor: hasConflict ? '#ef4444' : palette.border,
+            backgroundColor: hasConflict ? 'rgba(239, 68, 68, 0.28)' : palette.bg,
+            color: hasConflict ? '#fca5a5' : palette.text
+          },
+          hasConflict,
+          daysLabel,
+          isOvernight: true
+        });
+
+        // Tramo 2 (00:00 a Fin)
+        const left2 = 0;
+        const width2 = (endM / 1440) * 100;
+        segments.push({
+          id: shift.id,
+          code: shift.code,
+          name: shift.name,
+          leftPct: left2,
+          widthPct: width2,
+          startTime: '00:00',
+          endTime: this.formatShortTime(shift.endTime),
+          style: {
+            left: `${left2}%`,
+            width: `${width2}%`,
+            borderColor: hasConflict ? '#ef4444' : palette.border,
+            backgroundColor: hasConflict ? 'rgba(239, 68, 68, 0.28)' : palette.bg,
+            color: hasConflict ? '#fca5a5' : palette.text
+          },
+          hasConflict,
+          daysLabel,
+          isOvernight: true
+        });
+      } else {
+        // Horario diurno regular
+        const left = (startM / 1440) * 100;
+        const width = ((endM - startM) / 1440) * 100;
+        segments.push({
+          id: shift.id,
+          code: shift.code,
+          name: shift.name,
+          leftPct: left,
+          widthPct: width,
+          startTime: this.formatShortTime(shift.startTime),
+          endTime: this.formatShortTime(shift.endTime),
+          style: {
+            left: `${left}%`,
+            width: `${width}%`,
+            borderColor: hasConflict ? '#ef4444' : palette.border,
+            backgroundColor: hasConflict ? 'rgba(239, 68, 68, 0.28)' : palette.bg,
+            color: hasConflict ? '#fca5a5' : palette.text
+          },
+          hasConflict,
+          daysLabel,
+          isOvernight: false
+        });
+      }
+    });
+
+    return segments;
   });
 
   // ── Control de Acordeón de Auditoría (Homologado con Usuarios) ──
@@ -502,6 +635,7 @@ protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() =>
         mealEndTime: val.hasMealBreak ? formatTime(val.mealEndTime) : null,
         mealEarlyPauseMinutes: Number(val.mealEarlyPauseMinutes) || 10,
         scopeType: 'BRANCH',
+        branchId: this.activeBranchId(),
       };
 
       this.shiftService.createShift(createReq).subscribe({
@@ -514,6 +648,8 @@ protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() =>
         },
         error: (err) => {
           this.isSubmitting.set(false);
+          const msg = err.error?.message || 'Error al crear el turno en el servidor.';
+          this.formError.set(msg);
         },
       });
     } else if (mode === 'edit') {
@@ -539,6 +675,7 @@ protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() =>
         mealEndTime: val.hasMealBreak ? formatTime(val.mealEndTime) : null,
         mealEarlyPauseMinutes: Number(val.mealEarlyPauseMinutes) || 10,
         scopeType: 'BRANCH',
+        branchId: selected.branchId || this.activeBranchId(),
       };
 
       this.shiftService.updateShift(selected.id, updateReq).subscribe({
@@ -550,6 +687,8 @@ protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() =>
         },
         error: (err) => {
           this.isSubmitting.set(false);
+          const msg = err.error?.message || 'Error al actualizar el turno en el servidor.';
+          this.formError.set(msg);
         },
       });
     }

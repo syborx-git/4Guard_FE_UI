@@ -56,25 +56,27 @@ export class ShiftService {
     if (a.status !== 'ACTIVE' || b.status !== 'ACTIVE') return false;
     const branchA = a.branchId ?? this.DEFAULT_BRANCH_ID;
     const branchB = b.branchId ?? this.DEFAULT_BRANCH_ID;
-    if (branchA !== branchB) return false;
+    if (branchA && branchB && branchA !== branchB) return false;
     const commonDays = a.operatingDays.filter(d => b.operatingDays.includes(d));
     if (commonDays.length === 0) return false;
 
-    const toMinutes = (t: string) => {
-      const [h, m] = (t || '00:00').split(':').map(Number);
-      return h * 60 + m;
+    const toIntervals = (startTime: string, endTime: string): [number, number][] => {
+      const [sh, sm] = (startTime || '00:00').split(':').map(Number);
+      const [eh, em] = (endTime || '00:00').split(':').map(Number);
+      const s = (sh || 0) * 60 + (sm || 0);
+      const e = (eh || 0) * 60 + (em || 0);
+      return e <= s ? [[s, 1440], [0, e]] : [[s, e]];
     };
-    const startA = toMinutes(a.startTime);
-    const endA = toMinutes(a.endTime);
-    const startB = toMinutes(b.startTime);
-    const endB = toMinutes(b.endTime);
 
-    const normalize = (start: number, end: number) => {
-      return end <= start ? [start, end + 24 * 60] : [start, end];
-    };
-    const [sA, eA] = normalize(startA, endA);
-    const [sB, eB] = normalize(startB, endB);
-    return sA < eB && sB < eA;
+    const intervalsA = toIntervals(a.startTime, a.endTime);
+    const intervalsB = toIntervals(b.startTime, b.endTime);
+
+    for (const [sA, eA] of intervalsA) {
+      for (const [sB, eB] of intervalsB) {
+        if (sA < eB && sB < eA) return true;
+      }
+    }
+    return false;
   }
 
   public readonly conflictPairs = computed(() => {
