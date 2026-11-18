@@ -2105,6 +2105,20 @@
             <input #excelFileInput type="file" accept=".xlsx,.xls,.csv" (change)="onExcelFileSelected($event)"
               class="hidden" />
 
+            @if (palletStream().length > 0 && rec.status !== 'COMPLETED' && rec.status !== 'CANCELLED') {
+            <!-- Botón Eliminar Seleccionadas / Vaciar Todas las UAs -->
+            <button type="button" (click)="deleteSelectedOrAllPallets()"
+              class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              [title]="selectedPalletCount() > 0 ? 'Eliminar las ' + selectedPalletCount() + ' tarimas seleccionadas' : 'Eliminar y vaciar todas las tarimas leídas de esta descarga'">
+              <span class="material-symbols-outlined text-sm">delete_sweep</span>
+              @if (selectedPalletCount() > 0) {
+              <span>Eliminar ({{ selectedPalletCount() }})</span>
+              } @else {
+              <span>Eliminar Todas</span>
+              }
+            </button>
+            }
+
             <!-- Botón Cargar / Importar Excel -->
             <button type="button" (click)="excelFileInput.click()" [disabled]="isImportingExcel()"
               class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
@@ -2159,6 +2173,15 @@
         <table class="tarimas-table">
           <thead>
             <tr>
+              @if (rec.status === 'REGISTERED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED') {
+              <th class="text-center w-10 px-2">
+                <input type="checkbox"
+                  [checked]="isAllPalletsSelected()"
+                  (change)="toggleSelectAllPallets($event)"
+                  class="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer h-4 w-4"
+                  title="Seleccionar / Deseleccionar todas las tarimas" />
+              </th>
+              }
               <th class="text-center w-12">N°</th>
               <th>Código Tarima (UA)</th>
               <th>Lote Asignado</th>
@@ -2179,7 +2202,7 @@
             <!-- Separador Visual Dinámico cuando cambia el Producto en la misma remisión -->
             @if (i > 0 && pallet.productId !== palletStream()[i - 1].productId) {
             <tr class="bg-amber-500/10 border-t-2 border-b border-amber-500/40">
-              <td colspan="11" class="py-2 px-4 text-xs font-black text-amber-900 dark:text-amber-200">
+              <td [attr.colspan]="(rec.status === 'REGISTERED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED') ? 12 : 11" class="py-2 px-4 text-xs font-black text-amber-900 dark:text-amber-200">
                 <div class="flex items-center gap-2">
                   <span class="material-symbols-outlined text-sm text-amber-600">inventory_2</span>
                   <span>Cambio de Producto en Manifiesto: {{ pallet.productId }} — {{ pallet.description }}</span>
@@ -2187,7 +2210,16 @@
               </td>
             </tr>
             }
-            <tr [ngClass]="{ 'bg-rose-500/10 border-l-4 border-l-rose-500': pallet.status === 'QUARANTINED' }">
+            <tr [ngClass]="{ 'bg-rose-500/10 border-l-4 border-l-rose-500': pallet.status === 'QUARANTINED', 'bg-rose-50/50 dark:bg-rose-950/20': isPalletSelected(pallet.id) }">
+              @if (rec.status === 'REGISTERED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED') {
+              <td class="text-center px-2">
+                <input type="checkbox"
+                  [checked]="isPalletSelected(pallet.id)"
+                  (change)="toggleSelectPallet(pallet.id)"
+                  class="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer h-4 w-4"
+                  title="Seleccionar tarima para eliminar" />
+              </td>
+              }
               <td class="tarimas-cell-num">{{ pallet.palletNumber || ($index + 1) }}</td>
               <td class="tarimas-cell-code font-mono font-bold">{{ pallet.palletCode }}</td>
               <td class="tarimas-cell-lot">
@@ -2265,7 +2297,7 @@
             </tr>
             } @empty {
             <tr>
-              <td colspan="11" class="p-0">
+              <td [attr.colspan]="(rec.status === 'REGISTERED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED') ? 12 : 11" class="p-0">
                 <div class="tarimas-table-empty">
                   <span class="material-symbols-outlined tarimas-table-empty__icon">inventory_2</span>
                   <p class="tarimas-table-empty__title">No hay tarimas registradas en este folio.</p>

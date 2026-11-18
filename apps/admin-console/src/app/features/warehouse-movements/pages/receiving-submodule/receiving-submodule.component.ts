@@ -1147,6 +1147,10 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   // Selector y asignación reactiva de Bahía
   selectedBayName = signal<string>('');
 
+  // Selección múltiple de tarimas para eliminación masiva
+  selectedPalletIds = signal<Set<string>>(new Set());
+  selectedPalletCount = computed(() => this.selectedPalletIds().size);
+
   // Verificación de UAs escaneadas
   showUaVerificationModal = signal(false);
   verifiedPalletIds = signal<Set<string>>(new Set());
@@ -1341,6 +1345,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
   closeReceptionDetail(): void {
     this.selectedReception.set(null);
+    this.selectedPalletIds.set(new Set());
     this.formMode.set('idle');
   }
 
@@ -1723,6 +1728,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
     this.formMode.set('detail');
     this.selectedReception.set(rec);
+    this.selectedPalletIds.set(new Set());
     localStorage.setItem('4g_active_reception_folio', rec.folio);
 
     const prevStream = this.palletStream();
@@ -3006,7 +3012,89 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     }
     const list = this.palletStream().filter((p) => p.id !== palletId);
     this.palletStream.set(list);
+
+    if (this.selectedPalletIds().has(palletId)) {
+      const next = new Set(this.selectedPalletIds());
+      next.delete(palletId);
+      this.selectedPalletIds.set(next);
+    }
+
+    const currentRec = this.selectedReception();
+    if (currentRec) {
+      const updatedRec: ReceptionHeader = { ...currentRec, pallets: list };
+      this.selectedReception.set(updatedRec);
+      this.movementsService.updateReception(currentRec.folio, updatedRec, true);
+    }
+
     this.toast.info('Tarima removida de la descarga');
+  }
+
+  // ── GESTIÓN DE SELECCIÓN Y ELIMINACIÓN MASIVA DE UAS ──
+  isPalletSelected(id: string): boolean {
+    return this.selectedPalletIds().has(id);
+  }
+
+  isAllPalletsSelected(): boolean {
+    const list = this.palletStream();
+    if (list.length === 0) return false;
+    return list.every((p) => this.selectedPalletIds().has(p.id));
+  }
+
+  toggleSelectPallet(id: string): void {
+    const next = new Set(this.selectedPalletIds());
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    this.selectedPalletIds.set(next);
+  }
+
+  toggleSelectAllPallets(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    if (checked) {
+      const allIds = new Set(this.palletStream().map((p) => p.id));
+      this.selectedPalletIds.set(allIds);
+    } else {
+      this.selectedPalletIds.set(new Set());
+    }
+  }
+
+  deleteSelectedOrAllPallets(): void {
+    const list = this.palletStream();
+    if (list.length === 0) {
+      this.toast.info('No hay tarimas en el mapa de descarga.');
+      return;
+    }
+
+    const selectedIds = this.selectedPalletIds();
+    const isSelective = selectedIds.size > 0;
+    const countToDelete = isSelective ? selectedIds.size : list.length;
+
+    const message = isSelective
+      ? `¿Estás seguro de eliminar las ${countToDelete} tarimas (UAs) seleccionadas de esta descarga? Esta acción restará sus piezas del total.`
+      : `¿Estás seguro de eliminar TODAS las ${countToDelete} tarimas (UAs) de esta descarga? Esta acción vaciará el mapa de descarga por completo.`;
+
+    if (!confirm(message)) {
+      return;
+    }
+
+    const remaining = isSelective ? list.filter((p) => !selectedIds.has(p.id)) : [];
+    this.palletStream.set(remaining);
+    this.selectedPalletIds.set(new Set());
+
+    const currentRec = this.selectedReception();
+    if (currentRec) {
+      const updatedRec: ReceptionHeader = { ...currentRec, pallets: remaining };
+      this.selectedReception.set(updatedRec);
+      this.movementsService.updateReception(currentRec.folio, updatedRec, true);
+    }
+
+    this.toast.success(
+      isSelective
+        ? `⚡ ${countToDelete} tarimas seleccionadas eliminadas correctamente.`
+        : `⚡ Todas las tarimas (${countToDelete}) han sido eliminadas de la descarga.`
+    );
   }
 
   // ── SELECTOR VISUAL DE BAHÍAS (22 PALLETS) & CATÁLOGO WMS ──
