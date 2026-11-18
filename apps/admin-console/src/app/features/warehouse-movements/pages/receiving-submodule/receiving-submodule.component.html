@@ -732,7 +732,7 @@
               <span
                 class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-[rgba(197,168,107,0.14)] text-[#8c6d23] dark:text-[#dfb76c] border border-[rgba(197,168,107,0.35)] shrink-0 flex items-center gap-0.5">
                 <span class="material-symbols-outlined text-[10px]">pending_actions</span>
-                <span>Buffer Temporal</span>
+                <span>Posición Temporal</span>
               </span>
               } @else {
               <span class="logistics-command-autoslot-tag shrink-0">
@@ -1397,8 +1397,8 @@
               <p class="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
                 Rampa <strong>{{ rec.checkIn.rampNumber }}</strong> bloqueada. El operador <strong>{{
                   rec.checkIn.forkliftOperator }}</strong> validará el transporte y comenzará la descarga hacia bahía
-                <strong>{{ selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation ||
-                  'STAGING-R01' }}</strong>.
+                <strong>{{ formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation ||
+                  'STAGING-R01') }}</strong>.
               </p>
               <p class="text-[10px] text-blue-600/80 dark:text-blue-400/80 font-normal mt-0.5 flex items-center gap-1">
                 <span class="material-symbols-outlined text-[13px]">info</span>
@@ -1466,7 +1466,7 @@
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
             <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{
-              selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'STAGING-R01'
+              formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'STAGING-R01')
               }}</span>
           </div>
           <div class="reception-readonly-item">
@@ -1999,7 +1999,7 @@
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
             <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{
-              selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'STAGING-R01'
+              formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation || 'STAGING-R01')
               }}</span>
           </div>
           <div class="reception-readonly-item">
@@ -4034,7 +4034,7 @@
   @if (showBaySelectorModal()) {
   <fg-bay-occupancy-selector
     [selectedLocationCode]="isReallocatingMode() ? reallocatingSourceBay() : altaForm.value.storageLocation"
-    [dialogTitle]="isReallocatingMode() ? 'Reubicación de Buffer Temporal a Posición Fija Definitiva' : 'Selector Visual de Ocupación de Bahías'"
+    [dialogTitle]="isReallocatingMode() ? 'Reubicación de Posición Temporal a Posición Fija Definitiva' : 'Selector Visual de Ocupación de Bahías'"
     (locationSelected)="onBaySelected($event)" (closed)="closeBaySelectorModal()"></fg-bay-occupancy-selector>
   }
 

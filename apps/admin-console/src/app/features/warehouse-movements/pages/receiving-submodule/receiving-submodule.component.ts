@@ -1287,16 +1287,49 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     const trimmed = loc.trim();
     if (!trimmed) return 'Bahía no asignada';
     const upper = trimmed.toUpperCase();
-    if (upper.startsWith('STAGING') || upper.startsWith('BAHIA') || upper.startsWith('BAHÍA') || upper.startsWith('ANDEN') || upper.startsWith('ANDÉN')) {
-      return trimmed;
+
+    // 1. Si es posición temporal / staging (ej. STAGING-R04, STAGING-01, TMP, etc.)
+    if (this.isTemporaryBay(trimmed) || upper.startsWith('STAGING') || upper.startsWith('BAHIA') || upper.startsWith('BAHÍA') || upper.startsWith('ANDEN') || upper.startsWith('ANDÉN')) {
+      return 'ALMACÉN A - POS TEMPORAL';
     }
-    if (/^[A-Z]\d+$/i.test(upper)) {
-      return `BODEGA ${upper.charAt(0)} - POS-${upper}`;
+
+    // 2. Si ya viene con formato ALMACÉN / ALMACEN
+    if (upper.includes('ALMACÉN') || upper.includes('ALMACEN')) {
+      return trimmed.replace(/ALMACEN/gi, 'ALMACÉN');
     }
-    if (/^POS-[A-Z]\d+$/i.test(upper)) {
-      const letter = upper.replace('POS-', '').charAt(0);
-      return `BODEGA ${letter} - ${upper}`;
+
+    // 3. Formato POS-A-005, POS-A-5, POS-A05, POS-A5
+    const posMatch = upper.match(/^(?:POS-)?([A-Z])-?0*(\d+)$/i);
+    if (posMatch) {
+      const warehouse = posMatch[1].toUpperCase();
+      const posNum = parseInt(posMatch[2], 10);
+      return `ALMACÉN ${warehouse} - POS ${posNum}`;
     }
+
+    // 4. Formato simple A5, A05, A-5, B-12
+    const simpleMatch = upper.match(/^([A-Z])-?0*(\d+)$/i);
+    if (simpleMatch) {
+      const warehouse = simpleMatch[1].toUpperCase();
+      const posNum = parseInt(simpleMatch[2], 10);
+      return `ALMACÉN ${warehouse} - POS ${posNum}`;
+    }
+
+    // 5. Formato LOC-A-01-N1 o similar
+    const locMatch = upper.match(/^LOC-([A-Z])-?0*(\d+)/i);
+    if (locMatch) {
+      const warehouse = locMatch[1].toUpperCase();
+      const posNum = parseInt(locMatch[2], 10);
+      return `ALMACÉN ${warehouse} - POS ${posNum}`;
+    }
+
+    // 6. Formato BODEGA A - POS-A5
+    const bodegaMatch = upper.match(/BODEGA\s+([A-Z])\s*-\s*(?:POS-)?(?:[A-Z])?0*(\d+)/i);
+    if (bodegaMatch) {
+      const warehouse = bodegaMatch[1].toUpperCase();
+      const posNum = parseInt(bodegaMatch[2], 10);
+      return `ALMACÉN ${warehouse} - POS ${posNum}`;
+    }
+
     return trimmed;
   }
 
