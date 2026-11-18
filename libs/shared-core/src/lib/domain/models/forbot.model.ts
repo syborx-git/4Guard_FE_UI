@@ -46,6 +46,7 @@ export type ForbotIntentType =
   | 'TUTOR_DIR_CAPACITY'
   | 'TUTOR_DIR_MERMAS'
   | 'TUTOR_RF_MISSION'
+  | 'TUTOR_RECEIVING_SCAN'
   | 'IA_GENERATIVA_QUERY'
   | 'UNKNOWN';
 

@@ -308,7 +308,42 @@ export class RfForbotModalComponent {
       };
     }
 
-    // 4. Cola Offline e IndexedDB
+    // 4. Recepción, SKUs y Pistoleo de Tarimas
+    if (
+      q.includes('sku') ||
+      q.includes('skus') ||
+      q.includes('buscar producto') ||
+      q.includes('busco producto') ||
+      q.includes('pistolear') ||
+      q.includes('escanear tarima') ||
+      q.includes('piezas por tarima') ||
+      q.includes('pzas x tarima') ||
+      q.includes('tipo tarima') ||
+      q.includes('auto sscc') ||
+      q.includes('código ua') ||
+      q.includes('codigo ua') ||
+      q.includes('captura de datos')
+    ) {
+      return {
+        id: `bot-${Date.now()}`,
+        sender: 'bot',
+        text: `🎯 **Captura de Mercancía y Pistoleo en Andén:**\n1. **Buscar SKU:** Escribe el nombre (ej. *"LECHERA"*) o el número de SKU (*"8500297"*) en el buscador interactivo.\n2. **Piezas por Tarima:** Confirma o edita las unidades reales del pallet.\n3. **Tipo de Tarima:** Elige Madera Estándar, Madera Owens, Plástica o CHEP.\n4. **Pistolear UA:** Escanea la etiqueta de tarima con el láser, o pulsa **Auto SSCC** si no trae etiqueta.\n5. Pulsa **+ Agregar** para subir la tarima a la remisión.`,
+        timestamp: this.getCurrentTime(),
+        widgetData: {
+          type: 'action-card',
+          title: 'Guía de Captura de Mercancía',
+          items: [
+            { label: 'Buscador SKU', value: 'Predictivo en Vivo', badgeColor: 'blue' },
+            { label: 'Lectura UA', value: 'Láser o Auto SSCC', badgeColor: 'emerald' },
+            { label: 'Tarima Especial', value: 'Owens / CHEP / Std', badgeColor: 'amber' }
+          ],
+          actionLabel: 'Ir a Recepción de Andén',
+          actionRoute: '/receiving'
+        }
+      };
+    }
+
+    // 5. Cola Offline e IndexedDB
     if (q.includes('offline') || q.includes('sync') || q.includes('cola') || q.includes('red') || q.includes('internet')) {
       const isOff = this.syncState.isOffline();
       const count = this.syncState.pendingCount();

@@ -429,6 +429,34 @@ export class ForbotEngineService {
       return 'BLOQUEOS_CALIDAD_NOM251';
     }
 
+    // 6. Consultas Operativas de Recepción y Captura de Datos (SKU, Piezas, Tipo Tarima, Pistoleo UA, Lote)
+    if (
+      q.includes('sku') ||
+      q.includes('skus') ||
+      q.includes('buscar producto') ||
+      q.includes('busco producto') ||
+      q.includes('producto activo') ||
+      q.includes('piezas por tarima') ||
+      q.includes('pzas x tarima') ||
+      q.includes('pzas por tarima') ||
+      q.includes('tipo tarima') ||
+      q.includes('tipo de tarima') ||
+      q.includes('pistolear') ||
+      q.includes('escanear tarima') ||
+      q.includes('auto sscc') ||
+      q.includes('código ua') ||
+      q.includes('codigo ua') ||
+      q.includes('lote activo') ||
+      q.includes('agregar lote') ||
+      q.includes('captura de datos') ||
+      q.includes('descarga física') ||
+      q.includes('descarga fisica') ||
+      q.includes('simular tarima') ||
+      q.includes('concluir descarga')
+    ) {
+      return 'TUTOR_RECEIVING_SCAN';
+    }
+
     if (
       q.startsWith('ir a') ||
       q.startsWith('abrir') ||
@@ -735,6 +763,51 @@ Hay **${operators.length} montacarguistas activos** listos para recibir misiones
             actionRoute: '/warehouse-movements/outbound',
             actionLabel: 'Ver Salidas de Almacén',
             proactiveTip: 'Si un cliente exige vida útil mínima de entrega (ej. >90 días), el filtro FEFO restringe la búsqueda a lotes conformes.'
+          }
+        };
+      }
+
+      case 'TUTOR_RECEIVING_SCAN': {
+        return {
+          id,
+          sender: 'bot',
+          intent,
+          timestamp: time,
+          text: `🎯 **Guía Operativa: Barra de Recepción y Captura de Datos (Andén)**
+
+Para registrar y pistolear tarimas durante la descarga física:
+
+1. **Buscador Predictivo de Producto / SKU:**
+   • En el campo **"Producto (SKU) Activo"**, escribe el nombre comercial (ej. *"LECHERA"*, *"NESCAFE"*) o el número de SKU (ej. *"8500297"*).
+   • El catálogo desplegará las coincidencias en tiempo real con sus descripciones. Haz clic sobre el producto deseado para seleccionarlo.
+
+2. **Piezas por Tarima (Pzas x Tarima):**
+   • Se precarga la cama estándar del producto. Si recibes una tarima pico, incompleta o con estiba especial, puedes borrar el número y escribir las piezas reales (ej. 121, 300 pzas).
+
+3. **Tipo de Tarima:**
+   • Selecciona el soporte físico en el menú desplegable: **Madera Estándar**, **Madera Owens**, **Plástica**, o **CHEP**.
+
+4. **Lote Activo:**
+   • Selecciona el lote registrado de la remisión o pulsa **+ Lote** para dar de alta uno nuevo con su fecha de elaboración y caducidad.
+
+5. **Lectura / Pistoleo de Códigos de Tarima (UAs):**
+   • **Con Pistola Láser:** Dispara directo al código de barras GS1-128 / SSCC del pallet.
+   • **Sin Etiqueta de Origen:** Haz clic en el botón amarillo **Auto SSCC** para generar una clave única homologada.
+   • Pulsa el botón naranja **+ Agregar** para sumar la tarima al mapa de descarga.
+
+6. **Finalizar Maniobra:**
+   • Pulsa **Concluir Descarga (F01)** para cerrar la remisión, enviar las tarimas a Staging/Bahía y liberar la rampa.`,
+          widgetData: {
+            type: 'kpi-summary',
+            title: 'Módulo de Recepción y Descarga',
+            items: [
+              { label: 'Buscador SKU', value: 'Predictivo en Vivo', badgeColor: 'blue' },
+              { label: 'Lectura UA', value: 'Pistola Láser / Auto SSCC', badgeColor: 'emerald' },
+              { label: 'Cierre Oficial', value: 'Formato F01', badgeColor: 'amber' }
+            ],
+            actionRoute: '/warehouse-movements/receiving',
+            actionLabel: 'Abrir Mesa de Recepción',
+            proactiveTip: 'Si una tarima viene incompleta (pico), ajusta "Pzas x Tarima" antes de pistolear su código para que el inventario quede exacto.'
           }
         };
       }
