@@ -484,11 +484,18 @@ export class WarehouseMovementsApiService {
           if (key) {
             const existing = mergedMap.get(key);
             if (existing) {
+              const isCancelled = existing.status === 'CANCELLED' || item.status === 'CANCELLED';
+              let mergedItem = { ...item, ...existing };
               if (item.status === 'DISCHARGED' || item.status === 'COMPLETED' || (item.pallets && item.pallets.length > (existing.pallets?.length || 0))) {
-                mergedMap.set(key, { ...existing, ...item });
-              } else {
-                mergedMap.set(key, { ...item, ...existing });
+                mergedItem = { ...existing, ...item };
               }
+              if (isCancelled) {
+                mergedItem.status = 'CANCELLED';
+                mergedItem.cancellationReason = existing.cancellationReason || item.cancellationReason || item.cancellation_reason || '';
+                mergedItem.cancelledAt = existing.cancelledAt || item.cancelledAt || '';
+                mergedItem.cancelledBy = existing.cancelledBy || item.cancelledBy || '';
+              }
+              mergedMap.set(key, mergedItem);
             } else {
               mergedMap.set(key, item);
             }

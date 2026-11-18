@@ -1161,12 +1161,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   }
 
   protected readonly boardReceptions = computed(() => {
-    const sessionId = this.shiftContext.activeShift()?.sessionId;
-    const list = this.movementsService.receptions();
-    if (!sessionId) return list;
-    return list.filter(
-      (r) => r.shiftSessionId === sessionId || this.isActiveStatus(r.status)
-    );
+    return this.movementsService.receptions();
   });
 
   protected isCarryOver(rec: ReceptionHeader): boolean {
@@ -1179,14 +1174,8 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   kpiRegistered = computed(() => this.boardReceptions().filter((r) => r.status === 'REGISTERED').length);
   kpiInProcess = computed(() => this.boardReceptions().filter((r) => r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS').length);
   kpiDischarged = computed(() => this.boardReceptions().filter((r) => r.status === 'DISCHARGED').length);
-  kpiCompleted = computed(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return this.boardReceptions().filter((r) => r.status === 'COMPLETED' && (r.checkIn?.docDate === today || (r as any).docDate === today || (r as any).completedAt?.startsWith(today) || (r as any).createdAt?.startsWith(today))).length;
-  });
-  kpiCancelled = computed(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return this.boardReceptions().filter((r) => r.status === 'CANCELLED' && (r.checkIn?.docDate === today || (r as any).docDate === today || (r as any).cancelledAt?.startsWith(today) || (r as any).createdAt?.startsWith(today))).length;
-  });
+  kpiCompleted = computed(() => this.boardReceptions().filter((r) => r.status === 'COMPLETED').length);
+  kpiCancelled = computed(() => this.boardReceptions().filter((r) => r.status === 'CANCELLED').length);
   isCarryOverFilterActive = signal<boolean>(false);
   isUrgentFilterActive = signal<boolean>(false);
   kpiCarryOver = computed(() => this.boardReceptions().filter((r) => this.isCarryOver(r)).length);
@@ -1776,6 +1765,13 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
                 this.movementsService.updateGlobalMaxPalletNumber(Number(p.palletNumber));
               }
             }
+          }
+
+          if (rec.status === 'CANCELLED' || mapped.status === 'CANCELLED') {
+            mapped.status = 'CANCELLED';
+            mapped.cancellationReason = rec.cancellationReason || mapped.cancellationReason || '';
+            mapped.cancelledAt = rec.cancelledAt || mapped.cancelledAt || '';
+            mapped.cancelledBy = rec.cancelledBy || mapped.cancelledBy || '';
           }
 
           this.selectedReception.set(mapped);
@@ -3485,7 +3481,10 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
             );
 
             if (cancelled) {
-              this.selectReception(cancelled);
+              try {
+                this.movementsApi.saveLocalReception(cancelled);
+              } catch (_) {}
+              this.selectedReception.set(cancelled);
               this.selectedPrintReception.set(cancelled);
               this.printType.set('CANCELLATION');
               this.toast.success(`Recepción #${cancelled.folio} cancelada exitosamente.`);
@@ -3512,7 +3511,10 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       this.showCancelModal.set(false);
 
       if (cancelled) {
-        this.selectReception(cancelled);
+        try {
+          this.movementsApi.saveLocalReception(cancelled);
+        } catch (_) {}
+        this.selectedReception.set(cancelled);
         this.selectedPrintReception.set(cancelled);
         this.printType.set('CANCELLATION');
         this.toast.success(`Recepción #${cancelled.folio} cancelada exitosamente.`);

@@ -2873,6 +2873,9 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
+    try {
+      this.movementsApi.saveLocalReception(updated);
+    } catch (_) {}
 
     if (!skipAudit && partial.storageLocation) {
       this.addReceptionAudit(updated.folio, {
@@ -3142,6 +3145,9 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
+    try {
+      this.movementsApi.saveLocalReception(updated);
+    } catch (_) {}
 
     const totalPieces = pallets.reduce((sum, p) => sum + p.pieces, 0);
 
@@ -3257,6 +3263,9 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
+    try {
+      this.movementsApi.saveLocalReception(updated);
+    } catch (_) {}
 
     this.addReceptionAudit(updated.folio || folioOrId, {
       id: `aud-rec-canc-${Date.now()}`,
@@ -3319,6 +3328,9 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
+    try {
+      this.movementsApi.saveLocalReception(updated);
+    } catch (_) {}
 
     // Actualizar también en lotes de inventario/kardex
     this.inventoryBatchesSignal.update((batches) =>
@@ -3400,6 +3412,9 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
+    try {
+      this.movementsApi.saveLocalReception(updated);
+    } catch (_) {}
 
     // Actualizar también en lotes de inventario/kardex si aplica
     this.inventoryBatchesSignal.update((batches) =>
@@ -3474,6 +3489,9 @@ export class WarehouseMovementsService {
     const newArr = [...list];
     newArr[index] = updated;
     this.receptionsSignal.set(newArr);
+    try {
+      this.movementsApi.saveLocalReception(updated);
+    } catch (_) {}
 
     const actionLabel =
       actionType === 'MISSING_PALLETS'
