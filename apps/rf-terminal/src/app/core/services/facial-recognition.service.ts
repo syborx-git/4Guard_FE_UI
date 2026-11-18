@@ -101,7 +101,18 @@ export class FacialRecognitionService {
     if (this.modelsReady()) return;
     if (!this.modelsPromise) {
       this.modelsPromise = (async () => {
-        this.faceapi = await import('@vladmandic/face-api');
+        try {
+          const dynamicImport = new Function('modulePath', 'return import(modulePath)');
+          this.faceapi = await dynamicImport('@vladmandic/face-api');
+        } catch (importErr) {
+          console.warn('[FaceAPI] Módulo no disponible o no compilado en este entorno.', importErr);
+          throw new Error('Reconocimiento facial no soportado en este dispositivo.');
+        }
+
+        if (!this.faceapi?.nets) {
+          throw new Error('El motor de face-api no se inicializó correctamente.');
+        }
+
         await Promise.all([
           this.faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
           this.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS_URL),
