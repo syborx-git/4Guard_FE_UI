@@ -586,6 +586,7 @@ export class SmartNotificationService implements OnDestroy {
     if (typeof window === 'undefined') return;
 
     this.pollIntervalId = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       if (!this.authState.isAuthenticated()) return;
 
       const user = this.authState.currentUser();

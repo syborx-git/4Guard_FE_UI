@@ -322,8 +322,8 @@ footer,
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-glass);
-  backdrop-filter: blur(20px) saturate(145%);
-  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
 }
 
 .synexia-glass--strong,
@@ -498,9 +498,9 @@ Glass Components
 
   background: rgba(255, 255, 255, .65);
 
-  backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(10px) saturate(140%);
 
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
 
   border: 1px solid rgba(255, 255, 255, .45);
 

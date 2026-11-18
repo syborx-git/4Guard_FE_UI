@@ -878,9 +878,11 @@ export class WarehouseMovementsService {
   public startAutoPolling(): void {
     if (this.pollingIntervalId || typeof window === 'undefined') return;
     this.pollingIntervalId = setInterval(() => {
+      // Evitar consumo innecesario de CPU y red si la pestaña está en segundo plano o minimizada
+      if (typeof document !== 'undefined' && document.hidden) return;
       this.reloadReceptions();
       this.reloadOutbounds();
-    }, 2000);
+    }, 5000);
   }
 
   public stopAutoPolling(): void {

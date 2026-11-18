@@ -692,19 +692,16 @@ export class ShellComponent implements OnInit, OnDestroy {
     this.updateClock();
 
     this.clockIntervalId = setInterval(() => {
-      this.updateClock();
+      if (typeof document === 'undefined' || !document.hidden) {
+        this.updateClock();
+      }
     }, 1000);
 
     this.refreshIntervalId = setInterval(() => {
-      this.runHeaderRefreshAnimation();
-    }, 30000);
-
-    // Polling reactivo cada 6 segundos para recepciones de caseta en tiempo real
-    this.preReceptionPollIntervalId = setInterval(() => {
-      if (this.authState.isAuthenticated() && this.authState.accessToken()) {
-        this.movementsService.reloadReceptions();
+      if (typeof document === 'undefined' || !document.hidden) {
+        this.runHeaderRefreshAnimation();
       }
-    }, 6000);
+    }, 30000);
   }
 
   ngOnDestroy(): void {
