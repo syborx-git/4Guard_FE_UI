@@ -955,6 +955,24 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     );
   });
 
+  // ── MODAL ASIGNAR / CAMBIAR MONTACARGUISTA ──
+  showAssignOperatorModal = signal(false);
+  assignOperatorPendingAction = signal<'DISCHARGE' | 'COMPLETE' | 'EDIT' | null>(null);
+  modalOperatorSearchQuery = signal<string>('');
+  selectedModalOperator = signal<string>('');
+  modalFilteredOperators = computed(() => {
+    const q = this.modalOperatorSearchQuery().toLowerCase().trim();
+    const list = this.forkliftOperators();
+    if (!q) return list;
+    return list.filter(
+      (op) =>
+        (op.name && op.name.toLowerCase().includes(q)) ||
+        (op.code && op.code.toLowerCase().includes(q)) ||
+        (op.jobTitle && op.jobTitle.toLowerCase().includes(q)) ||
+        (op.shift && op.shift.toLowerCase().includes(q))
+    );
+  });
+
   // ── AUTOCOMPLETE PREDICTIVO DE RAMPA DE RECEPCIÓN ──
   rampSearchQuery = signal<string>('');
   isRampDropdownOpen = signal<boolean>(false);
@@ -2702,6 +2720,15 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       }
     }
 
+    if (!this.altaForm.get('forkliftOperator')?.value) {
+      const rec = this.selectedReception();
+      const opVal = rec?.checkIn?.forkliftOperator || (rec as any)?.forkliftOperatorName || '';
+      if (opVal && opVal !== 'Por Asignar') {
+        this.altaForm.patchValue({ forkliftOperator: opVal });
+        this.operatorSearchQuery.set(opVal);
+      }
+    }
+
     if (this.altaForm.invalid) {
       this.altaForm.markAllAsTouched();
       const missing: string[] = [];
@@ -2817,7 +2844,12 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     const current = currentRec || this.selectedReception();
     if (!current) return;
 
-    const op = current.checkIn?.forkliftOperator || 'Montacarguista';
+    const op = (current.checkIn?.forkliftOperator || this.altaForm.get('forkliftOperator')?.value || '').trim();
+    if (!op || op === 'Por Asignar') {
+      this.openAssignOperatorModal('DISCHARGE');
+      return;
+    }
+
     const recId = current.id || current.folio;
 
     this.isStartingDischarge.set(true);
@@ -4099,6 +4131,17 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       this.toast.warning('No hay ninguna recepción seleccionada.');
       return;
     }
+
+    const currentOp = (rec.checkIn?.forkliftOperator || this.altaForm.get('forkliftOperator')?.value || '').trim();
+    if (!currentOp || currentOp === 'Por Asignar') {
+      this.openAssignOperatorModal('COMPLETE');
+      this.toast.info('Por favor selecciona el montacarguista asignado para emitir el Formato F01 oficial.');
+      return;
+    } else if (!this.altaForm.get('forkliftOperator')?.value) {
+      this.altaForm.patchValue({ forkliftOperator: currentOp });
+      this.operatorSearchQuery.set(currentOp);
+    }
+
     if (!this.validateAltaForm()) return;
 
     if (this.palletStream().length === 0) {
@@ -4308,6 +4351,93 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     this.altaForm.patchValue({ forkliftOperator: '' });
     this.operatorSearchQuery.set('');
     this.isOperatorDropdownOpen.set(false);
+  }
+
+  // ── MÉTODOS DEL MODAL DE ASIGNACIÓN RÁPIDA DE MONTACARGUISTA ──
+  openAssignOperatorModal(action: 'DISCHARGE' | 'COMPLETE' | 'EDIT' = 'EDIT'): void {
+    const current = this.selectedReception();
+    const currentOp = (current?.checkIn?.forkliftOperator || this.altaForm.get('forkliftOperator')?.value || '').trim();
+    this.selectedModalOperator.set((currentOp && currentOp !== 'Por Asignar') ? currentOp : '');
+    this.modalOperatorSearchQuery.set('');
+    this.assignOperatorPendingAction.set(action);
+    this.showAssignOperatorModal.set(true);
+  }
+
+  closeAssignOperatorModal(): void {
+    this.showAssignOperatorModal.set(false);
+    this.assignOperatorPendingAction.set(null);
+  }
+
+  selectModalOperator(name: string): void {
+    this.selectedModalOperator.set(name);
+    this.modalOperatorSearchQuery.set(name);
+  }
+
+  onModalOperatorInput(event: Event): void {
+    const val = (event.target as HTMLInputElement).value;
+    this.modalOperatorSearchQuery.set(val);
+    this.selectedModalOperator.set(val);
+  }
+
+  confirmAssignOperator(operatorName?: string): void {
+    const op = (operatorName || this.selectedModalOperator() || this.modalOperatorSearchQuery()).trim();
+    if (!op || op === 'Por Asignar') {
+      this.toast.warning('Por favor selecciona o escribe el nombre del montacarguista.');
+      return;
+    }
+
+    const current = this.selectedReception();
+    if (!current) {
+      this.closeAssignOperatorModal();
+      return;
+    }
+
+    const pendingAction = this.assignOperatorPendingAction();
+
+    // 1. Actualizar estado reactivo y formularios locales
+    this.altaForm.patchValue({ forkliftOperator: op });
+    this.operatorSearchQuery.set(op);
+    if (!current.checkIn) {
+      current.checkIn = {} as any;
+    }
+    current.checkIn!.forkliftOperator = op;
+    this.selectedReception.set({ ...current });
+
+    const recId = current.id || current.folio;
+
+    // Buscar si coincide con un operador del catálogo para enviar su UUID
+    const matchedOp = this.forkliftOperators().find(
+      (o: any) =>
+        (o.name && o.name.toLowerCase() === op.toLowerCase()) ||
+        (o.code && o.code.toLowerCase() === op.toLowerCase())
+    );
+    const opUuid = matchedOp && typeof matchedOp.id === 'string' && /^[0-9a-f-]{36}$/i.test(matchedOp.id)
+      ? matchedOp.id
+      : undefined;
+
+    this.closeAssignOperatorModal();
+
+    // 2. Persistir en backend
+    this.movementsApi.updateReceptionParameters(recId, {
+      forkliftOperatorName: op,
+      forkliftOperatorId: opUuid
+    }).subscribe({
+      next: () => {
+        this.toast.success(`Montacarguista "${op}" asignado a la recepción #${current.folio}.`);
+        if (pendingAction === 'DISCHARGE') {
+          this.startDischarge(this.selectedReception()!);
+        } else if (pendingAction === 'COMPLETE') {
+          this.initiateCompleteReception();
+        }
+      },
+      error: () => {
+        if (pendingAction === 'DISCHARGE') {
+          this.startDischarge(this.selectedReception()!);
+        } else if (pendingAction === 'COMPLETE') {
+          this.initiateCompleteReception();
+        }
+      }
+    });
   }
 
   // ── MANEJADORES DE AUTOCOMPLETE PROVEEDOR ──

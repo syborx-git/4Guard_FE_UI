@@ -1465,9 +1465,17 @@
               }}</span>
           </div>
           <div class="reception-readonly-item">
-            <span class="reception-readonly-label">Montacarguista Asignado</span>
-            <span class="reception-readonly-val truncate font-bold text-amber-700 dark:text-amber-400">{{
-              rec.checkIn?.forkliftOperator || altaForm.get('forkliftOperator')?.value || 'Por Asignar' }}</span>
+            <div class="flex items-center justify-between">
+              <span class="reception-readonly-label">Montacarguista Asignado</span>
+              <button type="button" (click)="openAssignOperatorModal('EDIT')"
+                class="text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer">
+                <span class="material-symbols-outlined text-[13px]">edit</span>
+                <span>{{ (rec.checkIn?.forkliftOperator || altaForm.get('forkliftOperator')?.value) ? 'Cambiar' : 'Asignar' }}</span>
+              </button>
+            </div>
+            <span class="reception-readonly-val truncate font-bold text-amber-700 dark:text-amber-400">
+              {{ rec.checkIn?.forkliftOperator || altaForm.get('forkliftOperator')?.value || 'Por Asignar' }}
+            </span>
           </div>
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Rampa Bloqueada</span>
@@ -1528,9 +1536,20 @@
                   class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-700 dark:text-cyan-300">En
                   Proceso</span>
               </h3>
-              <p class="text-[11px] text-cyan-700 dark:text-cyan-300 font-medium">
-                Montacarguista <strong>{{ rec.checkIn.forkliftOperator }}</strong> leyendo códigos de tarima (UAs) en
-                andén.
+              <p class="text-[11px] text-cyan-700 dark:text-cyan-300 font-medium flex items-center gap-1.5 flex-wrap">
+                <span>Montacarguista</span>
+                @if (rec.checkIn?.forkliftOperator || altaForm.get('forkliftOperator')?.value; as opName) {
+                  <strong>{{ opName }}</strong>
+                  <button type="button" (click)="openAssignOperatorModal('EDIT')" class="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold hover:underline cursor-pointer">
+                    [Cambiar]
+                  </button>
+                } @else {
+                  <button type="button" (click)="openAssignOperatorModal('EDIT')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold text-[10px] border border-amber-500/40 cursor-pointer animate-pulse">
+                    <span class="material-symbols-outlined text-[11px]">forklift</span>
+                    <span>+ Asignar Montacarguista</span>
+                  </button>
+                }
+                <span>leyendo códigos de tarima (UAs) en andén.</span>
               </p>
             </div>
           </div>
@@ -1917,11 +1936,22 @@
                   Fase 4 de 5 (80%) · Pendiente de Aprobación
                 </span>
               </div>
-              <p class="text-xs text-purple-900 dark:text-purple-200 mt-0.5 font-medium">
-                El montacarguista <strong>{{ rec.checkIn.forkliftOperator }}</strong> finalizó la descarga de <strong>{{
-                  totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong> con destino inicial a <strong
-                  class="text-amber-800 dark:text-amber-300 font-mono">{{ selectedBayName() || 'STAGING-R01'
-                  }}</strong>.
+              <p class="text-xs text-purple-900 dark:text-purple-200 mt-0.5 font-medium flex items-center gap-1.5 flex-wrap">
+                <span>El montacarguista</span>
+                @if (rec.checkIn?.forkliftOperator || altaForm.get('forkliftOperator')?.value; as opName) {
+                  <strong class="text-purple-950 dark:text-purple-100 bg-purple-500/20 px-2 py-0.5 rounded border border-purple-500/30">
+                    {{ opName }}
+                  </strong>
+                  <button type="button" (click)="openAssignOperatorModal('EDIT')" class="text-[11px] text-amber-700 dark:text-amber-400 font-bold hover:underline cursor-pointer">
+                    [Cambiar]
+                  </button>
+                } @else {
+                  <button type="button" (click)="openAssignOperatorModal('EDIT')" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold text-xs border border-amber-500/40 hover:bg-amber-500/30 cursor-pointer animate-pulse">
+                    <span class="material-symbols-outlined text-xs">forklift</span>
+                    <span>+ Asignar Montacarguista</span>
+                  </button>
+                }
+                <span>finalizó la descarga de <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong> con destino inicial a <strong class="text-amber-800 dark:text-amber-300 font-mono">{{ selectedBayName() || 'STAGING-R01' }}</strong>.</span>
               </p>
             </div>
           </div>
@@ -2645,6 +2675,107 @@
             }
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ── MODAL: ASIGNACIÓN RÁPIDA DE MONTACARGUISTA ── -->
+  @if (showAssignOperatorModal()) {
+  <div class="modal-overlay p-3 sm:p-4" (click)="closeAssignOperatorModal()">
+    <div class="modal-card max-w-lg w-full shadow-2xl animate-fade-up overflow-hidden" (click)="$event.stopPropagation()">
+      <div class="modal-header flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+            <span class="material-symbols-outlined text-xl">forklift</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-slate-900 dark:text-white uppercase tracking-wider">
+              Asignar Montacarguista de Andén
+            </h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">
+              Folio #{{ selectedReception()?.folio }} · {{ selectedReception()?.checkIn?.rampNumber ? ('Rampa ' + selectedReception()?.checkIn?.rampNumber) : 'Andén General' }}
+            </p>
+          </div>
+        </div>
+        <button type="button" (click)="closeAssignOperatorModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body space-y-4 py-4 text-xs">
+        <div>
+          <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">
+            Buscar o Ingresar Nombre del Montacarguista:
+          </label>
+          <div class="relative">
+            <input type="text"
+              [value]="modalOperatorSearchQuery()"
+              (input)="onModalOperatorInput($event)"
+              placeholder="Escribe o busca un montacarguista..."
+              class="fg-input w-full pl-9 pr-3 py-2 text-xs font-bold" />
+            <span class="material-symbols-outlined absolute left-2.5 top-2 text-slate-400 text-sm">search</span>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+            Personal Calificado de Andén (Selección Rápida en 1 Clic):
+          </span>
+          <div class="max-h-56 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-xl p-2 bg-slate-50 dark:bg-slate-900/40">
+            @for (op of modalFilteredOperators(); track op.id || op.code || op.name) {
+            <div (click)="selectModalOperator(op.name)"
+              [class.border-amber-500]="selectedModalOperator() === op.name"
+              [class.bg-amber-50]="selectedModalOperator() === op.name"
+              class="flex items-center justify-between p-2 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 hover:bg-amber-500/10 cursor-pointer transition-all">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-base">badge</span>
+                <div>
+                  <span class="text-xs font-bold text-slate-900 dark:text-white block">{{ op.name }}</span>
+                  <span class="text-[10px] text-slate-500 font-mono">{{ op.code }} · {{ op.jobTitle || 'Montacarguista' }}</span>
+                </div>
+              </div>
+              @if (selectedModalOperator() === op.name) {
+              <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-sm">check_circle</span>
+              }
+            </div>
+            } @empty {
+            <div class="text-center py-3 text-[11px] text-slate-400 italic">
+              Sin coincidencias en catálogo. Se registrará el texto ingresado arriba.
+            </div>
+            }
+          </div>
+        </div>
+
+        @if (selectedModalOperator()) {
+        <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
+          <span class="text-xs text-amber-800 dark:text-amber-300">
+            Operador Seleccionado: <strong class="font-mono font-bold">{{ selectedModalOperator() }}</strong>
+          </span>
+          <button type="button" (click)="selectedModalOperator.set('')" class="text-[11px] text-amber-700 dark:text-amber-400 font-bold hover:underline cursor-pointer">
+            Limpiar
+          </button>
+        </div>
+        }
+      </div>
+
+      <div class="modal-footer flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
+        <button type="button" (click)="closeAssignOperatorModal()"
+          class="btn-ghost text-xs px-3 py-1.5 rounded-lg">
+          Cancelar
+        </button>
+        <button type="button" (click)="confirmAssignOperator()"
+          [disabled]="!selectedModalOperator() && !modalOperatorSearchQuery().trim()"
+          class="btn-primary-gold text-xs px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+          <span class="material-symbols-outlined text-sm">check</span>
+          @if (assignOperatorPendingAction() === 'DISCHARGE') {
+          <span>Asignar e Iniciar Descarga</span>
+          } @else if (assignOperatorPendingAction() === 'COMPLETE') {
+          <span>Asignar y Aprobar F01</span>
+          } @else {
+          <span>Guardar Asignación</span>
+          }
+        </button>
       </div>
     </div>
   </div>
