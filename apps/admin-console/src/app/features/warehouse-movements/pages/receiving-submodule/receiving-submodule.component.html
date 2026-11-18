@@ -718,7 +718,7 @@
                 (click)="rec.status !== 'COMPLETED' ? openBaySelector() : (isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode) ? openReallocationModal(rec) : null)"
                 class="logistics-command-bay-text truncate"
                 [class.cursor-pointer]="rec.status !== 'COMPLETED' || isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)"
-                [title]="(rec.status !== 'COMPLETED' || isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)) ? 'Haga clic para seleccionar bahía' : 'Posición fija definitiva'">
+                [title]="formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation) + ((rec.status !== 'COMPLETED' || isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)) ? ' — Clic para cambiar bahía' : '')">
                 {{ formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value ||
                 rec.storageLocation) }}
               </span>

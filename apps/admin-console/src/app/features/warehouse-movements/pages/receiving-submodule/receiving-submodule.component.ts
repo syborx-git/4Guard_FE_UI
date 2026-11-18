@@ -1282,17 +1282,24 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     if (!trimmed) return 'Bahía no asignada';
     const upper = trimmed.toUpperCase();
 
-    // 1. Si es posición temporal / staging (ej. STAGING-R04, STAGING-01, TMP, etc.)
-    if (this.isTemporaryBay(trimmed) || upper.startsWith('STAGING') || upper.startsWith('BAHIA') || upper.startsWith('BAHÍA') || upper.startsWith('ANDEN') || upper.startsWith('ANDÉN')) {
-      return 'ALMACÉN A - POS TEMPORAL';
-    }
-
-    // 2. Si ya viene con formato ALMACÉN / ALMACEN
+    // 1. Extraer si ya viene explícito con ALMACÉN / ALMACEN
     if (upper.includes('ALMACÉN') || upper.includes('ALMACEN')) {
       return trimmed.replace(/ALMACEN/gi, 'ALMACÉN');
     }
 
-    // 3. Formato POS-A-005, POS-A-5, POS-A05, POS-A5
+    // 2. Formato temporal con almacén específico (ej. POS-L-T01, POS-L-T1, POS-L-TMP, TMP-L, TEMPORAL L, STAGING-L01)
+    const tempWhMatch = upper.match(/^(?:POS-)?([A-Z])[-_ ]?(?:T|TMP|TEMPORAL)0*(\d+)?$/i) ||
+                        upper.match(/^(?:TMP|TEMPORAL|STAGING)[-_ ]?([A-Z])0*(\d+)?$/i) ||
+                        upper.match(/^(?:ALMACEN|ALMACÉN)\s*([A-Z])\s*[-_ ]?\s*(?:POS)?\s*(?:TEMPORAL|TMP)$/i);
+    if (tempWhMatch) {
+      const warehouse = (tempWhMatch[1] || 'A').toUpperCase();
+      const posNum = tempWhMatch[2] ? parseInt(tempWhMatch[2], 10) : null;
+      return posNum && posNum > 1 
+        ? `ALMACÉN ${warehouse} - POS TEMPORAL ${posNum}`
+        : `ALMACÉN ${warehouse} - POS TEMPORAL`;
+    }
+
+    // 3. Formato POS-A-005, POS-A-5, POS-A05, POS-A5 (posiciones fijas)
     const posMatch = upper.match(/^(?:POS-)?([A-Z])-?0*(\d+)$/i);
     if (posMatch) {
       const warehouse = posMatch[1].toUpperCase();
@@ -1322,6 +1329,11 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       const warehouse = bodegaMatch[1].toUpperCase();
       const posNum = parseInt(bodegaMatch[2], 10);
       return `ALMACÉN ${warehouse} - POS ${posNum}`;
+    }
+
+    // 7. Si es posición temporal genérica / staging de rampa sin almacén especificado (ej. STAGING-R04, STAGING-01, TMP, etc.)
+    if (this.isTemporaryBay(trimmed) || upper.startsWith('STAGING') || upper.startsWith('BAHIA') || upper.startsWith('BAHÍA') || upper.startsWith('ANDEN') || upper.startsWith('ANDÉN')) {
+      return 'ALMACÉN A - POS TEMPORAL';
     }
 
     return trimmed;
