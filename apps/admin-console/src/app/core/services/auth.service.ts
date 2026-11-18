@@ -61,7 +61,7 @@ export class AuthService {
    */
   login(credentials: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.API_URL}/login`, credentials).pipe(
-      timeout(3000),
+      timeout(10000),
       tap(response => {
         if (response.success && response.data) {
           if (!response.data.expiresAt) {
@@ -70,77 +70,82 @@ export class AuthService {
           this.handleAuthentication(response.data);
         }
       }),
-      catchError(() => {
-        // Fallback resiliente para desarrollo / demo local
-        const identifier = (credentials.identifier || '').trim().toLowerCase();
-        const localPart = identifier.split('@')[0] || identifier;
-        let role = 'ROLE_ADMIN';
-        let fullName = 'Enrique Architect (Director General)';
+      catchError((error) => {
+        // Fallback resiliente EXCLUSIVAMENTE para desarrollo local standalone cuando useMockData está activo y no hay backend disponible
+        if (environment.useMockData && (error?.status === 0 || error?.name === 'TimeoutError')) {
+          const identifier = (credentials.identifier || '').trim().toLowerCase();
+          const localPart = identifier.split('@')[0] || identifier;
+          let role = 'ROLE_ADMIN';
+          let fullName = 'Enrique Architect (Director General)';
 
-        if (localPart.includes('enrique') || localPart.includes('norma') || localPart.includes('alejandro') || localPart.includes('admin')) {
-          role = 'ROLE_ADMIN';
-          fullName = localPart.includes('norma') ? 'Norma (Dirección General)' : 'Enrique Architect (Director General)';
-        } else if (localPart.includes('pablo') || localPart.includes('operacion') || localPart.includes('gerente')) {
-          role = 'ROLE_OPERATIONS_MANAGER';
-          fullName = 'Pablo Gerente (Gerente de Operaciones)';
-        } else if (localPart.includes('coord') || localPart.includes('coordinador')) {
-          role = 'ROLE_OPERATIONS_COORDINATOR';
-          fullName = 'Coordinador de Operaciones';
-        } else if (localPart.includes('supervisor')) {
-          role = 'ROLE_OPERATIONS_SUPERVISOR';
-          fullName = 'Supervisor de Operaciones';
-        } else if (localPart.includes('mesa') || localPart.includes('control')) {
-          role = 'ROLE_CONTROL_DESK';
-          fullName = 'Mesa de Control';
-        } else if (localPart.includes('lider') || localPart.includes('turno')) {
-          role = 'ROLE_SHIFT_LEADER';
-          fullName = 'Líder de Turno';
-        } else if (localPart.includes('calidad_ayud') || localPart.includes('ayudante_calidad')) {
-          role = 'ROLE_QUALITY_ASSISTANT';
-          fullName = 'Ayudante de Calidad';
-        } else if (localPart.includes('calidad') || localPart.includes('qm') || localPart.includes('inspector') || localPart.includes('auditor')) {
-          role = 'ROLE_QM_INSPECTOR';
-          fullName = 'Inspector de Calidad';
-        } else if (localPart.includes('seguridad_ayud') || localPart.includes('ayudante_seguridad')) {
-          role = 'ROLE_SECURITY_ASSISTANT';
-          fullName = 'Ayudante de Seguridad';
-        } else if (localPart.includes('guard') || localPart.includes('caseta') || localPart.includes('seguridad') || localPart.includes('vigilan') || localPart.includes('jp')) {
-          role = 'ROLE_SECURITY_GUARD';
-          fullName = 'Juan Pablo Vigilancia (Caseta)';
-        } else if (localPart.includes('mc-') || localPart.includes('montacarga') || localPart.includes('oper')) {
-          role = 'ROLE_WAREHOUSE_OPERATOR';
-          fullName = 'Alex Gabriel Perez Garduño (Montacargas)';
+          if (localPart.includes('enrique') || localPart.includes('norma') || localPart.includes('alejandro') || localPart.includes('admin')) {
+            role = 'ROLE_ADMIN';
+            fullName = localPart.includes('norma') ? 'Norma (Dirección General)' : 'Enrique Architect (Director General)';
+          } else if (localPart.includes('pablo') || localPart.includes('operacion') || localPart.includes('gerente')) {
+            role = 'ROLE_OPERATIONS_MANAGER';
+            fullName = 'Pablo Gerente (Gerente de Operaciones)';
+          } else if (localPart.includes('coord') || localPart.includes('coordinador')) {
+            role = 'ROLE_OPERATIONS_COORDINATOR';
+            fullName = 'Coordinador de Operaciones';
+          } else if (localPart.includes('supervisor')) {
+            role = 'ROLE_OPERATIONS_SUPERVISOR';
+            fullName = 'Supervisor de Operaciones';
+          } else if (localPart.includes('mesa') || localPart.includes('control')) {
+            role = 'ROLE_CONTROL_DESK';
+            fullName = 'Mesa de Control';
+          } else if (localPart.includes('lider') || localPart.includes('turno')) {
+            role = 'ROLE_SHIFT_LEADER';
+            fullName = 'Líder de Turno';
+          } else if (localPart.includes('calidad_ayud') || localPart.includes('ayudante_calidad')) {
+            role = 'ROLE_QUALITY_ASSISTANT';
+            fullName = 'Ayudante de Calidad';
+          } else if (localPart.includes('calidad') || localPart.includes('qm') || localPart.includes('inspector') || localPart.includes('auditor')) {
+            role = 'ROLE_QM_INSPECTOR';
+            fullName = 'Inspector de Calidad';
+          } else if (localPart.includes('seguridad_ayud') || localPart.includes('ayudante_seguridad')) {
+            role = 'ROLE_SECURITY_ASSISTANT';
+            fullName = 'Ayudante de Seguridad';
+          } else if (localPart.includes('guard') || localPart.includes('caseta') || localPart.includes('seguridad') || localPart.includes('vigilan') || localPart.includes('jp')) {
+            role = 'ROLE_SECURITY_GUARD';
+            fullName = 'Juan Pablo Vigilancia (Caseta)';
+          } else if (localPart.includes('mc-') || localPart.includes('montacarga') || localPart.includes('oper')) {
+            role = 'ROLE_WAREHOUSE_OPERATOR';
+            fullName = 'Alex Gabriel Perez Garduño (Montacargas)';
+          }
+
+          const validJwt = this.createDevJwtToken(credentials.identifier, role, fullName);
+          const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+
+          const devSession: JwtSession = {
+            accessToken: validJwt,
+            refreshToken: validJwt,
+            expiresAt: expiresAt,
+            user: {
+              id: 'u-admin-01',
+              username: credentials.identifier,
+              fullName: fullName,
+              email: credentials.identifier.includes('@') ? credentials.identifier : `${credentials.identifier}@4guard.mx`,
+              role: role,
+              roleLevel: 1,
+              permissions: ['*'],
+              changePasswordRequired: false
+            }
+          };
+
+          this.handleAuthentication(devSession);
+
+          const devResponse: LoginResponse = {
+            success: true,
+            message: 'Inicio de sesión autorizado (Modo Local Mock)',
+            data: devSession,
+            timestamp: new Date().toISOString()
+          };
+
+          return of(devResponse);
         }
 
-        const validJwt = this.createDevJwtToken(credentials.identifier, role, fullName);
-        const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
-
-        const devSession: JwtSession = {
-          accessToken: validJwt,
-          refreshToken: validJwt,
-          expiresAt: expiresAt,
-          user: {
-            id: 'u-admin-01',
-            username: credentials.identifier,
-            fullName: fullName,
-            email: credentials.identifier.includes('@') ? credentials.identifier : `${credentials.identifier}@4guard.mx`,
-            role: role,
-            roleLevel: 1,
-            permissions: ['*'],
-            changePasswordRequired: false
-          }
-        };
-
-        this.handleAuthentication(devSession);
-
-        const devResponse: LoginResponse = {
-          success: true,
-          message: 'Inicio de sesión autorizado (Modo Local)',
-          data: devSession,
-          timestamp: new Date().toISOString()
-        };
-
-        return of(devResponse);
+        // Si el backend respondió con un código de error (e.g. 401, 403, 423), propagarlo directamente
+        return throwError(() => error);
       })
     );
   }

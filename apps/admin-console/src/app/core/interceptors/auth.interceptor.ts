@@ -28,11 +28,6 @@ function handle401Error(
   router: Router,
   originalError: HttpErrorResponse
 ) {
-  // En entorno local o desarrollo, un 401 del backend remoto no debe botar al usuario al login
-  if (!environment.production) {
-    return throwError(() => originalError);
-  }
-
   if (!isRefreshing) {
     isRefreshing = true;
     refreshTokenSubject.next(null);
@@ -127,11 +122,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(activeReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      // En entorno local/desarrollo, no cerrar sesión si una llamada HTTP remota devuelve 401/403
-      if (!environment.production) {
-        return throwError(() => error);
-      }
-
       const isExpiredForbidden =
         error.status === 403 &&
         error.error &&

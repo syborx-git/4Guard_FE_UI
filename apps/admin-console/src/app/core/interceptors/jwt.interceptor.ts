@@ -45,9 +45,6 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
         !router.url.includes('/carrier-checkin') &&
         !router.url.includes('/driver-checkin')
       ) {
-        if (!environment.production) {
-          return throwError(() => error);
-        }
         sessionStorageService.clearSession();
         router.navigate(['/login'], { queryParams: { reason: 'session_expired' } });
       }
