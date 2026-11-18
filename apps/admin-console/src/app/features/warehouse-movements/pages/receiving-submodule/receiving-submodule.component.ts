@@ -4867,7 +4867,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     const pdfFilename = isReception ? `Recepcion_${recNumber}` : `Cancelacion_${recNumber}`;
     this.isGeneratingPdf.set(true);
     try {
-      await this.printService.downloadPdf(selector, pdfFilename, { orientation: 'portrait', margin: 12 });
+      await this.printService.downloadPdf(selector, pdfFilename, { orientation: 'portrait', margin: 6, fitToSinglePage: true });
     } finally {
       this.isGeneratingPdf.set(false);
     }

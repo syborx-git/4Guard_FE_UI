@@ -22,12 +22,8 @@
 
     <div class="hero-header__actions">
       @if (canCreateOrEdit()) {
-      <button
-        type="button"
-        class="shift-btn shift-btn--primary"
-        (click)="onClickNewShift()"
-        [disabled]="formMode() === 'new' || isSubmitting()"
-      >
+      <button type="button" class="shift-btn shift-btn--primary" (click)="onClickNewShift()"
+        [disabled]="formMode() === 'new' || isSubmitting()">
         <span class="material-symbols-outlined">add</span>
         <span>Nuevo Turno</span>
       </button>
@@ -42,89 +38,86 @@
         <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
         <span>Métricas de Turnos y Horarios</span>
       </span>
-      <button
-        type="button"
-        (click)="toggleKpiCollapse()"
-        class="wms-kpi-toggle-btn"
-        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
-      >
+      <button type="button" (click)="toggleKpiCollapse()" class="wms-kpi-toggle-btn"
+        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'">
         <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
         <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
       </button>
     </div>
 
     @if (isKpiCollapsed()) {
-      <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
-      <div class="wms-kpi-summary-bar animate-fade-in">
-        <div class="wms-kpi-summary-items">
-          <div class="wms-kpi-summary-item">
-            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
-            <span class="wms-kpi-summary-label">Total Turnos:</span>
-            <strong class="wms-kpi-summary-value">{{ shiftService.totalShiftCount() }}</strong>
-          </div>
+    <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+    <div class="wms-kpi-summary-bar animate-fade-in">
+      <div class="wms-kpi-summary-items">
+        <div class="wms-kpi-summary-item">
+          <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+          <span class="wms-kpi-summary-label">Total Turnos:</span>
+          <strong class="wms-kpi-summary-value">{{ shiftService.totalShiftCount() }}</strong>
+        </div>
 
-          <div class="wms-kpi-summary-item">
-            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
-            <span class="wms-kpi-summary-label">Activos:</span>
-            <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ shiftService.activeShiftCount() }}</strong>
-          </div>
+        <div class="wms-kpi-summary-item">
+          <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+          <span class="wms-kpi-summary-label">Activos:</span>
+          <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{
+            shiftService.activeShiftCount() }}</strong>
+        </div>
 
-          <div class="wms-kpi-summary-item">
-            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--blue"></span>
-            <span class="wms-kpi-summary-label">Sucursal:</span>
-            <strong class="wms-kpi-summary-value text-blue-600 dark:text-blue-400">{{ activeBranchName() }}</strong>
-          </div>
+        <div class="wms-kpi-summary-item">
+          <span class="wms-kpi-summary-dot wms-kpi-summary-dot--blue"></span>
+          <span class="wms-kpi-summary-label">Sucursal:</span>
+          <strong class="wms-kpi-summary-value text-blue-600 dark:text-blue-400">{{ activeBranchName() }}</strong>
+        </div>
 
-          <div class="wms-kpi-summary-item">
-            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--warning"></span>
-            <span class="wms-kpi-summary-label">Conflictos:</span>
-            <strong class="wms-kpi-summary-value text-amber-500">{{ shiftService.conflictCount() }}</strong>
-          </div>
+        <div class="wms-kpi-summary-item">
+          <span class="wms-kpi-summary-dot wms-kpi-summary-dot--warning"></span>
+          <span class="wms-kpi-summary-label">Conflictos:</span>
+          <strong class="wms-kpi-summary-value text-amber-500">{{ shiftService.conflictCount() }}</strong>
         </div>
       </div>
+    </div>
     } @else {
-      <!-- Grid Completo de Tarjetas Grandes -->
-      <section class="shift-kpis animate-fade-in" aria-label="Resumen de turnos">
-        <article class="shift-kpi-card" data-tone="neutral">
-          <div class="shift-kpi-card__icon">
-            <span class="material-symbols-outlined">schedule</span>
-          </div>
-          <div class="shift-kpi-card__content">
-            <span class="shift-kpi-card__label">Total Turnos</span>
-            <strong class="shift-kpi-card__value">{{ shiftService.totalShiftCount() }}</strong>
-          </div>
-        </article>
+    <!-- Grid Completo de Tarjetas Grandes -->
+    <section class="shift-kpis animate-fade-in" aria-label="Resumen de turnos">
+      <article class="shift-kpi-card" data-tone="neutral">
+        <div class="shift-kpi-card__icon">
+          <span class="material-symbols-outlined">schedule</span>
+        </div>
+        <div class="shift-kpi-card__content">
+          <span class="shift-kpi-card__label">Total Turnos</span>
+          <strong class="shift-kpi-card__value">{{ shiftService.totalShiftCount() }}</strong>
+        </div>
+      </article>
 
-        <article class="shift-kpi-card" data-tone="success">
-          <div class="shift-kpi-card__icon">
-            <span class="material-symbols-outlined">check_circle</span>
-          </div>
-          <div class="shift-kpi-card__content">
-            <span class="shift-kpi-card__label">Turnos Activos</span>
-            <strong class="shift-kpi-card__value">{{ shiftService.activeShiftCount() }}</strong>
-          </div>
-        </article>
+      <article class="shift-kpi-card" data-tone="success">
+        <div class="shift-kpi-card__icon">
+          <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div class="shift-kpi-card__content">
+          <span class="shift-kpi-card__label">Turnos Activos</span>
+          <strong class="shift-kpi-card__value">{{ shiftService.activeShiftCount() }}</strong>
+        </div>
+      </article>
 
-        <article class="shift-kpi-card" data-tone="info">
-          <div class="shift-kpi-card__icon">
-            <span class="material-symbols-outlined">nightlight</span>
-          </div>
-          <div class="shift-kpi-card__content">
-            <span class="shift-kpi-card__label">Sucursal Activa</span>
-            <strong class="shift-kpi-card__value shift-kpi-card__value--text">{{ activeBranchName() }}</strong>
-          </div>
-        </article>
+      <article class="shift-kpi-card" data-tone="info">
+        <div class="shift-kpi-card__icon">
+          <span class="material-symbols-outlined">nightlight</span>
+        </div>
+        <div class="shift-kpi-card__content">
+          <span class="shift-kpi-card__label">Sucursal Activa</span>
+          <strong class="shift-kpi-card__value shift-kpi-card__value--text">{{ activeBranchName() }}</strong>
+        </div>
+      </article>
 
-        <article class="shift-kpi-card" data-tone="warning">
-          <div class="shift-kpi-card__icon">
-            <span class="material-symbols-outlined">warning</span>
-          </div>
-          <div class="shift-kpi-card__content">
-            <span class="shift-kpi-card__label">Conflictos de Horario</span>
-            <strong class="shift-kpi-card__value">{{ shiftService.conflictCount() }}</strong>
-          </div>
-        </article>
-      </section>
+      <article class="shift-kpi-card" data-tone="warning">
+        <div class="shift-kpi-card__icon">
+          <span class="material-symbols-outlined">warning</span>
+        </div>
+        <div class="shift-kpi-card__content">
+          <span class="shift-kpi-card__label">Conflictos de Horario</span>
+          <strong class="shift-kpi-card__value">{{ shiftService.conflictCount() }}</strong>
+        </div>
+      </article>
+    </section>
     }
   </section>
 
@@ -137,66 +130,61 @@
           <span class="font-bold text-sm tracking-wide text-slate-200">Mapa Visual de Cobertura 24 Horas</span>
           <span class="text-xs text-slate-400 font-mono">({{ activeBranchName() }})</span>
         </div>
-        <button
-          type="button"
-          class="shift-timeline-toggle"
-          (click)="toggle24hTimeline()"
+        <button type="button" class="shift-timeline-toggle" (click)="toggle24hTimeline()"
           [title]="show24hTimeline() ? 'Ocultar cronograma' : 'Mostrar cronograma'">
-          <span class="material-symbols-outlined text-sm">{{ show24hTimeline() ? 'visibility_off' : 'visibility' }}</span>
+          <span class="material-symbols-outlined text-sm">{{ show24hTimeline() ? 'visibility_off' : 'visibility'
+            }}</span>
           <span>{{ show24hTimeline() ? 'Ocultar Cronograma' : 'Ver Cronograma' }}</span>
         </button>
       </div>
 
       @if (show24hTimeline()) {
-        <div class="shift-timeline-body animate-fade-in">
-          <!-- Regla de 24 Horas -->
-          <div class="timeline-ruler">
-            <span class="ruler-tick">00:00</span>
-            <span class="ruler-tick">04:00</span>
-            <span class="ruler-tick">08:00</span>
-            <span class="ruler-tick">12:00</span>
-            <span class="ruler-tick">16:00</span>
-            <span class="ruler-tick">20:00</span>
-            <span class="ruler-tick">24:00</span>
+      <div class="shift-timeline-body animate-fade-in">
+        <!-- Regla de 24 Horas -->
+        <div class="timeline-ruler">
+          <span class="ruler-tick">00:00</span>
+          <span class="ruler-tick">04:00</span>
+          <span class="ruler-tick">08:00</span>
+          <span class="ruler-tick">12:00</span>
+          <span class="ruler-tick">16:00</span>
+          <span class="ruler-tick">20:00</span>
+          <span class="ruler-tick">24:00</span>
+        </div>
+
+        <!-- Pistas de Turnos (Gantt) -->
+        <div class="timeline-tracks">
+          <!-- Líneas guía de fondo -->
+          <div class="timeline-grid-lines" aria-hidden="true">
+            <span class="grid-line" style="left: 0%"></span>
+            <span class="grid-line" style="left: 16.66%"></span>
+            <span class="grid-line" style="left: 33.33%"></span>
+            <span class="grid-line" style="left: 50%"></span>
+            <span class="grid-line" style="left: 66.66%"></span>
+            <span class="grid-line" style="left: 83.33%"></span>
+            <span class="grid-line" style="left: 100%"></span>
           </div>
 
-          <!-- Pistas de Turnos (Gantt) -->
-          <div class="timeline-tracks">
-            <!-- Líneas guía de fondo -->
-            <div class="timeline-grid-lines" aria-hidden="true">
-              <span class="grid-line" style="left: 0%"></span>
-              <span class="grid-line" style="left: 16.66%"></span>
-              <span class="grid-line" style="left: 33.33%"></span>
-              <span class="grid-line" style="left: 50%"></span>
-              <span class="grid-line" style="left: 66.66%"></span>
-              <span class="grid-line" style="left: 83.33%"></span>
-              <span class="grid-line" style="left: 100%"></span>
-            </div>
-
-            <!-- Barras de Turnos -->
-            <div class="timeline-bars-container">
-              @for (seg of timelineSegments(); track seg.id + '-' + seg.startTime) {
-                <div
-                  class="timeline-shift-bar"
-                  [ngStyle]="seg.style"
-                  (click)="onSelectShift(seg.id)"
-                  [class.timeline-shift-bar--selected]="shiftService.selectedShiftId() === seg.id"
-                  [class.timeline-shift-bar--conflict]="seg.hasConflict"
-                  [title]="seg.name + ' (' + seg.code + '): ' + seg.startTime + ' - ' + seg.endTime + ' [' + seg.daysLabel + ']'">
-                  <span class="timeline-bar-label font-bold text-xs truncate">
-                    {{ seg.code }} ({{ seg.startTime }}-{{ seg.endTime }})
-                  </span>
-                  @if (seg.hasConflict) {
-                    <span class="material-symbols-outlined text-xs text-red-400">warning</span>
-                  }
-                  @if (seg.isOvernight) {
-                    <span class="material-symbols-outlined text-[10px] text-purple-300">nightlight</span>
-                  }
-                </div>
+          <!-- Barras de Turnos -->
+          <div class="timeline-bars-container">
+            @for (seg of timelineSegments(); track seg.id + '-' + seg.startTime) {
+            <div class="timeline-shift-bar" [ngStyle]="seg.style" (click)="onSelectShift(seg.id)"
+              [class.timeline-shift-bar--selected]="shiftService.selectedShiftId() === seg.id"
+              [class.timeline-shift-bar--conflict]="seg.hasConflict"
+              [title]="seg.name + ' (' + seg.code + '): ' + seg.startTime + ' - ' + seg.endTime + ' [' + seg.daysLabel + ']'">
+              <span class="timeline-bar-label font-bold text-xs truncate">
+                {{ seg.code }} ({{ seg.startTime }}-{{ seg.endTime }})
+              </span>
+              @if (seg.hasConflict) {
+              <span class="material-symbols-outlined text-xs text-red-400">warning</span>
+              }
+              @if (seg.isOvernight) {
+              <span class="material-symbols-outlined text-[10px] text-purple-300">nightlight</span>
               }
             </div>
+            }
           </div>
         </div>
+      </div>
       }
     </div>
   </section>
@@ -211,33 +199,20 @@
       <div class="shift-directory__toolbar">
         <div class="shift-search-input-wrap">
           <span class="material-symbols-outlined search-icon">search</span>
-          <input
-            type="text"
-            class="shift-search-input"
-            placeholder="Buscar por nombre, código o hora..."
-            [value]="shiftService.filters().searchTerm"
-            (input)="onSearchInput($event)"
-          />
+          <input type="text" class="shift-search-input" placeholder="Buscar por nombre, código o hora..."
+            [value]="shiftService.filters().searchTerm" (input)="onSearchInput($event)" />
         </div>
 
         <div class="shift-filters-row">
-          <select
-            class="shift-filter-select"
-            [value]="shiftService.filters().status"
-            (change)="onStatusFilterChange($event)"
-            title="Filtrar por Estatus"
-          >
+          <select class="shift-filter-select" [value]="shiftService.filters().status"
+            (change)="onStatusFilterChange($event)" title="Filtrar por Estatus">
             <option value="ALL">Todos los estatus</option>
             <option value="ACTIVE">Activos</option>
             <option value="INACTIVE">Inactivos</option>
           </select>
 
-          <select
-            class="shift-filter-select"
-            [value]="shiftService.filters().day"
-            (change)="onDayFilterChange($event)"
-            title="Filtrar por Día"
-          >
+          <select class="shift-filter-select" [value]="shiftService.filters().day" (change)="onDayFilterChange($event)"
+            title="Filtrar por Día">
             <option value="ALL">Todos los días</option>
             @for (dayCfg of daysConfig; track dayCfg.value) {
             <option [value]="dayCfg.value">{{ dayCfg.fullLabel }}</option>
@@ -262,18 +237,15 @@
         } @else {
         <ul class="shift-list">
           @for (shift of shiftService.filteredShifts(); track shift.id) {
-          <li
-            class="user-item shift-card-item"
+          <li class="user-item shift-card-item"
             [class.user-item--selected]="shiftService.selectedShiftId() === shift.id && formMode() !== 'new'"
             [class.user-item--inactive]="shift.status === 'INACTIVE'"
-            [class.shift-item--has-conflict]="hasConflict(shift.id)"
-            (click)="onSelectShift(shift.id)"
-            tabindex="0"
+            [class.shift-item--has-conflict]="hasConflict(shift.id)" (click)="onSelectShift(shift.id)" tabindex="0"
             (keydown.enter)="onSelectShift(shift.id)"
-            (keydown.space)="onSelectShift(shift.id); $event.preventDefault()"
-          >
+            (keydown.space)="onSelectShift(shift.id); $event.preventDefault()">
             <!-- Avatar con iniciales al estilo del módulo de usuarios -->
-            <div class="user-avatar shift-avatar" [class.shift-avatar--inactive]="shift.status === 'INACTIVE'" aria-hidden="true">
+            <div class="user-avatar shift-avatar" [class.shift-avatar--inactive]="shift.status === 'INACTIVE'"
+              aria-hidden="true">
               {{ getShiftInitials(shift) }}
             </div>
 
@@ -284,8 +256,7 @@
                 <span class="user-item__name font-bold text-sm" [title]="shift.name">
                   {{ shift.name }}
                 </span>
-                <span
-                  class="user-status-pill user-status-pill--{{ (shift.status || 'ACTIVE').toLowerCase() }}"
+                <span class="user-status-pill user-status-pill--{{ (shift.status || 'ACTIVE').toLowerCase() }}"
                   [attr.aria-label]="'Estado: ' + shift.status">
                   <span class="user-status-pill__dot"></span>
                   {{ shift.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
@@ -294,18 +265,20 @@
 
               <!-- Fila 2: Código mono oro + Horario operativo -->
               <div class="user-item__row-mid">
-                <span class="user-item__username font-mono font-bold text-xs text-amber-600 dark:text-amber-400">&#64;{{ shift.code }}</span>
+                <span class="user-item__username font-mono font-bold text-xs text-amber-600 dark:text-amber-400">&#64;{{
+                  shift.code }}</span>
                 <span class="user-item__dot-sep text-slate-400">•</span>
                 <span class="user-item__email flex items-center gap-1 font-mono text-xs">
                   <span class="material-symbols-outlined text-[13px] text-slate-400">schedule</span>
                   {{ formatShortTime(shift.startTime) }} → {{ formatShortTime(shift.endTime) }}
                 </span>
                 @if (shift.hasMealBreak && shift.mealStartTime) {
-                  <span class="user-item__dot-sep text-slate-400">•</span>
-                  <span class="flex items-center gap-1 text-xs text-amber-500 font-medium" title="Horario de comida">
-                    <span class="material-symbols-outlined text-[13px]">restaurant</span>
-                    {{ formatShortTime(shift.mealStartTime) }} - {{ formatShortTime(shift.mealEndTime) }} (-{{ shift.mealEarlyPauseMinutes || 10 }}m)
-                  </span>
+                <span class="user-item__dot-sep text-slate-400">•</span>
+                <span class="flex items-center gap-1 text-xs text-amber-500 font-medium" title="Horario de comida">
+                  <span class="material-symbols-outlined text-[13px]">restaurant</span>
+                  {{ formatShortTime(shift.mealStartTime) }} - {{ formatShortTime(shift.mealEndTime) }} (-{{
+                  shift.mealEarlyPauseMinutes || 10 }}m)
+                </span>
                 }
               </div>
 
@@ -321,14 +294,14 @@
                 </span>
 
                 @if (hasConflict(shift.id)) {
-                  <span class="shift-badge shift-badge--conflict text-[10px]" title="Conflicto de solapamiento">
-                    <span class="material-symbols-outlined text-[11px]">warning</span> Conflicto
-                  </span>
+                <span class="shift-badge shift-badge--conflict text-[10px]" title="Conflicto de solapamiento">
+                  <span class="material-symbols-outlined text-[11px]">warning</span> Conflicto
+                </span>
                 }
                 @if (shift.isOvernight) {
-                  <span class="shift-badge shift-badge--night text-[10px]" title="Jornada que cruza medianoche">
-                    <span class="material-symbols-outlined text-[11px]">nightlight</span> Nocturno
-                  </span>
+                <span class="shift-badge shift-badge--night text-[10px]" title="Jornada que cruza medianoche">
+                  <span class="material-symbols-outlined text-[11px]">nightlight</span> Nocturno
+                </span>
                 }
               </div>
             </div>
@@ -339,7 +312,8 @@
       </div>
 
       <footer class="shift-directory__footer">
-        <span>Mostrando <b>{{ shiftService.filteredShifts().length }}</b> de <b>{{ shiftService.totalShiftCount() }}</b> turnos</span>
+        <span>Mostrando <b>{{ shiftService.filteredShifts().length }}</b> de <b>{{ shiftService.totalShiftCount() }}</b>
+          turnos</span>
       </footer>
     </aside>
 
@@ -369,11 +343,11 @@
 
             <h2 class="shift-editor__title">
               @if (formMode() === 'new') {
-                Crear Nuevo Turno Operativo
+              Crear Nuevo Turno Operativo
               } @else if (shiftService.selectedShift()) {
-                {{ shiftService.selectedShift()?.name }}
+              {{ shiftService.selectedShift()?.name }}
               } @else {
-                Seleccione un Turno
+              Seleccione un Turno
               }
             </h2>
 
@@ -382,11 +356,8 @@
 
           @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {
           <div class="shift-editor__status-badge-wrap">
-            <span
-              class="shift-badge shift-badge--large"
-              [class.shift-badge--active]="current.status === 'ACTIVE'"
-              [class.shift-badge--inactive]="current.status === 'INACTIVE'"
-            >
+            <span class="shift-badge shift-badge--large" [class.shift-badge--active]="current.status === 'ACTIVE'"
+              [class.shift-badge--inactive]="current.status === 'INACTIVE'">
               {{ statusLabels[current.status] }}
             </span>
           </div>
@@ -404,15 +375,9 @@
                 <label class="field-label" for="shift-code">
                   Código de Turno <span class="required-star">*</span>
                 </label>
-                <input
-                  id="shift-code"
-                  type="text"
-                  class="field-input"
-                  [class.field-input--error]="isFieldInvalid('code')"
-                  formControlName="code"
-                  placeholder="Ej: TRN-MAT-01"
-                  maxlength="20"
-                />
+                <input id="shift-code" type="text" class="field-input"
+                  [class.field-input--error]="isFieldInvalid('code')" formControlName="code"
+                  placeholder="Ej: TRN-MAT-01" maxlength="20" />
                 @if (isFieldInvalid('code')) {
                 <span class="field-error">{{ getFieldError('code') }}</span>
                 }
@@ -423,15 +388,9 @@
                 <label class="field-label" for="shift-name">
                   Nombre Oficial del Turno <span class="required-star">*</span>
                 </label>
-                <input
-                  id="shift-name"
-                  type="text"
-                  class="field-input"
-                  [class.field-input--error]="isFieldInvalid('name')"
-                  formControlName="name"
-                  placeholder="Ej: Turno Matutino Principal"
-                  maxlength="100"
-                />
+                <input id="shift-name" type="text" class="field-input"
+                  [class.field-input--error]="isFieldInvalid('name')" formControlName="name"
+                  placeholder="Ej: Turno Matutino Principal" maxlength="100" />
                 @if (isFieldInvalid('name')) {
                 <span class="field-error">{{ getFieldError('name') }}</span>
                 }
@@ -440,15 +399,10 @@
               <!-- Descripción -->
               <div class="field-group col-12">
                 <label class="field-label" for="shift-desc">Descripción Operativa</label>
-                <textarea
-                  id="shift-desc"
-                  class="field-textarea"
-                  [class.field-input--error]="isFieldInvalid('description')"
-                  formControlName="description"
-                  rows="2"
+                <textarea id="shift-desc" class="field-textarea"
+                  [class.field-input--error]="isFieldInvalid('description')" formControlName="description" rows="2"
                   placeholder="Describa el objetivo operativo o tareas asociadas a este turno..."
-                  maxlength="250"
-                ></textarea>
+                  maxlength="250"></textarea>
                 @if (isFieldInvalid('description')) {
                 <span class="field-error">{{ getFieldError('description') }}</span>
                 }
@@ -465,13 +419,9 @@
                 <label class="field-label" for="shift-start-time">
                   Hora de Inicio <span class="required-star">*</span>
                 </label>
-                <input
-                  id="shift-start-time"
-                  type="time"
-                  class="field-input"
+                <input id="shift-start-time" type="time" class="field-input"
                   [class.field-input--error]="isFieldInvalid('startTime') || hasIdenticalTimeError()"
-                  formControlName="startTime"
-                />
+                  formControlName="startTime" />
                 @if (isFieldInvalid('startTime')) {
                 <span class="field-error">{{ getFieldError('startTime') }}</span>
                 }
@@ -482,13 +432,9 @@
                 <label class="field-label" for="shift-end-time">
                   Hora de Término <span class="required-star">*</span>
                 </label>
-                <input
-                  id="shift-end-time"
-                  type="time"
-                  class="field-input"
+                <input id="shift-end-time" type="time" class="field-input"
                   [class.field-input--error]="isFieldInvalid('endTime') || hasIdenticalTimeError()"
-                  formControlName="endTime"
-                />
+                  formControlName="endTime" />
                 @if (isFieldInvalid('endTime')) {
                 <span class="field-error">{{ getFieldError('endTime') }}</span>
                 }
@@ -524,19 +470,11 @@
                   Días Operativos de la Semana <span class="required-star">*</span>
                 </label>
 
-                <div
-                  class="day-picker-grid"
-                  [class.day-picker-grid--error]="isFieldInvalid('operatingDays')"
-                >
+                <div class="day-picker-grid" [class.day-picker-grid--error]="isFieldInvalid('operatingDays')">
                   @for (dayCfg of daysConfig; track dayCfg.value) {
-                  <button
-                    type="button"
-                    class="day-pill-btn"
-                    [class.day-pill-btn--selected]="isDaySelected(dayCfg.value)"
-                    (click)="toggleDay(dayCfg.value)"
-                    [title]="dayCfg.fullLabel"
-                    tabindex="0"
-                  >
+                  <button type="button" class="day-pill-btn"
+                    [class.day-pill-btn--selected]="isDaySelected(dayCfg.value)" (click)="toggleDay(dayCfg.value)"
+                    [title]="dayCfg.fullLabel" tabindex="0">
                     <span class="day-pill-short">{{ dayCfg.shortLabel }}</span>
                     <span class="day-pill-full">{{ dayCfg.fullLabel }}</span>
                   </button>
@@ -557,15 +495,9 @@
               <!-- Minutos de Descanso -->
               <div class="field-group col-4">
                 <label class="field-label" for="shift-rest-break">Minutos de Descanso</label>
-                <input
-                  id="shift-rest-break"
-                  type="number"
-                  class="field-input"
-                  [class.field-input--error]="isFieldInvalid('restBreakMinutes')"
-                  formControlName="restBreakMinutes"
-                  min="0"
-                  max="300"
-                />
+                <input id="shift-rest-break" type="number" class="field-input"
+                  [class.field-input--error]="isFieldInvalid('restBreakMinutes')" formControlName="restBreakMinutes"
+                  min="0" max="300" />
                 @if (isFieldInvalid('restBreakMinutes')) {
                 <span class="field-error">{{ getFieldError('restBreakMinutes') }}</span>
                 }
@@ -574,15 +506,9 @@
               <!-- Tolerancia de Entrada -->
               <div class="field-group col-4">
                 <label class="field-label" for="shift-tolerance">Tolerancia de Entrada (min)</label>
-                <input
-                  id="shift-tolerance"
-                  type="number"
-                  class="field-input"
-                  [class.field-input--error]="isFieldInvalid('toleranceMinutes')"
-                  formControlName="toleranceMinutes"
-                  min="0"
-                  max="120"
-                />
+                <input id="shift-tolerance" type="number" class="field-input"
+                  [class.field-input--error]="isFieldInvalid('toleranceMinutes')" formControlName="toleranceMinutes"
+                  min="0" max="120" />
                 @if (isFieldInvalid('toleranceMinutes')) {
                 <span class="field-error">{{ getFieldError('toleranceMinutes') }}</span>
                 }
@@ -596,72 +522,59 @@
 
             <div class="shift-form-grid">
               <!-- Checkbox Activar -->
-              <div class="field-group col-12" style="display: flex; align-items: center; gap: 8px; padding-bottom: 6px;">
-                <input
-                  type="checkbox"
-                  id="shift-has-meal"
-                  formControlName="hasMealBreak"
-                  style="width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer;"
-                />
+              <div class="field-group col-12"
+                style="display: flex; align-items: center; gap: 8px; padding-bottom: 6px;">
+                <input type="checkbox" id="shift-has-meal" formControlName="hasMealBreak"
+                  style="width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer;" />
                 <label for="shift-has-meal" class="field-label" style="margin: 0; cursor: pointer; font-weight: 600;">
                   Habilitar Horario de Comida Programado para este turno
                 </label>
               </div>
 
               @if (shiftForm.get('hasMealBreak')?.value) {
-                <!-- Inicio de Comida -->
-                <div class="field-group col-4">
-                  <label class="field-label" for="shift-meal-start">
-                    Inicio de Comida <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="shift-meal-start"
-                    type="time"
-                    class="field-input"
-                    formControlName="mealStartTime"
-                  />
-                </div>
+              <!-- Inicio de Comida -->
+              <div class="field-group col-4">
+                <label class="field-label" for="shift-meal-start">
+                  Inicio de Comida <span class="required-star">*</span>
+                </label>
+                <input id="shift-meal-start" type="time" class="field-input" formControlName="mealStartTime" />
+              </div>
 
-                <!-- Término de Comida -->
-                <div class="field-group col-4">
-                  <label class="field-label" for="shift-meal-end">
-                    Término de Comida <span class="required-star">*</span>
-                  </label>
-                  <input
-                    id="shift-meal-end"
-                    type="time"
-                    class="field-input"
-                    formControlName="mealEndTime"
-                  />
-                </div>
+              <!-- Término de Comida -->
+              <div class="field-group col-4">
+                <label class="field-label" for="shift-meal-end">
+                  Término de Comida <span class="required-star">*</span>
+                </label>
+                <input id="shift-meal-end" type="time" class="field-input" formControlName="mealEndTime" />
+              </div>
 
-                <!-- Ventana de Anticipación para Pausa en RF -->
-                <div class="field-group col-4">
-                  <label class="field-label" for="shift-meal-early-pause">
-                    Anticipación de Pausa RF <span class="required-star">*</span>
-                  </label>
-                  <select
-                    id="shift-meal-early-pause"
-                    class="field-input"
-                    formControlName="mealEarlyPauseMinutes"
-                  >
-                    <option [value]="5">5 minutos antes</option>
-                    <option [value]="10">10 minutos antes (Recomendado)</option>
-                    <option [value]="15">15 minutos antes</option>
-                    <option [value]="20">20 minutos antes</option>
-                  </select>
-                </div>
+              <!-- Ventana de Anticipación para Pausa en RF -->
+              <div class="field-group col-4">
+                <label class="field-label" for="shift-meal-early-pause">
+                  Anticipación de Pausa RF <span class="required-star">*</span>
+                </label>
+                <select id="shift-meal-early-pause" class="field-input" formControlName="mealEarlyPauseMinutes">
+                  <option [value]="5">5 minutos antes</option>
+                  <option [value]="10">10 minutos antes (Recomendado)</option>
+                  <option [value]="15">15 minutos antes</option>
+                  <option [value]="20">20 minutos antes</option>
+                </select>
+              </div>
 
-                <!-- Banner Informativo de Duración y Reglas de Montacargas -->
-                <div class="col-12" style="background: rgba(37, 99, 235, 0.07); border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 8px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; font-size: 0.85rem; color: #1e3a8a;">
-                  <span class="material-symbols-outlined" style="font-size: 22px; color: #2563eb; flex-shrink: 0; margin-top: 2px;">restaurant</span>
-                  <div style="line-height: 1.45;">
-                    <div><strong>Duración estimada de comida:</strong> {{ calculatedMealDuration() }} minutos.</div>
-                    <div style="margin-top: 4px; color: #3b82f6;">
-                      ℹ️ Los operadores y montacarguistas en Terminal RF podrán pausar su misión activa hasta <strong>{{ shiftForm.get('mealEarlyPauseMinutes')?.value || 10 }} minutos antes</strong> del inicio de la colación para resguardar la unidad con uñas a piso de manera segura.
-                    </div>
+              <!-- Banner Informativo de Duración y Reglas de Montacargas -->
+              <div class="col-12"
+                style="background: rgba(37, 99, 235, 0.07); border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 8px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; font-size: 0.85rem; color: #1e3a8a;">
+                <span class="material-symbols-outlined"
+                  style="font-size: 22px; color: #2563eb; flex-shrink: 0; margin-top: 2px;">restaurant</span>
+                <div style="line-height: 1.45;">
+                  <div><strong>Duración estimada de comida:</strong> {{ calculatedMealDuration() }} minutos.</div>
+                  <div style="margin-top: 4px; color: #3b82f6;">
+                    ℹ️ Los operadores y montacarguistas en Terminal RF podrán pausar su misión activa hasta <strong>{{
+                      shiftForm.get('mealEarlyPauseMinutes')?.value || 10 }} minutos antes</strong> del inicio de la
+                    colación para resguardar la unidad con uñas a piso de manera segura.
                   </div>
                 </div>
+              </div>
               }
             </div>
           </fieldset>
@@ -669,135 +582,142 @@
           <!-- Nota informativa de persistencia / auditoría -->
           <p class="shift-info-note">
             <span class="material-symbols-outlined">verified_user</span>
-            Los cambios guardados se aplican al catálogo operativo de 4GUARD WMS. La persistencia transaccional y los registros de auditoría detallados (audit_logs) son procesados automáticamente por el backend.
+            Los cambios guardados se aplican al catálogo operativo de 4GUARD WMS. La persistencia transaccional y los
+            registros de auditoría detallados (audit_logs) son procesados automáticamente por el backend.
           </p>
 
           <!-- SECCIÓN — Control & Auditoría en Tiempo Real (Homologada con Usuarios y Recepción) -->
           @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {
-            <div class="users-form-section users-audit-section mt-6 pt-4 border-t border-subtle">
-              <!-- Acordeón Header idéntico a Usuarios -->
-              <div
-                (click)="toggleShowAuditTimeline()"
-                class="users-audit-accordion-header flex items-center justify-between p-3.5 rounded-xl bg-surface-variant/40 hover:bg-surface-variant/70 border border-subtle cursor-pointer transition-colors shadow-sm"
-              >
-                <div class="flex items-center gap-2.5">
-                  <span class="material-symbols-outlined text-base text-gold text-amber-500">history</span>
-                  <span class="text-xs font-bold text-gold uppercase tracking-wider text-amber-500">
-                    Información de Control &amp; Auditoría
-                  </span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                    {{ auditLogs().length }} evento(s)
+          <div class="users-form-section users-audit-section mt-6 pt-4 border-t border-subtle">
+            <!-- Acordeón Header idéntico a Usuarios -->
+            <div (click)="toggleShowAuditTimeline()"
+              class="users-audit-accordion-header flex items-center justify-between p-3.5 rounded-xl bg-surface-variant/40 hover:bg-surface-variant/70 border border-subtle cursor-pointer transition-colors shadow-sm">
+              <div class="flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-base text-gold text-amber-500">history</span>
+                <span class="text-xs font-bold text-gold uppercase tracking-wider text-amber-500">
+                  Información de Control &amp; Auditoría
+                </span>
+                <span
+                  class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  {{ auditLogs().length }} evento(s)
+                </span>
+              </div>
+              <button type="button"
+                class="text-xs font-bold text-slate-400 flex items-center gap-1 hover:text-slate-200">
+                <span>{{ showAuditTimeline() ? 'Ocultar Historial' : 'Ver Historial de Auditoría' }}</span>
+                <span class="material-symbols-outlined text-base transition-transform duration-200"
+                  [class.rotate-180]="showAuditTimeline()">
+                  expand_more
+                </span>
+              </button>
+            </div>
+
+            @if (showAuditTimeline()) {
+            <div class="mt-4 space-y-4 animate-fade-in">
+              <!-- Metadatos de lectura rápida (4 Cards Bento idénticas a Usuarios) -->
+              <div class="carriers-readonly-grid grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="carriers-readonly-field">
+                  <span class="carriers-readonly-field__label">Código de Turno</span>
+                  <span class="carriers-readonly-field__value font-mono font-black text-xs">&#64;{{ current.code
+                    }}</span>
+                </div>
+                <div class="carriers-readonly-field">
+                  <span class="carriers-readonly-field__label">Sucursal Asignada</span>
+                  <span class="carriers-readonly-field__value text-xs font-black">{{ activeBranchName() }}</span>
+                </div>
+                <div class="carriers-readonly-field">
+                  <span class="carriers-readonly-field__label">Horario &amp; Duración</span>
+                  <span class="carriers-readonly-field__value text-xs font-black">{{ formatShortTime(current.startTime)
+                    }} → {{ formatShortTime(current.endTime) }} ({{ calculatedDuration().formattedDuration }})</span>
+                </div>
+                <div class="carriers-readonly-field">
+                  <span class="carriers-readonly-field__label">Estado Operativo</span>
+                  <span class="carriers-readonly-field__value text-xs font-black flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full"
+                      [ngClass]="current.status === 'ACTIVE' ? 'bg-emerald-500 shadow-[0_0_6px_#10b981]' : 'bg-slate-400'"></span>
+                    {{ current.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  class="text-xs font-bold text-slate-400 flex items-center gap-1 hover:text-slate-200"
-                >
-                  <span>{{ showAuditTimeline() ? 'Ocultar Historial' : 'Ver Historial de Auditoría' }}</span>
-                  <span class="material-symbols-outlined text-base transition-transform duration-200" [class.rotate-180]="showAuditTimeline()">
-                    expand_more
-                  </span>
-                </button>
               </div>
 
-              @if (showAuditTimeline()) {
-                <div class="mt-4 space-y-4 animate-fade-in">
-                  <!-- Metadatos de lectura rápida (4 Cards Bento idénticas a Usuarios) -->
-                  <div class="carriers-readonly-grid grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div class="carriers-readonly-field">
-                      <span class="carriers-readonly-field__label">Código de Turno</span>
-                      <span class="carriers-readonly-field__value font-mono font-black text-xs">&#64;{{ current.code }}</span>
+              <!-- Línea de Tiempo de Auditoría (Trazabilidad WMS) idéntica a Usuarios -->
+              <div class="carriers-timeline-preview">
+                <div class="carriers-timeline-preview__header">
+                  <div class="carriers-timeline-preview__title flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base text-amber-500">timeline</span>
+                    <span class="font-bold">Línea de Tiempo de Auditoría (Trazabilidad WMS)</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="carriers-timeline-preview__count">{{ auditLogs().length }} evento(s)</span>
+                    <button type="button" class="carriers-btn-icon"
+                      (click)="loadAuditLogs(current.id); $event.stopPropagation()" title="Actualizar bitácora"
+                      [disabled]="isLoadingAudit()">
+                      <span class="material-symbols-outlined text-sm" [class.spin]="isLoadingAudit()">refresh</span>
+                    </button>
+                  </div>
+                </div>
+
+                @if (isLoadingAudit()) {
+                <div
+                  class="carriers-timeline-preview__loading p-4 flex items-center justify-center gap-2 text-xs font-bold text-slate-400">
+                  <span class="material-symbols-outlined spin text-sm">sync</span>
+                  <span>Cargando bitácora de auditoría desde el servidor…</span>
+                </div>
+                } @else if (auditLogs().length === 0) {
+                <div
+                  class="carriers-timeline-preview__empty text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4">
+                  No se encontraron registros de auditoría para este turno.
+                </div>
+                } @else {
+                <div class="carriers-timeline-preview__nodes">
+                  @for (entry of auditLogs(); track entry.logId || $index; let isLast = $last) {
+                  <div class="carriers-tl-node" [ngClass]="getAuditColorClass(entry.action)">
+                    <div class="carriers-tl-node__dot">
+                      <span class="material-symbols-outlined text-sm">{{ getAuditIcon(entry.action) }}</span>
                     </div>
-                    <div class="carriers-readonly-field">
-                      <span class="carriers-readonly-field__label">Sucursal Asignada</span>
-                      <span class="carriers-readonly-field__value text-xs font-black">{{ activeBranchName() }}</span>
-                    </div>
-                    <div class="carriers-readonly-field">
-                      <span class="carriers-readonly-field__label">Horario &amp; Duración</span>
-                      <span class="carriers-readonly-field__value text-xs font-black">{{ formatShortTime(current.startTime) }} → {{ formatShortTime(current.endTime) }} ({{ calculatedDuration().formattedDuration }})</span>
-                    </div>
-                    <div class="carriers-readonly-field">
-                      <span class="carriers-readonly-field__label">Estado Operativo</span>
-                      <span class="carriers-readonly-field__value text-xs font-black flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full" [ngClass]="current.status === 'ACTIVE' ? 'bg-emerald-500 shadow-[0_0_6px_#10b981]' : 'bg-slate-400'"></span>
-                        {{ current.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
+                    @if (!isLast) {
+                    <div class="carriers-tl-node__line"></div>
+                    }
+                    <div class="carriers-tl-node__content">
+                      <div class="carriers-tl-node__header">
+                        <span class="carriers-tl-node__action font-bold">{{ getAuditSummary(entry.action) }}</span>
+                        <span class="carriers-tl-node__tag">&#64;{{ entry.username }}</span>
+                      </div>
+
+                      @if (entry.details && entry.details.length > 0) {
+                      <div
+                        class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2.5 rounded-lg bg-surface border border-subtle">
+                        @for (d of entry.details; track d.fieldName) {
+                        <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
+                          <span class="carriers-tl-diff__field font-bold text-slate-700 dark:text-slate-300">{{
+                            formatFieldLabel(d.fieldName) }}:&nbsp;</span>
+                          @if (d.oldValue !== null && d.oldValue !== undefined && d.oldValue !== '' && d.oldValue !==
+                          'null' && d.oldValue !== d.newValue) {
+                          <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{
+                            formatFieldValue(d.fieldName, d.oldValue) }}</span>
+                          <span class="carriers-tl-diff__arrow text-slate-400 mx-1.5 font-bold">➔</span>
+                          }
+                          <span
+                            class="carriers-tl-diff__new text-emerald-700 dark:text-emerald-400 font-mono font-bold text-[11px] ml-0.5">{{
+                            formatFieldValue(d.fieldName, d.newValue) }}</span>
+                        </div>
+                        }
+                      </div>
+                      }
+
+                      <span class="carriers-tl-node__meta flex items-center gap-1.5 mt-1 text-slate-400">
+                        <span class="material-symbols-outlined text-[13px]">schedule</span>
+                        <span>{{ entry.createdAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
                       </span>
                     </div>
                   </div>
-
-                  <!-- Línea de Tiempo de Auditoría (Trazabilidad WMS) idéntica a Usuarios -->
-                  <div class="carriers-timeline-preview">
-                    <div class="carriers-timeline-preview__header">
-                      <div class="carriers-timeline-preview__title flex items-center gap-2">
-                        <span class="material-symbols-outlined text-base text-amber-500">timeline</span>
-                        <span class="font-bold">Línea de Tiempo de Auditoría (Trazabilidad WMS)</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="carriers-timeline-preview__count">{{ auditLogs().length }} evento(s)</span>
-                        <button
-                          type="button"
-                          class="carriers-btn-icon"
-                          (click)="loadAuditLogs(current.id); $event.stopPropagation()"
-                          title="Actualizar bitácora"
-                          [disabled]="isLoadingAudit()">
-                          <span class="material-symbols-outlined text-sm" [class.spin]="isLoadingAudit()">refresh</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    @if (isLoadingAudit()) {
-                      <div class="carriers-timeline-preview__loading p-4 flex items-center justify-center gap-2 text-xs font-bold text-slate-400">
-                        <span class="material-symbols-outlined spin text-sm">sync</span>
-                        <span>Cargando bitácora de auditoría desde el servidor…</span>
-                      </div>
-                    } @else if (auditLogs().length === 0) {
-                      <div class="carriers-timeline-preview__empty text-xs font-bold text-slate-700 dark:text-slate-300 italic text-center py-4">
-                        No se encontraron registros de auditoría para este turno.
-                      </div>
-                    } @else {
-                      <div class="carriers-timeline-preview__nodes">
-                        @for (entry of auditLogs(); track entry.logId || $index; let isLast = $last) {
-                          <div class="carriers-tl-node" [ngClass]="getAuditColorClass(entry.action)">
-                            <div class="carriers-tl-node__dot">
-                              <span class="material-symbols-outlined text-sm">{{ getAuditIcon(entry.action) }}</span>
-                            </div>
-                            @if (!isLast) {
-                              <div class="carriers-tl-node__line"></div>
-                            }
-                            <div class="carriers-tl-node__content">
-                              <div class="carriers-tl-node__header">
-                                <span class="carriers-tl-node__action font-bold">{{ getAuditSummary(entry.action) }}</span>
-                                <span class="carriers-tl-node__tag">&#64;{{ entry.username }}</span>
-                              </div>
-
-                              @if (entry.details && entry.details.length > 0) {
-                                <div class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2.5 rounded-lg bg-surface border border-subtle">
-                                  @for (d of entry.details; track d.fieldName) {
-                                    <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
-                                      <span class="carriers-tl-diff__field font-bold text-slate-700 dark:text-slate-300">{{ formatFieldLabel(d.fieldName) }}:&nbsp;</span>
-                                      @if (d.oldValue !== null && d.oldValue !== undefined && d.oldValue !== '' && d.oldValue !== 'null' && d.oldValue !== d.newValue) {
-                                        <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ formatFieldValue(d.fieldName, d.oldValue) }}</span>
-                                        <span class="carriers-tl-diff__arrow text-slate-400 mx-1.5 font-bold">➔</span>
-                                      }
-                                      <span class="carriers-tl-diff__new text-emerald-700 dark:text-emerald-400 font-mono font-bold text-[11px] ml-0.5">{{ formatFieldValue(d.fieldName, d.newValue) }}</span>
-                                    </div>
-                                  }
-                                </div>
-                              }
-
-                              <span class="carriers-tl-node__meta flex items-center gap-1.5 mt-1 text-slate-400">
-                                <span class="material-symbols-outlined text-[13px]">schedule</span>
-                                <span>{{ entry.createdAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
-                              </span>
-                            </div>
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
+                  }
                 </div>
-              }
+                }
+              </div>
             </div>
+            }
+          </div>
           }
 
           <!-- Footer con datos de auditoría si están disponibles -->
@@ -817,32 +737,22 @@
           <div class="shift-editor__actions">
             <!-- Botón Eliminar Turno (Lado Izquierdo, Destructivo con Confirmación) -->
             @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {
-              <button
-                type="button"
-                class="shift-btn shift-btn--delete"
-                (click)="onClickDeleteShift()"
-                [disabled]="isSubmitting() || isDeleting()"
-                title="Dar de baja lógica el turno del catálogo de almacén"
-              >
-                <span class="material-symbols-outlined">delete_outline</span>
-                <span>Eliminar Turno</span>
-              </button>
+            <button type="button" class="shift-btn shift-btn--delete" (click)="onClickDeleteShift()"
+              [disabled]="isSubmitting() || isDeleting()" title="Dar de baja lógica el turno del catálogo de almacén">
+              <span class="material-symbols-outlined">delete_outline</span>
+              <span>Eliminar Turno</span>
+            </button>
             } @else {
-              <div></div>
+            <div></div>
             }
 
             <div class="shift-editor__actions-right">
               @if (formMode() === 'edit' && shiftService.selectedShift(); as current) {
               <!-- Botón Pausar / Reanudar (Toggle no destructivo con estética ámbar/esmeralda) -->
-              <button
-                type="button"
-                class="shift-btn shift-btn--toggle-status"
+              <button type="button" class="shift-btn shift-btn--toggle-status"
                 [class.shift-btn--status-active]="current.status === 'ACTIVE'"
-                [class.shift-btn--status-inactive]="current.status === 'INACTIVE'"
-                (click)="onToggleStatus()"
-                [disabled]="isSubmitting() || isDeleting()"
-                title="Cambiar estado entre activo e inactivo"
-              >
+                [class.shift-btn--status-inactive]="current.status === 'INACTIVE'" (click)="onToggleStatus()"
+                [disabled]="isSubmitting() || isDeleting()" title="Cambiar estado entre activo e inactivo">
                 <span class="material-symbols-outlined">
                   {{ current.status === 'ACTIVE' ? 'pause_circle' : 'play_circle' }}
                 </span>
@@ -850,11 +760,8 @@
               </button>
               }
 
-              <button
-                type="submit"
-                class="shift-btn shift-btn--primary"
-                [disabled]="isSubmitting() || isDeleting() || shiftForm.invalid || !shiftForm.dirty"
-              >
+              <button type="submit" class="shift-btn shift-btn--primary"
+                [disabled]="isSubmitting() || isDeleting() || shiftForm.invalid || !shiftForm.dirty">
                 <span class="material-symbols-outlined">save</span>
                 <span>
                   @if (isSubmitting()) { Guardando... }
@@ -870,7 +777,7 @@
     </main>
   </div>
 
-    <!-- ==================== MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE TURNO ==================== -->
+  <!-- ==================== MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE TURNO ==================== -->
   @if (showDeleteConfirmModal()) {
   <div class="modal-overlay" (click)="cancelDeleteShift()">
     <div class="modal-card modal-card--danger animate-fade-in" (click)="$event.stopPropagation()">
@@ -886,18 +793,22 @@
 
       <div class="modal-card__body">
         <p class="text-base text-slate-800 dark:text-slate-100 font-semibold mb-2">
-          ¿Desea dar de baja definitiva el turno <strong class="text-red-600 dark:text-red-400">{{ shiftService.selectedShift()?.name }}</strong> (<code>{{ shiftService.selectedShift()?.code }}</code>)?
+          ¿Desea dar de baja definitiva el turno <strong class="text-red-600 dark:text-red-400">{{
+            shiftService.selectedShift()?.name }}</strong> (<code>{{ shiftService.selectedShift()?.code }}</code>)?
         </p>
         <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-          Esta acción deshabilitará el turno de las cuadrillas activas de almacén y registrará la baja lógica en la bitácora de auditoría de PostgreSQL.
+          Esta acción deshabilitará el turno de las cuadrillas activas de almacén y registrará la baja lógica en la
+          bitácora de auditoría de PostgreSQL.
         </p>
       </div>
 
       <footer class="modal-card__footer">
-        <button type="button" class="shift-btn shift-btn--secondary" (click)="cancelDeleteShift()" [disabled]="isDeleting()">
+        <button type="button" class="shift-btn shift-btn--secondary" (click)="cancelDeleteShift()"
+          [disabled]="isDeleting()">
           Cancelar
         </button>
-        <button type="button" class="shift-btn shift-btn--danger-solid" (click)="confirmDeleteShift()" [disabled]="isDeleting()">
+        <button type="button" class="shift-btn shift-btn--danger-solid" (click)="confirmDeleteShift()"
+          [disabled]="isDeleting()">
           <span class="material-symbols-outlined">delete_forever</span>
           <span>{{ isDeleting() ? 'Eliminando...' : 'Sí, Eliminar Turno' }}</span>
         </button>

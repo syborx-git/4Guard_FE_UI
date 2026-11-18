@@ -14,7 +14,8 @@ import { AuthState } from '../../../../core/auth/auth.state';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="outbound" class="print-container bg-white text-black p-4 sm:p-5 max-w-full mx-auto font-sans border border-slate-300 rounded-sm shadow-sm text-[10px] leading-tight">
+    <div *ngIf="outbound" class="print-container bg-white text-black max-w-[800px] mx-auto font-sans border border-slate-300 rounded-sm shadow-sm select-none"
+         [ngClass]="densityMode === 'ultra-compact' ? 'p-2 sm:p-2.5 text-[7px] leading-tight' : (densityMode === 'compact' ? 'p-3 sm:p-3.5 text-[8px] leading-tight' : 'p-4 sm:p-5 text-[9.5px] leading-normal')">
       
       <!-- Top Header & Logo Institucional -->
       <div class="flex justify-between items-center mb-2 pb-1.5 border-b-2 border-black">
@@ -114,7 +115,8 @@ import { AuthState } from '../../../../core/auth/auth.state';
 
       <!-- Tabla de Tarimas (Detalle Oficial con Remisión Inicial y Caducidad por UA) -->
       <div class="mb-2 border border-black rounded-sm overflow-hidden">
-        <table class="w-full text-left text-[8.5px] sm:text-[9px] border-collapse font-sans uppercase">
+        <table class="w-full text-left border-collapse font-sans uppercase"
+               [ngClass]="densityMode === 'ultra-compact' ? 'text-[6.8px] leading-tight' : (densityMode === 'compact' ? 'text-[7.8px] leading-tight' : 'text-[8.5px] leading-normal')">
           <thead>
             <tr class="border-b border-black font-black uppercase bg-slate-200 text-slate-950">
               <th class="py-0.5 px-1.5 border-r border-black text-center w-8">N. TARIMA</th>
@@ -130,7 +132,8 @@ import { AuthState } from '../../../../core/auth/auth.state';
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of outbound.items; let idx = index" class="border-b border-slate-300 hover:bg-slate-50">
+            <tr *ngFor="let item of outbound.items; let idx = index" class="border-b border-slate-300 hover:bg-slate-50"
+            [ngClass]="densityMode === 'ultra-compact' ? 'text-[6.8px]' : (densityMode === 'compact' ? 'text-[7.8px]' : 'text-[8.5px]')">
               <td class="py-0.5 px-1.5 border-r border-black text-center font-bold font-mono">{{ item.palletNumber || (idx + 1) }}</td>
               <td class="py-0.5 px-1.5 border-r border-black font-bold font-mono text-slate-950">{{ item.palletCode }}</td>
               <td class="py-0.5 px-1.5 border-r border-black font-mono text-center font-bold">{{ item.inboundRemisionNo || outbound.remisionNo || '-' }}</td>
@@ -194,6 +197,13 @@ import { AuthState } from '../../../../core/auth/auth.state';
 export class PrintDispatchLayoutComponent {
   @Input() outbound!: WarehouseOutbound;
   protected readonly authState = inject(AuthState);
+
+  get densityMode(): 'normal' | 'compact' | 'ultra-compact' {
+    const count = this.outbound?.totalPallets || this.outbound?.items?.length || 0;
+    if (count > 30) return 'ultra-compact';
+    if (count > 16) return 'compact';
+    return 'normal';
+  }
 
   get printDate(): string {
     const d = new Date();

@@ -14,7 +14,8 @@ import { AuthState } from '../../../../core/auth/auth.state';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="outbound" class="print-container bg-white text-slate-900 p-4 sm:p-5 max-w-full mx-auto font-sans border-2 border-rose-600 rounded-lg shadow-sm">
+    <div *ngIf="outbound" class="print-container bg-white text-slate-900 max-w-[800px] mx-auto font-sans border-2 border-rose-600 rounded-sm shadow-sm select-none"
+         [ngClass]="densityMode === 'ultra-compact' ? 'p-2 sm:p-2.5 text-[7px] leading-tight' : (densityMode === 'compact' ? 'p-3 sm:p-3.5 text-[8px] leading-tight' : 'p-4 sm:p-5 text-[9.5px] leading-normal')">
       
       <!-- Header Advertencia Cancelación -->
       <div class="bg-rose-600 text-white p-2.5 sm:p-3 rounded-md mb-3 flex items-center justify-between shadow-xs">
@@ -83,7 +84,8 @@ import { AuthState } from '../../../../core/auth/auth.state';
       <div class="mb-3">
         <h3 class="text-[10px] font-bold text-slate-700 mb-1 uppercase tracking-wider">Unidades de Almacenamiento (UAs) Reintegradas a Stock:</h3>
         <div class="overflow-x-auto rounded border border-slate-200">
-          <table class="w-full text-left text-[11px]">
+          <table class="w-full text-left border-collapse font-sans uppercase"
+               [ngClass]="densityMode === 'ultra-compact' ? 'text-[6.8px] leading-tight' : (densityMode === 'compact' ? 'text-[7.8px] leading-tight' : 'text-[8.5px] leading-normal')">
             <thead>
               <tr class="bg-slate-100 font-bold text-slate-700 border-b border-slate-200">
                 <th class="py-1.5 px-2 w-8 text-center">N.</th>
@@ -149,6 +151,13 @@ import { AuthState } from '../../../../core/auth/auth.state';
 export class PrintOutboundCancellationLayoutComponent {
   @Input() outbound!: WarehouseOutbound;
   protected readonly authState = inject(AuthState);
+
+  get densityMode(): 'normal' | 'compact' | 'ultra-compact' {
+    const count = this.outbound?.items?.length || this.outbound?.totalPallets || 0;
+    if (count > 30) return 'ultra-compact';
+    if (count > 16) return 'compact';
+    return 'normal';
+  }
 
   get printDate(): string {
     const d = new Date();

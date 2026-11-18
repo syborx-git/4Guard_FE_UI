@@ -15,7 +15,8 @@ import { AuthState } from '../../../../core/auth/auth.state';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="reception" class="print-container bg-white text-slate-900 p-3 sm:p-4 max-w-full mx-auto font-sans border-2 border-rose-600 rounded-sm shadow-sm text-[8.5px] leading-tight select-none">
+    <div *ngIf="reception" class="print-container bg-white text-slate-900 max-w-[800px] mx-auto font-sans border-2 border-rose-600 rounded-sm shadow-sm select-none"
+         [ngClass]="densityMode === 'ultra-compact' ? 'p-2 sm:p-2.5 text-[7px] leading-tight' : (densityMode === 'compact' ? 'p-3 sm:p-3.5 text-[7.8px] leading-tight' : 'p-3.5 sm:p-4 text-[8.5px] leading-normal')">
       
       <!-- 1. Header Institucional y Advertencia de Cancelación -->
       <div class="flex justify-between items-center mb-1 pb-1 border-b-2 border-rose-600">
@@ -160,7 +161,8 @@ import { AuthState } from '../../../../core/auth/auth.state';
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of reception.pallets; let idx = index" class="border-b border-slate-300 hover:bg-rose-50/50">
+            <tr *ngFor="let item of reception.pallets; let idx = index" class="border-b border-slate-300 hover:bg-rose-50/50"
+            [ngClass]="densityMode === 'ultra-compact' ? 'text-[6.8px]' : (densityMode === 'compact' ? 'text-[7.5px]' : 'text-[8px]')">
               <td class="py-0.5 px-1 border-r border-black text-center font-bold font-mono text-slate-950">{{ item.palletNumber || (idx + 1) }}</td>
               <td class="py-0.5 px-1 border-r border-black font-black font-mono text-slate-950">{{ item.palletCode }}</td>
               <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold text-slate-950 whitespace-nowrap">
@@ -261,6 +263,13 @@ import { AuthState } from '../../../../core/auth/auth.state';
 export class PrintCancellationLayoutComponent {
   @Input() reception!: ReceptionHeader;
   protected readonly authState = inject(AuthState);
+
+  get densityMode(): 'normal' | 'compact' | 'ultra-compact' {
+    const count = this.reception?.pallets?.length || this.reception?.totalPallets || 0;
+    if (count > 30) return 'ultra-compact';
+    if (count > 16) return 'compact';
+    return 'normal';
+  }
 
   get printDate(): string {
     const d = new Date();

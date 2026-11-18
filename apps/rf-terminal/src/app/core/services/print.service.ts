@@ -40,21 +40,22 @@ export class PrintService {
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 8; // Margen simétrico de 8mm
+    const margin = 6; // Margen simétrico optimizado de 6mm
     const maxUsableWidth = pageWidth - (margin * 2);
     const maxUsableHeight = pageHeight - (margin * 2);
 
     let printWidth = maxUsableWidth;
     let printHeight = (canvas.height * printWidth) / canvas.width;
 
-    if (printHeight <= maxUsableHeight * 1.35) {
+    if (printHeight <= maxUsableHeight * 2.0) {
       if (printHeight > maxUsableHeight) {
         const scaleFactor = maxUsableHeight / printHeight;
         printHeight = maxUsableHeight;
         printWidth = printWidth * scaleFactor;
       }
       const xOffset = margin + (maxUsableWidth - printWidth) / 2;
-      pdf.addImage(imgData, 'PNG', xOffset, margin, printWidth, printHeight);
+      const yOffset = margin + (maxUsableHeight - printHeight) / 2;
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, printWidth, printHeight);
     } else {
       let heightLeft = printHeight;
       let position = margin;

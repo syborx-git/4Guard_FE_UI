@@ -13,7 +13,8 @@ import { AuthState } from '../../../../core/auth/auth.state';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="transfer" class="print-container bg-white text-black p-5 sm:p-6 max-w-full mx-auto font-sans border rounded-lg shadow-sm"
+    <div *ngIf="transfer" class="print-container bg-white text-black max-w-[800px] mx-auto font-sans border rounded-sm shadow-sm select-none"
+         [ngClass]="densityMode === 'ultra-compact' ? 'p-2 sm:p-2.5 text-[7px] leading-tight' : (densityMode === 'compact' ? 'p-3.5 sm:p-4 text-[8px] leading-tight' : 'p-5 sm:p-6 text-[8.5px] leading-normal')"
          [ngClass]="transfer.status === 'CANCELLED' ? 'border-2 border-rose-600' : 'border-slate-300'">
       
       <!-- ═══════════════════════════════════════════════════════════
@@ -353,6 +354,13 @@ import { AuthState } from '../../../../core/auth/auth.state';
 export class PrintTransferLayoutComponent {
   @Input() transfer!: WarehouseTransfer;
   protected readonly authState = inject(AuthState);
+
+  get densityMode(): 'normal' | 'compact' | 'ultra-compact' {
+    const count = this.transfer?.totalPallets || this.transfer?.pallets?.length || 0;
+    if (count > 30) return 'ultra-compact';
+    if (count > 16) return 'compact';
+    return 'normal';
+  }
 
   get printDate(): string {
     const d = new Date();

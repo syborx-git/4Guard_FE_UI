@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas';
 export interface PrintOptions {
   orientation?: 'portrait' | 'landscape';
   margin?: number;
+  fitToSinglePage?: boolean;
 }
 
 @Injectable({
@@ -46,14 +47,18 @@ export class PrintService {
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = options?.margin !== undefined ? options.margin : 10;
+    const margin = options?.margin !== undefined ? options.margin : 6;
     const maxUsableWidth = pageWidth - (margin * 2);
     const maxUsableHeight = pageHeight - (margin * 2);
 
     let printWidth = maxUsableWidth;
     let printHeight = (canvas.height * printWidth) / canvas.width;
 
-    if (printHeight <= maxUsableHeight * 1.35) {
+    const forceSinglePage = options?.fitToSinglePage !== false;
+
+    // Auto-ajuste proporcional para asegurar que documentos de alta densidad (hasta 53+ tarimas)
+    // queden perfectamente contenidos en UNA SOLA HOJA (Single Page) sin fragmentarse
+    if (forceSinglePage && printHeight <= maxUsableHeight * 2.0) {
       if (printHeight > maxUsableHeight) {
         const scaleFactor = maxUsableHeight / printHeight;
         printHeight = maxUsableHeight;
@@ -125,7 +130,7 @@ export class PrintService {
       const cleanTitle = documentTitle.replace(/\.pdf$/i, '');
       const isLandscape = options?.orientation === 'landscape' || (element.clientWidth > element.clientHeight * 1.15);
       const pageOrientation = isLandscape ? 'landscape' : 'portrait';
-      const pageMargin = options?.margin !== undefined ? `${options.margin}mm` : (isLandscape ? '0' : '6mm');
+      const pageMargin = options?.margin !== undefined ? `${options.margin}mm` : (isLandscape ? '0' : '5mm');
 
       // 1. Recopilar todas las hojas de estilo del documento (Tailwind, fuentes, iconos)
       const styleSheets = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
