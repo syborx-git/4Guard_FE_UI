@@ -2416,8 +2416,8 @@ export class WarehouseMovementsService {
         palletTypeLabel: labelType,
         observations: p.observations || '',
         status: p.status || 'SCANNED',
-        lotNumber: p.lotNumber || (p.receptionLot && p.receptionLot.lotNumber) || r.lotNumber || 'LOT-2026-01',
-        expirationDate: p.expirationDate || (p.receptionLot && p.receptionLot.expirationDate) || r.expirationDate || '2027-11-03',
+        lotNumber: p.lotNumber || (p.receptionLot && p.receptionLot.lotNumber) || r.lotNumber || '',
+        expirationDate: p.expirationDate || (p.receptionLot && p.receptionLot.expirationDate) || r.expirationDate || '',
         docNumber: p.docNumber || p.remisionNo || p.documentNumber || resolvedDoc || '',
       };
     });

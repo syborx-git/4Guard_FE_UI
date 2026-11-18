@@ -1859,31 +1859,22 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     }
 
     // Sincronizar catálogo de lotes disponibles en la sesión de recepción
-    const primaryLot = (rec.lotNumber || rec.checkIn?.lotNumber || '').trim().toUpperCase() || 'LOT-2026-01';
-    let primaryExp = rec.expirationDate || rec.checkIn?.expirationDate || '';
-    let primaryElab = rec.elaborationDate || rec.checkIn?.elaborationDate || '';
-
-    // Si la remisión aún no cuenta con fechas de caducidad definidas, inicializar con vigencia estándar (1 año)
-    if (!primaryExp) {
-      const nextYear = new Date();
-      nextYear.setFullYear(nextYear.getFullYear() + 1);
-      primaryExp = nextYear.toISOString().slice(0, 10);
-    }
-    if (!primaryElab) {
-      primaryElab = new Date().toISOString().slice(0, 10);
-    }
+    const rawLot = (rec.lotNumber || rec.checkIn?.lotNumber || '').trim().toUpperCase();
+    const primaryLot = (rawLot === 'LOT-2026-01') ? '' : rawLot;
+    const primaryExp = rec.expirationDate || rec.checkIn?.expirationDate || '';
+    const primaryElab = rec.elaborationDate || rec.checkIn?.elaborationDate || '';
 
     const recProdCode = matchedProduct ? matchedProduct.code : (rec.skuCode || rec.productId || '');
     const recProdName = rec.productName || (matchedProduct ? matchedProduct.name : '');
 
-    // Garantizar que el SKU de esta recepción esté dado de alta en la lista reactiva de productos
+    // Garantizar que el SKU de esta recepción esté dado de alta en la lista reactiva de productos si existe
     if (recProdCode && !this.products().some((p) => p.code === recProdCode || p.id === recProdCode)) {
       this.products.update((list) => [
         {
           id: `prod-${recProdCode}`,
           code: recProdCode,
           name: recProdName || recProdCode,
-          defaultPieces: rec.piecesPerPallet != null && Number(rec.piecesPerPallet) > 0 ? Number(rec.piecesPerPallet) : 135,
+          defaultPieces: rec.piecesPerPallet != null && Number(rec.piecesPerPallet) > 0 ? Number(rec.piecesPerPallet) : 0,
         },
         ...list,
       ]);
@@ -1900,7 +1891,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       productId: recProdCode,
       productName: recProdName,
       supplierName: defaultSupplier,
-      piecesPerPallet: rec.piecesPerPallet != null ? Number(rec.piecesPerPallet) : 0,
+      piecesPerPallet: (rec.piecesPerPallet != null && Number(rec.piecesPerPallet) > 0) ? Number(rec.piecesPerPallet) : (this.altaForm.get('piecesPerPallet')?.value || null),
       selectedPalletType: palletTypeValue,
       observations: cleanDischargeObs,
     });

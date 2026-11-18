@@ -1658,16 +1658,18 @@
 
 /* ── Chip activo: dorado resaltado ── */
 .driver-portal .chip-btn--active,
-.driver-portal.theme-dark .chip-btn--active {
-  background: rgba(197, 168, 107, 0.25) !important;
+.driver-portal.theme-dark .chip-btn--active,
+.chip-btn.chip-btn--active {
+  background: rgba(245, 158, 11, 0.25) !important;
   color: #fef08a !important;
   -webkit-text-fill-color: #fef08a !important;
-  border-color: #c5a86b !important;
-  box-shadow: 0 0 12px rgba(197, 168, 107, 0.4);
+  border: 2px solid #f59e0b !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.45) !important;
 }
 
 .driver-portal .chip-btn--active *,
-.driver-portal.theme-dark .chip-btn--active * {
+.driver-portal.theme-dark .chip-btn--active *,
+.chip-btn.chip-btn--active * {
   color: #fef08a !important;
   -webkit-text-fill-color: #fef08a !important;
 }

@@ -1446,18 +1446,15 @@
           } @else {
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Lote de Recepción</span>
-            <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.lotNumber ||
-              altaForm.value.lotNumber }}</span>
+            <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.lotNumber || altaForm.value.lotNumber || 'Por Asignar' }}</span>
           </div>
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Fecha de Elaboración</span>
-            <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.elaborationDate ||
-              altaForm.value.elaborationDate || 'N/A' }}</span>
+            <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.elaborationDate || altaForm.value.elaborationDate || 'Por Asignar' }}</span>
           </div>
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Fecha de Caducidad</span>
-            <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.expirationDate ||
-              altaForm.value.expirationDate }}</span>
+            <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.expirationDate || altaForm.value.expirationDate || 'Por Asignar' }}</span>
           </div>
           }
           <div class="reception-readonly-item">
@@ -1470,7 +1467,7 @@
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Montacarguista Asignado</span>
             <span class="reception-readonly-val truncate font-bold text-amber-700 dark:text-amber-400">{{
-              rec.checkIn?.forkliftOperator }}</span>
+              rec.checkIn?.forkliftOperator || altaForm.get('forkliftOperator')?.value || 'Por Asignar' }}</span>
           </div>
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Rampa Bloqueada</span>
@@ -1479,19 +1476,37 @@
           </div>
           <div class="reception-readonly-item sm:col-span-2">
             <span class="reception-readonly-label">Producto / SKU</span>
-            <span class="reception-readonly-val truncate">{{ rec.productId }} — {{ rec.productName }}</span>
+            <span class="reception-readonly-val truncate">
+              @if ((rec.productId || altaForm.value.productId)) {
+                {{ rec.productId || altaForm.value.productId }} — {{ rec.productName || altaForm.value.productName || 'Producto General' }}
+              } @else {
+                <span class="text-slate-400 dark:text-slate-500 italic font-normal">Por Asignar en Descarga</span>
+              }
+            </span>
           </div>
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Piezas x Tarima</span>
-            <span class="reception-readonly-val reception-readonly-val--pieces">{{ rec.piecesPerPallet }} PZAS</span>
+            <span class="reception-readonly-val reception-readonly-val--pieces">
+              @if ((rec.piecesPerPallet && rec.piecesPerPallet > 0) || (altaForm.value.piecesPerPallet && altaForm.value.piecesPerPallet > 0)) {
+                {{ rec.piecesPerPallet || altaForm.value.piecesPerPallet }} PZAS
+              } @else {
+                <span class="text-slate-400 dark:text-slate-500 italic font-normal">Por Definir</span>
+              }
+            </span>
           </div>
           <div class="reception-readonly-item">
             <span class="reception-readonly-label">Tipo de Tarima</span>
-            <span class="reception-readonly-val">{{ getPalletTypeLabel(rec.selectedPalletType) }}</span>
+            <span class="reception-readonly-val">
+              @if (rec.selectedPalletType || altaForm.value.selectedPalletType) {
+                {{ getPalletTypeLabel(rec.selectedPalletType || altaForm.value.selectedPalletType) }}
+              } @else {
+                <span class="text-slate-400 dark:text-slate-500 italic font-normal">Por Definir</span>
+              }
+            </span>
           </div>
           <div class="reception-readonly-item sm:col-span-2">
             <span class="reception-readonly-label">Proveedor</span>
-            <span class="reception-readonly-val truncate">{{ rec.supplierName }}</span>
+            <span class="reception-readonly-val truncate">{{ rec.supplierName || rec.checkIn?.client || 'Por Asignar' }}</span>
           </div>
         </div>
       </div>

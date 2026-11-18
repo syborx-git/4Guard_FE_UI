@@ -516,7 +516,8 @@
                       type="button"
                       (click)="selectTransportType(t)"
                       class="chip-btn"
-                      [class.chip-btn--active]="checkInForm.get('tipoTransporte')?.value === t"
+                      [class.chip-btn--active]="isTransportTypeSelected(t)"
+                      [ngClass]="isTransportTypeSelected(t) ? 'border-amber-400 bg-amber-500/20 text-amber-300 shadow-[0_0_14px_rgba(245,158,11,0.35)]' : ''"
                     >
                       <span class="text-base">{{ getTransportIcon(t) }}</span>
                       <span>{{ t }}</span>
@@ -544,7 +545,8 @@
                       type="button"
                       (click)="selectBoxDimension(d)"
                       class="chip-btn"
-                      [class.chip-btn--active]="checkInForm.get('medidasCaja')?.value === d"
+                      [class.chip-btn--active]="isBoxDimensionSelected(d)"
+                      [ngClass]="isBoxDimensionSelected(d) ? 'border-amber-400 bg-amber-500/20 text-amber-300 shadow-[0_0_14px_rgba(245,158,11,0.35)]' : ''"
                     >
                       <span>{{ d }}</span>
                     </button>

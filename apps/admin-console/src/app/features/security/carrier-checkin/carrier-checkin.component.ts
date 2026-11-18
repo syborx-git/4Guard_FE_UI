@@ -342,6 +342,22 @@ export class CarrierCheckinComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
 
+  protected isTransportTypeSelected(t: string): boolean {
+    const current = (this.checkInForm.get('tipoTransporte')?.value || '').trim().toUpperCase();
+    if (!current) return false;
+    const isOther = t === 'Otro (Especificar)' || t === 'Otro' || t === '__OTHER__';
+    if (isOther && this.isCustomTransport()) return true;
+    return current === t.trim().toUpperCase();
+  }
+
+  protected isBoxDimensionSelected(d: string): boolean {
+    const current = (this.checkInForm.get('medidasCaja')?.value || '').trim().toUpperCase();
+    if (!current) return false;
+    const isOther = d === 'Otra Medida' || d === 'Otro' || d === '__OTHER__';
+    if (isOther && this.isCustomDimension()) return true;
+    return current === d.trim().toUpperCase();
+  }
+
   protected getTransportIcon(t: string): string {
     if (t.includes('Camioneta')) return '🛻';
     if (t.includes('Tortón') || t.includes('Torton')) return '🚚';
