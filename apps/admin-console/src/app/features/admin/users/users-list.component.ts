@@ -723,13 +723,6 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  protected purgeDirectoryToEnrique(): void {
-    this.userAdminService.resetToEnriqueOnly();
-    this.selectedUser.set(null);
-    this.startNewUser();
-    this.toastService.success('🧹 Directorio purgado: únicamente se conserva a Enrique para tus pruebas.', 4000);
-  }
-
   // ── Helpers Form & UI ────────────────────────────────────
   protected fieldHasError(name: string): boolean {
     const ctrl = this.form.get(name);
