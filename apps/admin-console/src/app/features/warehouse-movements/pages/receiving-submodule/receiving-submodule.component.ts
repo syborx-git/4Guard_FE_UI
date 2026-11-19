@@ -1,6 +1,6 @@
 import { Component, ElementRef, ViewChild, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { debounceTime, distinctUntilChanged, timer, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged, timer, Subscription, concatMap } from 'rxjs';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthState } from '../../../../core/auth/auth.state';
@@ -699,13 +699,14 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       forkliftOperator: operator,
       storageLocation: current.storageLocation || current.storageLocationCode || this.selectedBayName() || `STAGING-R${String(rNum).padStart(2, '0')}`,
       clientCode: current.checkIn.clientCode || 'GENERIC',
-      supplierName: current.supplierName || current.checkIn.client || 'Cliente General',
-      productId: current.productId || this.products()[0]?.id || 'PROD-001',
-      productName: current.productName || this.products()[0]?.name || 'Mercancía General',
-      lotNumber: this.getActiveLot()?.lotNumber || current.lotNumber || 'LOT-2026-01',
-      expirationDate: this.getActiveLot()?.expirationDate || new Date(Date.now() + 31536000000).toISOString().slice(0, 10),
-      piecesPerPallet: current.piecesPerPallet || 135,
-      selectedPalletType: (current as any).palletType || 'Madera Estándar'
+      // ⚠️ Sin valores ficticios: Producto, Lote, Fechas, Piezas y Tarima los captura Operaciones en Fase 2
+      supplierName: current.supplierName || current.checkIn.client || '',
+      productId: current.productId || '',
+      productName: current.productName || '',
+      lotNumber: current.lotNumber || undefined,
+      expirationDate: current.expirationDate || null,
+      piecesPerPallet: current.piecesPerPallet || 0,
+      selectedPalletType: (current as any).selectedPalletType || (current as any).palletType || null
     };
 
     this.isAssigning.set(true);
@@ -2842,16 +2843,52 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     const current = currentRec || this.selectedReception();
     if (!current) return;
 
-    const op = (current.checkIn?.forkliftOperator || this.altaForm.get('forkliftOperator')?.value || '').trim();
+    const op = (this.altaForm.get('forkliftOperator')?.value || current.checkIn?.forkliftOperator || '').trim();
     if (!op || op === 'Por Asignar') {
       this.openAssignOperatorModal('DISCHARGE');
       return;
     }
 
+    // ── Validación estricta de parámetros REALES capturados por Operaciones (sin valores automáticos) ──
+    const raw = this.altaForm.getRawValue() as any;
+    const activeLot = this.getActiveLot();
+    const lotNumber = (activeLot?.lotNumber || raw.lotNumber || '').toString().trim();
+    const expirationDate = activeLot?.expirationDate || raw.expirationDate || '';
+    const elaborationDate = activeLot?.elaborationDate || raw.elaborationDate || '';
+    const missing: string[] = [];
+    if (!raw.productId) missing.push('Producto (SKU)');
+    if (!lotNumber) missing.push('Lote de Recepción');
+    if (!expirationDate) missing.push('Fecha de Caducidad');
+    if (!raw.supplierName) missing.push('Proveedor');
+    if (!raw.selectedPalletType) missing.push('Tipo de Tarima');
+    if (!raw.piecesPerPallet || Number(raw.piecesPerPallet) <= 0) missing.push('Piezas por Tarima');
+    if (missing.length > 0) {
+      this.altaForm.markAllAsTouched();
+      this.toast.warning(`Antes de iniciar la descarga captura: ${missing.join(', ')}.`);
+      return;
+    }
+    if (elaborationDate && expirationDate < elaborationDate) {
+      this.toast.error('La fecha de caducidad no puede ser anterior a la fecha de elaboración.');
+      return;
+    }
+
     const recId = current.id || current.folio;
+    const formVals = {
+      ...raw,
+      forkliftOperator: op,
+      lotNumber,
+      expirationDate,
+      elaborationDate,
+      rampNumber: raw.rampNumber || current.checkIn?.rampNumber || null,
+      storageLocation: raw.storageLocation || this.selectedBayName() || current.storageLocation || null,
+      status: 'ASSIGNED',
+    };
 
     this.isStartingDischarge.set(true);
-    this.movementsService.startDischarge(recId, op).subscribe({
+    this.movementsService
+      .saveDraftReceptionBackend(recId, formVals, [], this.products(), this.suppliers())
+      .pipe(concatMap(() => this.movementsService.startDischarge(recId, op)))
+      .subscribe({
       next: (updated) => {
         this.isStartingDischarge.set(false);
         this.selectedReception.set(updated);

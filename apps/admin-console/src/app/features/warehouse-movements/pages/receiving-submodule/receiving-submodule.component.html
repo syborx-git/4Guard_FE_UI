@@ -860,7 +860,43 @@
       }
 
       <!-- 3. SECCIÓN 2: PARÁMETROS DE LA RECEPCIÓN Y CONTROL DE LOTES -->
-      @if (rec.status === 'REGISTERED') {
+      @if (rec.status === 'REGISTERED' || rec.status === 'ASSIGNED') {
+      @if (rec.status === 'ASSIGNED') {
+      <!-- FASE 2: ANDÉN ASIGNADO · CAPTURA DE PARÁMETROS REALES ANTES DE INICIAR DESCARGA -->
+      <div
+        class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-1">
+        <div class="flex items-center gap-3">
+          <div
+            class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/40 shrink-0">
+            <span class="material-symbols-outlined text-2xl">forklift</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-xs text-blue-900 dark:text-blue-200 uppercase tracking-wide">
+              Andén Asignado · Rampa {{ rec.checkIn.rampNumber }} Bloqueada
+            </h3>
+            <p class="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
+              Captura abajo los parámetros reales de la descarga (Producto, Lote, Fechas, Montacarguista, Proveedor,
+              Tarima y Piezas) y después inicia la descarga física.
+            </p>
+            <p class="text-[10px] text-blue-600/80 dark:text-blue-400/80 font-normal mt-0.5 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px]">info</span>
+              <span>Los datos del transporte (chofer, placas, sellos y remisión) quedan fijos desde Caseta.</span>
+            </p>
+          </div>
+        </div>
+        <button type="button" (click)="startDischarge()" [disabled]="isStartingDischarge()"
+          class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap cursor-pointer hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Guarda los parámetros capturados e inicia la descarga física (escáner / Excel)">
+          @if (isStartingDischarge()) {
+          <span class="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+          <span>Guardando e Iniciando...</span>
+          } @else {
+          <span class="material-symbols-outlined text-sm">play_circle</span>
+          <span>Guardar Parámetros e Iniciar Descarga</span>
+          }
+        </button>
+      </div>
+      }
       <form [formGroup]="altaForm" class="space-y-4 pt-1">
         <div class="form-section__legend">
           <span class="material-symbols-outlined">inventory_2</span>
@@ -1412,148 +1448,6 @@
           </div>
         </div>
       </form>
-      } @else if (rec.status === 'ASSIGNED') {
-      <!-- FASE 2: ANDÉN ASIGNADO Y NOTIFICADO A TERMINAL DE MONTACARGAS -->
-      <div class="space-y-4 pt-1">
-        <div
-          class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <div
-              class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/40 shrink-0">
-              <span class="material-symbols-outlined text-2xl">forklift</span>
-            </div>
-            <div>
-              <h3 class="font-bold text-xs text-blue-900 dark:text-blue-200 uppercase tracking-wide">
-                Andén Asignado · Notificación Enviada a Terminal de Montacargas
-              </h3>
-              <p class="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
-                Rampa <strong>{{ rec.checkIn.rampNumber }}</strong> bloqueada. El operador <strong>{{
-                  rec.checkIn.forkliftOperator }}</strong> validará el transporte y comenzará la descarga hacia bahía
-                <strong>{{ formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value ||
-                  rec.storageLocation ||
-                  'STAGING-R01') }}</strong>.
-              </p>
-              <p class="text-[10px] text-blue-600/80 dark:text-blue-400/80 font-normal mt-0.5 flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px]">info</span>
-                <span>Plan B / Contingencia: Si la terminal móvil presenta fallas, inicia la descarga aquí para
-                  pistolear las tarimas desde esta PC.</span>
-              </p>
-            </div>
-          </div>
-          <button type="button" (click)="startDischarge()" [disabled]="isStartingDischarge()"
-            class="btn-primary-gold flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl text-slate-900 shadow-sm shrink-0 whitespace-nowrap cursor-pointer hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Iniciar descarga física en andén y habilitar captura / escáner de tarimas (Plan B / Contingencia si falla la tablet)">
-            @if (isStartingDischarge()) {
-            <span class="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
-            <span>Iniciando Descarga...</span>
-            } @else {
-            <span class="material-symbols-outlined text-sm">play_circle</span>
-            <span>Iniciar Descarga Física</span>
-            }
-          </button>
-        </div>
-
-        <!-- Vista de Parámetros Asignados -->
-        <div class="reception-readonly-grid">
-          @if (lotsList().length > 1) {
-          <div class="reception-readonly-item sm:col-span-3">
-            <span class="reception-readonly-label flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-xs text-amber-600 dark:text-amber-400">layers</span>
-              <span>Lotes de Recepción ({{ lotsList().length }} Lotes Registrados)</span>
-            </span>
-            <div class="flex flex-wrap gap-2 mt-1">
-              @for (lt of lotsList(); track lt.lotNumber) {
-              <div
-                class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-xs font-mono font-bold">
-                <span class="text-amber-800 dark:text-amber-300">{{ lt.lotNumber }}</span>
-                <span class="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Exp: {{ lt.expirationDate ||
-                  'N/A' }}</span>
-                @if (getPalletsCountForLot(lt.lotNumber); as count) {
-                @if (count > 0) {
-                <span
-                  class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">{{
-                  count }} UAs</span>
-                }
-                }
-              </div>
-              }
-            </div>
-          </div>
-          } @else {
-          <div class="reception-readonly-item">
-            <span class="reception-readonly-label">Lote de Recepción</span>
-            <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.lotNumber || altaForm.value.lotNumber || 'Por Asignar' }}</span>
-          </div>
-          <div class="reception-readonly-item">
-            <span class="reception-readonly-label">Fecha de Elaboración</span>
-            <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.elaborationDate || altaForm.value.elaborationDate || 'Por Asignar' }}</span>
-          </div>
-          <div class="reception-readonly-item">
-            <span class="reception-readonly-label">Fecha de Caducidad</span>
-            <span class="reception-readonly-val reception-readonly-val--mono">{{ rec.expirationDate || altaForm.value.expirationDate || 'Por Asignar' }}</span>
-          </div>
-          }
-          <div class="reception-readonly-item">
-            <span class="reception-readonly-label">Bahía Asignada (Almacén)</span>
-            <span class="reception-readonly-val font-mono font-bold text-blue-700 dark:text-blue-400">{{
-              formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation
-              || 'STAGING-R01')
-              }}</span>
-          </div>
-          <div class="reception-readonly-item">
-            <div class="flex items-center justify-between">
-              <span class="reception-readonly-label">Montacarguista Asignado</span>
-              <button type="button" (click)="openAssignOperatorModal('EDIT')"
-                class="text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer">
-                <span class="material-symbols-outlined text-[13px]">edit</span>
-                <span>{{ (rec.checkIn?.forkliftOperator || altaForm.get('forkliftOperator')?.value) ? 'Cambiar' : 'Asignar' }}</span>
-              </button>
-            </div>
-            <span class="reception-readonly-val truncate font-bold text-amber-700 dark:text-amber-400">
-              {{ rec.checkIn?.forkliftOperator || altaForm.get('forkliftOperator')?.value || 'Por Asignar' }}
-            </span>
-          </div>
-          <div class="reception-readonly-item">
-            <span class="reception-readonly-label">Rampa Bloqueada</span>
-            <span class="reception-readonly-val font-bold text-amber-700 dark:text-amber-400">{{ rec.checkIn?.rampNumber
-              ? ('Rampa ' + rec.checkIn.rampNumber) : 'Por Asignar' }}</span>
-          </div>
-          <div class="reception-readonly-item sm:col-span-2">
-            <span class="reception-readonly-label">Producto / SKU</span>
-            <span class="reception-readonly-val truncate">
-              @if ((rec.productId || altaForm.value.productId)) {
-                {{ rec.productId || altaForm.value.productId }} — {{ rec.productName || altaForm.value.productName || 'Producto General' }}
-              } @else {
-                <span class="text-slate-400 dark:text-slate-500 italic font-normal">Por Asignar en Descarga</span>
-              }
-            </span>
-          </div>
-          <div class="reception-readonly-item">
-            <span class="reception-readonly-label">Piezas x Tarima</span>
-            <span class="reception-readonly-val reception-readonly-val--pieces">
-              @if ((rec.piecesPerPallet && rec.piecesPerPallet > 0) || (altaForm.value.piecesPerPallet && altaForm.value.piecesPerPallet > 0)) {
-                {{ rec.piecesPerPallet || altaForm.value.piecesPerPallet }} PZAS
-              } @else {
-                <span class="text-slate-400 dark:text-slate-500 italic font-normal">Por Definir</span>
-              }
-            </span>
-          </div>
-          <div class="reception-readonly-item">
-            <span class="reception-readonly-label">Tipo de Tarima</span>
-            <span class="reception-readonly-val">
-              @if (rec.selectedPalletType || altaForm.value.selectedPalletType) {
-                {{ getPalletTypeLabel(rec.selectedPalletType || altaForm.value.selectedPalletType) }}
-              } @else {
-                <span class="text-slate-400 dark:text-slate-500 italic font-normal">Por Definir</span>
-              }
-            </span>
-          </div>
-          <div class="reception-readonly-item sm:col-span-2">
-            <span class="reception-readonly-label">Proveedor</span>
-            <span class="reception-readonly-val truncate">{{ rec.supplierName || rec.checkIn?.client || 'Por Asignar' }}</span>
-          </div>
-        </div>
-      </div>
       } @else if (rec.status === 'IN_PROGRESS') {
       <!-- FASE 3: DESCARGA FÍSICA EN CURSO (TERMINAL MONTACARGUISTA) -->
       <div class="space-y-4 pt-1">
