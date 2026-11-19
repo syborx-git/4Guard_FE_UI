@@ -28,7 +28,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         <div class="bg-rose-600 text-white rounded-md flex items-center justify-between shadow-xs"
              [ngClass]="densityMode === 'ultra-compact' ? 'p-1.5 mb-1.5' : (densityMode === 'compact' ? 'p-2 mb-2' : 'p-2.5 sm:p-3 mb-3')">
           <div class="flex items-center gap-2.5">
-            <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="w-auto object-contain rounded bg-white p-0.5"
+            <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" width="34" height="34" style="width: 34px !important; height: 34px !important; max-width: 34px !important; max-height: 34px !important; object-fit: contain !important;" class="w-auto object-contain rounded bg-white p-0.5"
                  [ngClass]="densityMode === 'ultra-compact' ? 'h-6 max-w-[30px]' : 'h-8 sm:h-9 max-w-[40px] sm:max-w-[46px]'" />
             <div>
               <h1 class="font-black tracking-wider uppercase leading-tight" [ngClass]="densityMode === 'ultra-compact' ? 'text-[10px]' : 'text-xs sm:text-sm md:text-base'">HOJA DE CANCELACIÓN DE CAMBIO DE ALMACÉN</h1>
@@ -193,7 +193,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         <div class="flex justify-between items-center border-b-2 border-black"
              [ngClass]="densityMode === 'ultra-compact' ? 'mb-1 pb-1' : (densityMode === 'compact' ? 'mb-1.5 pb-1' : 'mb-2 pb-1.5')">
           <div class="flex items-center gap-2.5">
-            <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="w-auto object-contain rounded"
+            <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" width="34" height="34" style="width: 34px !important; height: 34px !important; max-width: 34px !important; max-height: 34px !important; object-fit: contain !important;" class="w-auto object-contain rounded"
                  [ngClass]="densityMode === 'ultra-compact' ? 'h-6 max-w-[30px]' : 'h-8 max-w-[40px]'" />
             <div>
               <h1 class="font-black tracking-tight text-black leading-none mb-0.5" [ngClass]="densityMode === 'ultra-compact' ? 'text-xs' : 'text-sm sm:text-base'">4-GUARD WMS</h1>

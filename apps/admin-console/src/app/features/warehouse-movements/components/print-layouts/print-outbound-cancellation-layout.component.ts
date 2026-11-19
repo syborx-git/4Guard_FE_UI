@@ -21,7 +21,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
       <div class="bg-rose-600 text-white rounded-md flex items-center justify-between shadow-xs"
            [ngClass]="densityMode === 'ultra-compact' ? 'p-1.5 mb-1.5' : (densityMode === 'compact' ? 'p-2 mb-2' : 'p-2.5 sm:p-3 mb-3')">
         <div class="flex items-center gap-2.5">
-          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="w-auto object-contain rounded bg-white p-0.5"
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" width="34" height="34" style="width: 34px !important; height: 34px !important; max-width: 34px !important; max-height: 34px !important; object-fit: contain !important;" class="w-auto object-contain rounded bg-white p-0.5"
                [ngClass]="densityMode === 'ultra-compact' ? 'h-6 max-w-[30px]' : 'h-8 sm:h-9 max-w-[40px] sm:max-w-[46px]'" />
           <div>
             <h1 class="font-black tracking-wider uppercase leading-tight" [ngClass]="densityMode === 'ultra-compact' ? 'text-[10px]' : 'text-xs sm:text-sm md:text-base'">HOJA DE CANCELACIÓN DE SALIDA DE ALMACÉN</h1>

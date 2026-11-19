@@ -154,6 +154,14 @@ export class PrintService {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
+            img[src*="logo-4guard"] {
+              width: 36px !important;
+              height: 36px !important;
+              max-width: 36px !important;
+              max-height: 36px !important;
+              object-fit: contain !important;
+              display: inline-block !important;
+            }
             .f01-print-sheet {
               border: none !important;
               box-shadow: none !important;

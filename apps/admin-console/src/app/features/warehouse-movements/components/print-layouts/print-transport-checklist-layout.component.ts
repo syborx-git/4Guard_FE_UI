@@ -95,7 +95,7 @@ export interface TransportChecklistPrintData {
           <!-- Logo 4Guard -->
           <td rowspan="2" class="w-[140px] border border-slate-900 p-1 bg-slate-100 align-middle">
             <div class="flex items-center justify-center gap-1">
-              <img src="/assets/logo-4guard.svg" alt="4Guard" class="h-8 max-h-9 w-auto object-contain" />
+              <img src="/assets/logo-4guard.svg" alt="4Guard" width="36" height="36" style="width: 36px !important; height: 36px !important; max-width: 36px !important; max-height: 36px !important; object-fit: contain !important;" class="h-8 max-h-9 w-auto object-contain" />
               <span class="font-black text-xs tracking-tighter text-slate-900">4GUARD</span>
             </div>
           </td>

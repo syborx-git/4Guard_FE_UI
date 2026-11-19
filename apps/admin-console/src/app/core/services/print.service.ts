@@ -173,6 +173,17 @@ export class PrintService {
                 size: letter ${pageOrientation};
                 margin: ${pageMargin};
               }
+              img {
+                max-width: 100%;
+              }
+              img[src*="logo-4guard"] {
+                width: 36px !important;
+                height: 36px !important;
+                max-width: 36px !important;
+                max-height: 36px !important;
+                object-fit: contain !important;
+                display: inline-block !important;
+              }
               @media print {
                 html, body {
                   background-color: #ffffff !important;
@@ -183,6 +194,14 @@ export class PrintService {
                 }
                 .no-print, .modal-overlay, button {
                   display: none !important;
+                }
+                img[src*="logo-4guard"] {
+                  width: 36px !important;
+                  height: 36px !important;
+                  max-width: 36px !important;
+                  max-height: 36px !important;
+                  object-fit: contain !important;
+                  display: inline-block !important;
                 }
                 .print-container, .f01-print-sheet {
                   border: none !important;
@@ -221,8 +240,8 @@ export class PrintService {
       `);
       frameDoc.close();
 
-      // 4. Disparar impresión nativa una vez montado el DOM del iframe (inmediato)
-      setTimeout(() => {
+      // 4. Disparar impresión nativa una vez asegurada la carga de imágenes y stylesheets
+      const triggerPrint = () => {
         try {
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
@@ -234,9 +253,29 @@ export class PrintService {
             if (document.body.contains(iframe)) {
               document.body.removeChild(iframe);
             }
-          }, 3000);
+          }, 3500);
         }
-      }, 50);
+      };
+
+      const imgs = Array.from(frameDoc.querySelectorAll('img'));
+      let pendingImages = 0;
+      imgs.forEach((img) => {
+        if (!img.complete) {
+          pendingImages++;
+          img.onload = img.onerror = () => {
+            pendingImages--;
+            if (pendingImages <= 0) {
+              setTimeout(triggerPrint, 60);
+            }
+          };
+        }
+      });
+
+      if (pendingImages === 0) {
+        setTimeout(triggerPrint, 120);
+      } else {
+        setTimeout(triggerPrint, 500);
+      }
 
     } catch (err) {
       console.error('[PrintService] Error en printElement:', err);

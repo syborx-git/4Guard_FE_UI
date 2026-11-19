@@ -19,7 +19,7 @@ import { QualityClaim, CLAIM_STAGE_LABELS, CLAIM_DEFECT_TYPE_LABELS } from '../.
       <!-- ── 1. ENCABEZADO INSTITUCIONAL CORPORATIVO ── -->
       <div class="flex justify-between items-start mb-2 pb-1.5 border-b-2 border-[#0c2340]">
         <div class="flex items-center gap-2.5">
-          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-8 sm:h-9 w-auto max-w-[42px] sm:max-w-[48px] object-contain rounded" />
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" width="40" height="40" style="width: 40px !important; height: 40px !important; max-width: 40px !important; max-height: 40px !important; object-fit: contain !important;" class="h-8 sm:h-9 w-auto max-w-[42px] sm:max-w-[48px] object-contain rounded" />
           <div>
             <h1 class="text-sm sm:text-base font-extrabold tracking-tight text-[#0c2340] m-0">4-GUARD WMS</h1>
             <p class="text-[8px] sm:text-[8.5px] text-slate-600 font-semibold uppercase leading-tight m-0">

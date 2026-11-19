@@ -27,7 +27,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
       <div *ngIf="reception.status === 'CANCELLED'" class="bg-rose-600 text-white rounded-md flex items-center justify-between shadow-xs"
            [ngClass]="densityMode === 'ultra-compact' ? 'p-1.5 mb-1' : 'p-2.5 mb-2'">
         <div class="flex items-center gap-2">
-          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-6 w-auto max-w-[34px] object-contain rounded bg-white p-0.5" />
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" width="34" height="34" style="width: 34px !important; height: 34px !important; max-width: 34px !important; max-height: 34px !important; object-fit: contain !important;" class="h-6 w-auto max-w-[34px] object-contain rounded bg-white p-0.5" />
           <div>
             <h1 class="font-black tracking-wider uppercase leading-tight"
                 [ngClass]="densityMode === 'ultra-compact' ? 'text-xs' : 'text-xs sm:text-sm'">COMPROBANTE DE CANCELACIÓN DE RECEPCIÓN</h1>
@@ -46,7 +46,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
       <div class="flex justify-between items-center border-b-2 border-black"
            [ngClass]="densityMode === 'ultra-compact' ? 'mb-1 pb-1' : (densityMode === 'compact' ? 'mb-1.5 pb-1' : 'mb-2 pb-1.5')">
         <div class="flex items-center gap-2">
-          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo"
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" width="34" height="34" style="width: 34px !important; height: 34px !important; max-width: 34px !important; max-height: 34px !important; object-fit: contain !important;"
                class="w-auto object-contain rounded"
                [ngClass]="densityMode === 'ultra-compact' ? 'h-6 max-w-[32px]' : (densityMode === 'compact' ? 'h-7 max-w-[36px]' : 'h-8 max-w-[40px]')" />
           <div>

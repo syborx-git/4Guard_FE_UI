@@ -21,7 +21,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
       <!-- 1. Header Institucional y Advertencia de Cancelación -->
       <div class="flex justify-between items-center mb-1 pb-1 border-b-2 border-rose-600">
         <div class="flex items-center gap-2">
-          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-6 sm:h-7 w-auto max-w-[34px] object-contain rounded bg-white p-0.5" />
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" width="34" height="34" style="width: 34px !important; height: 34px !important; max-width: 34px !important; max-height: 34px !important; object-fit: contain !important;" class="h-6 sm:h-7 w-auto max-w-[34px] object-contain rounded bg-white p-0.5" />
           <div>
             <h1 class="text-xs sm:text-sm font-black tracking-tight text-slate-950 leading-none mb-0.5">4-GUARD WMS</h1>
             <p class="text-[7.5px] text-slate-800 font-bold uppercase tracking-tight">

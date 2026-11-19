@@ -780,6 +780,20 @@ Glass Components
     print-color-adjust: exact !important;
   }
 
+  // 5.1 Regla blindada para logotipo institucional en impresión física
+  img {
+    max-width: 100%;
+  }
+
+  img[src*="logo-4guard"] {
+    width: 36px !important;
+    height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
+    object-fit: contain !important;
+    display: inline-block !important;
+  }
+
   // 6. Tablas, bordes y saltos de página inteligentes
   table {
     width: 100% !important;
