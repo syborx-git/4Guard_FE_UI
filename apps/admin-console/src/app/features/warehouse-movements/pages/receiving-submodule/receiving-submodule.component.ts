@@ -238,6 +238,11 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       input.value = '';
       return;
     }
+    if (targetRec.status === 'CANCELLED') {
+      this.toast.warning('Operación bloqueada: Esta recepción está cancelada y no admite carga de archivos.');
+      input.value = '';
+      return;
+    }
 
     this.isImportingExcel.set(true);
     this.excelExportService.parseInventarioExcel(file, targetRec)
@@ -3199,11 +3204,19 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   }
 
   openBaySelector(): void {
+    if (this.selectedReception()?.status === 'CANCELLED') {
+      this.toast.warning('Esta recepción está cancelada y no admite cambios de bahía.');
+      return;
+    }
     this.isReallocatingMode.set(false);
     this.showBaySelectorModal.set(true);
   }
 
   openReallocationModal(rec: ReceptionHeader): void {
+    if (rec.status === 'CANCELLED' || this.selectedReception()?.status === 'CANCELLED') {
+      this.toast.warning('Esta recepción está cancelada y su inventario fue revocado.');
+      return;
+    }
     const bay = rec.storageLocation || rec.storageLocationCode || this.selectedBayName() || 'STAGING-01';
     this.isReallocatingMode.set(true);
     this.reallocatingSourceBay.set(bay);

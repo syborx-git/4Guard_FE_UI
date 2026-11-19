@@ -721,7 +721,15 @@
                   Andén {{ rec.checkIn.rampNumber || 1 }}
                 </span>
 
-                @if (rec.status !== 'COMPLETED' && rec.status !== 'CANCELLED') {
+                @if (rec.status === 'CANCELLED') {
+                <!-- Caso CANCELADO: Totalmente inactivo y sin botones de acción -->
+                <span
+                  class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 flex items-center gap-1 select-none"
+                  title="Folio cancelado y rampa liberada. No se permite reubicación ni cambio de bahía.">
+                  <span class="material-symbols-outlined text-xs">block</span>
+                  <span>Revocado</span>
+                </span>
+                } @else if (rec.status !== 'COMPLETED') {
                 <!-- Caso 1: En proceso -> Asignación de bahía -->
                 <button type="button" (click)="openBaySelector()" class="btn-bay-action"
                   title="Ver mapa de ocupación en tiempo real y asignar bahía">
@@ -751,15 +759,22 @@
             <div
               class="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-blue-200/60 dark:border-blue-800/40">
               <span
-                (click)="rec.status !== 'COMPLETED' ? openBaySelector() : (isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode) ? openReallocationModal(rec) : null)"
+                (click)="rec.status !== 'CANCELLED' && (rec.status !== 'COMPLETED' ? openBaySelector() : (isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode) ? openReallocationModal(rec) : null))"
                 class="logistics-command-bay-text truncate"
-                [class.cursor-pointer]="rec.status !== 'COMPLETED' || isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)"
-                [title]="formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation) + ((rec.status !== 'COMPLETED' || isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)) ? ' — Clic para cambiar bahía' : '')">
+                [class.cursor-pointer]="rec.status !== 'CANCELLED' && (rec.status !== 'COMPLETED' || isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode))"
+                [title]="formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value || rec.storageLocation) + (rec.status !== 'CANCELLED' && (rec.status !== 'COMPLETED' || isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)) ? ' — Clic para cambiar bahía' : '')">
                 {{ formatLocationDisplay(selectedBayName() || altaForm.get('storageLocation')?.value ||
                 rec.storageLocation) }}
               </span>
 
-              @if (isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)) {
+              @if (rec.status === 'CANCELLED') {
+              <span
+                class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 shrink-0 flex items-center gap-0.5 select-none"
+                title="Inventario revocado sin ingreso a bahía">
+                <span class="material-symbols-outlined text-[10px]">cancel</span>
+                <span>Revocada</span>
+              </span>
+              } @else if (isTemporaryBay(selectedBayName() || rec.storageLocation || rec.storageLocationCode)) {
               <span
                 class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-[rgba(197,168,107,0.14)] text-[#8c6d23] dark:text-[#dfb76c] border border-[rgba(197,168,107,0.35)] shrink-0 flex items-center gap-0.5">
                 <span class="material-symbols-outlined text-[10px]">pending_actions</span>
@@ -2078,6 +2093,7 @@
             </button>
             }
 
+            @if (rec.status !== 'COMPLETED' && rec.status !== 'CANCELLED') {
             <!-- Botón Cargar / Importar Excel -->
             <button type="button" (click)="excelFileInput.click()" [disabled]="isImportingExcel()"
               class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
@@ -2090,6 +2106,7 @@
               <span>Cargar Excel</span>
               }
             </button>
+            }
 
             @if (palletStream().length > 0 || (rec.pallets && rec.pallets.length > 0)) {
             <button type="button" (click)="exportPalletsToExcel(rec)"
