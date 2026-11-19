@@ -331,6 +331,21 @@ export class LoginComponent implements OnInit, OnDestroy {
     window.location.href = 'mailto:soporte@4guard.com?subject=Desbloqueo de Cuenta 4GUARD WMS';
   }
 
+  /**
+   * Permite reintentar el acceso de inmediato limpiando el temporizador local en el navegador.
+   */
+  protected resetLocalLockout(): void {
+    this.clearLockCountdown();
+    this.sessionStorageService.clearAuthLockout();
+    const identifier = this.sessionStorageService.normalizeIdentifier(this.emailCtrl.value || '');
+    if (identifier) {
+      this.sessionStorageService.clearFailedAttempts(identifier);
+    }
+    this.attemptsRemaining.set(null);
+    this.loginError.set(null);
+    this.viewState.set('login');
+  }
+
 
 
   ngOnDestroy(): void {

@@ -670,17 +670,51 @@
 
                 <div class="users-security-card">
                   <div class="users-security-card__info">
-                    <div class="users-security-card__title">Contraseña de Acceso</div>
+                    <div class="users-security-card__title">Gestión de Credenciales</div>
                     <div class="users-security-card__desc">
-                      Establece o actualiza la contraseña definitiva de acceso al sistema WMS para este usuario.
+                      Establece una contraseña manual o genera una clave temporal aleatoria con vigencia de primer ingreso.
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <button
+                      class="users-btn users-btn--secondary"
+                      type="button"
+                      (click)="openSetPasswordModal()">
+                      <span class="material-symbols-outlined">key</span>
+                      🔑 Establecer Contraseña
+                    </button>
+                    <button
+                      class="users-btn users-btn--ghost"
+                      type="button"
+                      (click)="openGenerateConfirm(selectedUser()!)"
+                      title="Genera una clave provisional y la muestra en pantalla">
+                      <span class="material-symbols-outlined">password</span>
+                      ⚡ Generar Clave Temporal
+                    </button>
+                  </div>
+                </div>
+
+                <div class="users-security-card mt-3">
+                  <div class="users-security-card__info">
+                    <div class="users-security-card__title flex items-center gap-2">
+                      <span>Desbloqueo &amp; Control de Intentos Fallidos</span>
+                      @if (selectedUser()?.failedAttempts && selectedUser()!.failedAttempts > 0) {
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/40">
+                          🚨 {{ selectedUser()!.failedAttempts }} intento(s) fallido(s)
+                        </span>
+                      }
+                    </div>
+                    <div class="users-security-card__desc">
+                      Restablece los intentos a cero y elimina cualquier bloqueo de 15 minutos en el servidor o navegador.
                     </div>
                   </div>
                   <button
-                    class="users-btn users-btn--secondary"
+                    class="users-btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-sm disabled:opacity-50"
                     type="button"
-                    (click)="openSetPasswordModal()">
-                    <span class="material-symbols-outlined">key</span>
-                    🔑 Establecer Contraseña
+                    [disabled]="isUnlocking()"
+                    (click)="unlockUser(selectedUser()!)">
+                    <span class="material-symbols-outlined text-sm">lock_open</span>
+                    <span>{{ isUnlocking() ? 'Desbloqueando...' : '🔓 Desbloquear Cuenta' }}</span>
                   </button>
                 </div>
               </fieldset>

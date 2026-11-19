@@ -133,7 +133,11 @@
               <span class="locked-view__timer-label">TIEMPO RESTANTE</span>
               <span class="locked-view__timer-value">{{ formattedLockTime() }}</span>
             </div>
-            <div class="locked-view__actions">
+            <div class="locked-view__actions" style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%;">
+              <button type="button" class="btn-primary-gold" style="width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; font-weight: 800; font-size: 0.8125rem; display: flex; items-center; justify-content: center; gap: 0.5rem; cursor: pointer;" (click)="resetLocalLockout()">
+                <span class="material-symbols-outlined" style="font-size: 1rem;">restart_alt</span>
+                <span>Reintentar Inicio de Sesión</span>
+              </button>
               <button type="button" class="locked-view__btn locked-view__btn--outline" (click)="contactSupport()">
                 Contactar Soporte
               </button>
@@ -153,7 +157,11 @@
               <span class="material-symbols-outlined locked-view__info-icon">mail</span>
               <span class="locked-view__info-text">Notificación enviada al correo del operador.</span>
             </div>
-            <div class="locked-view__actions">
+            <div class="locked-view__actions" style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%;">
+              <button type="button" class="btn-primary-gold" style="width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; font-weight: 800; font-size: 0.8125rem; display: flex; items-center; justify-content: center; gap: 0.5rem; cursor: pointer;" (click)="resetLocalLockout()">
+                <span class="material-symbols-outlined" style="font-size: 1rem;">restart_alt</span>
+                <span>Reintentar Inicio de Sesión</span>
+              </button>
               <button type="button" class="locked-view__btn locked-view__btn--outline" (click)="contactSupport()">
                 Contactar Soporte
               </button>

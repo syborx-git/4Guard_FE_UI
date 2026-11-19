@@ -129,13 +129,27 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
     const user = this.selectedUser();
     if (user) {
       this.userAdminService.update(user.id, {
-        password: newPassword
+        password: newPassword,
+        failedAttempts: 0,
+        lockedUntil: null,
+        permanentlyLocked: false,
+        status: 'ACTIVE',
+        isEnabled: true,
+        changePasswordRequired: false
       }).pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
-          this.toastService.success(`⚡ Contraseña de "${user.firstName} ${user.lastName}" establecida con éxito en la base de datos.`, 4000);
+          const fullName = `${user.firstName} ${user.lastName}`;
+          this.toastService.success(`⚡ Contraseña de "${fullName}" establecida con éxito y cuenta desbloqueada en la base de datos.`, 5000);
+          this.justCreatedUserData.set({
+            fullName,
+            username: user.username,
+            email: user.email,
+            tempPass: newPassword
+          });
           this.saveSuccess.set(true);
           this.loadAuditLogs(user.id);
-          setTimeout(() => this.saveSuccess.set(false), 4000);
+          this.loadUsers();
+          setTimeout(() => this.saveSuccess.set(false), 5000);
         },
         error: (err: HttpErrorResponse) => {
           const msg = err?.error?.message || err?.message || 'Error al actualizar la contraseña del usuario.';
@@ -143,6 +157,28 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       });
     }
+  }
+
+  // ── Desbloqueo Inmediato de Cuenta (SuperAdmin) ───────────
+  protected isUnlocking = signal(false);
+  protected unlockUser(user?: UserAdminItem): void {
+    const target = user || this.selectedUser();
+    if (!target || this.isUnlocking()) return;
+
+    this.isUnlocking.set(true);
+    this.userAdminService.unlockAccount(target.id).subscribe({
+      next: () => {
+        this.isUnlocking.set(false);
+        this.toastService.success(`🔓 Cuenta de "${target.firstName} ${target.lastName}" desbloqueada exitosamente en el servidor. Intentos fallidos restablecidos a 0.`, 5000);
+        this.loadUsers();
+        this.loadAuditLogs(target.id);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.isUnlocking.set(false);
+        const msg = err?.error?.message || 'Error al desbloquear la cuenta del usuario.';
+        this.toastService.error(`❌ ${msg}`, 4500);
+      }
+    });
   }
 
   // ── Estado: Eliminación de Usuario ───────────────────────
