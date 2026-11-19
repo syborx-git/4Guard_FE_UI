@@ -80,7 +80,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     return document.documentElement.classList.contains('dark') || document.documentElement.classList.contains('theme-dark');
   });
   protected readonly authState = inject(AuthState);
-  protected readonly Math      = Math;
+  protected readonly Math = Math;
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly movementsApi = inject(WarehouseMovementsApiService);
   private readonly qualityState = inject(QualityStateService);
@@ -103,7 +103,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     this.isTabletModeActive.set(next);
     try {
       localStorage.setItem('4g_tablet_receiving_mode', String(next));
-    } catch (_) {}
+    } catch (_) { }
     if (next) {
       this.toast.success('📱 Modo Tablet Montacarguista ACTIVADO: Las descargas son capturadas por el operador en la tablet RF y llegan listas para visto bueno y F01.');
     } else {
@@ -812,9 +812,9 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     const otherPallets = Math.max(0, totalStoredInBay - thisRecPallets);
 
     const locMap = this.movementsService.locations();
-    const loc = locMap[clean] || 
-                (clean.startsWith('LOC-') ? locMap[clean.replace(/^LOC-/, 'POS-')] : undefined) ||
-                (clean.startsWith('POS-') ? locMap[clean.replace(/^POS-/, 'LOC-')] : undefined);
+    const loc = locMap[clean] ||
+      (clean.startsWith('LOC-') ? locMap[clean.replace(/^LOC-/, 'POS-')] : undefined) ||
+      (clean.startsWith('POS-') ? locMap[clean.replace(/^POS-/, 'LOC-')] : undefined);
     const totalCapacity = this.movementsService.resolveBayCapacity(loc);
     const availableCupo = Math.max(0, totalCapacity - totalStoredInBay);
     return {
@@ -1198,6 +1198,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   kpiDischarged = computed(() => this.boardReceptions().filter((r) => r.status === 'DISCHARGED').length);
   kpiCompleted = computed(() => this.boardReceptions().filter((r) => r.status === 'COMPLETED').length);
   kpiCancelled = computed(() => this.boardReceptions().filter((r) => r.status === 'CANCELLED').length);
+  kpiPaused = computed(() => this.boardReceptions().filter((r) => r.status === 'PAUSED').length);
   isCarryOverFilterActive = signal<boolean>(false);
   isUrgentFilterActive = signal<boolean>(false);
   kpiCarryOver = computed(() => this.boardReceptions().filter((r) => this.isCarryOver(r)).length);
@@ -1311,12 +1312,12 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
     // 2. Formato temporal con almacén específico (ej. POS-L-T01, POS-L-T1, POS-L-TMP, TMP-L, TEMPORAL L, STAGING-L01)
     const tempWhMatch = upper.match(/^(?:POS-)?([A-Z])[-_ ]?(?:T|TMP|TEMPORAL)0*(\d+)?$/i) ||
-                        upper.match(/^(?:TMP|TEMPORAL|STAGING)[-_ ]?([A-Z])0*(\d+)?$/i) ||
-                        upper.match(/^(?:ALMACEN|ALMACÉN)\s*([A-Z])\s*[-_ ]?\s*(?:POS)?\s*(?:TEMPORAL|TMP)$/i);
+      upper.match(/^(?:TMP|TEMPORAL|STAGING)[-_ ]?([A-Z])0*(\d+)?$/i) ||
+      upper.match(/^(?:ALMACEN|ALMACÉN)\s*([A-Z])\s*[-_ ]?\s*(?:POS)?\s*(?:TEMPORAL|TMP)$/i);
     if (tempWhMatch) {
       const warehouse = (tempWhMatch[1] || 'A').toUpperCase();
       const posNum = tempWhMatch[2] ? parseInt(tempWhMatch[2], 10) : null;
-      return posNum && posNum > 1 
+      return posNum && posNum > 1
         ? `ALMACÉN ${warehouse} - POS TEMPORAL ${posNum}`
         : `ALMACÉN ${warehouse} - POS TEMPORAL`;
     }
@@ -1481,7 +1482,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
           }
         }
       },
-      error: () => {},
+      error: () => { },
     });
 
     this.route.queryParams.subscribe((params) => {
@@ -1499,7 +1500,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
                 this.selectReception(found);
               }
             },
-            error: () => {},
+            error: () => { },
           });
         }
       } else {
@@ -1617,7 +1618,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
               this.patchAltaFormWithReception(mapped);
             }
           },
-          error: () => {}
+          error: () => { }
         });
       }
     });
@@ -1656,7 +1657,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
           }
         }
       },
-      error: () => {}
+      error: () => { }
     });
   }
 
@@ -1813,7 +1814,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
           this.movementsService.updateReception(mapped.id || mapped.folio, mapped);
           this.loadAuditLogs(mapped.id || mapped.folio);
         },
-        error: () => {},
+        error: () => { },
       });
     }
   }
@@ -1824,12 +1825,12 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
     const matchedProduct = (currentProdId || rec.productName)
       ? this.products().find(
-          (p) =>
-            p.code === currentProdId ||
-            p.id === currentProdId ||
-            (p.name && rec.productName && p.name.trim().toLowerCase() === rec.productName.trim().toLowerCase()) ||
-            (p.code && rec.productName && rec.productName.includes(p.code))
-        )
+        (p) =>
+          p.code === currentProdId ||
+          p.id === currentProdId ||
+          (p.name && rec.productName && p.name.trim().toLowerCase() === rec.productName.trim().toLowerCase()) ||
+          (p.code && rec.productName && rec.productName.includes(p.code))
+      )
       : null;
 
     if (matchedProduct) {
@@ -2375,7 +2376,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
         lotNumber: lotNum,
         expirationDate: matchedLot?.expirationDate || undefined,
       }).subscribe({
-        next: () => {},
+        next: () => { },
         error: (err: any) => console.warn('Sync assignLotToPallet error:', err)
       });
     }
@@ -2513,58 +2514,58 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
   getAuditIcon(action: string): string {
     switch (action) {
-      case 'RECEPCION_CREADA':     return 'add_circle';
+      case 'RECEPCION_CREADA': return 'add_circle';
       case 'RECEPCION_COMPLETADA': return 'check_circle';
-      case 'RECEPCION_REABIERTA':  return 'lock_open_right';
-      case 'BAHIA_REUBICADA':      return 'swap_horiz';
-      case 'BAHIA_MODIFICADA':     return 'grid_view';
+      case 'RECEPCION_REABIERTA': return 'lock_open_right';
+      case 'BAHIA_REUBICADA': return 'swap_horiz';
+      case 'BAHIA_MODIFICADA': return 'grid_view';
       case 'FICHA_CASETA_MODIFICADA': return 'badge';
       case 'REENTRY_COMPLETED':
       case 'REINGRESO_REGISTRADO': return 'replay';
-      case 'REENTRY_SCANNED':      return 'qr_code_scanner';
-      case 'TARIMA_EDITADA':       return 'edit_note';
-      case 'REMISION_MODIFICADA':  return 'edit_document';
-      case 'RECEPCION_ACTUALIZADA':return 'edit';
-      case 'RECEPCION_CANCELADA':  return 'cancel';
-      default:                     return 'history';
+      case 'REENTRY_SCANNED': return 'qr_code_scanner';
+      case 'TARIMA_EDITADA': return 'edit_note';
+      case 'REMISION_MODIFICADA': return 'edit_document';
+      case 'RECEPCION_ACTUALIZADA': return 'edit';
+      case 'RECEPCION_CANCELADA': return 'cancel';
+      default: return 'history';
     }
   }
 
   getAuditColorClass(action: string): string {
     switch (action) {
-      case 'RECEPCION_CREADA':     return 'carriers-tl-node--emerald';
+      case 'RECEPCION_CREADA': return 'carriers-tl-node--emerald';
       case 'RECEPCION_COMPLETADA': return 'carriers-tl-node--blue';
-      case 'RECEPCION_REABIERTA':  return 'carriers-tl-node--purple';
-      case 'BAHIA_REUBICADA':      return 'carriers-tl-node--amber';
-      case 'BAHIA_MODIFICADA':     return 'carriers-tl-node--blue';
+      case 'RECEPCION_REABIERTA': return 'carriers-tl-node--purple';
+      case 'BAHIA_REUBICADA': return 'carriers-tl-node--amber';
+      case 'BAHIA_MODIFICADA': return 'carriers-tl-node--blue';
       case 'FICHA_CASETA_MODIFICADA': return 'carriers-tl-node--indigo';
       case 'REENTRY_COMPLETED':
       case 'REINGRESO_REGISTRADO':
-      case 'REENTRY_SCANNED':      return 'carriers-tl-node--indigo';
-      case 'REMISION_MODIFICADA':  return 'carriers-tl-node--purple';
+      case 'REENTRY_SCANNED': return 'carriers-tl-node--indigo';
+      case 'REMISION_MODIFICADA': return 'carriers-tl-node--purple';
       case 'TARIMA_EDITADA':
-      case 'RECEPCION_ACTUALIZADA':return 'carriers-tl-node--amber';
-      case 'RECEPCION_CANCELADA':  return 'carriers-tl-node--red';
-      default:                     return 'carriers-tl-node--indigo';
+      case 'RECEPCION_ACTUALIZADA': return 'carriers-tl-node--amber';
+      case 'RECEPCION_CANCELADA': return 'carriers-tl-node--red';
+      default: return 'carriers-tl-node--indigo';
     }
   }
 
   getAuditSummary(action: string): string {
     switch (action) {
-      case 'RECEPCION_CREADA':     return 'Pre-Recepción Registrada en Caseta';
+      case 'RECEPCION_CREADA': return 'Pre-Recepción Registrada en Caseta';
       case 'RECEPCION_COMPLETADA': return 'Descarga Finalizada y Cierre F01';
-      case 'RECEPCION_REABIERTA':  return 'Reapertura Extraordinaria con Autorización';
-      case 'BAHIA_REUBICADA':      return 'Reubicación a Posición Fija Definitiva';
-      case 'BAHIA_MODIFICADA':     return 'Cambio de Bahía de Almacenamiento';
+      case 'RECEPCION_REABIERTA': return 'Reapertura Extraordinaria con Autorización';
+      case 'BAHIA_REUBICADA': return 'Reubicación a Posición Fija Definitiva';
+      case 'BAHIA_MODIFICADA': return 'Cambio de Bahía de Almacenamiento';
       case 'FICHA_CASETA_MODIFICADA': return 'Modificación de Check List de Transporte';
-      case 'REENTRY_COMPLETED':    return 'Reingreso Formal / Devolución Concluida F01-R';
+      case 'REENTRY_COMPLETED': return 'Reingreso Formal / Devolución Concluida F01-R';
       case 'REINGRESO_REGISTRADO': return 'Arribo de Reingreso en Caseta';
-      case 'REENTRY_SCANNED':      return 'UA Reingresada Escaneada en Andén';
-      case 'REMISION_MODIFICADA':  return 'Modificación de No. de Remisión';
-      case 'TARIMA_EDITADA':       return 'Ajuste de Tarima Individual';
-      case 'RECEPCION_ACTUALIZADA':return 'Actualización de Parámetros de Recepción';
-      case 'RECEPCION_CANCELADA':  return 'Cancelación Extraordinaria con Autorización';
-      default:                     return action;
+      case 'REENTRY_SCANNED': return 'UA Reingresada Escaneada en Andén';
+      case 'REMISION_MODIFICADA': return 'Modificación de No. de Remisión';
+      case 'TARIMA_EDITADA': return 'Ajuste de Tarima Individual';
+      case 'RECEPCION_ACTUALIZADA': return 'Actualización de Parámetros de Recepción';
+      case 'RECEPCION_CANCELADA': return 'Cancelación Extraordinaria con Autorización';
+      default: return action;
     }
   }
 
@@ -3214,8 +3215,8 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
         ...p,
         locationId: res.locationId || targetBay,
         currentLocation: targetBay,
-        observations: isReallocation 
-          ? `Reubicado desde buffer temporal ${sourceBay} a posición fija ${targetBay}` 
+        observations: isReallocation
+          ? `Reubicado desde buffer temporal ${sourceBay} a posición fija ${targetBay}`
           : p.observations,
       }));
 
@@ -3243,8 +3244,8 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
       // Registrar explícitamente en la línea de tiempo de auditoría
       const auditAction = isReallocation ? 'BAHIA_REUBICADA' : 'BAHIA_MODIFICADA';
-      const actionLabel = isReallocation 
-        ? 'Reubicación a Posición Fija Definitiva' 
+      const actionLabel = isReallocation
+        ? 'Reubicación a Posición Fija Definitiva'
         : 'Cambio de Bahía de Almacenamiento';
 
       this.movementsService.addReceptionAudit(updatedRec.folio, {
@@ -3253,8 +3254,8 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
         actionLabel: actionLabel,
         username: 'Administrador WMS',
         timestamp: new Date().toLocaleString('es-MX'),
-        reason: isReallocation 
-          ? `Reubicación desde buffer temporal ${sourceBay} a posición fija ${targetBay}` 
+        reason: isReallocation
+          ? `Reubicación desde buffer temporal ${sourceBay} a posición fija ${targetBay}`
           : `Asignación de bahía ${targetBay}`,
         details: [
           { fieldName: 'Bahía Origen', oldValue: sourceBay },
@@ -3612,7 +3613,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
             if (cancelled) {
               try {
                 this.movementsApi.saveLocalReception(cancelled);
-              } catch (_) {}
+              } catch (_) { }
               this.selectedReception.set(cancelled);
               this.selectedPrintReception.set(cancelled);
               this.printType.set('CANCELLATION');
@@ -3642,7 +3643,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       if (cancelled) {
         try {
           this.movementsApi.saveLocalReception(cancelled);
-        } catch (_) {}
+        } catch (_) { }
         this.selectedReception.set(cancelled);
         this.selectedPrintReception.set(cancelled);
         this.printType.set('CANCELLATION');
@@ -3718,7 +3719,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.09);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   playBeepError(): void {
@@ -3734,7 +3735,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.18);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // Manejo de disparo láser de pistola con auto-avance al siguiente campo

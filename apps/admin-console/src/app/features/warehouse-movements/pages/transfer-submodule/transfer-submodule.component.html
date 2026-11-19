@@ -294,16 +294,6 @@
 
           <button
             type="button"
-            (click)="toggleStatusFilter('PAUSED')"
-            class="filter-pill"
-            [class.filter-pill--active]="isStatusFilterActive('PAUSED')"
-          >
-            <span class="filter-pill-dot dot--amber"></span>
-            <span>Pausados</span>
-          </button>
-
-          <button
-            type="button"
             (click)="toggleStatusFilter('COMPLETED')"
             class="filter-pill"
             [class.filter-pill--active]="isStatusFilterActive('COMPLETED')"
@@ -314,12 +304,42 @@
 
           <button
             type="button"
+            (click)="toggleStatusFilter('PAUSED')"
+            class="filter-pill"
+            [class.filter-pill--active]="isStatusFilterActive('PAUSED')"
+          >
+            <span class="filter-pill-dot dot--amber"></span>
+            <span>Pausados ({{ kpiPaused() }})</span>
+          </button>
+
+          <button
+            type="button"
             (click)="toggleStatusFilter('CANCELLED')"
             class="filter-pill"
             [class.filter-pill--active]="isStatusFilterActive('CANCELLED')"
           >
             <span class="filter-pill-dot dot--rose"></span>
-            <span>Cancelados</span>
+            <span>Cancelados ({{ kpiCancelled() }})</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleUrgentFilter()"
+            class="filter-pill"
+            [class.filter-pill--active]="isUrgentFilterActive()"
+          >
+            <span class="material-symbols-outlined text-[14px] text-rose-500 animate-pulse">bolt</span>
+            <span>Urgentes ({{ kpiUrgent() }})</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="toggleCarryOverFilter()"
+            class="filter-pill"
+            [class.filter-pill--active]="isCarryOverFilterActive()"
+          >
+            <span class="material-symbols-outlined text-[14px] text-amber-500">history</span>
+            <span>Arrastre ({{ kpiCarryOver() }})</span>
           </button>
         </div>
       </div>

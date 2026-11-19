@@ -70,6 +70,25 @@ export class TransferSubmoduleComponent implements OnInit {
   selectedTransfer = signal<WarehouseTransfer | null>(null);
   searchQuery = signal<string>('');
   statusFilter = signal<string>('ALL');
+  activeStatusFilters = signal<string[]>([]);
+  isUrgentFilter = signal<boolean>(false);
+  isCarryOverFilter = signal<boolean>(false);
+
+  toggleUrgentFilter(): void {
+    this.isUrgentFilter.update((v) => !v);
+  }
+
+  isUrgentFilterActive(): boolean {
+    return this.isUrgentFilter();
+  }
+
+  toggleCarryOverFilter(): void {
+    this.isCarryOverFilter.update((v) => !v);
+  }
+
+  isCarryOverFilterActive(): boolean {
+    return this.isCarryOverFilter();
+  }
   auditEntries = signal<MovementAuditEntry[]>([]);
   isLoadingAudit = signal(false);
 
@@ -704,7 +723,14 @@ export class TransferSubmoduleComponent implements OnInit {
       && this.isActiveStatus(transfer.status);
   }
 
-  kpiTotalTransfers = computed(() => this.boardTransfers().length);
+  readonly kpiTotalTransfers = computed(() => this.boardTransfers().length);
+  readonly kpiAssigned = computed(() => this.boardTransfers().filter((t) => t.status === 'ASSIGNED').length);
+  readonly kpiInProgress = computed(() => this.boardTransfers().filter((t) => t.status === 'IN_PROGRESS').length);
+  readonly kpiCompleted = computed(() => this.boardTransfers().filter((t) => t.status === 'COMPLETED').length);
+  readonly kpiPaused = computed(() => this.boardTransfers().filter((t) => t.status === 'PAUSED').length);
+  readonly kpiCancelled = computed(() => this.boardTransfers().filter((t) => t.status === 'CANCELLED').length);
+  readonly kpiUrgent = computed(() => this.boardTransfers().filter((t) => t.priority === 'URGENT' && this.isActiveStatus(t.status)).length);
+  readonly kpiCarryOver = computed(() => this.boardTransfers().filter((t) => this.isCarryOver(t)).length);
   kpiOccupiedLocations = computed(() => this.occupiedLocations().length);
   kpiAvailableLocations = computed(() => this.availableLocations().length);
   kpiTotalPalletsMoved = computed(() =>
@@ -794,11 +820,27 @@ export class TransferSubmoduleComponent implements OnInit {
   filteredTransfers = computed(() => {
     const list = this.boardTransfers();
     const query = this.searchQuery().toLowerCase().trim();
+    const multi = this.activeStatusFilters();
     const status = this.statusFilter();
 
     return list.filter((t) => {
-      const matchStatus = status === 'ALL' || t.status === status;
+      let matchStatus = true;
+      if (multi.length > 0) {
+        matchStatus = multi.some((m) => {
+          if (m === 'IN_PROGRESS') return t.status === 'IN_PROGRESS' || t.status === 'ASSIGNED';
+          return t.status === m;
+        });
+      } else if (status !== 'ALL') {
+        if (status === 'IN_PROGRESS') {
+          matchStatus = t.status === 'IN_PROGRESS' || t.status === 'ASSIGNED';
+        } else {
+          matchStatus = t.status === status;
+        }
+      }
       if (!matchStatus) return false;
+
+      if (this.isUrgentFilter() && t.priority !== 'URGENT') return false;
+      if (this.isCarryOverFilter() && !this.isCarryOver(t)) return false;
 
       if (!query) return true;
       const matchFolio = t.folio.toLowerCase().includes(query);
@@ -933,11 +975,26 @@ export class TransferSubmoduleComponent implements OnInit {
   }
 
   toggleStatusFilter(status: string): void {
-    this.statusFilter.set(status);
+    if (status === 'ALL') {
+      this.activeStatusFilters.set([]);
+      this.statusFilter.set('ALL');
+      return;
+    }
+    const current = this.activeStatusFilters();
+    if (current.includes(status)) {
+      const updated = current.filter((s) => s !== status);
+      this.activeStatusFilters.set(updated);
+      this.statusFilter.set(updated.length === 1 ? updated[0] : (updated.length === 0 ? 'ALL' : 'MULTI'));
+    } else {
+      const updated = [...current, status];
+      this.activeStatusFilters.set(updated);
+      this.statusFilter.set(updated.length === 1 ? updated[0] : 'MULTI');
+    }
   }
 
   isStatusFilterActive(status: string): boolean {
-    return this.statusFilter() === status;
+    if (status === 'ALL') return this.activeStatusFilters().length === 0;
+    return this.activeStatusFilters().includes(status);
   }
 
   // Seleccionar un Traspaso del Directorio (Modo Detalle/Solo Lectura)

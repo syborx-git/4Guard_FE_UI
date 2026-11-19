@@ -237,6 +237,7 @@ export type ReceptionStatus =
   | 'IN_PROGRESS'
   | 'DISCHARGED'
   | 'COMPLETED'
+  | 'PAUSED'
   | 'CANCELLED';
 
 export interface ReceptionHeader {

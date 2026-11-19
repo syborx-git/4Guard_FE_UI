@@ -290,10 +290,28 @@
           <span>Retornos ({{ kpiReturns() }})</span>
         </button>
 
+        <button type="button" (click)="toggleStatusFilter('PAUSED')" class="filter-pill"
+          [class.filter-pill--active]="isStatusFilterActive('PAUSED')">
+          <span class="filter-pill-dot dot--amber"></span>
+          <span>Pausadas ({{ kpiPaused() }})</span>
+        </button>
+
         <button type="button" (click)="toggleStatusFilter('CANCELLED')" class="filter-pill"
           [class.filter-pill--active]="isStatusFilterActive('CANCELLED')">
           <span class="filter-pill-dot dot--rose"></span>
           <span>Canceladas ({{ kpiCancelled() }})</span>
+        </button>
+
+        <button type="button" (click)="toggleUrgentFilter()" class="filter-pill"
+          [class.filter-pill--active]="isUrgentFilterActive()">
+          <span class="material-symbols-outlined text-[14px] text-rose-500 animate-pulse">bolt</span>
+          <span>Urgentes ({{ kpiUrgent() }})</span>
+        </button>
+
+        <button type="button" (click)="toggleCarryOverFilter()" class="filter-pill"
+          [class.filter-pill--active]="isCarryOverFilterActive()">
+          <span class="material-symbols-outlined text-[14px] text-amber-500">history</span>
+          <span>Arrastre ({{ kpiCarryOver() }})</span>
         </button>
       </div>
     </div>
@@ -320,11 +338,13 @@
           <span class="executive-status-badge" [class.badge--caseta]="rec.status === 'REGISTERED'"
             [class.badge--anden]="rec.status === 'ASSIGNED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED'"
             [class.badge--verificado]="rec.status === 'COMPLETED'"
+            [class.badge--pausado]="rec.status === 'PAUSED'"
             [class.badge--cancelado]="rec.status === 'CANCELLED'">
             @if (rec.status === 'REGISTERED') { Caseta }
             @else if (rec.status === 'ASSIGNED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED') { En
             Andén }
             @else if (rec.status === 'COMPLETED') { Verificado }
+            @else if (rec.status === 'PAUSED') { Pausada }
             @else if (rec.status === 'CANCELLED') { Cancelado }
           </span>
         </div>
@@ -334,6 +354,22 @@
           <span class="executive-folio-badge">
             #{{ rec.folio }}
           </span>
+          @if (isCarryOver(rec)) {
+          <span
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50"
+            title="Pendiente de un turno anterior. Requiere atención y relevo operativo.">
+            <span class="material-symbols-outlined text-[12px]">history</span>
+            <span>Arrastre</span>
+          </span>
+          }
+          @if (rec.priority === 'URGENT') {
+          <span
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/50 animate-pulse"
+            title="Recepción con Prioridad Urgente (SLA Estricto)">
+            <span class="material-symbols-outlined text-[13px] text-rose-500">bolt</span>
+            <span>Urgente</span>
+          </span>
+          }
           @if (rec.operationType === 'REENTRY') {
           <span
             class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
