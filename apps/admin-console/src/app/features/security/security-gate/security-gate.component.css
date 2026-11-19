@@ -1412,7 +1412,8 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 10px;
+  gap: 5px;
+  padding: 3px 8px;
   border-radius: 8px;
   background: var(--navy-mid);
   color: #fbbf24;
@@ -1422,21 +1423,80 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--gold-border);
   box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
+/* Opción A: Verde Bosque de Alto Contraste en Modo Claro (WCAG AAA) */
 .cell-ramp-badge--assigned {
-  background: rgba(16, 185, 129, 0.18);
-  color: #059669;
-  border-color: rgba(16, 185, 129, 0.45);
+  background: #ecfdf5;
+  color: #064e3b;
+  border: 1.5px solid #10b981;
   font-weight: 800;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.2);
+}
+
+.cell-ramp-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #059669;
+  box-shadow: 0 0 6px #10b981;
+  display: inline-block;
+  flex-shrink: 0;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.cell-ramp-action-text {
+  font-family: var(--font-primary, sans-serif);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #065f46;
+}
+
+.cell-ramp-sep {
+  color: #059669;
+  font-weight: 900;
+  opacity: 0.7;
+}
+
+.cell-ramp-target-pill {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  background: #064e3b;
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 5px;
+  box-shadow: 0 1px 2px rgba(6, 78, 59, 0.35);
+  display: inline-block;
 }
 
 :host-context(.dark) .cell-ramp-badge--assigned,
 :host-context(.theme-dark) .cell-ramp-badge--assigned {
-  background: rgba(16, 185, 129, 0.25);
-  color: #34d399;
-  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(16, 185, 129, 0.22);
+  color: #a7f3d0;
+  border-color: rgba(52, 211, 153, 0.6);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+
+:host-context(.dark) .cell-ramp-action-text,
+:host-context(.theme-dark) .cell-ramp-action-text {
+  color: #6ee7b7;
+}
+
+:host-context(.dark) .cell-ramp-live-dot,
+:host-context(.theme-dark) .cell-ramp-live-dot {
+  background-color: #34d399;
+  box-shadow: 0 0 8px #34d399;
+}
+
+:host-context(.dark) .cell-ramp-target-pill,
+:host-context(.theme-dark) .cell-ramp-target-pill {
+  background: #047857;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .cell-ramp-badge--staging {

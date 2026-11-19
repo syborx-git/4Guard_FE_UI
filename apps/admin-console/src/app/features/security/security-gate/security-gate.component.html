@@ -1567,8 +1567,11 @@
                   </td>
                   <td>
                     @if (hasRampAssigned(item)) {
-                      <span class="cell-ramp-badge cell-ramp-badge--assigned animate-pulse !bg-emerald-500/25 !text-emerald-300 !border-emerald-500/50 font-bold" title="Rampa física asignada por Almacén. Indique al chofer atracar en este andén.">
-                        🟢 DAR ACCESO · {{ formatRampDisplay(item) }}
+                      <span class="cell-ramp-badge cell-ramp-badge--assigned" title="Rampa física asignada por Almacén. Indique al chofer atracar en este andén.">
+                        <span class="cell-ramp-live-dot"></span>
+                        <span class="cell-ramp-action-text">DAR ACCESO</span>
+                        <span class="cell-ramp-sep">·</span>
+                        <span class="cell-ramp-target-pill">{{ formatRampDisplay(item) }}</span>
                       </span>
                     } @else {
                       <span class="cell-ramp-badge cell-ramp-badge--pending" title="Unidad estacionada en patio en espera de asignación de andén por Mesa de Control">
