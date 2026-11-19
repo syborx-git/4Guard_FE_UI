@@ -207,9 +207,9 @@ import { AuthState } from '../../../../core/auth/auth.state';
                 <td class="border-r border-black font-mono text-center font-bold text-amber-900 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.lotNumber || reception.lotNumber || '-' }}</td>
                 <td class="border-r border-black font-mono font-bold text-center text-slate-950 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.productId }}</td>
                 <td class="border-r border-black font-semibold text-slate-950" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">
-                  <div class="leading-tight truncate max-w-[210px]">{{ item.description }}</div>
+                  <div class="leading-snug pb-[1px] max-w-[210px] break-words">{{ item.description }}</div>
                   @if (item.observations && item.observations !== 'Descarga conforme estándar' && densityMode !== 'ultra-compact') {
-                    <span class="block text-[6.5px] italic text-slate-500 normal-case leading-none truncate max-w-[210px]">{{ item.observations }}</span>
+                    <span class="block text-[6.5px] italic text-slate-500 normal-case leading-snug pb-[1px] max-w-[210px] break-words">{{ item.observations }}</span>
                   }
                 </td>
                 <td class="border-r border-black text-center uppercase" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6.5px]' : (densityMode === 'compact' ? 'py-0.5 px-1.5 text-[7.5px]' : 'py-1 px-2 text-[8px]')">{{ item.palletTypeLabel || 'Madera Estándar' }}</td>
@@ -223,7 +223,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
                 <td class="border-r border-black font-mono text-center font-bold text-amber-900 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.lotNumber }}</td>
                 <td class="border-r border-black font-mono font-bold text-center text-slate-950 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.productId }}</td>
                 <td class="border-r border-black font-semibold text-slate-950" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">
-                  <div class="leading-tight truncate max-w-[210px]">{{ item.description }}</div>
+                  <div class="leading-snug pb-[1px] max-w-[210px] break-words">{{ item.description }}</div>
                 </td>
                 <td class="border-r border-black text-center uppercase" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6.5px]' : (densityMode === 'compact' ? 'py-0.5 px-1.5 text-[7.5px]' : 'py-1 px-2 text-[8px]')">{{ item.palletTypeLabel }}</td>
                 <td class="text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.pieces | number:'1.0-0' }} PZAS</td>
@@ -253,24 +253,27 @@ import { AuthState } from '../../../../core/auth/auth.state';
            [ngClass]="densityMode === 'ultra-compact' ? 'text-[7px] pt-1' : (densityMode === 'compact' ? 'text-[7.5px] pt-1' : 'text-[8.5px] pt-1.5')">
         <div class="text-left">
           <div class="border-b border-black w-full" [ngClass]="densityMode === 'ultra-compact' ? 'mb-0.5' : 'mb-1'"></div>
-          <p class="font-bold text-slate-900 truncate">{{ (reception.checkIn.driverName || 'Armando Flores').toUpperCase() }}</p>
-          <p class="text-slate-500 uppercase tracking-wide" [ngClass]="densityMode === 'ultra-compact' ? 'text-[6px]' : 'text-[7.5px]'">Entregó: Chofer / {{ (reception.checkIn.carrierLine || 'Transportista').toUpperCase() }}</p>
+          <p class="font-bold text-slate-900 leading-snug pb-[1px] break-words">{{ (reception.checkIn.driverName || 'Armando Flores').toUpperCase() }}</p>
+          <p class="text-slate-500 uppercase tracking-wide leading-snug pb-[1px]" [ngClass]="densityMode === 'ultra-compact' ? 'text-[6px]' : 'text-[7.5px]'">Entregó: Chofer / {{ (reception.checkIn.carrierLine || 'Transportista').toUpperCase() }}</p>
         </div>
         <div class="text-center">
           <div class="border-b border-black w-full" [ngClass]="densityMode === 'ultra-compact' ? 'mb-0.5' : 'mb-1'"></div>
-          <p class="font-bold text-slate-900 truncate">{{ (reception.checkIn.forkliftOperator || 'POR ASIGNAR').toUpperCase() }}</p>
-          <p class="text-slate-500 uppercase tracking-wide" [ngClass]="densityMode === 'ultra-compact' ? 'text-[6px]' : 'text-[7.5px]'">Montacarguista: Descarga en Andén</p>
+          <p class="font-bold text-slate-900 leading-snug pb-[1px] break-words">{{ (reception.checkIn.forkliftOperator || 'POR ASIGNAR').toUpperCase() }}</p>
+          <p class="text-slate-500 uppercase tracking-wide leading-snug pb-[1px]" [ngClass]="densityMode === 'ultra-compact' ? 'text-[6px]' : 'text-[7.5px]'">Montacarguista: Descarga en Andén</p>
         </div>
         <div class="text-right">
           <div class="border-b border-black w-full" [ngClass]="densityMode === 'ultra-compact' ? 'mb-0.5' : 'mb-1'"></div>
-          <p class="font-bold text-slate-900 truncate">{{ capturedByName }}</p>
-          <p class="text-slate-500 uppercase tracking-wide" [ngClass]="densityMode === 'ultra-compact' ? 'text-[6px]' : 'text-[7.5px]'">Recibió y Autorizó: Supervisor WMS</p>
+          <p class="font-bold text-slate-900 leading-snug pb-[1px] break-words">{{ capturedByName }}</p>
+          <p class="text-slate-500 uppercase tracking-wide leading-snug pb-[1px]" [ngClass]="densityMode === 'ultra-compact' ? 'text-[6px]' : 'text-[7.5px]'">Recibió y Autorizó: Supervisor WMS</p>
         </div>
       </div>
 
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+    }
     @media print {
       @page {
         size: letter portrait;

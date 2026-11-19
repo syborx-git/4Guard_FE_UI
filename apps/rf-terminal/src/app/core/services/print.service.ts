@@ -28,7 +28,9 @@ export class PrintService {
       scale: 2, // Calidad retina 2x para nitidez y fidelidad exacta
       useCORS: true,
       backgroundColor: '#ffffff',
-      logging: false
+      logging: false,
+      scrollX: 0,
+      scrollY: 0
     });
 
     const imgData = canvas.toDataURL('image/png');
@@ -54,7 +56,7 @@ export class PrintService {
         printWidth = printWidth * scaleFactor;
       }
       const xOffset = margin + (maxUsableWidth - printWidth) / 2;
-      const yOffset = margin + (maxUsableHeight - printHeight) / 2;
+      const yOffset = margin;
       pdf.addImage(imgData, 'PNG', xOffset, yOffset, printWidth, printHeight);
     } else {
       let heightLeft = printHeight;

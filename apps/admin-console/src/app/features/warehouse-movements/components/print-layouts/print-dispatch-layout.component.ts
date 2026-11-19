@@ -18,32 +18,37 @@ import { AuthState } from '../../../../core/auth/auth.state';
          [ngClass]="densityMode === 'ultra-compact' ? 'p-2 sm:p-2.5 text-[7px] leading-tight' : (densityMode === 'compact' ? 'p-3 sm:p-3.5 text-[8px] leading-tight' : 'p-4 sm:p-5 text-[9.5px] leading-normal')">
       
       <!-- Top Header & Logo Institucional -->
-      <div class="flex justify-between items-center mb-2 pb-1.5 border-b-2 border-black">
+      <div class="flex justify-between items-center border-b-2 border-black"
+           [ngClass]="densityMode === 'ultra-compact' ? 'mb-1 pb-1' : (densityMode === 'compact' ? 'mb-1.5 pb-1' : 'mb-2 pb-1.5')">
         <div class="flex items-center gap-2.5">
-          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="h-8 w-auto max-w-[40px] object-contain rounded" />
+          <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="w-auto object-contain rounded"
+               [ngClass]="densityMode === 'ultra-compact' ? 'h-6 max-w-[30px]' : 'h-8 max-w-[40px]'" />
           <div>
-            <h1 class="text-sm sm:text-base font-black tracking-tight text-black leading-none mb-0.5">4-GUARD WMS</h1>
-            <p class="text-[8.5px] text-slate-700 font-bold uppercase tracking-tight">
+            <h1 class="font-black tracking-tight text-black leading-none mb-0.5" [ngClass]="densityMode === 'ultra-compact' ? 'text-xs' : 'text-sm sm:text-base'">4-GUARD WMS</h1>
+            <p class="text-slate-700 font-bold uppercase tracking-tight" [ngClass]="densityMode === 'ultra-compact' ? 'text-[7px]' : 'text-[8.5px]'">
               Calle. Industria Automotriz sin número, Colonia el Coecillo, municipio de Toluca, Estado de México, C.P 50246.
             </p>
           </div>
         </div>
 
         <div class="text-right shrink-0">
-          <span class="text-[9px] font-bold text-slate-700 block uppercase">FECHA DE IMPRESIÓN</span>
-          <span class="text-xs font-mono font-black text-black">{{ printDate }}</span>
+          <span class="font-bold text-slate-700 block uppercase" [ngClass]="densityMode === 'ultra-compact' ? 'text-[7px]' : 'text-[9px]'">FECHA DE IMPRESIÓN</span>
+          <span class="font-mono font-black text-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[9.5px]' : 'text-xs'">{{ printDate }}</span>
         </div>
       </div>
 
       <!-- Main Title (Estandarizado en Mayúsculas Oficiales) -->
-      <div class="text-center mb-2">
-        <h2 class="text-xs sm:text-sm font-black uppercase tracking-widest text-black border-y-2 border-black py-0.5 inline-block px-8">
+      <div class="text-center" [ngClass]="densityMode === 'ultra-compact' ? 'mb-1' : 'mb-2'">
+        <h2 class="font-black uppercase tracking-widest text-black border-y-2 border-black inline-block"
+            [ngClass]="densityMode === 'ultra-compact' ? 'text-[10px] py-0 px-4' : 'text-xs sm:text-sm py-0.5 px-8'">
           SALIDA DE MERCANCÍA
         </h2>
       </div>
 
       <!-- Header Grid Metadata: 2 Columnas Estructuradas en MAYÚSCULAS y Espacio Optimizado -->
-      <div class="grid grid-cols-2 gap-x-5 gap-y-1 text-[9.5px] mb-2.5 border border-black p-2 rounded-sm bg-slate-50/50 uppercase" style="display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important;">
+      <div class="grid grid-cols-2 gap-x-4 border border-black rounded-sm bg-slate-50/50 uppercase"
+           [ngClass]="densityMode === 'ultra-compact' ? 'gap-y-0.5 text-[7.5px] mb-1 p-1.5' : (densityMode === 'compact' ? 'gap-y-0.5 text-[8.5px] mb-1.5 p-1.5' : 'gap-y-1 text-[9.5px] mb-2.5 p-2')"
+           style="display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important;">
         
         <!-- Columna Izquierda: Logística & Transporte -->
         <div class="space-y-1">
@@ -114,64 +119,69 @@ import { AuthState } from '../../../../core/auth/auth.state';
       </div>
 
       <!-- Tabla de Tarimas (Detalle Oficial con Remisión Inicial y Caducidad por UA) -->
-      <div class="mb-2 border border-black rounded-sm overflow-hidden">
+      <div class="border border-black rounded-sm overflow-hidden" [ngClass]="densityMode === 'ultra-compact' ? 'mb-1' : 'mb-2'">
         <table class="w-full text-left border-collapse font-sans uppercase"
-               [ngClass]="densityMode === 'ultra-compact' ? 'text-[6.8px] leading-tight' : (densityMode === 'compact' ? 'text-[7.8px] leading-tight' : 'text-[8.5px] leading-normal')">
+               [ngClass]="densityMode === 'ultra-compact' ? 'text-[6.5px] leading-tight' : (densityMode === 'compact' ? 'text-[7.5px] leading-tight' : 'text-[8.5px] leading-normal')">
           <thead>
             <tr class="border-b border-black font-black uppercase bg-slate-200 text-slate-950">
-              <th class="py-0.5 px-1.5 border-r border-black text-center w-8">N. TARIMA</th>
-              <th class="py-0.5 px-1.5 border-r border-black font-mono">CÓDIGO TARIMA (UA)</th>
-              <th class="py-0.5 px-1.5 border-r border-black font-mono text-center">DOC. INICIAL</th>
-              <th class="py-0.5 px-1.5 border-r border-black font-mono">SKU</th>
-              <th class="py-0.5 px-1.5 border-r border-black">DESCRIPCIÓN</th>
-              <th class="py-0.5 px-1.5 border-r border-black">CLIENTE / PROVEEDOR</th>
-              <th class="py-0.5 px-1.5 border-r border-black">TIPO TARIMA</th>
-              <th class="py-0.5 px-1.5 border-r border-black font-mono text-center">CADUCIDAD</th>
-              <th class="py-0.5 px-1.5 border-r border-black text-right">CANT X TARIMA</th>
-              <th class="py-0.5 px-1.5">UBICACIÓN / OBS</th>
+              <th class="border-r border-black text-center w-6" [ngClass]="densityMode === 'ultra-compact' ? 'py-0.5 px-1' : 'py-0.5 px-1.5'">N. TARIMA</th>
+              <th class="border-r border-black font-mono" [ngClass]="densityMode === 'ultra-compact' ? 'py-0.5 px-1' : 'py-0.5 px-1.5'">CÓDIGO TARIMA (UA)</th>
+              <th class="border-r border-black font-mono text-center" [ngClass]="densityMode === 'ultra-compact' ? 'py-0.5 px-1' : 'py-0.5 px-1.5'">DOC. INICIAL</th>
+              <th class="border-r border-black font-mono" [ngClass]="densityMode === 'ultra-compact' ? 'py-0.5 px-1' : 'py-0.5 px-1.5'">SKU</th>
+              <th class="border-r border-black" [ngClass]="densityMode === 'ultra-compact' ? 'py-0.5 px-1' : 'py-0.5 px-1.5'">DESCRIPCIÓN</th>
+              <th class="border-r border-black" [ngClass]="densityMode === 'ultra-compact' ? 'py-0.5 px-1' : 'py-0.5 px-1.5'">CLIENTE / PROVEEDOR</th>
+              <th class="border-r border-black" [ngClass]="densityMode === 'ultra-compact' ? 'py-0.5 px-1' : 'py-0.5 px-1.5'">TIPO TARIMA</th>
+              <th class="border-r border-black font-mono text-center" [ngClass]="densityMode === 'ultra-compact' ? 'py-0.5 px-1' : 'py-0.5 px-1.5'">CADUCIDAD</th>
+              <th class="border-r border-black text-right" [ngClass]="densityMode === 'ultra-compact' ? 'py-0.5 px-1' : 'py-0.5 px-1.5'">CANT X TARIMA</th>
+              <th [ngClass]="densityMode === 'ultra-compact' ? 'py-0.5 px-1' : 'py-0.5 px-1.5'">UBICACIÓN / OBS</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let item of outbound.items; let idx = index" class="border-b border-slate-300 hover:bg-slate-50"
-            [ngClass]="densityMode === 'ultra-compact' ? 'text-[6.8px]' : (densityMode === 'compact' ? 'text-[7.8px]' : 'text-[8.5px]')">
-              <td class="py-0.5 px-1.5 border-r border-black text-center font-bold font-mono">{{ item.palletNumber || (idx + 1) }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black font-bold font-mono text-slate-950">{{ item.palletCode }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black font-mono text-center font-bold">{{ item.inboundRemisionNo || outbound.remisionNo || '-' }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black font-mono font-bold">{{ item.productId }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black font-semibold">{{ item.description }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black text-[8px]">{{ item.clientName || outbound.clientName }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black text-[8px]">{{ item.palletTypeLabel || item.palletTypeId || 'TARIMA ESTÁNDAR' }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black font-mono text-center font-bold">{{ formatDateDMY(item.expirationDate) }}</td>
-              <td class="py-0.5 px-1.5 border-r border-black text-right font-black font-mono">{{ item.pieces | number:'1.0-0' }} PZAS</td>
-              <td class="py-0.5 px-1.5 italic text-slate-600 text-[8px]">{{ item.locationCode || 'ANDÉN' }}</td>
+            [ngClass]="densityMode === 'ultra-compact' ? 'text-[6.5px]' : (densityMode === 'compact' ? 'text-[7.5px]' : 'text-[8.5px]')">
+              <td class="border-r border-black text-center font-bold font-mono" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-0.5 px-1.5'">{{ item.palletNumber || (idx + 1) }}</td>
+              <td class="border-r border-black font-bold font-mono text-slate-950 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-0.5 px-1.5'">{{ item.palletCode }}</td>
+              <td class="border-r border-black font-mono text-center font-bold whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-0.5 px-1.5'">{{ item.inboundRemisionNo || outbound.remisionNo || '-' }}</td>
+              <td class="border-r border-black font-mono font-bold whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-0.5 px-1.5'">{{ item.productId }}</td>
+              <td class="border-r border-black font-semibold leading-snug pb-[1px]" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-0.5 px-1.5'">{{ item.description }}</td>
+              <td class="border-r border-black leading-snug" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6px]' : 'py-0.5 px-1.5 text-[8px]'">{{ item.clientName || outbound.clientName }}</td>
+              <td class="border-r border-black leading-snug" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6px]' : 'py-0.5 px-1.5 text-[8px]'">{{ item.palletTypeLabel || item.palletTypeId || 'TARIMA ESTÁNDAR' }}</td>
+              <td class="border-r border-black font-mono text-center font-bold whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-0.5 px-1.5'">{{ formatDateDMY(item.expirationDate) }}</td>
+              <td class="border-r border-black text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-0.5 px-1.5'">{{ item.pieces | number:'1.0-0' }} PZAS</td>
+              <td class="italic text-slate-600 leading-snug" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6px]' : 'py-0.5 px-1.5 text-[8px]'">{{ item.locationCode || 'ANDÉN' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <!-- Totales -->
-      <div class="flex justify-between items-center text-[10px] font-bold border-b-2 border-black pb-1 mb-3 bg-slate-100 px-2.5 py-1 rounded uppercase">
-        <div>TOTAL TARIMAS: <span class="font-mono font-black text-xs">{{ outbound.totalPallets }}</span></div>
-        <div>SKUS DISTINTOS: <span class="font-mono font-black text-xs">{{ distinctProductsCount }}</span></div>
-        <div>TOTAL PIEZAS: <span class="font-mono font-black text-xs">{{ outbound.totalPieces | number:'1.0-0' }} PZAS</span></div>
+      <div class="flex justify-between items-center font-bold border-b-2 border-black bg-slate-100 rounded uppercase"
+           [ngClass]="densityMode === 'ultra-compact' ? 'text-[7.5px] px-2 py-0.5 mb-1' : (densityMode === 'compact' ? 'text-[8.5px] px-2.5 py-0.5 mb-1.5' : 'text-[10px] px-2.5 py-1 mb-3')">
+        <div>TOTAL TARIMAS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ outbound.totalPallets }}</span></div>
+        <div>SKUS DISTINTOS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ distinctProductsCount }}</span></div>
+        <div>TOTAL PIEZAS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ outbound.totalPieces | number:'1.0-0' }} PZAS</span></div>
       </div>
 
       <!-- Footer: Elaboró + Recibe de Conformidad -->
-      <div class="grid grid-cols-2 gap-10 items-end text-[9.5px] pt-1 uppercase">
+      <div class="grid grid-cols-2 gap-10 items-end uppercase"
+           [ngClass]="densityMode === 'ultra-compact' ? 'text-[7px] pt-0.5' : (densityMode === 'compact' ? 'text-[8.5px] pt-1' : 'text-[9.5px] pt-1')">
         <div>
-          <p class="font-bold text-slate-800">ELABORÓ: <span class="font-black text-black">{{ elaboroName }}</span></p>
-          <p class="text-[7.5px] text-slate-500 font-sans tracking-wide">Documento auditado oficial 4GUARD WMS</p>
+          <p class="font-bold text-slate-800 leading-snug pb-[1px]">ELABORÓ: <span class="font-black text-black">{{ elaboroName }}</span></p>
+          <p class="text-slate-500 font-sans tracking-wide leading-snug" [ngClass]="densityMode === 'ultra-compact' ? 'text-[6px]' : 'text-[7.5px]'">Documento auditado oficial 4GUARD WMS</p>
         </div>
 
         <div class="text-center">
           <div class="border-b-2 border-black w-full mb-1"></div>
-          <p class="font-black text-[9px] tracking-widest uppercase text-slate-950">RECIBE DE CONFORMIDAD (CHOFER / DESTINO)</p>
+          <p class="font-black tracking-widest uppercase text-slate-950 leading-snug pb-[1px]" [ngClass]="densityMode === 'ultra-compact' ? 'text-[7px]' : 'text-[9px]'">RECIBE DE CONFORMIDAD (CHOFER / DESTINO)</p>
         </div>
       </div>
 
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+    }
     .grid-cols-2 {
       display: grid !important;
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -187,9 +197,6 @@ import { AuthState } from '../../../../core/auth/auth.state';
       .grid-cols-2 {
         display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-      }
-      table {
-        page-break-inside: avoid;
       }
     }
   `]

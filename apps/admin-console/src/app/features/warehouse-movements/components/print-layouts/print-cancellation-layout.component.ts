@@ -135,8 +135,9 @@ import { AuthState } from '../../../../core/auth/auth.state';
       </div>
 
       <!-- 4. Motivo / Justificación de la Cancelación Extraordinaria -->
-      <div class="mb-1.5 bg-rose-50 p-2 border-l-4 border-rose-600 border-y border-r border-rose-200 rounded-sm text-[8.5px]">
-        <span class="font-black text-rose-900 uppercase tracking-wider block text-[7.5px] mb-0.5">
+      <div class="bg-rose-50 border-l-4 border-rose-600 border-y border-r border-rose-200 rounded-sm"
+           [ngClass]="densityMode === 'ultra-compact' ? 'mb-1 p-1 text-[7.5px]' : 'mb-1.5 p-2 text-[8.5px]'">
+        <span class="font-black text-rose-900 uppercase tracking-wider block mb-0.5" [ngClass]="densityMode === 'ultra-compact' ? 'text-[7px]' : 'text-[7.5px]'">
           MOTIVO / JUSTIFICACIÓN OFICIAL DE CANCELACIÓN (AUDITORÍA WMS):
         </span>
         <p class="text-slate-950 font-bold italic font-mono leading-snug">
@@ -146,7 +147,8 @@ import { AuthState } from '../../../../core/auth/auth.state';
 
       <!-- 5. Tabla de Partidas / Unidades de Almacenamiento (UAs) Revocadas -->
       <div class="mb-1 border border-black rounded-sm overflow-hidden">
-        <table class="w-full text-left text-[7.5px] sm:text-[8px] border-collapse font-sans uppercase">
+        <table class="w-full text-left border-collapse font-sans uppercase"
+               [ngClass]="densityMode === 'ultra-compact' ? 'text-[6.5px] leading-tight' : 'text-[7.5px] sm:text-[8px]'">
           <thead>
             <tr class="border-b border-black font-black uppercase bg-slate-200 text-slate-950">
               <th class="py-0.5 px-1 border-r border-black text-center w-6">N°</th>
@@ -162,26 +164,26 @@ import { AuthState } from '../../../../core/auth/auth.state';
           </thead>
           <tbody>
             <tr *ngFor="let item of reception.pallets; let idx = index" class="border-b border-slate-300 hover:bg-rose-50/50"
-            [ngClass]="densityMode === 'ultra-compact' ? 'text-[6.8px]' : (densityMode === 'compact' ? 'text-[7.5px]' : 'text-[8px]')">
-              <td class="py-0.5 px-1 border-r border-black text-center font-bold font-mono text-slate-950">{{ item.palletNumber || (idx + 1) }}</td>
-              <td class="py-0.5 px-1 border-r border-black font-black font-mono text-slate-950">{{ item.palletCode }}</td>
-              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold text-slate-950 whitespace-nowrap">
+            [ngClass]="densityMode === 'ultra-compact' ? 'text-[6.5px]' : (densityMode === 'compact' ? 'text-[7.5px]' : 'text-[8px]')">
+              <td class="px-1 border-r border-black text-center font-bold font-mono text-slate-950" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px]' : 'py-0.5'">{{ item.palletNumber || (idx + 1) }}</td>
+              <td class="px-1 border-r border-black font-black font-mono text-slate-950 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px]' : 'py-0.5'">{{ item.palletCode }}</td>
+              <td class="px-1 border-r border-black font-mono text-center font-bold text-slate-950 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px]' : 'py-0.5'">
                 {{ item.docNumber || (item && item['doc_number']) || (item.receptionLot && item.receptionLot.docNumber) || (item && (item.remisionNo || item.documentNumber)) || reception.checkIn?.docNumber || '-' }}
               </td>
-              <td class="py-0.5 px-1 border-r border-black font-mono font-bold text-slate-950">{{ item.productId || reception.productId || '-' }}</td>
-              <td class="py-0.5 px-1 border-r border-black font-bold max-w-[150px] truncate text-slate-950" [title]="item.description || reception.productName">
+              <td class="px-1 border-r border-black font-mono font-bold text-slate-950 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px]' : 'py-0.5'">{{ item.productId || reception.productId || '-' }}</td>
+              <td class="px-1 border-r border-black font-bold max-w-[180px] break-words leading-snug pb-[1px] text-slate-950" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px]' : 'py-0.5'" [title]="item.description || reception.productName">
                 {{ item.description || reception.productName || 'PRODUCTO CANCELADO' }}
               </td>
-              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold text-rose-900 whitespace-nowrap">
+              <td class="px-1 border-r border-black font-mono text-center font-bold text-rose-900 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px]' : 'py-0.5'">
                 {{ item.lotNumber || (item && item['lot_number']) || (item.receptionLot && item.receptionLot.lotNumber) || (item && item['batchNumber']) || reception.lotNumber || '-' }}
               </td>
-              <td class="py-0.5 px-1 border-r border-black font-mono text-center font-bold text-slate-950 whitespace-nowrap">
+              <td class="px-1 border-r border-black font-mono text-center font-bold text-slate-950 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px]' : 'py-0.5'">
                 {{ formatDateDMY(item.expirationDate || (item && item['expiration_date']) || (item.receptionLot && item.receptionLot.expirationDate) || reception.expirationDate) }}
               </td>
-              <td class="py-0.5 px-1 border-r border-black text-right font-black font-mono text-slate-950 whitespace-nowrap">
+              <td class="px-1 border-r border-black text-right font-black font-mono text-slate-950 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px]' : 'py-0.5'">
                 {{ item.pieces | number:'1.0-0' }} PZAS
               </td>
-              <td class="py-0.5 px-1 text-center font-mono font-black text-rose-800 text-[7px] whitespace-nowrap">
+              <td class="px-1 text-center font-mono font-black text-rose-800 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] text-[6px]' : 'py-0.5 text-[7px]'">
                 REVOCADO
               </td>
             </tr>
@@ -234,10 +236,13 @@ import { AuthState } from '../../../../core/auth/auth.state';
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+    }
     @media print {
       @page {
         size: letter portrait;
-        margin: 6mm;
+        margin: 5mm;
       }
       .print-container {
         border: none !important;
@@ -245,14 +250,10 @@ import { AuthState } from '../../../../core/auth/auth.state';
         padding: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
-        page-break-inside: avoid !important;
       }
       .grid.grid-cols-2 {
         display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-      }
-      table {
-        page-break-inside: avoid !important;
       }
       tr, td, th {
         page-break-inside: avoid !important;
