@@ -139,6 +139,25 @@ export class PrintService {
         .map(el => el.outerHTML)
         .join('\n');
 
+      // 1.1 Volcar de forma síncrona todas las reglas CSS compiladas en memoria (garantiza Tailwind e impresión idéntica al preview)
+      let compiledStyles = '';
+      try {
+        const sheets = Array.from(document.styleSheets);
+        for (const sheet of sheets) {
+          try {
+            if (sheet.cssRules) {
+              for (const rule of Array.from(sheet.cssRules)) {
+                compiledStyles += rule.cssText + '\n';
+              }
+            }
+          } catch {
+            // Regla cross-origin protegida por CORS
+          }
+        }
+      } catch (err) {
+        console.warn('[PrintService] Error leyendo cssRules:', err);
+      }
+
       // 2. Crear iframe invisible para impresión limpia
       const iframe = document.createElement('iframe');
       iframe.name = 'fg-instant-print-frame';
@@ -166,12 +185,27 @@ export class PrintService {
         <html lang="es">
           <head>
             <meta charset="utf-8">
+            <base href="${document.baseURI}">
             <title>${cleanTitle}</title>
             ${styleSheets}
+            ${compiledStyles ? `<style id="fg-compiled-app-styles">${compiledStyles}</style>` : ''}
             <style>
               @page {
                 size: letter ${pageOrientation};
                 margin: ${pageMargin};
+              }
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                box-sizing: border-box;
+              }
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                font-family: inherit;
               }
               img {
                 max-width: 100%;
@@ -190,7 +224,7 @@ export class PrintService {
                   color: #000000 !important;
                   -webkit-print-color-adjust: exact !important;
                   print-color-adjust: exact !important;
-                  text-transform: uppercase !important;
+                  color-adjust: exact !important;
                 }
                 .no-print, .modal-overlay, button {
                   display: none !important;
@@ -204,12 +238,10 @@ export class PrintService {
                   display: inline-block !important;
                 }
                 .print-container, .f01-print-sheet {
-                  border: none !important;
                   box-shadow: none !important;
-                  padding: 0 !important;
                   max-width: 100% !important;
                   width: 100% !important;
-                  text-transform: uppercase !important;
+                  margin: 0 auto !important;
                 }
                 .origin-top-left, .poster-scalable-wrapper, #gate-qr-poster-target {
                   transform: none !important;
@@ -217,19 +249,6 @@ export class PrintService {
                   height: auto !important;
                   margin: 0 auto !important;
                 }
-              }
-              html, body {
-                margin: 0 !important;
-                padding: 0 !important;
-                background-color: #ffffff !important;
-                color: #000000 !important;
-                font-family: inherit;
-                text-transform: uppercase !important;
-              }
-              * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                box-sizing: border-box;
               }
             </style>
           </head>
@@ -253,7 +272,7 @@ export class PrintService {
             if (document.body.contains(iframe)) {
               document.body.removeChild(iframe);
             }
-          }, 3500);
+          }, 4000);
         }
       };
 
@@ -265,16 +284,20 @@ export class PrintService {
           img.onload = img.onerror = () => {
             pendingImages--;
             if (pendingImages <= 0) {
-              setTimeout(triggerPrint, 60);
+              setTimeout(triggerPrint, 150);
             }
           };
         }
       });
 
       if (pendingImages === 0) {
-        setTimeout(triggerPrint, 120);
+        if ((document as any).fonts?.ready) {
+          (document as any).fonts.ready.then(() => setTimeout(triggerPrint, 200));
+        } else {
+          setTimeout(triggerPrint, 250);
+        }
       } else {
-        setTimeout(triggerPrint, 500);
+        setTimeout(triggerPrint, 600);
       }
 
     } catch (err) {

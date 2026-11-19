@@ -245,9 +245,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         margin: 5mm;
       }
       .print-container {
-        border: none !important;
         box-shadow: none !important;
-        padding: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
       }
@@ -278,10 +276,18 @@ export class PrintCancellationLayoutComponent {
   }
 
   get cancellationDateDisplay(): string {
-    if (this.reception?.cancelledAt) {
-      return this.reception.cancelledAt;
+    const raw = this.reception?.cancelledAt;
+    if (raw && typeof raw === 'string' && !raw.toLowerCase().includes('invalid')) {
+      return raw;
     }
-    return this.printDate;
+    const created = (this.reception as any)?.rawCreatedAt || this.reception?.createdAt;
+    if (created && typeof created === 'string' && !created.toLowerCase().includes('invalid')) {
+      const d = new Date(created);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleString('es-MX');
+      }
+    }
+    return new Date().toLocaleString('es-MX');
   }
 
   get totalPallets(): number {

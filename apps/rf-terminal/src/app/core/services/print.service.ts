@@ -115,6 +115,20 @@ export class PrintService {
       .map(node => node.outerHTML)
       .join('\n');
 
+    let compiledStyles = '';
+    try {
+      const sheets = Array.from(document.styleSheets);
+      for (const sheet of sheets) {
+        try {
+          if (sheet.cssRules) {
+            for (const rule of Array.from(sheet.cssRules)) {
+              compiledStyles += rule.cssText + '\n';
+            }
+          }
+        } catch { }
+      }
+    } catch (err) { }
+
     // Crear iframe oculto en el DOM
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
@@ -139,8 +153,10 @@ export class PrintService {
       <html lang="es">
         <head>
           <meta charset="utf-8">
+          <base href="${document.baseURI}">
           <title>${documentTitle}</title>
           ${styles}
+          ${compiledStyles ? `<style id="fg-rf-compiled-css">${compiledStyles}</style>` : ''}
           <style>
             @page {
               size: letter portrait;
@@ -153,6 +169,7 @@ export class PrintService {
               color: #000000 !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
+              color-adjust: exact !important;
             }
             img[src*="logo-4guard"] {
               width: 36px !important;
@@ -162,13 +179,11 @@ export class PrintService {
               object-fit: contain !important;
               display: inline-block !important;
             }
-            .f01-print-sheet {
-              border: none !important;
+            .f01-print-sheet, .print-container {
               box-shadow: none !important;
               margin: 0 auto !important;
               width: 100% !important;
               max-width: 100% !important;
-              padding: 0 !important;
             }
           </style>
         </head>

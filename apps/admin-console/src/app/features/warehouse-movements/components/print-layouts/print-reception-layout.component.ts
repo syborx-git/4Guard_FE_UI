@@ -280,9 +280,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         margin: 5mm 5mm !important;
       }
       .print-container {
-        border: none !important;
         box-shadow: none !important;
-        padding: 0 !important;
         margin: 0 auto !important;
         width: 100% !important;
         max-width: 100% !important;

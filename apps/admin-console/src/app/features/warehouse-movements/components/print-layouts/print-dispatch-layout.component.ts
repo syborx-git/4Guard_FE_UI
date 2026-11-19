@@ -188,9 +188,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
     }
     @media print {
       .print-container {
-        border: none !important;
         box-shadow: none !important;
-        padding: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
       }
