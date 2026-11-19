@@ -662,13 +662,27 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
   isRampSelectedInAlta(rampNumber: number, targetRec?: ReceptionHeader | null): boolean {
     const rec = targetRec || this.quickRampModalRec() || this.selectedReception();
     if (!rec) return false;
-    const currentRamp = rec.checkIn?.rampNumber || this.altaForm.get('rampNumber')?.value;
+    const formRamp = this.altaForm?.get('rampNumber')?.value;
+    const currentRamp = (formRamp != null && Number(formRamp) > 0) ? formRamp : rec.checkIn?.rampNumber;
     return Number(currentRamp) === rampNumber;
   }
 
   isRampAvailable(rampNumber: number): boolean {
     const occ = this.getRampOccupancy(rampNumber);
     return !occ || occ.status === 'AVAILABLE';
+  }
+
+  assignRampFromQuickModal(rm: RampItem, qRec: ReceptionHeader): void {
+    if (this.isRampBusy(rm.rampNumber, qRec.folio)) {
+      const occ = this.getRampOccupancy(rm.rampNumber);
+      const opLabel = occ?.operationType === 'OUTBOUND' ? 'la Salida / Carga' : 'la Recepción / Descarga';
+      this.toast.warning(`⚠️ La ${rm.name} se encuentra ocupada por ${opLabel} (Folio #${occ?.operationFolio || 'Activo'}). Debe liberarse antes de asignarla.`);
+      return;
+    }
+    this.closeQuickRampModal();
+    this.selectReception(qRec);
+    this.selectRamp(rm);
+    this.toast.info(`Rampa ${rm.rampNumber} seleccionada para Folio #${qRec.folio}. Complete montacarguista, lotes y tipo de tarima para proceder con la descarga.`);
   }
 
   quickAssignRamp(rm: RampItem, targetRec?: ReceptionHeader | null): void {
@@ -2683,30 +2697,17 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Auto-recuperación de Lote y Fecha de Caducidad si no vinieron en formulario para evitar bloqueos
-    if (!this.altaForm.get('lotNumber')?.value) {
-      const activeLot = this.getActiveLot();
-      const lotVal = activeLot?.lotNumber || this.selectedScanningLot() || 'LOT-2026-01';
-      this.altaForm.patchValue({ lotNumber: lotVal });
-    }
-
-    if (!this.altaForm.get('expirationDate')?.value) {
-      const activeLot = this.getActiveLot();
-      if (activeLot?.expirationDate) {
+    // Sincronización de Lote y Fecha de Caducidad desde el lote activo del Hub si fue capturado
+    const activeLot = this.getActiveLot();
+    if (activeLot) {
+      if (!this.altaForm.get('lotNumber')?.value && activeLot.lotNumber) {
+        this.altaForm.patchValue({ lotNumber: activeLot.lotNumber });
+      }
+      if (!this.altaForm.get('expirationDate')?.value && activeLot.expirationDate) {
         this.altaForm.patchValue({
           expirationDate: activeLot.expirationDate,
           elaborationDate: activeLot.elaborationDate || new Date().toISOString().slice(0, 10)
         });
-      } else {
-        const nextYear = new Date();
-        nextYear.setFullYear(nextYear.getFullYear() + 1);
-        const expStr = nextYear.toISOString().slice(0, 10);
-        const elabStr = new Date().toISOString().slice(0, 10);
-        this.altaForm.patchValue({ expirationDate: expStr, elaborationDate: elabStr });
-        if (this.lotsList().length > 0) {
-          const updatedLots = this.lotsList().map((l, idx) => idx === 0 ? { ...l, expirationDate: expStr, elaborationDate: elabStr } : l);
-          this.lotsList.set(updatedLots);
-        }
       }
     }
 

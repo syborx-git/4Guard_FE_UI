@@ -789,22 +789,21 @@
             <div>
               <h3
                 class="text-xs sm:text-sm font-black text-slate-100 uppercase tracking-wide m-0 flex items-center gap-2">
-                <span>Asignación de Andén en Recepción (1 Clic)</span>
-                @if (rec.checkIn?.rampNumber) {
+                <span>Selección de Andén de Descarga (Rampa 1-12)</span>
+                @if (altaForm.get('rampNumber')?.value || rec.checkIn?.rampNumber) {
                 <span
                   class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  Rampa {{ rec.checkIn.rampNumber }} Asignada
+                  Rampa {{ altaForm.get('rampNumber')?.value || rec.checkIn?.rampNumber }} Seleccionada
                 </span>
                 } @else {
                 <span
                   class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
-                  Unidad en Espera en Patio
+                  Pendiente de Selección
                 </span>
                 }
               </h3>
               <p class="text-[11px] text-slate-400 m-0 mt-0.5">
-                Seleccione la rampa libre para enviar la orden inmediata a <strong>Caseta (Levantar Pluma)</strong> y a
-                la <strong>Tablet del Montacarguista</strong>.
+                Seleccione el andén asignado. A continuación complete montacarguista, lotes y tarimas antes de despachar a descarga física.
               </p>
             </div>
           </div>
@@ -822,14 +821,14 @@
         <!-- Grid 1-12 de Rampas (Estilo Homologado Idéntico a Caseta) -->
         <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
           @for (rm of STANDARD_WAREHOUSE_RAMPS; track rm.rampNumber) {
-          <button type="button" (click)="quickAssignRamp(rm, rec)" [disabled]="isAssigning()"
+          <button type="button" (click)="selectRamp(rm)" [disabled]="isAssigning()"
             class="p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] relative group"
             [ngClass]="{
                       'border-[#b8860b] bg-[#d4af37]/20 ring-2 ring-[#b8860b] shadow-lg shadow-amber-500/10': isRampSelectedInAlta(rm.rampNumber, rec),
                       'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-400 hover:bg-emerald-500/15 hover:scale-[1.02]': !isRampSelectedInAlta(rm.rampNumber, rec) && isRampAvailable(rm.rampNumber),
                       'border-slate-700 bg-slate-800/40 opacity-75 hover:border-amber-500/50': !isRampSelectedInAlta(rm.rampNumber, rec) && !isRampAvailable(rm.rampNumber)
                     }"
-            [title]="getRampOccupancy(rm.rampNumber) ? (getRampOccupancy(rm.rampNumber)?.statusLabel + ' - Folio #' + (getRampOccupancy(rm.rampNumber)?.operationFolio || 'S/N')) : 'Clic para asignar rampa inmediata'">
+            [title]="getRampOccupancy(rm.rampNumber) ? (getRampOccupancy(rm.rampNumber)?.statusLabel + ' - Folio #' + (getRampOccupancy(rm.rampNumber)?.operationFolio || 'S/N')) : 'Clic para seleccionar esta rampa de descarga'">
             <div class="flex items-center justify-between w-full">
               <span class="font-mono font-black text-xs sm:text-sm text-slate-100">
                 R-{{ rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber }} </span>
@@ -849,7 +848,7 @@
               </span>
               } @else {
               <span class="text-[10px] font-bold text-emerald-400 block group-hover:underline">
-                {{ isRampSelectedInAlta(rm.rampNumber, rec) ? 'Asignada' : 'Disponible ➔' }}
+                {{ isRampSelectedInAlta(rm.rampNumber, rec) ? 'Seleccionada' : 'Disponible ➔' }}
               </span>
               }
             </div>
@@ -2288,11 +2287,11 @@
           class="btn-save flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-black text-xs shadow-md w-full sm:w-auto justify-center text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
           @if (isAssigning()) {
           <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
-          <span>{{ rec.checkIn?.rampNumber ? 'Asignando Montacarguista...' : 'Enviando Asignación a Caseta...' }}</span>
+          <span>{{ (rec.checkIn?.rampNumber || altaForm.get('rampNumber')?.value) ? 'Asignando Montacarguista y Despachando...' : 'Enviando Asignación a Caseta...' }}</span>
           } @else {
-          <span class="material-symbols-outlined text-base">{{ rec.checkIn?.rampNumber ? 'forklift' : 'forward_to_inbox'
+          <span class="material-symbols-outlined text-base">{{ (rec.checkIn?.rampNumber || altaForm.get('rampNumber')?.value) ? 'forklift' : 'forward_to_inbox'
             }}</span>
-          <span>{{ rec.checkIn?.rampNumber ? 'Asignar Montacarguista y Proceder a Descarga' : 'Mandar Asignación de
+          <span>{{ (rec.checkIn?.rampNumber || altaForm.get('rampNumber')?.value) ? 'Asignar e Iniciar Descarga' : 'Mandar Asignación de
             Rampa a Caseta de Seguridad' }}</span>
           }
         </button>
@@ -4453,7 +4452,7 @@
       <!-- Grid 1-12 -->
       <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
         @for (rm of STANDARD_WAREHOUSE_RAMPS; track rm.rampNumber) {
-        <button type="button" (click)="quickAssignRamp(rm, qRec)" [disabled]="isAssigning()"
+        <button type="button" (click)="assignRampFromQuickModal(rm, qRec)" [disabled]="isAssigning()"
           class="p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[74px] relative group"
           [ngClass]="{
                 'border-[#b8860b] bg-[#d4af37]/20 ring-2 ring-[#b8860b] shadow-md': isRampSelectedInAlta(rm.rampNumber, qRec),
