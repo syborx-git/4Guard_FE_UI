@@ -49,7 +49,7 @@ export class PrintService {
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = options?.margin !== undefined ? options.margin : 6;
+    const margin = options?.margin !== undefined ? options.margin : 4;
     const maxUsableWidth = pageWidth - (margin * 2);
     const maxUsableHeight = pageHeight - (margin * 2);
 
@@ -132,7 +132,6 @@ export class PrintService {
       const cleanTitle = documentTitle.replace(/\.pdf$/i, '');
       const isLandscape = options?.orientation === 'landscape' || (element.clientWidth > element.clientHeight * 1.15);
       const pageOrientation = isLandscape ? 'landscape' : 'portrait';
-      const pageMargin = options?.margin !== undefined ? `${options.margin}mm` : (isLandscape ? '0' : '5mm');
 
       // 1. Recopilar todas las hojas de estilo del documento (Tailwind, fuentes, iconos)
       const styleSheets = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
@@ -192,7 +191,7 @@ export class PrintService {
             <style>
               @page {
                 size: letter ${pageOrientation};
-                margin: ${pageMargin};
+                margin: 0 !important;
               }
               * {
                 -webkit-print-color-adjust: exact !important;
@@ -202,9 +201,11 @@ export class PrintService {
               }
               html, body {
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 4mm 5mm !important;
                 background-color: #ffffff !important;
                 color: #000000 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
                 font-family: inherit;
               }
               img {
@@ -220,6 +221,9 @@ export class PrintService {
               }
               @media print {
                 html, body {
+                  margin: 0 !important;
+                  padding: 4mm 5mm !important;
+                  width: 100% !important;
                   background-color: #ffffff !important;
                   color: #000000 !important;
                   -webkit-print-color-adjust: exact !important;
@@ -237,11 +241,12 @@ export class PrintService {
                   object-fit: contain !important;
                   display: inline-block !important;
                 }
-                .print-container, .f01-print-sheet {
+                .print-container, .f01-print-sheet, .claim-pdf-sheet, .dev-pdf-sheet, .f01-pdf-sheet {
                   box-shadow: none !important;
                   max-width: 100% !important;
                   width: 100% !important;
-                  margin: 0 auto !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
                 }
                 .origin-top-left, .poster-scalable-wrapper, #gate-qr-poster-target {
                   transform: none !important;

@@ -771,13 +771,13 @@ export interface TransportChecklistPrintData {
     /* ── Reglas de Impresión Física ── */
     @page {
       size: letter portrait;
-      margin: 6mm;
+      margin: 0 !important;
     }
 
     @media print {
       body, html {
         margin: 0 !important;
-        padding: 0 !important;
+        padding: 4mm 5mm !important;
         background: #ffffff !important;
         color: #000000 !important;
         -webkit-print-color-adjust: exact !important;
@@ -787,7 +787,7 @@ export interface TransportChecklistPrintData {
         width: 100% !important;
         max-width: 100% !important;
         padding: 0 !important;
-        margin: 0 auto !important;
+        margin: 0 !important;
         border: none !important;
         box-shadow: none !important;
         page-break-inside: avoid !important;

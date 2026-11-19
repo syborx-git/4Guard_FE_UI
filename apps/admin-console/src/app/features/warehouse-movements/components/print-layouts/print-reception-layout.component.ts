@@ -15,7 +15,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="reception" class="print-container bg-white text-black max-w-[800px] mx-auto font-sans border rounded-sm shadow-sm select-none"
+    <div *ngIf="reception" class="print-container bg-white text-black w-full max-w-full mx-auto font-sans border rounded-sm shadow-sm select-none"
          [ngClass]="[
            reception.status === 'CANCELLED' ? 'border-2 border-rose-600' : 'border-slate-300',
            densityMode === 'ultra-compact' ? 'p-2 sm:p-2.5 text-[7px] leading-tight' : (densityMode === 'compact' ? 'p-3.5 sm:p-4 text-[8px] leading-tight' : 'p-5 sm:p-6 text-[8.5px] leading-normal')
@@ -277,11 +277,12 @@ import { AuthState } from '../../../../core/auth/auth.state';
     @media print {
       @page {
         size: letter portrait;
-        margin: 5mm 5mm !important;
+        margin: 0 !important;
       }
       .print-container {
         box-shadow: none !important;
-        margin: 0 auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
         background: transparent !important;

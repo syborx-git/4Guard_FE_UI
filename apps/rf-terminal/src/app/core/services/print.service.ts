@@ -160,11 +160,13 @@ export class PrintService {
           <style>
             @page {
               size: letter portrait;
-              margin: 6mm;
+              margin: 0 !important;
             }
             body {
               margin: 0 !important;
-              padding: 0 !important;
+              padding: 4mm 5mm !important;
+              width: 100% !important;
+              box-sizing: border-box !important;
               background: #ffffff !important;
               color: #000000 !important;
               -webkit-print-color-adjust: exact !important;
@@ -181,7 +183,8 @@ export class PrintService {
             }
             .f01-print-sheet, .print-container {
               box-shadow: none !important;
-              margin: 0 auto !important;
+              margin: 0 !important;
+              padding: 0 !important;
               width: 100% !important;
               max-width: 100% !important;
             }

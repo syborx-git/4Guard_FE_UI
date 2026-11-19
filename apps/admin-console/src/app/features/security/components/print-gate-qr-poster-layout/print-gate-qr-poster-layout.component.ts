@@ -825,7 +825,7 @@ export interface GateQrPosterPrintData {
 
       @page {
         size: letter landscape;
-        margin: 0;
+        margin: 0 !important;
       }
 
       body {

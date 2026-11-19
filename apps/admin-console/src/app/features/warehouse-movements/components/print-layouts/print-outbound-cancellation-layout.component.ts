@@ -14,7 +14,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="outbound" class="print-container bg-white text-slate-900 max-w-[800px] mx-auto font-sans border-2 border-rose-600 rounded-sm shadow-sm select-none"
+    <div *ngIf="outbound" class="print-container bg-white text-slate-900 w-full max-w-full mx-auto font-sans border-2 border-rose-600 rounded-sm shadow-sm select-none"
          [ngClass]="densityMode === 'ultra-compact' ? 'p-2 sm:p-2.5 text-[7px] leading-tight' : (densityMode === 'compact' ? 'p-3 sm:p-3.5 text-[8px] leading-tight' : 'p-4 sm:p-5 text-[9.5px] leading-normal')">
       
       <!-- Header Advertencia Cancelación -->
@@ -148,10 +148,16 @@ import { AuthState } from '../../../../core/auth/auth.state';
       display: block;
     }
     @media print {
+      @page {
+        size: letter portrait;
+        margin: 0 !important;
+      }
       .print-container {
         box-shadow: none !important;
         width: 100% !important;
         max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
     }
   `]

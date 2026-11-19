@@ -411,8 +411,8 @@ export class PurchaseOrderDetailDrawerComponent implements OnChanges, OnDestroy 
         <meta charset="UTF-8">
         <title>${record.activeVersion.fileName}</title>
         <style>
-          @page { size: A4 portrait; margin: 15mm; }
-          body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 0; padding: 20px; background: #fff; }
+          @page { size: letter portrait; margin: 0 !important; }
+          body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 0; padding: 4mm 5mm; background: #fff; }
           .po-box { border: 2px solid #000; padding: 20px; max-width: 800px; margin: 0 auto; }
           .header { text-align: center; margin-bottom: 20px; position: relative; }
           .company { font-size: 18px; font-weight: bold; margin: 0; text-transform: uppercase; }

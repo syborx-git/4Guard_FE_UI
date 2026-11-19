@@ -213,7 +213,7 @@ import { QualityClaim, CLAIM_STAGE_LABELS, CLAIM_DEFECT_TYPE_LABELS } from '../.
   styles: [`
     .claim-pdf-sheet {
       width: 100%;
-      max-width: 680px;
+      max-width: 100%;
       padding: 10px 14px;
       background: #ffffff;
       color: #000000;
@@ -252,9 +252,15 @@ import { QualityClaim, CLAIM_STAGE_LABELS, CLAIM_DEFECT_TYPE_LABELS } from '../.
     .f01-qr-stamp--gold { border-color: #fde68a; background: #fffbeb; }
 
     @media print {
+      @page {
+        size: letter portrait;
+        margin: 0 !important;
+      }
       .claim-pdf-sheet {
-        padding: 0;
-        max-width: 100%;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
       }
     }
   `]

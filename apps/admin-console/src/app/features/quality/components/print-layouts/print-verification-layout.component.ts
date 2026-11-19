@@ -457,7 +457,7 @@ import { LoadVerification } from '../../models/quality.models';
   styles: [`
     .f01-pdf-sheet {
       width: 100%;
-      max-width: 680px;
+      max-width: 100%;
       padding: 10px 14px;
       background: #ffffff;
       color: #000000;
@@ -499,9 +499,15 @@ import { LoadVerification } from '../../models/quality.models';
     .f01-qr-stamp--indigo { border-color: #c7d2fe; background: #eef2ff; }
 
     @media print {
+      @page {
+        size: letter portrait;
+        margin: 0 !important;
+      }
       .f01-pdf-sheet {
-        padding: 0;
-        max-width: 100%;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
       }
     }
   `]

@@ -15,7 +15,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div *ngIf="reception" class="print-container bg-white text-slate-900 max-w-[800px] mx-auto font-sans border-2 border-rose-600 rounded-sm shadow-sm select-none"
+    <div *ngIf="reception" class="print-container bg-white text-slate-900 w-full max-w-full mx-auto font-sans border-2 border-rose-600 rounded-sm shadow-sm select-none"
          [ngClass]="densityMode === 'ultra-compact' ? 'p-2 sm:p-2.5 text-[7px] leading-tight' : (densityMode === 'compact' ? 'p-3 sm:p-3.5 text-[7.8px] leading-tight' : 'p-3.5 sm:p-4 text-[8.5px] leading-normal')">
       
       <!-- 1. Header Institucional y Advertencia de Cancelación -->
@@ -242,12 +242,14 @@ import { AuthState } from '../../../../core/auth/auth.state';
     @media print {
       @page {
         size: letter portrait;
-        margin: 5mm;
+        margin: 0 !important;
       }
       .print-container {
         box-shadow: none !important;
         width: 100% !important;
         max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
       .grid.grid-cols-2 {
         display: grid !important;

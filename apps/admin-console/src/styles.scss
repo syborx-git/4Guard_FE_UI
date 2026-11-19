@@ -643,14 +643,16 @@ Glass Components
   }
 
   // 1. Reset base de impresión
-  html, body {
+  html,
+  body {
     background: #ffffff !important;
     color: #000000 !important;
     width: 100% !important;
     height: auto !important;
     min-height: auto !important;
     margin: 0 !important;
-    padding: 5mm 6mm !important;
+    padding: 4mm 5mm !important;
+    box-sizing: border-box !important;
     font-size: 11pt !important;
     overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
@@ -697,7 +699,7 @@ Glass Components
   .shell__content,
   .shell--collapsed,
   main,
-  router-outlet + * {
+  router-outlet+* {
     position: static !important;
     display: block !important;
     width: 100% !important;
@@ -759,10 +761,18 @@ Glass Components
   .print-container,
   .official-print-document,
   .fg-print-outbound,
+  .claim-pdf-sheet,
+  .dev-pdf-sheet,
+  .f01-pdf-sheet,
+  .f01-print-sheet,
   fg-print-reception-layout,
   fg-print-cancellation-layout,
+  fg-print-outbound-cancellation-layout,
   fg-print-transfer-layout,
   fg-print-dispatch-layout,
+  fg-print-transport-checklist-layout,
+  fg-print-claim-layout,
+  fg-print-deviation-layout,
   fg-print-verification-layout {
     position: relative !important;
     display: block !important;
@@ -823,18 +833,52 @@ Glass Components
   }
 
   // Respetar colores exactos en fondos de advertencias/comprobantes
-  .bg-rose-600 { background-color: #e11d48 !important; color: #ffffff !important; }
-  .bg-rose-50 { background-color: #fff1f2 !important; }
-  .border-rose-600 { border-color: #e11d48 !important; }
-  .text-rose-700 { color: #be123c !important; }
+  .bg-rose-600 {
+    background-color: #e11d48 !important;
+    color: #ffffff !important;
+  }
 
-  .bg-amber-500\/10 { background-color: #fef3c7 !important; }
-  .bg-emerald-500\/10 { background-color: #d1fae5 !important; }
-  .bg-slate-900 { background-color: #0f172a !important; color: #ffffff !important; }
-  .bg-slate-800 { background-color: #1e293b !important; color: #ffffff !important; }
-  .bg-slate-200 { background-color: #e2e8f0 !important; }
-  .bg-slate-100 { background-color: #f1f5f9 !important; }
-  .bg-slate-50 { background-color: #f8fafc !important; }
+  .bg-rose-50 {
+    background-color: #fff1f2 !important;
+  }
+
+  .border-rose-600 {
+    border-color: #e11d48 !important;
+  }
+
+  .text-rose-700 {
+    color: #be123c !important;
+  }
+
+  .bg-amber-500\/10 {
+    background-color: #fef3c7 !important;
+  }
+
+  .bg-emerald-500\/10 {
+    background-color: #d1fae5 !important;
+  }
+
+  .bg-slate-900 {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+  }
+
+  .bg-slate-800 {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+  }
+
+  .bg-slate-200 {
+    background-color: #e2e8f0 !important;
+  }
+
+  .bg-slate-100 {
+    background-color: #f1f5f9 !important;
+  }
+
+  .bg-slate-50 {
+    background-color: #f8fafc !important;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -887,6 +931,7 @@ body.dark,
 :root.dark,
 .theme-dark,
 .dark {
+
   select,
   .fg-select,
   .form-select,
@@ -1122,6 +1167,7 @@ body.dark,
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1244,6 +1290,7 @@ body.dark,
 :root.dark,
 .theme-dark,
 .dark {
+
   // Overlays con difuminado táctico
   .modal-overlay,
   .bay-modal-overlay {
@@ -1271,10 +1318,25 @@ body.dark,
     border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
     color: #edf1f5 !important;
 
-    h1, h2, h3, h4, .modal-title, .modal-header-title, .bay-modal-title, .dock-map-modal-title, .relabel-modal-title {
+    h1,
+    h2,
+    h3,
+    h4,
+    .modal-title,
+    .modal-header-title,
+    .bay-modal-title,
+    .dock-map-modal-title,
+    .relabel-modal-title {
       color: #edf1f5 !important;
     }
-    p, span, .modal-subtitle, .modal-header-subtitle, .bay-modal-subtitle, .dock-map-modal-subtitle, .relabel-modal-subtitle {
+
+    p,
+    span,
+    .modal-subtitle,
+    .modal-header-subtitle,
+    .bay-modal-subtitle,
+    .dock-map-modal-subtitle,
+    .relabel-modal-subtitle {
       color: #9aa6b4 !important;
     }
   }
@@ -1347,6 +1409,7 @@ body.dark,
     .modal-summary-label {
       color: #9aa6b4 !important;
     }
+
     .modal-summary-value {
       color: #edf1f5 !important;
     }
@@ -1364,10 +1427,13 @@ body.dark,
       border-color: rgba(208, 175, 103, 0.35) !important;
     }
 
-    .bay-wh-title, .bay-pos-code {
+    .bay-wh-title,
+    .bay-pos-code {
       color: #edf1f5 !important;
     }
-    .bay-wh-subtitle, .bay-wh-metric-lbl {
+
+    .bay-wh-subtitle,
+    .bay-wh-metric-lbl {
       color: #9aa6b4 !important;
     }
   }
@@ -1455,6 +1521,7 @@ html.theme-light,
 body.theme-light,
 :root.theme-light,
 .theme-light {
+
   .modal-overlay,
   .bay-modal-overlay {
     background: rgba(15, 23, 42, 0.5) !important;
@@ -1478,10 +1545,25 @@ body.theme-light,
     border-bottom: 1px solid #e2e8f0 !important;
     color: #0f172a !important;
 
-    h1, h2, h3, h4, .modal-title, .modal-header-title, .bay-modal-title, .dock-map-modal-title, .relabel-modal-title {
+    h1,
+    h2,
+    h3,
+    h4,
+    .modal-title,
+    .modal-header-title,
+    .bay-modal-title,
+    .dock-map-modal-title,
+    .relabel-modal-title {
       color: #0f172a !important;
     }
-    p, span, .modal-subtitle, .modal-header-subtitle, .bay-modal-subtitle, .dock-map-modal-subtitle, .relabel-modal-subtitle {
+
+    p,
+    span,
+    .modal-subtitle,
+    .modal-header-subtitle,
+    .bay-modal-subtitle,
+    .dock-map-modal-subtitle,
+    .relabel-modal-subtitle {
       color: #64748b !important;
     }
   }
@@ -1548,6 +1630,7 @@ body.theme-light,
     .modal-summary-label {
       color: #64748b !important;
     }
+
     .modal-summary-value {
       color: #0f172a !important;
     }
@@ -1564,10 +1647,13 @@ body.theme-light,
       border-color: #c5a86b !important;
     }
 
-    .bay-wh-title, .bay-pos-code {
+    .bay-wh-title,
+    .bay-pos-code {
       color: #0f172a !important;
     }
-    .bay-wh-subtitle, .bay-wh-metric-lbl {
+
+    .bay-wh-subtitle,
+    .bay-wh-metric-lbl {
       color: #64748b !important;
     }
   }
