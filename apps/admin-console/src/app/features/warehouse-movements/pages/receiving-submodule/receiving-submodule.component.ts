@@ -1380,7 +1380,6 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
           if (m === 'REENTRY') return r.operationType === 'REENTRY' || !!r.sourceOutboundFolio;
           if (m === 'DISCHARGED') return r.status === 'DISCHARGED';
           if (m === 'IN_PROGRESS') return r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED';
-          if (m === 'REGISTERED' && this.isTabletModeActive() && r.status === 'DISCHARGED') return true;
           return r.status === m;
         });
       } else if (st !== 'ALL') {
@@ -1390,8 +1389,6 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
           matchStatus = r.status === 'DISCHARGED';
         } else if (st === 'IN_PROGRESS') {
           matchStatus = r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED';
-        } else if (st === 'REGISTERED' && this.isTabletModeActive() && r.status === 'DISCHARGED') {
-          matchStatus = true;
         } else {
           matchStatus = r.status === st;
         }
