@@ -2416,15 +2416,21 @@
 }
 
 .f01-preview-viewport {
-  background: #0f172a;
+  background: #f1f5f9;
   border-radius: 14px;
   padding: 1.25rem 0.75rem;
   display: flex;
   justify-content: center;
   overflow-y: auto;
   max-height: 70vh;
-  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1.5px solid rgba(197, 168, 107, 0.3);
+}
+
+:host-context(.dark) .f01-preview-viewport,
+:host-context(.theme-dark) .f01-preview-viewport {
+  background: #0f172a;
+  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
 .f01-paper-container {

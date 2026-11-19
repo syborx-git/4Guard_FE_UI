@@ -3159,7 +3159,7 @@
         </div>
 
         <!-- Contenido Imprimible Homologado -->
-        <div class="modal-body flex-1 overflow-y-auto pr-0.5">
+        <div class="modal-body flex-1 overflow-y-auto bg-slate-100/70 dark:bg-slate-950/40 p-2 sm:p-3 rounded-xl pr-0.5">
           @if (selectedPrintOutbound()?.status === 'CANCELLED') {
             <fg-print-outbound-cancellation-layout [outbound]="selectedPrintOutbound()!"></fg-print-outbound-cancellation-layout>
           } @else {
