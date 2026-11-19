@@ -130,7 +130,7 @@ export class PrintService {
       }
 
       const cleanTitle = documentTitle.replace(/\.pdf$/i, '');
-      const isLandscape = options?.orientation === 'landscape' || (element.clientWidth > element.clientHeight * 1.15);
+      const isLandscape = options?.orientation === 'landscape';
       const pageOrientation = isLandscape ? 'landscape' : 'portrait';
 
       // 1. Recopilar todas las hojas de estilo del documento (Tailwind, fuentes, iconos)
