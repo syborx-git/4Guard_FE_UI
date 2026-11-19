@@ -49,7 +49,17 @@ export class SmartNotificationService implements OnDestroy {
   private readonly http = inject(HttpClient);
 
   private pollIntervalId: any = null;
-  private readonly knownNotifiedFolios = new Set<string>();
+  public readonly knownNotifiedFolios = new Set<string>();
+
+  public isDriverTokenNotified(token: string | null | undefined): boolean {
+    if (!token) return false;
+    return this.knownNotifiedFolios.has(`driver-${token}`);
+  }
+
+  public markDriverTokenNotified(token: string | null | undefined): void {
+    if (!token) return;
+    this.knownNotifiedFolios.add(`driver-${token}`);
+  }
 
   // ── Historial y Cola Reactiva de Notificaciones ──
   private readonly _notifications = signal<SmartNotification[]>([]);
@@ -196,6 +206,13 @@ export class SmartNotificationService implements OnDestroy {
           const driverName = event.driverName || 'Chofer';
           const carrier = event.carrierName || 'Transportista';
           const token = event.token || event.folio || 'QR';
+
+          // Control de Deduplicación: si ya fue registrado, evitar re-despacho
+          if (this.knownNotifiedFolios.has(`driver-${token}`)) {
+            return;
+          }
+          this.knownNotifiedFolios.add(`driver-${token}`);
+          if (event.id) this.knownNotifiedFolios.add(`driver-${event.id}`);
 
           this.pendingDriverPasses.update(list => [event, ...list.filter(p => (p.token || p.id) !== token)]);
           this.hasNewDriverSubmission.set(true);
@@ -481,16 +498,19 @@ export class SmartNotificationService implements OnDestroy {
    */
   public updateSubmittedDriverPasses(passes: any[]): void {
     const submitted = (passes || []).filter(p => p.status === 'SUBMITTED');
-    const prevCount = this.pendingDriverPasses().length;
     this.pendingDriverPasses.set(submitted);
 
-    if (submitted.length > prevCount && submitted.length > 0) {
-      const latest = submitted[0];
+    // Solo despachar si hay pases que no hayan sido notificados previamente
+    for (const latest of submitted) {
+      const token = latest.token || latest.id;
+      if (!token || this.knownNotifiedFolios.has(`driver-${token}`)) {
+        continue;
+      }
+      this.knownNotifiedFolios.add(`driver-${token}`);
       this.hasNewDriverSubmission.set(true);
 
       const driverName = latest.driverName || latest.nombreOperador || 'Chofer';
       const carrier = latest.carrierLine || latest.carrierLineCode || 'Transportista';
-      const token = latest.token || latest.id || 'QR';
 
       this.dispatch({
         category: 'SECURITY',
@@ -503,6 +523,7 @@ export class SmartNotificationService implements OnDestroy {
         severity: 'SUCCESS',
         data: latest
       });
+      break;
     }
   }
 

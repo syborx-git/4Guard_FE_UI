@@ -1730,20 +1730,31 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.activePasses.set(cleanList);
     this.smartNotification.updateSubmittedDriverPasses(cleanList);
 
-    // Detectar y notificar en vivo cuando un pase cambia a SUBMITTED
+    // Detectar y auto-cargar en vivo cuando un pase cambia a SUBMITTED (desduplicado con STOMP)
     for (const p of cleanList) {
-      if (p && p.status === 'SUBMITTED' && p.token && !this.notifiedSubmittedTokens.has(p.token)) {
-        this.notifiedSubmittedTokens.add(p.token);
-        this.playCheckinChime();
-        this.smartNotification.openDropdown();
+      if (p && p.status === 'SUBMITTED' && p.token) {
+        const token = p.token;
+        const alreadyNotifiedGlobal = this.smartNotification.isDriverTokenNotified(token);
+        const alreadyNotifiedLocal = this.notifiedSubmittedTokens.has(token);
 
-        const chofer = p.driverName || p.nombreOperador || 'Transportista';
-        const unidad = p.tractorPlates || p.placasTracto || p.placasUnidad || 'Unidad';
-        this.toast.success(`🔔 ¡Registro recibido en Caseta! ${chofer} (${unidad}) completó el Pase #${p.token}.`);
+        if (!alreadyNotifiedLocal) {
+          this.notifiedSubmittedTokens.add(token);
 
-        // Si el formulario principal está limpio o no hay otro pase activo seleccionado, auto-cargar este pase para agilidad total
-        if (!this.activeToken() && (!this.checkInForm.dirty || !this.checkInForm.get('nombreOperador')?.value)) {
-          this.loadDriverSubmission(p);
+          // Si NO ha sido notificado previamente por WebSocket STOMP, despachar aviso fallback una sola vez
+          if (!alreadyNotifiedGlobal) {
+            this.smartNotification.markDriverTokenNotified(token);
+            this.playCheckinChime();
+            this.smartNotification.openDropdown();
+
+            const chofer = p.driverName || p.nombreOperador || 'Transportista';
+            const unidad = p.tractorPlates || p.placasTracto || p.placasUnidad || 'Unidad';
+            this.toast.success(`🔔 ¡Registro recibido en Caseta! ${chofer} (${unidad}) completó el Pase #${p.token}.`);
+          }
+
+          // Si el formulario principal está limpio o no hay otro pase activo seleccionado, auto-cargar este pase para agilidad total
+          if (!this.activeToken() && (!this.checkInForm.dirty || !this.checkInForm.get('nombreOperador')?.value)) {
+            this.loadDriverSubmission(p);
+          }
         }
       }
     }

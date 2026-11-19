@@ -221,7 +221,7 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
       this.playChime();
     } else if (category === 'SECURITY' && this.isSecurityContext()) {
       this.isOpen.set(true);
-      this.playChime();
+      // Nota: El audio ya fue emitido por SmartNotificationService.dispatch(), se omite playChime() redundante
     }
 
     if (this.autoCloseTimeoutId) clearTimeout(this.autoCloseTimeoutId);
