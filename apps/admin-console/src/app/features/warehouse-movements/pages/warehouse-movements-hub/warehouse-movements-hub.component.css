@@ -182,9 +182,9 @@
   overflow: hidden;
   cursor: pointer;
   outline: none;
-  background: var(--bg-card-exec, var(--bg-card));
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  background: var(--bg-card-exec, linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32)) !important;
+  border-top: 3.5px solid var(--gold, #c5a86b) !important;
   border-radius: var(--radius-xl, 18px);
   color: var(--text-primary);
   box-shadow: var(--shadow-card);
@@ -312,9 +312,9 @@
 
 :host-context(.theme-dark) .admin-module-card,
 :host-context(.dark) .admin-module-card {
-  background: var(--bg-card-exec, var(--bg-card));
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  background: var(--bg-card-exec, linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%));
+  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.24)) !important;
+  border-top: 3.5px solid var(--gold, #d0af67) !important;
   color: var(--text-primary);
   box-shadow: var(--shadow-card);
 }

@@ -272,6 +272,8 @@ h1, h2, h3, h4, h5, h6 {
 
   --bg-page:        #f5f4f0;
   --bg-card:        rgba(255, 255, 255, 0.95);
+  --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --border-card-gold: rgba(197, 168, 107, 0.32);
   --bg-subtle:      rgba(23, 32, 51, 0.025);
   --border-subtle:  rgba(76, 86, 105, 0.12);
   --border-card:    rgba(76, 86, 105, 0.12);
@@ -317,6 +319,8 @@ h1, h2, h3, h4, h5, h6 {
 
   --bg-page:        #080e18;
   --bg-card:        rgba(15, 23, 42, 0.95);
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --border-card-gold: rgba(208, 175, 103, 0.24);
   --bg-subtle:      rgba(255, 255, 255, 0.04);
   --border-subtle:  rgba(255, 255, 255, 0.08);
   --border-card:    rgba(255, 255, 255, 0.10);
@@ -1219,13 +1223,21 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: center;
   padding: 0.35rem 1rem;
-  border-radius: 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-card, 16px);
+  background: var(--bg-card-exec, linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32));
+  border-top: 3.5px solid var(--gold, #c5a86b) !important;
+  box-shadow: var(--shadow-card);
   font-size: 0.78rem;
   min-height: 38px;
   transition: all 0.2s ease-in-out;
+}
+
+:host-context(.theme-dark) .movement-kpi-summary-bar,
+:host-context(.dark) .movement-kpi-summary-bar {
+  background: var(--bg-card-exec, linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%));
+  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.24));
+  border-top: 3.5px solid var(--gold, #d0af67) !important;
 }
 
 .movement-kpi-summary-items {
@@ -1284,15 +1296,15 @@ h1, h2, h3, h4, h5, h6 {
 .movement-kpi-card {
   position: relative;
   overflow: hidden;
-  background: var(--bg-card-exec, var(--bg-card));
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  background: var(--bg-card-exec, linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32)) !important;
+  border-top: 3.5px solid var(--gold, #c5a86b) !important;
   border-radius: var(--radius-xl, 18px);
   padding: 1rem 1.15rem;
   display: flex;
   align-items: center;
   gap: 1rem;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   min-height: 82px;
   box-sizing: border-box;
@@ -1301,8 +1313,24 @@ h1, h2, h3, h4, h5, h6 {
 
 .movement-kpi-card:hover {
   transform: translateY(-2px);
-  border-color: var(--gold);
-  box-shadow: var(--shadow-hover);
+  border-color: var(--gold, #c5a86b) !important;
+  border-top: 3.5px solid var(--gold, #c5a86b) !important;
+  box-shadow: 0 16px 36px rgba(197, 168, 107, 0.18), 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+:host-context(.theme-dark) .movement-kpi-card,
+:host-context(.dark) .movement-kpi-card {
+  background: var(--bg-card-exec, linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%));
+  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.24)) !important;
+  border-top: 3.5px solid var(--gold, #d0af67) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+:host-context(.theme-dark) .movement-kpi-card:hover,
+:host-context(.dark) .movement-kpi-card:hover {
+  border-color: var(--gold, #d0af67) !important;
+  border-top: 3.5px solid var(--gold, #d0af67) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.50), 0 0 20px rgba(208, 175, 103, 0.15);
 }
 
 .movement-kpi-card__icon {

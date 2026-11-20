@@ -43,7 +43,7 @@
 
 :host-context(.theme-dark),
 :host-context(.dark) {
-  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --text-primary:     #edf1f5;
@@ -319,17 +319,19 @@
   gap: 0.72rem;
   padding: 0.78rem 0.9rem;
   overflow: hidden;
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32));
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   background: var(--bg-card-exec, var(--bg-card));
   box-shadow: var(--shadow-card);
+  backdrop-filter: blur(16px);
   transition: transform 180ms var(--ease), border-color 180ms var(--ease), box-shadow 180ms var(--ease);
 }
 
 .br-kpi-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(197, 168, 107, 0.32);
+  border-color: rgba(197, 168, 107, 0.5);
+  box-shadow: 0 16px 36px rgba(197, 168, 107, 0.18), var(--shadow-card);
 }
 
 .br-kpi-card__icon {
@@ -1406,8 +1408,16 @@
 
 :host-context(.theme-dark) .br-kpi-card,
 :host-context(.dark) .br-kpi-card {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: linear-gradient(135deg, rgba(22, 31, 51, 0.98), rgba(19, 28, 47, 0.96));
+  border-color: var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
+}
+
+:host-context(.theme-dark) .br-kpi-card:hover,
+:host-context(.dark) .br-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(208, 175, 103, 0.20), var(--shadow-card);
 }
 
 :host-context(.theme-dark) .br-kpi-card__value,

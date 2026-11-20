@@ -60,7 +60,7 @@
 
 :host-context(.theme-dark),
 :host-context(.dark) {
-  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
 
   --bg-page:        #0b1119;
@@ -215,19 +215,19 @@
   align-items: center;
   gap: 0.9rem;
   padding: 0.95rem 1.1rem;
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32));
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   background: var(--bg-card-exec, var(--bg-card));
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(16px);
   overflow: hidden;
-  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
 }
 
 .sections-kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 18px 40px rgba(36, 44, 58, 0.12);
+  box-shadow: 0 16px 36px rgba(197, 168, 107, 0.18), var(--shadow-card);
 }
 
 .sections-kpi-card__icon-wrap {
@@ -332,9 +332,10 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  background: var(--bg-card);
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32));
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec, var(--bg-card));
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(20px);
   overflow: hidden;
@@ -678,9 +679,10 @@
 .sections-detail {
   flex: 1;
   min-width: 0;
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  background: var(--bg-card);
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32));
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec, var(--bg-card));
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(20px);
   overflow: hidden;
@@ -1259,9 +1261,16 @@
 :host-context(.dark) .sections-directory,
 :host-context(.theme-dark) .sections-detail,
 :host-context(.dark) .sections-detail {
-  background: var(--bg-card);
-  border-color: var(--border-card);
+  background: var(--bg-card-exec);
+  border-color: var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   box-shadow: var(--shadow-card);
+}
+
+:host-context(.theme-dark) .sections-kpi-card:hover,
+:host-context(.dark) .sections-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(208, 175, 103, 0.20), var(--shadow-card);
 }
 
 :host-context(.theme-dark) .fg-input,

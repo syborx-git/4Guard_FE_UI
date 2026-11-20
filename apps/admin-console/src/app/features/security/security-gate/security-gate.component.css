@@ -24,7 +24,7 @@
   --bg-card-exec:   linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --bg-card-hover:  #ffffff;
   --border-card:    rgba(76, 86, 105, 0.10);
-  --border-card-gold: rgba(197, 168, 107, 0.35);
+  --border-card-gold: rgba(197, 168, 107, 0.32);
   --border-subtle:  rgba(76, 86, 105, 0.08);
   --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   --shadow-hover:   0 16px 40px rgba(197, 168, 107, 0.22);
@@ -79,10 +79,10 @@
 :host-context(.dark) {
   --bg-page:        #0b1119;
   --bg-card:        rgba(17, 26, 38, 0.94);
-  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --bg-card-hover:  rgba(23, 35, 50, 0.98);
   --border-card:    rgba(255, 255, 255, 0.08);
-  --border-card-gold: rgba(208, 175, 103, 0.28);
+  --border-card-gold: rgba(208, 175, 103, 0.24);
   --border-subtle:  rgba(255, 255, 255, 0.06);
   --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-hover:   0 20px 44px rgba(208, 175, 103, 0.18);
@@ -576,23 +576,104 @@
    ═════════════════════════════════════════════════════════════════════════════ */
 /* ── CONTENEDOR DE TARJETAS / SECCIONES DEL MÓDULO HOMOLOGADO RF ── */
 .security-card,
-.module-kpi-card {
+.module-kpi-card,
+.security-kpi-card,
+.metric-card {
   position: relative;
-  background: var(--bg-card-exec, var(--bg-card));
-  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.35)) !important;
+  background: var(--bg-card-exec, linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32)) !important;
   border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   color: var(--text-primary);
-  transition: all 0.25s ease;
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background 220ms ease;
   overflow: hidden;
 }
 
+/* Resplandor diagonal especular ejecutivo */
+.module-kpi-card::before,
+.security-kpi-card::before,
+.metric-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(130deg,
+      rgba(255, 255, 255, 0.35),
+      transparent 38%,
+      transparent 66%,
+      rgba(197, 168, 107, 0.05));
+}
+
+/* Línea sutil superior de brillo */
+.module-kpi-card::after,
+.security-kpi-card::after,
+.metric-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 14%;
+  right: 14%;
+  height: 1px;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.95),
+      transparent);
+  opacity: 0.6;
+}
+
 .security-card:hover,
-.module-kpi-card:hover {
+.module-kpi-card:hover,
+.security-kpi-card:hover,
+.metric-card:hover {
+  transform: translateY(-3px);
   border-color: rgba(212, 175, 55, 0.75) !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12), 0 0 24px rgba(212, 175, 55, 0.2) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12), 0 0 24px rgba(212, 175, 55, 0.20) !important;
+}
+
+/* Dark mode explícito para Tarjeta Ejecutiva */
+:host-context([data-theme="dark"]) .module-kpi-card,
+:host-context(.theme-dark) .module-kpi-card,
+:host-context(.dark) .module-kpi-card,
+:host-context([data-theme="dark"]) .security-kpi-card,
+:host-context(.theme-dark) .security-kpi-card,
+:host-context(.dark) .security-kpi-card,
+:host-context([data-theme="dark"]) .metric-card,
+:host-context(.theme-dark) .metric-card,
+:host-context(.dark) .metric-card,
+:host-context([data-theme="dark"]) .security-card,
+:host-context(.theme-dark) .security-card,
+:host-context(.dark) .security-card {
+  background: var(--bg-card-exec, linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%)) !important;
+  border-color: var(--border-card-gold, rgba(208, 175, 103, 0.24)) !important;
+  border-top: 3.5px solid var(--gold, #d0af67) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color: var(--text-primary, #edf1f5);
+}
+
+:host-context([data-theme="dark"]) .module-kpi-card::before,
+:host-context(.theme-dark) .module-kpi-card::before,
+:host-context(.dark) .module-kpi-card::before {
+  background: linear-gradient(130deg,
+      rgba(255, 255, 255, 0.04),
+      transparent 40%,
+      rgba(208, 175, 103, 0.04));
+}
+
+:host-context([data-theme="dark"]) .module-kpi-card:hover,
+:host-context(.theme-dark) .module-kpi-card:hover,
+:host-context(.dark) .module-kpi-card:hover {
+  border-color: rgba(208, 175, 103, 0.65) !important;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.50), 0 0 24px rgba(208, 175, 103, 0.22) !important;
 }
 
 .module-kpi-grid {
@@ -614,20 +695,12 @@
 }
 
 .module-kpi-card {
-  padding: 1rem 1.15rem;
+  padding: 1.15rem 1.35rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  backdrop-filter: blur(12px);
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  min-height: 82px;
+  gap: 1.1rem;
+  min-height: 88px;
   box-sizing: border-box;
-}
-
-.module-kpi-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--gold-border);
-  box-shadow: var(--shadow-md);
 }
 
 .module-kpi-card__icon {
@@ -697,12 +770,24 @@
   justify-content: center;
   gap: 1.5rem;
   padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  box-shadow: var(--shadow-sm);
+  border-radius: 14px;
+  background: var(--bg-card-exec, linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32));
+  border-top: 3px solid var(--gold) !important;
+  box-shadow: var(--shadow-card, var(--shadow-sm));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   flex-wrap: wrap;
   font-size: 0.75rem;
+}
+
+:host-context([data-theme="dark"]) .security-kpi-summary-bar,
+:host-context(.theme-dark) .security-kpi-summary-bar,
+:host-context(.dark) .security-kpi-summary-bar {
+  background: var(--bg-card-exec, linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%)) !important;
+  border-color: var(--border-card-gold, rgba(208, 175, 103, 0.24)) !important;
+  border-top: 3px solid var(--gold, #d0af67) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.40);
 }
 
 .security-kpi-summary-item {

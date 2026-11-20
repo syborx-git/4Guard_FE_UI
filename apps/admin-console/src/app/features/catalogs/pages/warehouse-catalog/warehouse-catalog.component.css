@@ -83,7 +83,7 @@
 
 :host-context(.theme-dark),
 :host-context(.dark) {
-  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
 
   --bg-page:           #0b1119;
@@ -373,16 +373,17 @@
   }
 }
 
-.module-kpi-card {
+.module-kpi-card,
+.catalog-stat-card {
   position: relative;
   background: var(--bg-card-exec, var(--bg-card));
-  border: 1.5px solid var(--border-card-gold, var(--gold-border)) !important;
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32)) !important;
   border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
   color: var(--text-primary);
-  transition: all 0.25s ease;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
   overflow: hidden;
   padding: 1rem 1.15rem;
   display: flex;
@@ -428,10 +429,28 @@
   filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.75)) drop-shadow(0 0 5px rgba(224, 200, 122, 0.65)) !important;
 }
 
-.module-kpi-card:hover {
+.module-kpi-card:hover,
+.catalog-stat-card:hover {
   transform: translateY(-2px);
   border-color: rgba(212, 175, 55, 0.75) !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12), 0 0 24px rgba(212, 175, 55, 0.35) !important;
+  box-shadow: 0 16px 36px rgba(197, 168, 107, 0.20), var(--shadow-card) !important;
+}
+
+:host-context(.theme-dark) .module-kpi-card,
+:host-context(.dark) .module-kpi-card,
+:host-context(.theme-dark) .catalog-stat-card,
+:host-context(.dark) .catalog-stat-card {
+  background: var(--bg-card-exec);
+  border-color: var(--border-card-gold) !important;
+  border-top: 3.5px solid var(--gold) !important;
+}
+
+:host-context(.theme-dark) .module-kpi-card:hover,
+:host-context(.dark) .module-kpi-card:hover,
+:host-context(.theme-dark) .catalog-stat-card:hover,
+:host-context(.dark) .catalog-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(208, 175, 103, 0.25), var(--shadow-card) !important;
 }
 
 @keyframes star-border-spin {
