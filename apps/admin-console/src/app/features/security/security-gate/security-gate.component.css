@@ -1153,6 +1153,436 @@
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.25) !important;
 }
 
+/* ── Resumen de Destino / Posicionamiento Rápido ── */
+.dest-summary-chip {
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  border: 1px solid rgba(76, 86, 105, 0.15);
+  background: #f8fafc;
+  color: #475569;
+}
+
+:host-context(.dark) .dest-summary-chip,
+:host-context(.theme-dark) .dest-summary-chip,
+:host(.dark) .dest-summary-chip,
+:host(.theme-dark) .dest-summary-chip {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+.dest-summary-chip--ramp {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+  font-weight: 800;
+}
+
+:host-context(.dark) .dest-summary-chip--ramp,
+:host-context(.theme-dark) .dest-summary-chip--ramp,
+:host(.dark) .dest-summary-chip--ramp,
+:host(.theme-dark) .dest-summary-chip--ramp {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.dest-summary-tag {
+  font-size: 0.625rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  opacity: 0.85;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   MONITOR DE ANDENES EN CASETA (DOCK MONITOR CARD) — LIGHT & DARK HOMOLOGADO
+   ═════════════════════════════════════════════════════════════════════════════ */
+.dock-monitor-card {
+  margin-top: 1rem;
+  padding: 1.15rem 1.25rem;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1.5px solid rgba(197, 168, 107, 0.28);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s ease;
+}
+
+:host-context(.dark) .dock-monitor-card,
+:host-context(.theme-dark) .dock-monitor-card,
+:host(.dark) .dock-monitor-card,
+:host(.theme-dark) .dock-monitor-card {
+  background: rgba(15, 23, 42, 0.75);
+  border-color: rgba(255, 255, 255, 0.10);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.dock-monitor-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.dock-monitor-card__title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.dock-monitor-icon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(197, 168, 107, 0.12);
+  border: 1px solid rgba(197, 168, 107, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b45309;
+}
+
+:host-context(.dark) .dock-monitor-icon-wrap,
+:host-context(.theme-dark) .dock-monitor-icon-wrap,
+:host(.dark) .dock-monitor-icon-wrap,
+:host(.theme-dark) .dock-monitor-icon-wrap {
+  background: rgba(208, 175, 103, 0.15);
+  border-color: rgba(208, 175, 103, 0.3);
+  color: #fbbf24;
+}
+
+.dock-monitor-title {
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0f172a !important;
+  margin: 0;
+  line-height: 1.2;
+}
+
+:host-context(.dark) .dock-monitor-title,
+:host-context(.theme-dark) .dock-monitor-title,
+:host(.dark) .dock-monitor-title,
+:host(.theme-dark) .dock-monitor-title {
+  color: #f1f5f9 !important;
+}
+
+.dock-monitor-subtitle {
+  font-size: 0.6875rem;
+  color: #64748b;
+  margin: 0.15rem 0 0 0;
+  font-weight: 500;
+}
+
+:host-context(.dark) .dock-monitor-subtitle,
+:host-context(.theme-dark) .dock-monitor-subtitle,
+:host(.dark) .dock-monitor-subtitle,
+:host(.theme-dark) .dock-monitor-subtitle {
+  color: #94a3b8;
+}
+
+/* Badges de Estado */
+.dock-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.dock-status-badge--waiting {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+}
+
+:host-context(.dark) .dock-status-badge--waiting,
+:host-context(.theme-dark) .dock-status-badge--waiting,
+:host(.dark) .dock-status-badge--waiting,
+:host(.theme-dark) .dock-status-badge--waiting {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+}
+
+.dock-status-badge--assigned {
+  background: #10b981;
+  border: 1px solid #059669;
+  color: #022c22;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+
+/* Leyenda de monitoreo */
+.dock-monitor-legend-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.6875rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(76, 86, 105, 0.08);
+}
+
+:host-context(.dark) .dock-monitor-legend-bar,
+:host-context(.theme-dark) .dock-monitor-legend-bar,
+:host(.dark) .dock-monitor-legend-bar,
+:host(.theme-dark) .dock-monitor-legend-bar {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.dock-monitor-legend-label {
+  font-weight: 600;
+  color: #475569;
+}
+
+:host-context(.dark) .dock-monitor-legend-label,
+:host-context(.theme-dark) .dock-monitor-legend-label,
+:host(.dark) .dock-monitor-legend-label,
+:host(.theme-dark) .dock-monitor-legend-label {
+  color: #94a3b8;
+}
+
+.dock-monitor-legend-items {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.dock-legend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.dock-legend-pill--free {
+  color: #15803d;
+}
+:host-context(.dark) .dock-legend-pill--free,
+:host-context(.theme-dark) .dock-legend-pill--free,
+:host(.dark) .dock-legend-pill--free,
+:host(.theme-dark) .dock-legend-pill--free {
+  color: #34d399;
+}
+
+.dock-legend-dot--free {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.dock-legend-pill--occupied {
+  color: #b45309;
+}
+:host-context(.dark) .dock-legend-pill--occupied,
+:host-context(.theme-dark) .dock-legend-pill--occupied,
+:host(.dark) .dock-legend-pill--occupied,
+:host(.theme-dark) .dock-legend-pill--occupied {
+  color: #fbbf24;
+}
+
+.dock-legend-dot--occupied {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #f59e0b;
+}
+
+/* Grid de Andenes */
+.dock-ramp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.55rem;
+}
+
+@media (min-width: 640px) {
+  .dock-ramp-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .dock-ramp-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* Celdas de Rampa Individuales */
+.dock-ramp-cell {
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1.5px solid transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 68px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.dock-ramp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.dock-ramp-number {
+  font-family: var(--font-mono);
+  font-weight: 900;
+  font-size: 0.8125rem;
+  letter-spacing: -0.02em;
+}
+
+.dock-ramp-meta {
+  margin-top: 0.35rem;
+}
+
+.dock-ramp-tag {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* 1. Rampa Disponible */
+.dock-ramp-cell--available {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+.dock-ramp-cell--available .dock-ramp-number {
+  color: #0f172a;
+}
+.dock-ramp-cell--available .dock-ramp-tag--free {
+  color: #15803d;
+}
+.dock-ramp-cell--available .dock-ramp-dot--free {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #10b981;
+}
+
+:host-context(.dark) .dock-ramp-cell--available,
+:host-context(.theme-dark) .dock-ramp-cell--available,
+:host(.dark) .dock-ramp-cell--available,
+:host(.theme-dark) .dock-ramp-cell--available {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+:host-context(.dark) .dock-ramp-cell--available .dock-ramp-number,
+:host-context(.theme-dark) .dock-ramp-cell--available .dock-ramp-number,
+:host(.dark) .dock-ramp-cell--available .dock-ramp-number,
+:host(.theme-dark) .dock-ramp-cell--available .dock-ramp-number {
+  color: #f1f5f9;
+}
+:host-context(.dark) .dock-ramp-cell--available .dock-ramp-tag--free,
+:host-context(.theme-dark) .dock-ramp-cell--available .dock-ramp-tag--free,
+:host(.dark) .dock-ramp-cell--available .dock-ramp-tag--free,
+:host(.theme-dark) .dock-ramp-cell--available .dock-ramp-tag--free {
+  color: #34d399;
+}
+
+/* 2. Rampa Ocupada */
+.dock-ramp-cell--occupied {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+.dock-ramp-cell--occupied .dock-ramp-number {
+  color: #334155;
+}
+.dock-ramp-cell--occupied .dock-ramp-icon--lock {
+  color: #d97706;
+}
+.dock-ramp-cell--occupied .dock-ramp-tag--folio {
+  font-family: var(--font-mono);
+  color: #b45309;
+  font-weight: 800;
+}
+
+:host-context(.dark) .dock-ramp-cell--occupied,
+:host-context(.theme-dark) .dock-ramp-cell--occupied,
+:host(.dark) .dock-ramp-cell--occupied,
+:host(.theme-dark) .dock-ramp-cell--occupied {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+:host-context(.dark) .dock-ramp-cell--occupied .dock-ramp-number,
+:host-context(.theme-dark) .dock-ramp-cell--occupied .dock-ramp-number,
+:host(.dark) .dock-ramp-cell--occupied .dock-ramp-number,
+:host(.theme-dark) .dock-ramp-cell--occupied .dock-ramp-number {
+  color: #e2e8f0;
+}
+:host-context(.dark) .dock-ramp-cell--occupied .dock-ramp-icon--lock,
+:host-context(.theme-dark) .dock-ramp-cell--occupied .dock-ramp-icon--lock,
+:host(.dark) .dock-ramp-cell--occupied .dock-ramp-icon--lock,
+:host(.theme-dark) .dock-ramp-cell--occupied .dock-ramp-icon--lock {
+  color: #fbbf24;
+}
+:host-context(.dark) .dock-ramp-cell--occupied .dock-ramp-tag--folio,
+:host-context(.theme-dark) .dock-ramp-cell--occupied .dock-ramp-tag--folio,
+:host(.dark) .dock-ramp-cell--occupied .dock-ramp-tag--folio,
+:host(.theme-dark) .dock-ramp-cell--occupied .dock-ramp-tag--folio {
+  color: #fbbf24;
+}
+
+/* 3. Rampa Asignada por Operaciones a esta unidad */
+.dock-ramp-cell--ops-assigned {
+  background: #dcfce7 !important;
+  border: 2px solid #16a34a !important;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25), 0 4px 14px rgba(22, 163, 74, 0.2) !important;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.dock-ramp-cell--ops-assigned .dock-ramp-number {
+  color: #14532d !important;
+}
+.dock-ramp-cell--ops-assigned .dock-ramp-icon--check {
+  color: #16a34a !important;
+}
+.dock-ramp-cell--ops-assigned .dock-ramp-tag--ops {
+  color: #15803d !important;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+:host-context(.dark) .dock-ramp-cell--ops-assigned,
+:host-context(.theme-dark) .dock-ramp-cell--ops-assigned,
+:host(.dark) .dock-ramp-cell--ops-assigned,
+:host(.theme-dark) .dock-ramp-cell--ops-assigned {
+  background: rgba(16, 185, 129, 0.25) !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3), 0 6px 20px rgba(16, 185, 129, 0.3) !important;
+}
+:host-context(.dark) .dock-ramp-cell--ops-assigned .dock-ramp-number,
+:host-context(.theme-dark) .dock-ramp-cell--ops-assigned .dock-ramp-number,
+:host(.dark) .dock-ramp-cell--ops-assigned .dock-ramp-number,
+:host(.theme-dark) .dock-ramp-cell--ops-assigned .dock-ramp-number {
+  color: #ecfdf5 !important;
+}
+:host-context(.dark) .dock-ramp-cell--ops-assigned .dock-ramp-tag--ops,
+:host-context(.theme-dark) .dock-ramp-cell--ops-assigned .dock-ramp-tag--ops,
+:host(.dark) .dock-ramp-cell--ops-assigned .dock-ramp-tag--ops,
+:host(.theme-dark) .dock-ramp-cell--ops-assigned .dock-ramp-tag--ops {
+  color: #6ee7b7 !important;
+}
+
+.dock-ramp-cell--dimmed {
+  opacity: 0.45;
+}
+
 .form-floating-footer {
   position: sticky;
   bottom: 1rem;

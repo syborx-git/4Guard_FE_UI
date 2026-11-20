@@ -721,21 +721,21 @@
               <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Destino / Posicionamiento
               </label>
-              <div class="p-2 rounded-xl border flex items-center justify-between text-xs" [ngClass]="{
-                    'border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold': checkInForm.get('assignmentType')?.value === 'RAMP' && checkInForm.get('rampNumber')?.value,
-                    'border-slate-300 dark:border-slate-700 bg-slate-100/60 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400': checkInForm.get('assignmentType')?.value === 'PATIO' || !checkInForm.get('rampNumber')?.value
+              <div class="dest-summary-chip" [ngClass]="{
+                    'dest-summary-chip--ramp': checkInForm.get('assignmentType')?.value === 'RAMP' && checkInForm.get('rampNumber')?.value,
+                    'dest-summary-chip--patio': checkInForm.get('assignmentType')?.value === 'PATIO' || !checkInForm.get('rampNumber')?.value
                   }">
                 <div class="flex items-center gap-1.5 truncate">
                   @if (checkInForm.get('assignmentType')?.value === 'RAMP' && checkInForm.get('rampNumber')?.value) {
                   <span class="material-symbols-outlined text-sm text-amber-500">dock</span>
-                  <span class="truncate">Rampa R-{{ checkInForm.get('rampNumber')?.value < 10 ? '0' +
+                  <span class="truncate font-bold">Rampa R-{{ checkInForm.get('rampNumber')?.value < 10 ? '0' +
                       checkInForm.get('rampNumber')?.value : checkInForm.get('rampNumber')?.value }}</span>
                       } @else {
                       <span class="material-symbols-outlined text-sm text-slate-400">local_parking</span>
                       <span class="truncate">En Espera en Patio</span>
                       }
                 </div>
-                <span class="text-[10px] font-semibold text-slate-400 font-mono">
+                <span class="dest-summary-tag">
                   {{ checkInForm.get('assignmentType')?.value === 'RAMP' && checkInForm.get('rampNumber')?.value ?
                   'Andén Directo' : 'Patio' }}
                 </span>
@@ -744,16 +744,17 @@
           </div>
 
           <!-- ── SELECTOR INTERACTIVO: RAMPA FÍSICA O ESPERA EN PATIO ── -->
-          <div
-            class="mt-4 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/60 backdrop-blur-sm space-y-3.5 shadow-sm">
-            <div class="flex items-center justify-between flex-wrap gap-2.5">
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-amber-500 text-lg">dock</span>
+          <div class="dock-monitor-card">
+            <div class="dock-monitor-card__header">
+              <div class="dock-monitor-card__title-group">
+                <div class="dock-monitor-icon-wrap">
+                  <span class="material-symbols-outlined text-base">dock</span>
+                </div>
                 <div>
-                  <h3 class="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                  <h3 class="dock-monitor-title">
                     Asignación de Andén en Caseta
                   </h3>
-                  <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p class="dock-monitor-subtitle">
                     Monitor de Andenes · Operaciones asigna la rampa. Caseta solo visualiza.
                   </p>
                 </div>
@@ -761,66 +762,65 @@
 
               <!-- Estado de la asignación (solo lectura; la rampa la asigna Operaciones) -->
               @if (opsAssignedRamp(); as opsRamp) {
-              <span
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black animate-pulse">
-                🟢 METER A RAMPA R-{{ opsRamp < 10 ? '0' + opsRamp : opsRamp }} </span>
-                  } @else {
-                  <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-xs font-bold">
-                    ⏳ En espera de asignación de rampa en Operaciones (Pablo)
-                  </span>
-                  }
+              <span class="dock-status-badge dock-status-badge--assigned animate-pulse">
+                🟢 METER A RAMPA R-{{ opsRamp < 10 ? '0' + opsRamp : opsRamp }}
+              </span>
+              } @else {
+              <span class="dock-status-badge dock-status-badge--waiting">
+                ⏳ En espera de asignación de rampa en Operaciones (Pablo)
+              </span>
+              }
             </div>
 
             <!-- MONITOR DE ANDENES (SOLO LECTURA) -->
-            @if (true) {
-            <div class="space-y-3 animate-fade-in">
-              <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                <span class="font-semibold">Monitoreo de andenes en vivo (solo lectura · la rampa la asigna
-                  Operaciones):</span>
-                <div class="flex items-center gap-3 text-[10px]">
-                  <span class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Libre
+            <div class="dock-monitor-body animate-fade-in">
+              <div class="dock-monitor-legend-bar">
+                <span class="dock-monitor-legend-label">
+                  Monitoreo de andenes en vivo (solo lectura · la rampa la asigna Operaciones):
+                </span>
+                <div class="dock-monitor-legend-items">
+                  <span class="dock-legend-pill dock-legend-pill--free">
+                    <span class="dock-legend-dot dock-legend-dot--free"></span> Libre
                   </span>
-                  <span class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold">
-                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> Ocupada
+                  <span class="dock-legend-pill dock-legend-pill--occupied">
+                    <span class="dock-legend-dot dock-legend-dot--occupied"></span> Ocupada
                   </span>
                 </div>
               </div>
 
-              <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+              <div class="dock-ramp-grid">
                 @for (rm of STANDARD_WAREHOUSE_RAMPS; track rm.rampNumber) {
                 <div
-                  class="p-2.5 rounded-xl border text-left transition-all cursor-default select-none flex flex-col justify-between min-h-[68px]"
+                  class="dock-ramp-cell"
                   [ngClass]="{
-                          'border-emerald-500 bg-emerald-500/25 ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/30 animate-pulse': isOpsRamp(rm.rampNumber),
-                          'opacity-40': opsAssignedRamp() && !isOpsRamp(rm.rampNumber),
-                          'border-emerald-500/30 bg-emerald-500/5': !isOpsRamp(rm.rampNumber) && isRampAvailable(rm.rampNumber),
-                          'border-slate-300 dark:border-slate-700 bg-slate-100/60 dark:bg-slate-800/40': !isOpsRamp(rm.rampNumber) && !isRampAvailable(rm.rampNumber)
-                        }"
+                    'dock-ramp-cell--ops-assigned': isOpsRamp(rm.rampNumber),
+                    'dock-ramp-cell--dimmed': opsAssignedRamp() && !isOpsRamp(rm.rampNumber),
+                    'dock-ramp-cell--available': !isOpsRamp(rm.rampNumber) && isRampAvailable(rm.rampNumber),
+                    'dock-ramp-cell--occupied': !isOpsRamp(rm.rampNumber) && !isRampAvailable(rm.rampNumber)
+                  }"
                   [title]="getRampOccupancyInfo(rm.rampNumber) ? (getRampOccupancyInfo(rm.rampNumber)?.statusLabel + ' - Folio #' + (getRampOccupancyInfo(rm.rampNumber)?.operationFolio || 'S/N')) : 'Rampa Libre'">
-                  <div class="flex items-center justify-between w-full">
-                    <span class="font-mono font-black text-xs sm:text-sm text-slate-900 dark:text-slate-100">
-                      R-{{ rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber }} </span>
-                        @if (isOpsRamp(rm.rampNumber)) {
-                        <span class="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
-                        } @else if (!isRampAvailable(rm.rampNumber)) {
-                        <span class="material-symbols-outlined text-xs text-amber-600 dark:text-amber-400"
-                          title="Rampa ocupada">lock</span>
-                        } @else {
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        }
+                  <div class="dock-ramp-header">
+                    <span class="dock-ramp-number">
+                      R-{{ rm.rampNumber < 10 ? '0' + rm.rampNumber : rm.rampNumber }}
+                    </span>
+                    @if (isOpsRamp(rm.rampNumber)) {
+                    <span class="material-symbols-outlined text-sm dock-ramp-icon--check">check_circle</span>
+                    } @else if (!isRampAvailable(rm.rampNumber)) {
+                    <span class="material-symbols-outlined text-xs dock-ramp-icon--lock" title="Rampa ocupada">lock</span>
+                    } @else {
+                    <span class="dock-ramp-dot--free"></span>
+                    }
                   </div>
 
-                  <div class="mt-1">
+                  <div class="dock-ramp-meta">
                     @if (isOpsRamp(rm.rampNumber)) {
-                    <span class="text-[10px] font-black text-emerald-700 dark:text-emerald-300 block">METER AQUÍ</span>
+                    <span class="dock-ramp-tag dock-ramp-tag--ops">METER AQUÍ</span>
                     } @else if (!isRampAvailable(rm.rampNumber)) {
-                    <span class="text-[10px] font-mono text-amber-600 dark:text-amber-400 block truncate font-bold">
+                    <span class="dock-ramp-tag dock-ramp-tag--folio truncate">
                       #{{ getRampOccupancyInfo(rm.rampNumber)?.operationFolio || 'Ocupada' }}
                     </span>
                     } @else {
-                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block">
+                    <span class="dock-ramp-tag dock-ramp-tag--free">
                       Disponible
                     </span>
                     }
@@ -829,7 +829,6 @@
                 }
               </div>
             </div>
-            }
           </div>
         </div>
 
