@@ -1482,13 +1482,24 @@
             </td>
             <td>
               @if (hasRampAssigned(item)) {
-              <span class="cell-ramp-badge cell-ramp-badge--assigned"
-                title="Rampa física asignada por Almacén. Indique al chofer atracar en este andén.">
-                <span class="cell-ramp-live-dot"></span>
-                <span class="cell-ramp-action-text">DAR ACCESO</span>
-                <span class="cell-ramp-sep">·</span>
-                <span class="cell-ramp-target-pill">{{ formatRampDisplay(item) }}</span>
-              </span>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="cell-ramp-badge cell-ramp-badge--assigned"
+                  title="Rampa física asignada por Almacén. Indique al chofer atracar en este andén.">
+                  <span class="cell-ramp-live-dot"></span>
+                  <span class="cell-ramp-action-text">DAR ACCESO</span>
+                  <span class="cell-ramp-sep">·</span>
+                  <span class="cell-ramp-target-pill">{{ formatRampDisplay(item) }}</span>
+                </span>
+
+                @if (canReassignRamp(item)) {
+                <button type="button" (click)="openReassignRampModal(item)"
+                  class="btn-change-ramp-trigger"
+                  title="Cambiar andén físico con re-autenticación y trazabilidad de seguridad">
+                  <span class="material-symbols-outlined text-[13px]">swap_horiz</span>
+                  <span>Cambiar</span>
+                </button>
+                }
+              </div>
               } @else {
               <span class="cell-ramp-badge cell-ramp-badge--pending"
                 title="Unidad estacionada en patio en espera de asignación de andén por Mesa de Control">
@@ -2485,6 +2496,230 @@
           }
         </button>
       </div>
+    </div>
+  </div>
+  }
+
+  <!-- ── MODAL REASIGNACIÓN DE RAMPA CON RE-AUTENTICACIÓN Y AUDITORÍA (SDOP / ADR-020) ── -->
+  @if (showReassignRampModal() && selectedReassignPass()) {
+  <div class="modal-overlay animate-fade-in" (click)="closeReassignRampModal()">
+    <div class="modal-card modal-card--reassign-ramp relative" (click)="$event.stopPropagation()">
+      <!-- Accent top bar -->
+      <div class="reassign-modal-accent-bar"></div>
+
+      <!-- Close Button -->
+      <button type="button" (click)="closeReassignRampModal()" class="modal-close-btn" aria-label="Cerrar modal reasignación">
+        ✕
+      </button>
+
+      <!-- Header -->
+      <div class="reassign-header">
+        <div class="reassign-header-icon">
+          <span class="material-symbols-outlined text-xl">swap_horiz</span>
+        </div>
+        <div class="reassign-header-info min-w-0 flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="reassign-title">
+              Reasignación de Rampa Operativa
+            </h3>
+            <span class="reassign-folio-badge">
+              #{{ selectedReassignPass().generatedFolio || selectedReassignPass().token }}
+            </span>
+          </div>
+          <div class="reassign-unit-subtitle">
+            <span class="material-symbols-outlined text-xs text-amber-500">local_shipping</span>
+            <span>Unidad:</span>
+            <strong class="font-mono text-slate-900 dark:text-slate-100 font-bold tracking-wider">
+              {{ selectedReassignPass().tractorPlates || 'S/P' }}
+            </strong>
+            @if (selectedReassignPass().carrierLine) {
+            <span class="text-slate-300 dark:text-slate-600">•</span>
+            <span class="text-slate-600 dark:text-slate-300">{{ selectedReassignPass().carrierLine }}</span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Grid (4 Chips) -->
+      <div class="reassign-summary-grid">
+        <div class="reassign-chip">
+          <span class="reassign-chip-label">
+            <span class="material-symbols-outlined text-[13px]">person</span>
+            Chofer
+          </span>
+          <span class="reassign-chip-val" [title]="selectedReassignPass().driverName || 'S/N'">
+            {{ selectedReassignPass().driverName || 'S/N' }}
+          </span>
+        </div>
+
+        <div class="reassign-chip">
+          <span class="reassign-chip-label">
+            <span class="material-symbols-outlined text-[13px]">sync_alt</span>
+            Operación
+          </span>
+          <span class="reassign-chip-val font-mono">
+            {{ selectedReassignPass().operationType || selectedReassignPass().operacion || 'DESCARGA' }}
+          </span>
+        </div>
+
+        <div class="reassign-chip">
+          <span class="reassign-chip-label">
+            <span class="material-symbols-outlined text-[13px]">schedule</span>
+            Hora Entrada
+          </span>
+          <span class="reassign-chip-val font-mono">
+            {{ formatTimeString(selectedReassignPass().receptionTime || selectedReassignPass().horaEntrada || selectedReassignPass().createdAt) }}
+          </span>
+        </div>
+
+        <div class="reassign-chip reassign-chip--current-ramp">
+          <span class="reassign-chip-label">
+            <span class="material-symbols-outlined text-[13px]">warehouse</span>
+            Rampa Actual
+          </span>
+          <span class="reassign-chip-val font-bold text-amber-600 dark:text-amber-400">
+            {{ formatRampDisplay(selectedReassignPass()) }}
+          </span>
+        </div>
+      </div>
+
+      <form (ngSubmit)="submitReassignRamp()" class="space-y-3">
+        <!-- 1. Selección de Nueva Rampa -->
+        <div class="form-group-reassign">
+          <label for="newRampSelect" class="reassign-field-label flex items-center justify-between">
+            <span class="flex items-center gap-1.5 font-bold">
+              <span class="material-symbols-outlined text-sm text-amber-500">grid_view</span>
+              <span>Seleccionar Nuevo Andén Destino *</span>
+            </span>
+            <span class="text-[11px] text-slate-500 font-normal">Solo andenes libres</span>
+          </label>
+          <select
+            id="newRampSelect"
+            class="reassign-field-input reassign-field-select"
+            [ngModel]="newSelectedRampNumber()"
+            (ngModelChange)="newSelectedRampNumber.set($event)"
+            name="newRampNumber"
+            required
+          >
+            <option [ngValue]="null" disabled selected>-- Selecciona un andén disponible --</option>
+            @for (ramp of getAvailableRampsForReassign(selectedReassignPass().rampNumber); track ramp.id) {
+              <option 
+                [ngValue]="ramp.id" 
+                [disabled]="ramp.isOccupied || ramp.isCurrent">
+                R-{{ ramp.id < 10 ? '0' + ramp.id : ramp.id }} · {{ ramp.name }}
+                {{ ramp.isCurrent ? ' (Rampa Actual)' : (ramp.isOccupied ? ' (Ocupada)' : ' ✓ Disponible') }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <!-- 2. Motivo o Justificación Obligatoria -->
+        <div class="form-group-reassign">
+          <label for="reassignReason" class="reassign-field-label flex items-center gap-1.5 font-bold">
+            <span class="material-symbols-outlined text-sm text-amber-500">edit_note</span>
+            <span>Motivo / Justificación de la Reasignación *</span>
+          </label>
+          <textarea
+            id="reassignReason"
+            rows="2"
+            class="reassign-field-input reassign-field-textarea"
+            [ngModel]="reassignRampReason()"
+            (ngModelChange)="reassignRampReason.set($event)"
+            name="reassignReason"
+            placeholder="Describe la razón operativa del cambio (ej. Rampa niveladora averiada, saturación de pasillo, indicación de patio)..."
+            required
+            minlength="8"
+          ></textarea>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            Este motivo se registrará de forma permanente en la bitácora de auditoría y se sincronizará con Almacén.
+          </p>
+        </div>
+
+        <!-- 3. Re-Autenticación de Seguridad -->
+        <div class="reassign-auth-card">
+          <div class="reassign-auth-header">
+            <span class="material-symbols-outlined text-sm text-amber-600 dark:text-amber-400">shield</span>
+            <span class="font-bold text-xs uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              Firma y Credenciales de Seguridad (Trazabilidad)
+            </span>
+          </div>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+            <div>
+              <label for="reassignUser" class="reassign-auth-label">Usuario / Correo *</label>
+              <input
+                id="reassignUser"
+                type="text"
+                class="reassign-field-input reassign-field-input--sm"
+                [ngModel]="reassignAuthUser()"
+                (ngModelChange)="reassignAuthUser.set($event)"
+                name="reassignUser"
+                placeholder="guardia.seguridad"
+                required
+              />
+            </div>
+
+            <div>
+              <label for="reassignPassword" class="reassign-auth-label">Contraseña de Acceso *</label>
+              <div class="relative">
+                <input
+                  id="reassignPassword"
+                  [type]="showReassignPassword() ? 'text' : 'password'"
+                  class="reassign-field-input reassign-field-input--sm pr-8"
+                  [ngModel]="reassignAuthPassword()"
+                  (ngModelChange)="reassignAuthPassword.set($event)"
+                  name="reassignPassword"
+                  placeholder="••••••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  (click)="toggleShowReassignPassword()"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
+                  title="Mostrar/ocultar contraseña"
+                >
+                  <span class="material-symbols-outlined text-sm">
+                    {{ showReassignPassword() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error Banner -->
+        @if (reassignRampError()) {
+        <div class="reassign-error-banner animate-shake">
+          <span class="material-symbols-outlined text-sm text-rose-500">error</span>
+          <span>{{ reassignRampError() }}</span>
+        </div>
+        }
+
+        <!-- Footer Actions -->
+        <div class="reassign-actions-bar">
+          <button
+            type="button"
+            (click)="closeReassignRampModal()"
+            class="btn-reassign-cancel"
+            [disabled]="isSubmittingReassignRamp()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="btn-reassign-confirm"
+            [disabled]="isSubmittingReassignRamp()"
+          >
+            @if (isSubmittingReassignRamp()) {
+              <span class="material-symbols-outlined text-sm animate-spin">refresh</span>
+              <span>Firmando y Reasignando...</span>
+            } @else {
+              <span class="material-symbols-outlined text-sm">swap_horiz</span>
+              <span>Confirmar y Reasignar Rampa</span>
+            }
+          </button>
+        </div>
+      </form>
     </div>
   </div>
   }

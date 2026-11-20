@@ -3927,4 +3927,417 @@ h1, h2, h3, h4, h5, h6 {
   color: #94a3b8;
 }
 
+/* ==========================================================================
+   BOTÓN REASIGNACIÓN DE RAMPA EN TABLA DE PATIO (SDOP / ADR-020)
+   ========================================================================== */
+
+.btn-change-ramp-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  line-height: 1;
+}
+
+.btn-change-ramp-trigger:hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #d97706;
+  color: #92400e;
+  transform: translateY(-1px);
+}
+
+:host-context(.theme-dark) .btn-change-ramp-trigger,
+:host-context(.dark) .btn-change-ramp-trigger {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+:host-context(.theme-dark) .btn-change-ramp-trigger:hover,
+:host-context(.dark) .btn-change-ramp-trigger:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #fbbf24;
+  color: #fef08a;
+}
+
+/* ==========================================================================
+   MODAL DE REASIGNACIÓN DE RAMPA CON RE-AUTENTICACIÓN Y TRAZABILIDAD (ADR-020)
+   ========================================================================== */
+
+.modal-card--reassign-ramp {
+  max-width: 34rem !important;
+  width: 95vw !important;
+  padding: 1.15rem 1.4rem 1.25rem !important;
+  border-radius: 1.15rem !important;
+  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 55%, #f9f5ea 100%) !important;
+  border: 1px solid rgba(197, 168, 107, 0.35) !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(197, 168, 107, 0.20) !important;
+  overflow: hidden !important;
+  position: relative;
+}
+
+:host-context(.theme-dark) .modal-card--reassign-ramp,
+:host-context(.dark) .modal-card--reassign-ramp {
+  background: linear-gradient(145deg, #0f172a 0%, #131d33 60%, #0d1527 100%) !important;
+  border: 1px solid rgba(208, 175, 103, 0.30) !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+}
+
+.reassign-modal-accent-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #d97706 0%, #f59e0b 50%, #c5a86b 100%);
+}
+
+.reassign-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+  padding-top: 0.25rem;
+}
+
+.reassign-header-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.30);
+}
+
+:host-context(.theme-dark) .reassign-header-icon,
+:host-context(.dark) .reassign-header-icon {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.40);
+}
+
+.reassign-title {
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: #172033 !important;
+  line-height: 1.25;
+  margin: 0 !important;
+}
+
+:host-context(.theme-dark) .reassign-title,
+:host-context(.dark) .reassign-title {
+  color: #f8fafc !important;
+}
+
+.reassign-folio-badge {
+  font-size: 0.6875rem;
+  font-family: var(--shift-font-mono, monospace);
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.375rem;
+  background: rgba(197, 168, 107, 0.15);
+  color: #8c671b;
+  border: 1px solid rgba(197, 168, 107, 0.35);
+}
+
+:host-context(.theme-dark) .reassign-folio-badge,
+:host-context(.dark) .reassign-folio-badge {
+  background: rgba(208, 175, 103, 0.18);
+  color: #fef08a;
+  border-color: rgba(208, 175, 103, 0.35);
+}
+
+.reassign-unit-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: #5a6477;
+  margin-top: 0.2rem;
+}
+
+:host-context(.theme-dark) .reassign-unit-subtitle,
+:host-context(.dark) .reassign-unit-subtitle {
+  color: #94a3b8;
+}
+
+/* ── 4-Chip Summary Grid ── */
+.reassign-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .reassign-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.reassign-chip {
+  display: flex;
+  flex-direction: column;
+  padding: 0.425rem 0.6rem;
+  border-radius: 0.55rem;
+  background: #ffffff;
+  border: 1px solid rgba(76, 86, 105, 0.12);
+  transition: all 0.2s ease;
+}
+
+:host-context(.theme-dark) .reassign-chip,
+:host-context(.dark) .reassign-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.reassign-chip--current-ramp {
+  background: rgba(245, 158, 11, 0.08) !important;
+  border-color: rgba(245, 158, 11, 0.30) !important;
+}
+
+:host-context(.theme-dark) .reassign-chip--current-ramp,
+:host-context(.dark) .reassign-chip--current-ramp {
+  background: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+.reassign-chip-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #7c8799;
+  margin-bottom: 0.15rem;
+}
+
+:host-context(.theme-dark) .reassign-chip-label,
+:host-context(.dark) .reassign-chip-label {
+  color: #94a3b8;
+}
+
+.reassign-chip-val {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #172033;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:host-context(.theme-dark) .reassign-chip-val,
+:host-context(.dark) .reassign-chip-val {
+  color: #f1f5f9;
+}
+
+/* ── Form Inputs ── */
+.form-group-reassign {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.reassign-field-label {
+  font-size: 0.75rem;
+  color: #172033;
+}
+
+:host-context(.theme-dark) .reassign-field-label,
+:host-context(.dark) .reassign-field-label {
+  color: #e2e8f0;
+}
+
+.reassign-field-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.55rem;
+  font-size: 0.8rem;
+  background: #ffffff;
+  border: 1px solid rgba(76, 86, 105, 0.20);
+  color: #172033;
+  transition: all 0.18s ease;
+  outline: none;
+}
+
+.reassign-field-input:focus {
+  border-color: #c5a86b;
+  box-shadow: 0 0 0 2px rgba(197, 168, 107, 0.20);
+}
+
+:host-context(.theme-dark) .reassign-field-input,
+:host-context(.dark) .reassign-field-input {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+}
+
+:host-context(.theme-dark) .reassign-field-input:focus,
+:host-context(.dark) .reassign-field-input:focus {
+  border-color: #d0af67;
+  box-shadow: 0 0 0 2px rgba(208, 175, 103, 0.25);
+}
+
+.reassign-field-select {
+  cursor: pointer;
+}
+
+.reassign-field-textarea {
+  resize: vertical;
+  min-height: 52px;
+}
+
+.reassign-field-input--sm {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+/* ── Auth Card (Re-autenticación) ── */
+.reassign-auth-card {
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.75rem;
+  background: rgba(197, 168, 107, 0.08);
+  border: 1px solid rgba(197, 168, 107, 0.28);
+}
+
+:host-context(.theme-dark) .reassign-auth-card,
+:host-context(.dark) .reassign-auth-card {
+  background: rgba(208, 175, 103, 0.08);
+  border-color: rgba(208, 175, 103, 0.25);
+}
+
+.reassign-auth-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.reassign-auth-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #5a6477;
+  margin-bottom: 0.25rem;
+}
+
+:host-context(.theme-dark) .reassign-auth-label,
+:host-context(.dark) .reassign-auth-label {
+  color: #94a3b8;
+}
+
+/* ── Error Banner ── */
+.reassign-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.55rem;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #e11d48;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+:host-context(.theme-dark) .reassign-error-banner,
+:host-context(.dark) .reassign-error-banner {
+  color: #fb7185;
+}
+
+/* ── Action Buttons ── */
+.reassign-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(76, 86, 105, 0.14);
+}
+
+:host-context(.theme-dark) .reassign-actions-bar,
+:host-context(.dark) .reassign-actions-bar {
+  border-top-color: rgba(255, 255, 255, 0.10);
+}
+
+.btn-reassign-cancel {
+  padding: 0.5rem 1rem;
+  border-radius: 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid rgba(76, 86, 105, 0.25);
+  color: #5a6477;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-reassign-cancel:hover {
+  background: rgba(76, 86, 105, 0.08);
+  color: #172033;
+}
+
+:host-context(.theme-dark) .btn-reassign-cancel,
+:host-context(.dark) .btn-reassign-cancel {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+}
+
+:host-context(.theme-dark) .btn-reassign-cancel:hover,
+:host-context(.dark) .btn-reassign-cancel:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+}
+
+.btn-reassign-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #c5a86b 0%, #b8913b 100%);
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(197, 168, 107, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-reassign-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d0af67 0%, #c5a86b 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(197, 168, 107, 0.45);
+}
+
+:host-context(.theme-dark) .btn-reassign-confirm,
+:host-context(.dark) .btn-reassign-confirm {
+  background: linear-gradient(135deg, #d0af67 0%, #b8913b 100%);
+  color: #0f172a;
+}
+
+.btn-reassign-confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 
