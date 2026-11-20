@@ -357,9 +357,25 @@ export class OperationalNotificationsComponent implements OnInit, OnDestroy {
     }
   }
 
+  private readonly componentBootTimestamp = Date.now();
+  private lastOpChimeTime = 0;
+
   // ── Sonido de Notificación ──
   public playChime(): void {
     if (!isPlatformBrowser(this.platformId)) return;
+
+    // Supresión durante arranque/recarga
+    if (Date.now() - this.componentBootTimestamp < 3500) {
+      return;
+    }
+
+    // Debounce acústico
+    const nowMs = Date.now();
+    if (nowMs - this.lastOpChimeTime < 600) {
+      return;
+    }
+    this.lastOpChimeTime = nowMs;
+
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextClass) return;

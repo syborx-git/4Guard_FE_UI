@@ -994,6 +994,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   private readonly notifiedSubmittedTokens = new Set<string>();
   private readonly notifiedReadyExitTokens: Set<string> = this.loadNotifiedExitTokensFromStorage();
   private isInitialYardHydrated = false;
+  private isInitialActivePassesHydrated = false;
   private lastHandledToken: string | null = null;
 
   private loadNotifiedExitTokensFromStorage(): Set<string> {
@@ -1034,7 +1035,22 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     return 'Andén Principal';
   }
 
+  private readonly componentInitTimestamp = Date.now();
+  private lastSecurityChimeTime = 0;
+
   private playCheckinChime(): void {
+    // Supresión durante el arranque inicial o recarga de la pantalla (evitar sonido trabado en reload)
+    if (Date.now() - this.componentInitTimestamp < 3500) {
+      return;
+    }
+
+    // Debounce acústico de 800ms para no amontonar secuencias
+    const nowMs = Date.now();
+    if (nowMs - this.lastSecurityChimeTime < 800) {
+      return;
+    }
+    this.lastSecurityChimeTime = nowMs;
+
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
@@ -1973,6 +1989,26 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     this.activePasses.set(cleanList);
     this.smartNotification.updateSubmittedDriverPasses(cleanList);
+
+    // Si es la primera hidratación al cargar/refrescar la página, registrar tokens existentes para no disparar timbres falsos
+    if (!this.isInitialActivePassesHydrated) {
+      this.isInitialActivePassesHydrated = true;
+      for (const p of cleanList) {
+        if (p && p.token) {
+          this.notifiedSubmittedTokens.add(p.token);
+          this.smartNotification.markDriverTokenNotified(p.token);
+        }
+      }
+
+      // Si el formulario principal está limpio y hay un pase SUBMITTED, precargarlo silenciosamente
+      if (!this.activeToken() && (!this.checkInForm.dirty || !this.checkInForm.get('nombreOperador')?.value)) {
+        const pendingSubmitted = cleanList.find(p => p.status === 'SUBMITTED');
+        if (pendingSubmitted) {
+          this.loadDriverSubmission(pendingSubmitted);
+        }
+      }
+      return;
+    }
 
     // Detectar y auto-cargar en vivo cuando un pase cambia a SUBMITTED (desduplicado con STOMP)
     for (const p of cleanList) {

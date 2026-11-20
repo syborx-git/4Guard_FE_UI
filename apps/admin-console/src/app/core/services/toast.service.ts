@@ -81,6 +81,7 @@ export class ToastService {
   }
 
   private lastSoundTime = 0;
+  private readonly serviceBootTimestamp = Date.now();
 
   private show(type: ToastType, message: string, duration: number): void {
     if (!message || !message.trim()) return;
@@ -109,6 +110,11 @@ export class ToastService {
    */
   private async playSound(type: ToastType): Promise<void> {
     if (this.isMuted()) return;
+
+    // Supresión acústica durante los primeros 3.5 segundos tras el arranque o recarga
+    if (Date.now() - this.serviceBootTimestamp < 3500) {
+      return;
+    }
 
     // Prevenir solapamiento estridente de ráfagas acústicas simultáneas
     const now = Date.now();

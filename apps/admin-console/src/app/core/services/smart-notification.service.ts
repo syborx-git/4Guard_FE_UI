@@ -51,6 +51,15 @@ export class SmartNotificationService implements OnDestroy {
   private pollIntervalId: any = null;
   public readonly knownNotifiedFolios = new Set<string>();
 
+  /** Marca de tiempo de inicialización para suprimir falsas alarmas acústicas durante el arranque */
+  private readonly appBootTimestamp = Date.now();
+  private static readonly BOOT_AUDIO_GRACE_PERIOD_MS = 4000;
+  private lastChimeTimestamp = 0;
+
+  /** Indica si la primera corrida de polling de respaldo ya hidrató el estado existente */
+  private isInitialDriverPollHydrated = false;
+  private isInitialReceptionPollHydrated = false;
+
   public isDriverTokenNotified(token: string | null | undefined): boolean {
     if (!token) return false;
     return this.knownNotifiedFolios.has(`driver-${token}`);
@@ -500,6 +509,16 @@ export class SmartNotificationService implements OnDestroy {
     const submitted = (passes || []).filter(p => p.status === 'SUBMITTED');
     this.pendingDriverPasses.set(submitted);
 
+    // Si aún nos encontramos en el periodo de gracia inicial tras el arranque/recarga, registrar los tokens para que no chillen al inicio
+    const isBootGrace = (Date.now() - this.appBootTimestamp) < SmartNotificationService.BOOT_AUDIO_GRACE_PERIOD_MS;
+    if (isBootGrace) {
+      for (const p of submitted) {
+        const token = p.token || p.id;
+        if (token) this.knownNotifiedFolios.add(`driver-${token}`);
+      }
+      return;
+    }
+
     // Solo despachar si hay pases que no hayan sido notificados previamente
     for (const latest of submitted) {
       const token = latest.token || latest.id;
@@ -540,6 +559,20 @@ export class SmartNotificationService implements OnDestroy {
    */
   public playChime(severity: NotificationSeverity = 'INFO'): void {
     if (typeof window === 'undefined') return;
+
+    // 1. Supresión durante el arranque o recarga de la página (evita sonido trabado o fantasma al refrescar)
+    const elapsedSinceBoot = Date.now() - this.appBootTimestamp;
+    if (elapsedSinceBoot < SmartNotificationService.BOOT_AUDIO_GRACE_PERIOD_MS) {
+      return;
+    }
+
+    // 2. Debounce acústico de 600ms para evitar ráfagas o sonidos encimados ("trabados")
+    const nowMs = Date.now();
+    if (nowMs - this.lastChimeTimestamp < 600) {
+      return;
+    }
+    this.lastChimeTimestamp = nowMs;
+
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
@@ -623,6 +656,18 @@ export class SmartNotificationService implements OnDestroy {
         const passes = res?.data || (Array.isArray(res) ? res : []);
         if (Array.isArray(passes) && passes.length > 0) {
           const submitted = passes.filter((p: any) => p && (p.status === 'SUBMITTED' || p.status === 'PENDING_DRIVER'));
+
+          // Si es la primera ejecución tras arrancar/refrescar la app, solo hidratar knownNotifiedFolios sin emitir audio ni alertas repetidas
+          if (!this.isInitialDriverPollHydrated) {
+            this.isInitialDriverPollHydrated = true;
+            submitted.forEach((p: any) => {
+              const token = p.token || p.id;
+              if (token) this.knownNotifiedFolios.add(`driver-${token}`);
+            });
+            this.pendingDriverPasses.set(submitted);
+            return;
+          }
+
           submitted.forEach((p: any) => {
             const token = p.token || p.id;
             if (token && !this.knownNotifiedFolios.has(`driver-${token}`)) {
@@ -642,6 +687,8 @@ export class SmartNotificationService implements OnDestroy {
               });
             }
           });
+        } else {
+          this.isInitialDriverPollHydrated = true;
         }
       });
 
@@ -658,6 +705,16 @@ export class SmartNotificationService implements OnDestroy {
         ).subscribe(res => {
           const recs = res?.data || (Array.isArray(res) ? res : []);
           if (Array.isArray(recs) && recs.length > 0) {
+            // Si es la primera ejecución tras arrancar/refrescar la app, registrar los existentes como conocidos sin disparar chime
+            if (!this.isInitialReceptionPollHydrated) {
+              this.isInitialReceptionPollHydrated = true;
+              recs.forEach((rec: any) => {
+                const fol = String(rec.folio || rec.id || '');
+                if (fol) this.knownNotifiedFolios.add(`rec-${fol}`);
+              });
+              return;
+            }
+
             recs.forEach((rec: any) => {
               const fol = String(rec.folio || rec.id || '');
               if (fol && !this.knownNotifiedFolios.has(`rec-${fol}`)) {
