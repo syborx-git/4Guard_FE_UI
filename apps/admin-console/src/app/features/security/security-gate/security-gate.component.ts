@@ -410,13 +410,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
     // 2. Pases devueltos por el backend como en patio (In-Yard)
     for (const p of this.backendInYardPasses()) {
-      if (p.status === 'COMPLETED_EXIT') continue;
+      if (p.status === 'COMPLETED_EXIT' || p.status === 'CANCELLED') continue;
       const key = (p.generatedFolio || p.token || p.id || '').trim().toUpperCase();
       if (!key || exitTokensOrFolios.has(key)) continue;
 
       const ws = (p.warehouseStatus || '').toUpperCase();
-      const isCancelled = ws === 'CANCELLED' || p.status === 'CANCELLED';
-      const isReady = p.isReadyForExit === true || ws === 'COMPLETED' || ws === 'DISPATCHED' || isCancelled || p.status === 'READY_FOR_EXIT';
+      if (ws === 'CANCELLED') continue;
+      const isReady = p.isReadyForExit === true || ws === 'COMPLETED' || ws === 'DISPATCHED' || p.status === 'READY_FOR_EXIT';
       const timeVal = p.receptionTime || p.horaEntrada || (p.createdAt ? this.formatTimeString(p.createdAt) : this.getCurrentTimeString());
       mergedMap.set(key, {
         ...p,
@@ -440,13 +440,17 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       if (mergedMap.has(key)) {
         const existing = mergedMap.get(key);
         const isCancelled = (r.status as string) === 'CANCELLED';
+        if (isCancelled) {
+          mergedMap.delete(key);
+          continue;
+        }
         const isCompleted = (r.status as string) === 'COMPLETED';
-        if (isCancelled || isCompleted || r.status !== existing.warehouseStatus) {
+        if (isCompleted || r.status !== existing.warehouseStatus) {
           mergedMap.set(key, {
             ...existing,
             warehouseStatus: r.status,
-            status: isCancelled ? 'CANCELLED' : (isCompleted ? 'COMPLETED' : existing.status),
-            isReadyForExit: isCancelled || isCompleted || existing.isReadyForExit,
+            status: isCompleted ? 'COMPLETED' : existing.status,
+            isReadyForExit: isCompleted || existing.isReadyForExit,
             cancellationReason: r.cancellationReason || existing.cancellationReason,
             cancelledBy: r.cancelledBy || existing.cancelledBy,
             rampNumber: r.checkIn?.rampNumber ?? existing.rampNumber,
@@ -458,17 +462,17 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       }
 
       // Si el backend ya devolvió la lista oficial de patio, no re-inyectar recepciones que el backend omitió
-      if (hasBackendInYard && !key.startsWith('LOCAL-') && !key.startsWith('TEMP-') && (r.status === 'COMPLETED' || !r.id)) {
+      if (hasBackendInYard && !key.startsWith('LOCAL-') && !key.startsWith('TEMP-') && (r.status === 'COMPLETED' || (r.status as string) === 'CANCELLED' || !r.id)) {
         continue;
       }
 
-      // Solo incluir si la recepción está en estado activo de patio (REGISTERED, ASSIGNED, IN_PROGRESS, DISCHARGED, COMPLETED, CANCELLED)
-      if (r.status === 'REGISTERED' || r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED' || (r.status as string) === 'COMPLETED' || (r.status as string) === 'CANCELLED') {
+      // Solo incluir si la recepción está en estado activo de patio (REGISTERED, ASSIGNED, IN_PROGRESS, DISCHARGED, COMPLETED)
+      if (r.status === 'REGISTERED' || r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS' || r.status === 'DISCHARGED' || (r.status as string) === 'COMPLETED') {
         const seals = r.checkIn?.sealNumbers && r.checkIn.sealNumbers.length > 0
           ? r.checkIn.sealNumbers
           : (r.checkIn?.sealNumber ? [r.checkIn.sealNumber] : []);
 
-        const isReady = (r.status as string) === 'COMPLETED' || (r.status as string) === 'CANCELLED' || (r as any).isReadyForExit === true;
+        const isReady = (r.status as string) === 'COMPLETED' || (r as any).isReadyForExit === true;
         const timeVal = r.checkIn?.receptionTime || (r.createdAt ? this.formatTimeString(r.createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
@@ -516,13 +520,17 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       if (mergedMap.has(key)) {
         const existing = mergedMap.get(key);
         const isCancelled = (o.status as string) === 'CANCELLED';
+        if (isCancelled) {
+          mergedMap.delete(key);
+          continue;
+        }
         const isCompleted = (o.status as string) === 'COMPLETED';
-        if (isCancelled || isCompleted || o.status !== existing.warehouseStatus) {
+        if (isCompleted || o.status !== existing.warehouseStatus) {
           mergedMap.set(key, {
             ...existing,
             warehouseStatus: o.status,
-            status: isCancelled ? 'CANCELLED' : (isCompleted ? 'COMPLETED' : existing.status),
-            isReadyForExit: isCancelled || isCompleted || existing.isReadyForExit,
+            status: isCompleted ? 'COMPLETED' : existing.status,
+            isReadyForExit: isCompleted || existing.isReadyForExit,
             rampNumber: o.rampNumber ?? existing.rampNumber,
             rampCode: this.getFormattedRampLabel(o.rampCode ?? existing.rampCode, o.rampNumber ?? existing.rampNumber)
           });
@@ -530,13 +538,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         continue;
       }
 
-      if (hasBackendInYard && !key.startsWith('LOCAL-') && !key.startsWith('TEMP-') && (o.status === 'COMPLETED' || !o.id)) {
+      if (hasBackendInYard && !key.startsWith('LOCAL-') && !key.startsWith('TEMP-') && (o.status === 'COMPLETED' || (o.status as string) === 'CANCELLED' || !o.id)) {
         continue;
       }
 
-      if (o.status === 'REGISTERED' || o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED' || (o.status as string) === 'COMPLETED' || (o.status as string) === 'CANCELLED') {
+      if (o.status === 'REGISTERED' || o.status === 'ASSIGNED' || o.status === 'IN_PROGRESS' || o.status === 'LOADED' || (o.status as string) === 'COMPLETED') {
         const seals = o.sealNumber ? o.sealNumber.split(',').map((s: string) => s.trim()) : [];
-        const isReady = (o.status as string) === 'COMPLETED' || (o.status as string) === 'CANCELLED' || (o as any).isReadyForExit === true;
+        const isReady = (o.status as string) === 'COMPLETED' || (o as any).isReadyForExit === true;
         const timeVal = o.timestamp || (o.dispatchedAt ? this.formatTimeString(o.dispatchedAt) : (o as any).createdAt ? this.formatTimeString((o as any).createdAt) : this.getCurrentTimeString());
 
         mergedMap.set(key, {
@@ -2053,11 +2061,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       this.isLoadingInYard.set(true);
     }
     const session = this.movementsService.movementsApi.getSessionOrg();
-    const role = (this.authState.role() || '').toUpperCase();
-    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO') || role.includes('CONTROL_DESK') || role.includes('MESA');
-    const branchToQuery = isAdminOrManager ? undefined : session.branchId;
 
-    this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: branchToQuery }).subscribe({
+    this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
       next: (passes) => {
         this.isLoadingInYard.set(false);
         const purgedAtStr = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_env_purged_at') : null;
