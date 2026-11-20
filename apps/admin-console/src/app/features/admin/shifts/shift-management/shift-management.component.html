@@ -290,7 +290,7 @@
 
               <!-- Fila 3: Chips de Días Operativos + Sucursal con icono + Badges de conflicto/nocturno -->
               <div class="user-item__row-bottom flex items-center gap-2 flex-wrap mt-1">
-                <span class="user-role-badge user-role-badge--operator text-[11px] font-bold">
+                <span class="shift-days-chip">
                   {{ getDayShortLabels(shift.operatingDays) }}
                 </span>
 
@@ -372,8 +372,12 @@
 
         <!-- Formulario -->
         <form [formGroup]="shiftForm" (ngSubmit)="onSubmitForm()" class="shift-form">
-          <fieldset class="shift-form__fieldset" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
-            <legend class="shift-form__legend">Identificación del Turno</legend>
+          <!-- SECCIÓN 1: Identificación del Turno -->
+          <fieldset class="shift-form-section" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
+            <div class="shift-section-header">
+              <span class="material-symbols-outlined">badge</span>
+              <span>Identificación del Turno</span>
+            </div>
 
             <div class="shift-form-grid">
               <!-- Código -->
@@ -416,24 +420,36 @@
             </div>
           </fieldset>
 
-          <fieldset class="shift-form__fieldset" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
-            <legend class="shift-form__legend">Horario y Días de Operación</legend>
+          <!-- SECCIÓN 2: Horario y Días de Operación -->
+          <fieldset class="shift-form-section" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
+            <div class="shift-section-header">
+              <span class="material-symbols-outlined">schedule</span>
+              <span>Horario y Días de Operación</span>
+            </div>
 
-            <!-- Selector de Modo: Horario Unificado vs Horarios Personalizados por Día -->
-            <div class="schedule-mode-selector-wrap mb-4">
+            <!-- Selector de Modo: Segmented Control 50/50 -->
+            <div class="schedule-mode-selector-wrap">
               <span class="schedule-mode-title">Esquema de Horarios:</span>
-              <div class="schedule-mode-pill-group">
-                <button type="button" class="schedule-mode-btn"
+              <div class="schedule-mode-track" role="tablist" aria-label="Esquema de horarios">
+                <button type="button" role="tab" class="schedule-mode-btn"
+                  [attr.aria-selected]="scheduleMode() === 'UNIFIED'"
                   [class.schedule-mode-btn--active]="scheduleMode() === 'UNIFIED'"
                   (click)="setScheduleMode('UNIFIED')">
-                  <span class="material-symbols-outlined text-sm">schedule</span>
-                  <span>Horario Unificado (Mismo horario todos los días)</span>
+                  <span class="material-symbols-outlined">schedule</span>
+                  <div class="schedule-mode-btn__text">
+                    <strong>Horario Unificado</strong>
+                    <small>Mismo horario todos los días</small>
+                  </div>
                 </button>
-                <button type="button" class="schedule-mode-btn"
+                <button type="button" role="tab" class="schedule-mode-btn"
+                  [attr.aria-selected]="scheduleMode() === 'PER_DAY'"
                   [class.schedule-mode-btn--active]="scheduleMode() === 'PER_DAY'"
                   (click)="setScheduleMode('PER_DAY')">
-                  <span class="material-symbols-outlined text-sm">calendar_month</span>
-                  <span>Horarios por Día (Días intercalados / Rotativo)</span>
+                  <span class="material-symbols-outlined">calendar_month</span>
+                  <div class="schedule-mode-btn__text">
+                    <strong>Horarios por Día</strong>
+                    <small>Días intercalados / Rotativo</small>
+                  </div>
                 </button>
               </div>
             </div>
@@ -483,12 +499,14 @@
                 }
               </div>
 
-              <!-- Cálculo de Duración Neta -->
+              <!-- Cálculo de Duración Neta (Altura unificada 42px) -->
               <div class="field-group col-4 duration-display-group">
-                <span class="field-label">Duración Calculada</span>
-                <div class="duration-pill">
-                  <span class="material-symbols-outlined duration-icon">schedule</span>
-                  <strong class="duration-value">{{ calculatedDuration().formattedDuration }}</strong>
+                <span class="field-label">Duración Neta Calculada</span>
+                <div class="duration-pill" [class.duration-pill--overnight]="calculatedDuration().isOvernight">
+                  <div class="duration-pill__main">
+                    <span class="material-symbols-outlined duration-icon">timelapse</span>
+                    <strong class="duration-value">{{ calculatedDuration().formattedDuration }}</strong>
+                  </div>
 
                   @if (calculatedDuration().isOvernight) {
                   <span class="overnight-badge" title="Este turno cruza la medianoche (ej: 22:00 a 06:00)">
@@ -507,17 +525,24 @@
               </div>
               }
 
-              <!-- Selector de Días Operativos (7 Días) -->
+              <!-- Selector de Días Operativos (7 Días Homologado) -->
               <div class="field-group col-12">
-                <label class="field-label">
-                  Días Operativos de la Semana <span class="required-star">*</span>
-                </label>
+                <div class="day-picker-header">
+                  <label class="field-label">
+                    Días Operativos de la Semana <span class="required-star">*</span>
+                  </label>
+                  <span class="day-picker-counter">
+                    {{ (shiftForm.get('operatingDays')?.value || []).length }} de 7 días activos
+                  </span>
+                </div>
 
                 <div class="day-picker-grid" [class.day-picker-grid--error]="isFieldInvalid('operatingDays')">
                   @for (dayCfg of daysConfig; track dayCfg.value) {
                   <button type="button" class="day-pill-btn"
+                    [attr.aria-pressed]="isDaySelected(dayCfg.value)"
                     [class.day-pill-btn--selected]="isDaySelected(dayCfg.value)" (click)="toggleDay(dayCfg.value)"
                     [title]="dayCfg.fullLabel" tabindex="0">
+                    <span class="day-pill-dot" aria-hidden="true"></span>
                     <span class="day-pill-short">{{ dayCfg.shortLabel }}</span>
                     <span class="day-pill-full">{{ dayCfg.fullLabel }}</span>
                   </button>
@@ -623,27 +648,37 @@
             }
           </fieldset>
 
-          <fieldset class="shift-form__fieldset" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
-            <legend class="shift-form__legend">Parámetros Operativos y Tolerancia</legend>
+          <!-- SECCIÓN 3: Parámetros Operativos y Tolerancia (50/50 Simétrico) -->
+          <fieldset class="shift-form-section" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
+            <div class="shift-section-header">
+              <span class="material-symbols-outlined">tune</span>
+              <span>Parámetros Operativos y Tolerancia</span>
+            </div>
 
             <div class="shift-form-grid">
               <!-- Minutos de Descanso -->
-              <div class="field-group col-4">
+              <div class="field-group col-6">
                 <label class="field-label" for="shift-rest-break">Minutos de Descanso</label>
-                <input id="shift-rest-break" type="number" class="field-input"
-                  [class.field-input--error]="isFieldInvalid('restBreakMinutes')" formControlName="restBreakMinutes"
-                  min="0" max="300" />
+                <div class="input-unit-wrap">
+                  <input id="shift-rest-break" type="number" class="field-input field-input--unit"
+                    [class.field-input--error]="isFieldInvalid('restBreakMinutes')" formControlName="restBreakMinutes"
+                    min="0" max="300" />
+                  <span class="input-unit-tag">min</span>
+                </div>
                 @if (isFieldInvalid('restBreakMinutes')) {
                 <span class="field-error">{{ getFieldError('restBreakMinutes') }}</span>
                 }
               </div>
 
               <!-- Tolerancia de Entrada -->
-              <div class="field-group col-4">
+              <div class="field-group col-6">
                 <label class="field-label" for="shift-tolerance">Tolerancia de Entrada (min)</label>
-                <input id="shift-tolerance" type="number" class="field-input"
-                  [class.field-input--error]="isFieldInvalid('toleranceMinutes')" formControlName="toleranceMinutes"
-                  min="0" max="120" />
+                <div class="input-unit-wrap">
+                  <input id="shift-tolerance" type="number" class="field-input field-input--unit"
+                    [class.field-input--error]="isFieldInvalid('toleranceMinutes')" formControlName="toleranceMinutes"
+                    min="0" max="120" />
+                  <span class="input-unit-tag">min</span>
+                </div>
                 @if (isFieldInvalid('toleranceMinutes')) {
                 <span class="field-error">{{ getFieldError('toleranceMinutes') }}</span>
                 }
@@ -651,18 +686,20 @@
             </div>
           </fieldset>
 
-          <!-- 🍽️ SECCIÓN: Horario de Comida / Colación Programada -->
-          <fieldset class="shift-form__fieldset" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
-            <legend class="shift-form__legend">🍽️ Horario de Comida / Colación Programada</legend>
+          <!-- SECCIÓN 4: Horario de Comida / Colación Programada (Homologado Sin Inline Styles) -->
+          <fieldset class="shift-form-section" [disabled]="isSubmitting() || isShiftLeaderReadOnly()">
+            <div class="shift-section-header">
+              <span class="material-symbols-outlined">restaurant</span>
+              <span>Horario de Comida / Colación Programada</span>
+            </div>
 
             <div class="shift-form-grid">
-              <!-- Checkbox Activar -->
-              <div class="field-group col-12"
-                style="display: flex; align-items: center; gap: 8px; padding-bottom: 6px;">
-                <input type="checkbox" id="shift-has-meal" formControlName="hasMealBreak"
-                  style="width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer;" />
-                <label for="shift-has-meal" class="field-label" style="margin: 0; cursor: pointer; font-weight: 600;">
-                  Habilitar Horario de Comida Programado para este turno
+              <!-- Toggle Card Activar -->
+              <div class="field-group col-12">
+                <label for="shift-has-meal" class="meal-toggle-card"
+                  [class.meal-toggle-card--active]="shiftForm.get('hasMealBreak')?.value">
+                  <input type="checkbox" id="shift-has-meal" class="meal-toggle-checkbox" formControlName="hasMealBreak" />
+                  <span class="meal-toggle-text">Habilitar Horario de Comida Programado para este turno</span>
                 </label>
               </div>
 
@@ -706,7 +743,7 @@
                 <label class="field-label" for="shift-meal-early-pause">
                   Anticipación de Pausa RF <span class="required-star">*</span>
                 </label>
-                <select id="shift-meal-early-pause" class="field-input" formControlName="mealEarlyPauseMinutes">
+                <select id="shift-meal-early-pause" class="field-select" formControlName="mealEarlyPauseMinutes">
                   <option [value]="5">5 minutos antes</option>
                   <option [value]="10">10 minutos antes (Recomendado)</option>
                   <option [value]="15">15 minutos antes</option>
@@ -715,16 +752,19 @@
               </div>
 
               <!-- Banner Informativo de Duración y Reglas de Montacargas -->
-              <div class="col-12"
-                style="background: rgba(37, 99, 235, 0.07); border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 8px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; font-size: 0.85rem; color: #1e3a8a;">
-                <span class="material-symbols-outlined"
-                  style="font-size: 22px; color: #2563eb; flex-shrink: 0; margin-top: 2px;">restaurant</span>
-                <div style="line-height: 1.45;">
-                  <div><strong>Duración estimada de comida:</strong> {{ calculatedMealDuration() }} minutos.</div>
-                  <div style="margin-top: 4px; color: #3b82f6;">
-                    ℹ️ Los operadores y montacarguistas en Terminal RF podrán pausar su misión activa hasta <strong>{{
-                      shiftForm.get('mealEarlyPauseMinutes')?.value || 10 }} minutos antes</strong> del inicio de la
-                    colación para resguardar la unidad con uñas a piso de manera segura.
+              <div class="col-12">
+                <div class="shift-meal-info-banner">
+                  <span class="material-symbols-outlined shift-meal-info-banner__icon">restaurant</span>
+                  <div class="shift-meal-info-banner__body">
+                    <div class="shift-meal-info-banner__title">
+                      <strong>Duración estimada de comida:</strong> {{ calculatedMealDuration() }} minutos.
+                    </div>
+                    <p class="shift-meal-info-banner__desc">
+                      <span class="material-symbols-outlined">info</span>
+                      <span>Los operadores y montacarguistas en Terminal RF podrán pausar su misión activa hasta <strong>{{
+                        shiftForm.get('mealEarlyPauseMinutes')?.value || 10 }} minutos antes</strong> del inicio de la
+                        colación para resguardar la unidad con uñas a piso de manera segura.</span>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -744,7 +784,7 @@
           <div class="users-form-section users-audit-section mt-6 pt-4 border-t border-subtle">
             <!-- Acordeón Header idéntico a Usuarios -->
             <div (click)="toggleShowAuditTimeline()"
-              class="users-audit-accordion-header flex items-center justify-between p-3.5 rounded-xl bg-surface-variant/40 hover:bg-surface-variant/70 border border-subtle cursor-pointer transition-colors shadow-sm">
+              class="users-audit-accordion-header flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-colors shadow-sm">
               <div class="flex items-center gap-2.5">
                 <span class="material-symbols-outlined text-base text-gold text-amber-500">history</span>
                 <span class="text-xs font-bold text-gold uppercase tracking-wider text-amber-500">
@@ -839,7 +879,7 @@
 
                       @if (entry.details && entry.details.length > 0) {
                       <div
-                        class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2.5 rounded-lg bg-surface border border-subtle">
+                        class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2.5 rounded-lg border">
                         @for (d of entry.details; track d.fieldName) {
                         <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
                           <span class="carriers-tl-diff__field font-bold text-slate-700 dark:text-slate-300">{{
