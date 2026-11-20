@@ -201,6 +201,7 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
       hasConflict: boolean;
       daysLabel: string;
       isOvernight: boolean;
+      tone: string;
     }> = [];
 
     shifts.forEach((shift, index) => {
@@ -224,13 +225,11 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
           endTime: '24:00',
           style: {
             left: `${left1}%`,
-            width: `${width1}%`,
-            borderColor: hasConflict ? '#ef4444' : palette.border,
-            backgroundColor: hasConflict ? 'rgba(239, 68, 68, 0.28)' : palette.bg,
-            color: hasConflict ? '#fca5a5' : palette.text
+            width: `${width1}%`
           },
           hasConflict,
           daysLabel,
+          tone: palette.tone,
           isOvernight: true
         });
 
@@ -247,13 +246,11 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
           endTime: this.formatShortTime(shift.endTime),
           style: {
             left: `${left2}%`,
-            width: `${width2}%`,
-            borderColor: hasConflict ? '#ef4444' : palette.border,
-            backgroundColor: hasConflict ? 'rgba(239, 68, 68, 0.28)' : palette.bg,
-            color: hasConflict ? '#fca5a5' : palette.text
+            width: `${width2}%`
           },
           hasConflict,
           daysLabel,
+          tone: palette.tone,
           isOvernight: true
         });
       } else {
@@ -270,13 +267,11 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
           endTime: this.formatShortTime(shift.endTime),
           style: {
             left: `${left}%`,
-            width: `${width}%`,
-            borderColor: hasConflict ? '#ef4444' : palette.border,
-            backgroundColor: hasConflict ? 'rgba(239, 68, 68, 0.28)' : palette.bg,
-            color: hasConflict ? '#fca5a5' : palette.text
+            width: `${width}%`
           },
           hasConflict,
           daysLabel,
+          tone: palette.tone,
           isOvernight: false
         });
       }

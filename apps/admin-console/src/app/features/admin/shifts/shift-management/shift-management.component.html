@@ -166,8 +166,14 @@
 
           <!-- Barras de Turnos -->
           <div class="timeline-bars-container">
+            @if (timelineSegments().length === 0) {
+            <div class="timeline-empty-state">
+              <span class="material-symbols-outlined text-sm text-amber-500">info</span>
+              <span>Sin turnos operativos registrados para graficar en el cronograma</span>
+            </div>
+            }
             @for (seg of timelineSegments(); track seg.id + '-' + seg.startTime) {
-            <div class="timeline-shift-bar" [ngStyle]="seg.style" (click)="onSelectShift(seg.id)"
+            <div class="timeline-shift-bar" [ngStyle]="seg.style" [attr.data-tone]="seg.tone" (click)="onSelectShift(seg.id)"
               [class.timeline-shift-bar--selected]="shiftService.selectedShiftId() === seg.id"
               [class.timeline-shift-bar--conflict]="seg.hasConflict"
               [title]="seg.name + ' (' + seg.code + '): ' + seg.startTime + ' - ' + seg.endTime + ' [' + seg.daysLabel + ']'">
