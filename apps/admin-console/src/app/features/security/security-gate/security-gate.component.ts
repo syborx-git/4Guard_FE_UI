@@ -416,7 +416,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
       const ws = (p.warehouseStatus || '').toUpperCase();
       if (ws === 'CANCELLED') continue;
-      const isReady = p.isReadyForExit === true || ws === 'COMPLETED' || ws === 'DISPATCHED' || p.status === 'READY_FOR_EXIT';
+      const isPreCompletion = ['REGISTERED', 'PENDING', 'ASSIGNED', 'IN_PROGRESS', 'PAUSED', 'DRAFT', 'DISCHARGED', 'LOADED'].includes(ws);
+      const isReady = !isPreCompletion && (p.isReadyForExit === true || ws === 'COMPLETED' || ws === 'DISPATCHED' || p.status === 'READY_FOR_EXIT');
       const timeVal = p.receptionTime || p.horaEntrada || (p.createdAt ? this.formatTimeString(p.createdAt) : this.getCurrentTimeString());
       mergedMap.set(key, {
         ...p,
@@ -446,11 +447,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         }
         const isCompleted = (r.status as string) === 'COMPLETED';
         if (isCompleted || r.status !== existing.warehouseStatus) {
+          const rStatus = (r.status as string || '').toUpperCase();
+          const isPreCompletion = ['REGISTERED', 'PENDING', 'ASSIGNED', 'IN_PROGRESS', 'PAUSED', 'DRAFT', 'DISCHARGED', 'LOADED'].includes(rStatus);
           mergedMap.set(key, {
             ...existing,
             warehouseStatus: r.status,
             status: isCompleted ? 'COMPLETED' : existing.status,
-            isReadyForExit: isCompleted || existing.isReadyForExit,
+            isReadyForExit: isCompleted || (!isPreCompletion && existing.isReadyForExit),
             cancellationReason: r.cancellationReason || existing.cancellationReason,
             cancelledBy: r.cancelledBy || existing.cancelledBy,
             rampNumber: r.checkIn?.rampNumber ?? existing.rampNumber,
@@ -526,11 +529,13 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
         }
         const isCompleted = (o.status as string) === 'COMPLETED';
         if (isCompleted || o.status !== existing.warehouseStatus) {
+          const oStatus = (o.status as string || '').toUpperCase();
+          const isPreCompletion = ['REGISTERED', 'PENDING', 'ASSIGNED', 'IN_PROGRESS', 'PAUSED', 'DRAFT', 'DISCHARGED', 'LOADED'].includes(oStatus);
           mergedMap.set(key, {
             ...existing,
             warehouseStatus: o.status,
             status: isCompleted ? 'COMPLETED' : existing.status,
-            isReadyForExit: isCompleted || existing.isReadyForExit,
+            isReadyForExit: isCompleted || (!isPreCompletion && existing.isReadyForExit),
             rampNumber: o.rampNumber ?? existing.rampNumber,
             rampCode: this.getFormattedRampLabel(o.rampCode ?? existing.rampCode, o.rampNumber ?? existing.rampNumber)
           });
