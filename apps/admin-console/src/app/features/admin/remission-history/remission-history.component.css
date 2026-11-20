@@ -21,8 +21,9 @@
   --bg-hover: #f1f5f9;
 
   --border-card: rgba(76, 86, 105, 0.14);
-  --border-card-gold: rgba(197, 168, 107, 0.35);
+  --border-card-gold: rgba(197, 168, 107, 0.32);
   --border-subtle: rgba(76, 86, 105, 0.18);
+  --radius-xl: 18px;
 
   --text-primary: #1c2940;
   --text-secondary: #5a6477;
@@ -43,7 +44,7 @@
   --c-info: #2d7dd2;
   --c-info-bg: rgba(45, 125, 210, 0.10);
 
-  --shadow-card: 0 8px 24px rgba(36, 44, 58, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --shadow-card: 0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   --shadow-hover: 0 14px 32px rgba(197, 168, 107, 0.22), 0 4px 12px rgba(23, 32, 51, 0.06);
 
   background: var(--bg-page-grad);
@@ -59,7 +60,7 @@
   --bg-page: #0b1119;
   --bg-page-grad: radial-gradient(circle at 90% 5%, rgba(208, 175, 103, 0.06), transparent 32rem), #0b1119;
   --bg-card: rgba(17, 26, 38, 0.96);
-  --bg-card-exec: linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --bg-card-exec: linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --bg-subtle: rgba(255, 255, 255, 0.05);
   --bg-hover: rgba(23, 35, 50, 0.98);
 
@@ -86,7 +87,7 @@
   --c-info: #77a8df;
   --c-info-bg: rgba(96, 165, 250, 0.15);
 
-  --shadow-card: 0 16px 36px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(208, 175, 103, 0.18);
+  --shadow-card: 0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-hover: 0 20px 48px rgba(0, 0, 0, 0.65), 0 0 24px rgba(208, 175, 103, 0.22);
 }
 
@@ -283,10 +284,10 @@
   align-items: center;
   gap: 0.85rem;
   padding: 1rem 1.15rem;
-  border-radius: 16px;
+  border-radius: var(--radius-xl, 18px);
   background: var(--bg-card-exec);
-  border: 1px solid var(--border-card-gold);
-  border-top: 3.5px solid var(--gold);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   box-shadow: var(--shadow-card);
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
@@ -389,10 +390,10 @@
   flex-direction: column;
   gap: 0.9rem;
   padding: 1.15rem 1.25rem;
-  border-radius: 18px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card-gold);
-  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   box-shadow: var(--shadow-card);
 }
 
@@ -611,10 +612,10 @@
 
 /* ── TABLA DE HISTORIAL EJECUTIVA ────────────────────────────────────────── */
 .history-table-card {
-  border-radius: 18px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card-gold);
-  border-top: 3.5px solid var(--gold);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   box-shadow: var(--shadow-card);
   overflow: hidden;
 }

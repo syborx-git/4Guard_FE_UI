@@ -302,6 +302,7 @@ h1, h2, h3, h4, h5, h6 {
   --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
 
   --radius-card:    18px;
+  --radius-xl:      18px;
   --radius-input:   10px;
   --radius-badge:   99px;
   --radius-btn:     10px;
@@ -320,11 +321,11 @@ h1, h2, h3, h4, h5, h6 {
   --bg-page:        #080e18;
   --bg-card:        rgba(15, 23, 42, 0.95);
   --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
-  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --bg-subtle:      rgba(255, 255, 255, 0.04);
   --border-subtle:  rgba(255, 255, 255, 0.08);
   --border-card:    rgba(255, 255, 255, 0.10);
-  --shadow-card:    0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
   --text-primary:   #f8fafc;
   --text-secondary: #cbd5e1;
@@ -525,16 +526,19 @@ h1, h2, h3, h4, h5, h6 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem 0.75rem;
   padding: 0.6rem 0.85rem;
-  border-radius: var(--radius-xl, 14px);
-  background: var(--gold-bg);
-  border: 1.5px solid var(--gold-border);
-  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .caseta-summary-card,
 :host-context(.dark) .caseta-summary-card {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.35);
+  background: var(--bg-card-exec);
+  border-color: var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 .caseta-summary-item {
@@ -646,16 +650,19 @@ h1, h2, h3, h4, h5, h6 {
    ───────────────────────────────────────────────────────────── */
 .tarimas-table-wrapper {
   overflow-x: auto;
-  border-radius: 0.75rem;
-  border: 1.5px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  background: #ffffff;
+  border-radius: var(--radius-xl, 18px);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
+  background: var(--bg-card-exec);
 }
 
 :host-context(.theme-dark) .tarimas-table-wrapper,
 :host-context(.dark) .tarimas-table-wrapper {
-  border-color: #334155;
-  background: #0f172a;
+  border-color: var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
 }
 
 .tarimas-table {
@@ -1785,9 +1792,10 @@ h1, h2, h3, h4, h5, h6 {
 .carriers-directory {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  background: var(--bg-card);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(20px);
   overflow: hidden;

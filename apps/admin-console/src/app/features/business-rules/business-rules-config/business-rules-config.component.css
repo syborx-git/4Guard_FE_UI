@@ -408,10 +408,10 @@
    ════════════════════════════════════════════════════════════ */
 .br-filters-section {
   padding: 1.1rem 1.35rem;
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
-  background: var(--bg-card-exec, var(--bg-card));
+  background: var(--bg-card-exec);
   box-shadow: var(--shadow-card);
   flex-shrink: 0;
 }
@@ -509,10 +509,10 @@
   flex-direction: column;
   max-height: 860px;
   overflow: hidden;
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
-  background: var(--bg-card-exec, var(--bg-card));
+  background: var(--bg-card-exec);
   box-shadow: var(--shadow-card);
 }
 
@@ -573,9 +573,11 @@
   display: flex;
   flex-direction: column;
   padding: 0.9rem 1rem;
-  border: 1px solid var(--border-card-gold, var(--gold-border, rgba(92, 104, 122, 0.12)));
-  border-radius: 14px;
-  background: var(--bg-card, #ffffff);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
   transition: transform 180ms var(--ease), border-color 180ms, box-shadow 180ms;
 }
@@ -888,10 +890,10 @@
 .br-form-panel {
   display: flex;
   flex-direction: column;
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
-  background: var(--bg-card-exec, var(--bg-card));
+  background: var(--bg-card-exec);
   box-shadow: var(--shadow-card);
   overflow: hidden;
 }
@@ -1062,9 +1064,11 @@
 .br-section {
   margin: 0;
   padding: 1.25rem 1.4rem 1.4rem;
-  border: 1px solid rgba(92, 104, 122, 0.12);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.85);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
 }
 
 .br-section__legend {
@@ -1431,8 +1435,10 @@
 :host-context(.dark) .br-filters-section,
 :host-context(.dark) .br-catalog-panel,
 :host-context(.dark) .br-form-panel {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: linear-gradient(135deg, rgba(21, 31, 52, 0.98), rgba(18, 27, 46, 0.97));
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .br-catalog-header,
@@ -1459,11 +1465,17 @@
 }
 
 :host-context(.theme-dark) .br-rule-card,
-:host-context(.theme-dark) .br-scope-card,
 :host-context(.theme-dark) .br-section,
 :host-context(.dark) .br-rule-card,
-:host-context(.dark) .br-scope-card,
 :host-context(.dark) .br-section {
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
+}
+
+:host-context(.theme-dark) .br-scope-card,
+:host-context(.dark) .br-scope-card {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(27, 39, 63, 0.96);
 }

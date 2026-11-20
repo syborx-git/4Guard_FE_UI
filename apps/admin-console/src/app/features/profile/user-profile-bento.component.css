@@ -1,1 +1,64 @@
-/* Estilos CSS vacíos - todo se gestiona con Tailwind en el HTML según las especificaciones */
+/* ════════════════════════════════════════════════════════════════
+   PERFIL DE USUARIO (BENTO) — ESTÁNDAR TARJETA EJECUTIVA 4GUARD WMS
+   Soporte completo Modo Claro & Modo Oscuro (.theme-dark / .dark)
+   ════════════════════════════════════════════════════════════════ */
+
+:host {
+  --gold:             #c5a86b;
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+  --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --shadow-card:      0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --radius-xl:        18px;
+
+  display: block;
+  width: 100%;
+}
+
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --gold:             #d0af67;
+  --border-card-gold: rgba(208, 175, 103, 0.28);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.profile-exec-card {
+  background: var(--bg-card-exec) !important;
+  border: 1.5px solid var(--border-card-gold) !important;
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+:host-context(.theme-dark) .profile-exec-card,
+:host-context(.dark) .profile-exec-card {
+  background: var(--bg-card-exec) !important;
+  border: 1.5px solid var(--border-card-gold) !important;
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+/* Contraste de texto en Modo Claro sobre superficie Tarjeta Ejecutiva */
+.profile-exec-card .text-white {
+  color: #1c2940;
+}
+
+.profile-exec-card .text-gray-300,
+.profile-exec-card .text-gray-400 {
+  color: #5a6477;
+}
+
+:host-context(.theme-dark) .profile-exec-card .text-white,
+:host-context(.dark) .profile-exec-card .text-white {
+  color: #ffffff;
+}
+
+:host-context(.theme-dark) .profile-exec-card .text-gray-300,
+:host-context(.dark) .profile-exec-card .text-gray-300 {
+  color: #d1d5db;
+}
+
+:host-context(.theme-dark) .profile-exec-card .text-gray-400,
+:host-context(.dark) .profile-exec-card .text-gray-400 {
+  color: #9ca3af;
+}

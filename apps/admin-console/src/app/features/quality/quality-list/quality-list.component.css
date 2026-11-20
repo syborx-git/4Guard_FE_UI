@@ -14,12 +14,21 @@
 
   /* ── Fallback Tokens Ejecutivos ── */
   --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
-  --border-card-gold: rgba(197, 168, 107, 0.35);
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+  --shadow-card:      0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   --gold:             #c5a86b;
   --gold-bg:          rgba(197, 168, 107, 0.10);
   --gold-border:      rgba(197, 168, 107, 0.28);
   --shadow-hover:     0 16px 40px rgba(197, 168, 107, 0.22);
   --radius-xl:        18px;
+}
+
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --gold:             #d0af67;
+  --border-card-gold: rgba(208, 175, 103, 0.28);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* ── PROTECCIÓN GLOBAL DE FUENTE DE ICONOS MATERIAL SYMBOLS ─────────── */
@@ -152,9 +161,9 @@
 }
 
 .qm-kpi-card {
-  background: var(--bg-card-exec, var(--bg-card, rgba(255, 255, 255, 0.95)));
-  border: 1.5px solid var(--border-card-gold, var(--gold-border, rgba(197, 168, 107, 0.35)));
-  border-top: 3.5px solid var(--gold, #c5a86b);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   padding: 1rem 1.15rem;
   display: flex;
@@ -162,7 +171,7 @@
   gap: 1rem;
   cursor: pointer;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
   min-height: 82px;
   box-sizing: border-box;
   backdrop-filter: blur(12px);
@@ -426,11 +435,11 @@
    ══════════════════════════════════════════════════════════ */
 .quality-card {
   position: relative;
-  background: var(--bg-card-exec, #ffffff);
-  border: 1.5px solid var(--border-card-gold, var(--gold-border, rgba(197, 168, 107, 0.35)));
-  border-top: 3.5px solid var(--gold, #c5a86b);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -913,10 +922,10 @@ body.theme-dark .quality-page {
 
 :host-context(.theme-dark) .qm-kpi-card,
 :host-context(.dark) .qm-kpi-card {
-  background: var(--bg-card-exec, #111827);
-  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.28));
-  border-top: 3.5px solid var(--gold, #d0af67);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .qm-kpi-card__label,
@@ -968,9 +977,10 @@ body.theme-dark .quality-page {
 
 :host-context(.theme-dark) .quality-card,
 :host-context(.dark) .quality-card {
-  background: var(--bg-card-exec, #111827);
-  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.28));
-  border-top: 3.5px solid var(--gold, #d0af67);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .quality-card__top,

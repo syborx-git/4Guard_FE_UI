@@ -200,12 +200,12 @@
   overflow: hidden;
   cursor: pointer;
   outline: none;
-  border: 1.5px solid var(--border-card-gold, var(--gold-border, rgba(197, 168, 107, 0.28)));
-  border-top: 3.5px solid var(--gold, #c5a86b);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   color: var(--text-primary, #1E293B);
-  background: var(--bg-card-exec, var(--bg-card, #FFFFFF));
-  box-shadow: var(--shadow-card, 0 10px 30px rgba(53, 47, 36, 0.05));
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
   transition: all 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -313,8 +313,10 @@
 
 :host-context(.theme-dark),
 :host-context(.dark) {
-  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --gold:             #d0af67;
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --bg-page:          #0b1119;
   --bg-card:          rgba(17, 26, 38, 0.94);
 }
@@ -338,12 +340,12 @@
 
 :host-context(.theme-dark) .admin-module-card,
 :host-context(.dark) .admin-module-card {
-  background: var(--bg-card-exec, var(--bg-card, rgba(17, 26, 38, 0.94)));
-  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.24));
-  border-top: 3.5px solid var(--gold, #d0af67);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   color: var(--text-primary, #F1F5F9);
-  box-shadow: var(--shadow-card, 0 18px 42px rgba(0, 0, 0, 0.35));
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .admin-module-card:hover,

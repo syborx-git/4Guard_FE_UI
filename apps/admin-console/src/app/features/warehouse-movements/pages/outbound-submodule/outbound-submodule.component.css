@@ -595,6 +595,7 @@ h1, h2, h3, h4, h5, h6 {
   --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
 
   --radius-card:    18px;
+  --radius-xl:      18px;
   --radius-input:   10px;
   --radius-badge:   99px;
   --radius-btn:     10px;
@@ -613,11 +614,11 @@ h1, h2, h3, h4, h5, h6 {
   --bg-page:        #080e18;
   --bg-card:        rgba(15, 23, 42, 0.95);
   --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
-  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --bg-subtle:      rgba(255, 255, 255, 0.04);
   --border-subtle:  rgba(255, 255, 255, 0.08);
   --border-card:    rgba(255, 255, 255, 0.10);
-  --shadow-card:    0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
   --text-primary:   #f1f5f9;
   --text-secondary: #94a3b8;
@@ -748,9 +749,10 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── PANEL IZQUIERDO — DIRECTORIO MASTER ── */
 .outbound-master-panel {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
@@ -938,9 +940,10 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── PANEL DERECHO — WORKBENCH ── */
 .outbound-detail-panel {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   min-height: 560px;
   display: flex;
@@ -1071,17 +1074,20 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: space-between;
   padding: 0.85rem 1.25rem;
-  border: 1px solid var(--border-subtle, #e2e8f0);
-  background: #ffffff;
-  border-radius: 14px;
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
+  border-radius: var(--radius-xl, 18px);
   flex-shrink: 0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .outbound-breadcrumb-bar,
 :host-context(.dark) .outbound-breadcrumb-bar {
-  background: #0f172a;
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--bg-card-exec);
+  border-color: var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 .outbound-breadcrumb-bar__path {
@@ -3457,16 +3463,19 @@ h1, h2, h3, h4, h5, h6 {
   overflow-x: auto;
   max-width: 100%;
   box-sizing: border-box;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.dark) .ua-table-wrapper,
 :host-context(.theme-dark) .ua-table-wrapper {
-  background: #111a2e;
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--bg-card-exec);
+  border-color: var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 .ua-table {
@@ -3582,16 +3591,20 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   gap: 1.25rem;
   padding: 0.9rem 1.4rem;
-  background: #ffffff;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 14px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   margin-top: 0.75rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-card);
 }
 
-:host-context(.dark) .totals-bar {
-  background: #1e293b;
-  border-color: #334155;
+:host-context(.dark) .totals-bar,
+:host-context(.theme-dark) .totals-bar {
+  background: var(--bg-card-exec);
+  border-color: var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 .totals-bar__item {
@@ -3916,16 +3929,20 @@ h1, h2, h3, h4, h5, h6 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
-  background: var(--gold-bg);
-  border: 1.5px solid var(--gold-border);
-  border-radius: var(--radius-xl, 12px);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   padding: 0.65rem 0.85rem;
 }
 
 :host-context(.dark) .caseta-summary-card,
 :host-context(.theme-dark) .caseta-summary-card {
-  background: #0f172a;
-  border-color: #1e293b;
+  background: var(--bg-card-exec);
+  border-color: var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 .caseta-summary-item {

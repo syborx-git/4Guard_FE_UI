@@ -12,7 +12,7 @@
   --bg-card:          rgba(255, 255, 255, 0.92);
   --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --border-card:      rgba(76, 86, 105, 0.10);
-  --border-card-gold: rgba(197, 168, 107, 0.35);
+  --border-card-gold: rgba(197, 168, 107, 0.32);
   --shadow-card:      0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   --shadow-hover:     0 16px 40px rgba(197, 168, 107, 0.22);
   --text-primary:     #1c2940;
@@ -31,7 +31,7 @@
   /* ── Fallback Tokens Dark Mode ── */
   --bg-page:          #0b1119;
   --bg-card:          rgba(17, 26, 38, 0.94);
-  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --border-card:      rgba(255, 255, 255, 0.08);
   --border-card-gold: rgba(208, 175, 103, 0.28);
   --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -55,7 +55,7 @@
 .perf-section {
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   padding: 1.5rem;
   box-shadow: var(--shadow-card);
@@ -128,7 +128,7 @@
 .perf-gate-step-card {
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   padding: 1rem;
   display: flex;
@@ -267,7 +267,7 @@
 .perf-flow-card {
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   padding: 1.15rem;
   display: flex;
@@ -411,7 +411,7 @@
 .perf-dock-stat {
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   padding: 1rem;
   display: flex;
@@ -460,7 +460,7 @@
 .perf-ramp-card {
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   padding: 1rem;
   display: flex;
@@ -477,9 +477,7 @@
 }
 
 :host-context(.theme-dark) .perf-ramp-card,
-:host-context(.dark) .perf-ramp-card {
-  background: rgba(255, 255, 255, 0.02);
-}
+/* En modo oscuro .perf-ramp-card mantiene var(--bg-card-exec) de Tarjeta Ejecutiva */
 
 .perf-ramp-card__header {
   display: flex;

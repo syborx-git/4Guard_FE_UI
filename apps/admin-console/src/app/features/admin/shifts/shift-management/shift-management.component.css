@@ -21,7 +21,7 @@
   --bg-card:             rgba(255, 255, 255, 0.96);
   --bg-card-hover:       #f8fafc;
   --border-card:         rgba(76, 86, 105, 0.12);
-  --shadow-card:         0 12px 32px rgba(36, 44, 58, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.90);
+  --shadow-card:         0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
 
   --text-primary:        #1c2940;
   --text-secondary:      #5a6477;
@@ -92,7 +92,7 @@
   --gold-light:          #e1c47c;
   --gold-bg:             rgba(208, 175, 103, 0.12);
   --gold-border:         rgba(208, 175, 103, 0.28);
-  --border-card-gold:    rgba(208, 175, 103, 0.24);
+  --border-card-gold:    rgba(208, 175, 103, 0.28);
   --bg-card-exec:        linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --bg-card:             rgba(17, 26, 38, 0.94);
   --bg-card-hover:       rgba(23, 35, 50, 0.98);
@@ -608,14 +608,14 @@
   position: sticky;
   top: 1rem;
   max-height: calc(100vh - 110px);
-  background: var(--shift-bg-card);
+  background: var(--bg-card-exec);
   border: 1.5px solid var(--border-card-gold);
-  border-top: 3.5px solid var(--gold);
-  border-radius: var(--radius-xl);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: var(--shift-shadow);
+  box-shadow: var(--shadow-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -883,12 +883,12 @@
 }
 
 .shift-editor__card {
-  background: var(--shift-bg-card);
+  background: var(--bg-card-exec);
   border: 1.5px solid var(--border-card-gold);
-  border-top: 3.5px solid var(--gold);
-  border-radius: var(--radius-xl);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   padding: 0;
-  box-shadow: var(--shift-shadow);
+  box-shadow: var(--shadow-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   display: flex;
@@ -1291,10 +1291,10 @@
 :host-context(.dark) .shift-timeline-card,
 :host(.theme-dark) .shift-timeline-card,
 :host(.dark) .shift-timeline-card {
-  background: var(--bg-card-exec, linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%)) !important;
-  border-color: var(--border-card-gold, rgba(208, 175, 103, 0.24)) !important;
+  background: var(--bg-card-exec) !important;
+  border-color: var(--border-card-gold) !important;
   border-top: 3.5px solid var(--gold, #d0af67) !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-card);
 }
 
 .shift-timeline-card__header {

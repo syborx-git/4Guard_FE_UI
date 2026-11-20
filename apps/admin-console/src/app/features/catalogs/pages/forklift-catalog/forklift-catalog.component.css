@@ -33,9 +33,9 @@
 }
 
 .catalog-card-container {
-  background: var(--bg-card-exec, var(--bg-card, #FFFFFF));
-  border: 1.5px solid var(--border-card-gold, var(--gold-border, #E2E8F0));
-  border-top: 3.5px solid var(--gold, #c5a86b);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   padding: 1.5rem;
   box-shadow: var(--shadow-card);
@@ -198,9 +198,11 @@
 
 .table-wrapper {
   overflow-x: auto;
-  border-radius: 14px;
-  border: 1px solid #E2E8F0;
-  background: #FFFFFF;
+  border-radius: var(--radius-xl, 18px);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
 }
 
 .data-table {
@@ -275,9 +277,9 @@
 
 .modal-card {
   width: 100%;
-  background: var(--bg-card-exec, var(--bg-card, #FFFFFF));
-  border: 1.5px solid var(--border-card-gold, var(--gold-border, #E2E8F0));
-  border-top: 3.5px solid var(--gold, #c5a86b);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   padding: 1.5rem;
   box-shadow: var(--shadow-card);
@@ -326,17 +328,20 @@
 
 :host-context(.theme-dark),
 :host-context(.dark) {
-  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --gold:             #d0af67;
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --bg-page:          #0b1119;
   --bg-card:          rgba(17, 26, 38, 0.94);
 }
 
 :host-context(.theme-dark) .catalog-card-container,
 :host-context(.dark) .catalog-card-container {
-  background: var(--bg-card-exec, var(--bg-card, rgba(17, 26, 38, 0.94)));
-  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.24));
-  border-top: 3.5px solid var(--gold, #d0af67);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
 }
 
@@ -423,8 +428,11 @@
 
 :host-context(.theme-dark) .table-wrapper,
 :host-context(.dark) .table-wrapper {
-  background: rgba(9, 13, 22, 0.6);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .data-table th,
@@ -454,9 +462,10 @@
 
 :host-context(.theme-dark) .modal-card,
 :host-context(.dark) .modal-card {
-  background: var(--bg-card-exec, var(--bg-card, rgba(17, 26, 38, 0.94)));
-  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.24));
-  border-top: 3.5px solid var(--gold, #d0af67);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
 }
 

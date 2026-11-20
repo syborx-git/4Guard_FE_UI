@@ -70,8 +70,8 @@
   --bg-subtle:      rgba(255, 255, 255, 0.04);
   --border-subtle:  rgba(255, 255, 255, 0.08);
   --border-card:    rgba(255, 255, 255, 0.10);
-  --border-card-gold: rgba(208, 175, 103, 0.24);
-  --shadow-card:    0 12px 32px rgba(0, 0, 0, 0.45);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-hover:   0 20px 44px rgba(208, 175, 103, 0.18);
 
   --text-primary:   #f1f5f9;
@@ -251,6 +251,7 @@ h1, h2, h3, h4, h5, h6 {
   gap: 0.35rem;
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
+  border-top: 3.5px solid var(--gold) !important;
   padding: 0.35rem;
   border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04));
@@ -370,7 +371,7 @@ h1, h2, h3, h4, h5, h6 {
 :host-context(.theme-dark) .quality-kpi-card,
 :host-context(.dark) .quality-kpi-card {
   background: var(--bg-card-exec, linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%));
-  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.24)) !important;
+  border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.28)) !important;
   border-top: 3.5px solid var(--gold, #d0af67) !important;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }

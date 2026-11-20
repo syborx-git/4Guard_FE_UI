@@ -18,6 +18,12 @@
   --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
   --font-body:    'Inter', system-ui, sans-serif;
   --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+
+  --gold:             #c5a86b;
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+  --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --shadow-card:      0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --radius-xl:        18px;
 }
 
 *,
@@ -27,16 +33,19 @@
 }
 
 /* ── THEME TOKENS: DARK OBSIDIAN (DEFAULT) ── */
+:host-context(.theme-dark),
+:host-context(.dark),
 .driver-portal.theme-dark {
   --bg-page:        #070c13;
   --bg-container:   #0b1119;
   --bg-header:      linear-gradient(180deg, #162230 0%, #101924 100%);
   --bg-card:        #111a26;
-  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.98) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --bg-card-inner:  #0c131d;
   --bg-input:       #080e16;
   --bdr-main:       rgba(255, 255, 255, 0.09);
   --border-card-gold: rgba(208, 175, 103, 0.28);
+  --gold:           #d0af67;
   --bdr-subtle:     rgba(255, 255, 255, 0.05);
   --bdr-focus:      #d0af67;
 
@@ -65,7 +74,7 @@
   --canvas-bg:      #080e16;
   --canvas-bdr:     rgba(208, 175, 103, 0.35);
   --canvas-guide:   rgba(255, 255, 255, 0.25);
-  --shadow-card:    0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* ── THEME TOKENS: LIGHT (OUTDOOR SUNLIGHT READABLE) ── */
@@ -78,7 +87,8 @@
   --bg-card-inner:  #f8fafc;
   --bg-input:       #ffffff;
   --bdr-main:       #cbd5e1;
-  --border-card-gold: rgba(197, 168, 107, 0.35);
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+  --gold:           #c5a86b;
   --bdr-subtle:     #e2e8f0;
   --bdr-focus:      #b45309;
 
@@ -107,7 +117,7 @@
   --canvas-bg:      #ffffff;
   --canvas-bdr:     #94a3b8;
   --canvas-guide:   #94a3b8;
-  --shadow-card:    0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-card:    0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 /* ── Container Layout ── */
@@ -411,10 +421,10 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  background: var(--bg-card-exec, var(--bg-card));
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold-primary);
-  border-radius: 18px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   padding: 1.25rem;
   box-shadow: var(--shadow-card);
   transition: all 0.25s ease;
@@ -828,9 +838,11 @@
 .seals-card {
   width: 100%;
   box-sizing: border-box;
-  background: var(--bg-card-inner);
-  border: 1px solid var(--bdr-main);
-  border-radius: 14px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   padding: 0.85rem;
   margin-top: 1rem;
 }
@@ -913,9 +925,11 @@
 .checklist-section {
   width: 100%;
   box-sizing: border-box;
-  background: var(--bg-card-inner);
-  border: 1px solid var(--bdr-main);
-  border-radius: 16px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   padding: 1rem;
 }
 
@@ -1073,9 +1087,11 @@
 .signature-box-card {
   width: 100%;
   box-sizing: border-box;
-  background: var(--bg-card-inner);
-  border: 1.5px solid var(--bdr-main);
-  border-radius: 16px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   padding: 1rem;
   margin-bottom: 1rem;
 }
@@ -1201,9 +1217,11 @@
 .declaration-card {
   width: 100%;
   box-sizing: border-box;
-  background: var(--bg-card-inner);
-  border: 1px solid var(--bdr-main);
-  border-radius: 14px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   padding: 0.85rem 1rem;
   margin-bottom: 1.25rem;
 }
@@ -1399,10 +1417,10 @@
 .success-card {
   width: 100%;
   box-sizing: border-box;
-  background: var(--bg-card-exec, var(--bg-card));
-  border: 1.5px solid var(--border-card-gold, var(--emerald-border));
-  border-top: 3.5px solid var(--gold-primary);
-  border-radius: 20px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   padding: 2.2rem 1.4rem;
   text-align: center;
   box-shadow: var(--shadow-card);

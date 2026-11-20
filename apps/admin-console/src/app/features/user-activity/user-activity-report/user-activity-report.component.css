@@ -74,7 +74,8 @@
 /* Dark mode ────────────────────────────────────────────────── */
 :host-context(.theme-dark),
 :host-context(.dark) {
-  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --gold:             #d0af67;
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
@@ -128,18 +129,11 @@
   min-height: 160px;
   padding: 1.55rem 1.85rem;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 26px;
-  background:
-    linear-gradient(
-      112deg,
-      rgba(255, 255, 255, 0.96) 0%,
-      rgba(251, 251, 252, 0.93) 55%,
-      rgba(248, 246, 240, 0.91) 100%
-    );
-  box-shadow:
-    0 10px 30px rgba(25, 35, 55, 0.055),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
   isolation: isolate;
 }
 
@@ -597,7 +591,7 @@
   padding: 0.78rem 0.9rem;
   overflow: hidden;
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   background: var(--bg-card-exec, var(--bg-card));
   box-shadow: var(--shadow-card);
@@ -711,7 +705,7 @@
   margin: 0;
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   overflow: hidden;
@@ -1126,7 +1120,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   background: var(--bg-card-exec, var(--bg-card));
   box-shadow: var(--shadow-card);
@@ -2116,17 +2110,11 @@
 
 .ua-timeline {
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.84);
-  border-radius: 25px;
-  background:
-    linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.96),
-      rgba(249, 250, 251, 0.94)
-    );
-  box-shadow:
-    0 12px 30px rgba(23, 32, 51, 0.065),
-    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
   animation: pageIn 240ms var(--ease) both;
 }
 
@@ -2342,17 +2330,11 @@
   gap: 0.54rem;
   padding: 1rem 1.1rem;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.88);
-  border-radius: 15px;
-  background:
-    linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.99),
-      rgba(251, 251, 252, 0.96)
-    );
-  box-shadow:
-    0 5px 16px rgba(23, 32, 51, 0.045),
-    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
   transition:
     border-color 180ms var(--ease),
@@ -2867,17 +2849,10 @@
 
 :host-context(.theme-dark) .ua-hero ,
 :host-context(.dark) .ua-hero {
-  border-color: rgba(255, 255, 255, 0.07);
-  background:
-    linear-gradient(
-      112deg,
-      rgba(22, 31, 51, 0.98) 0%,
-      rgba(18, 27, 46, 0.97) 55%,
-      rgba(30, 34, 45, 0.96) 100%
-    );
-  box-shadow:
-    0 14px 34px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .ua-hero::before ,
@@ -2967,16 +2942,10 @@
 
 :host-context(.theme-dark) .ua-kpi-card ,
 :host-context(.dark) .ua-kpi-card {
-  border-color: rgba(255, 255, 255, 0.065);
-  background:
-    linear-gradient(
-      135deg,
-      rgba(22, 31, 51, 0.98),
-      rgba(19, 28, 47, 0.96)
-    );
-  box-shadow:
-    0 7px 18px rgba(0, 0, 0, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .ua-kpi-card:hover ,
@@ -3120,16 +3089,10 @@
 
 :host-context(.theme-dark) .ua-table-container ,
 :host-context(.dark) .ua-table-container {
-  border-color: rgba(255, 255, 255, 0.065);
-  background:
-    linear-gradient(
-      135deg,
-      rgba(21, 31, 52, 0.99),
-      rgba(18, 27, 46, 0.98)
-    );
-  box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .ua-table__head ,
@@ -3276,16 +3239,10 @@
 
 :host-context(.theme-dark) .ua-tl-item__card ,
 :host-context(.dark) .ua-tl-item__card {
-  border-color: rgba(255, 255, 255, 0.065);
-  background:
-    linear-gradient(
-      135deg,
-      rgba(27, 39, 63, 0.98),
-      rgba(22, 33, 55, 0.97)
-    );
-  box-shadow:
-    0 6px 18px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .ua-tl-item__card:hover ,

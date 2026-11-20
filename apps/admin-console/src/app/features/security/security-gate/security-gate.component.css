@@ -82,7 +82,7 @@
   --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --bg-card-hover:  rgba(23, 35, 50, 0.98);
   --border-card:    rgba(255, 255, 255, 0.08);
-  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --border-subtle:  rgba(255, 255, 255, 0.06);
   --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-hover:   0 20px 44px rgba(208, 175, 103, 0.18);
@@ -423,17 +423,19 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   padding: 0.65rem 1rem;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(254, 252, 246, 0.98) 0%, rgba(250, 244, 230, 0.95) 100%);
-  border: 1.5px solid rgba(197, 168, 107, 0.4);
-  box-shadow: 0 2px 8px rgba(197, 168, 107, 0.08);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.dark) .sec-history-shift-banner,
 :host-context(.theme-dark) .sec-history-shift-banner {
-  background: linear-gradient(135deg, rgba(30, 25, 15, 0.85) 0%, rgba(20, 24, 33, 0.9) 100%);
-  border-color: rgba(208, 175, 103, 0.3);
-  box-shadow: none;
+  background: var(--bg-card-exec);
+  border-color: var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 .sec-history-shift-label {
@@ -487,17 +489,19 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #f8fafc 0%, #fdfbf7 100%);
-  border: 1.5px solid rgba(197, 168, 107, 0.35);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.dark) .sec-history-filter-bar,
 :host-context(.theme-dark) .sec-history-filter-bar {
-  background: rgba(17, 26, 38, 0.85);
-  border-color: rgba(208, 175, 103, 0.25);
-  box-shadow: none;
+  background: var(--bg-card-exec);
+  border-color: var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 .sec-history-range-label {
@@ -770,10 +774,10 @@
   justify-content: center;
   gap: 1.5rem;
   padding: 0.75rem 1.5rem;
-  border-radius: 14px;
+  border-radius: var(--radius-xl, 18px);
   background: var(--bg-card-exec, linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%));
   border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32));
-  border-top: 3px solid var(--gold) !important;
+  border-top: 3.5px solid var(--gold) !important;
   box-shadow: var(--shadow-card, var(--shadow-sm));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -785,9 +789,9 @@
 :host-context(.theme-dark) .security-kpi-summary-bar,
 :host-context(.dark) .security-kpi-summary-bar {
   background: var(--bg-card-exec, linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%)) !important;
-  border-color: var(--border-card-gold, rgba(208, 175, 103, 0.24)) !important;
-  border-top: 3px solid var(--gold, #d0af67) !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.40);
+  border-color: var(--border-card-gold, rgba(208, 175, 103, 0.28)) !important;
+  border-top: 3.5px solid var(--gold, #d0af67) !important;
+  box-shadow: var(--shadow-card);
 }
 
 .security-kpi-summary-item {
@@ -1085,12 +1089,13 @@
   gap: 0.5rem;
   flex-wrap: wrap;
   padding: 0.65rem 0.85rem;
-  border-radius: var(--radius-card);
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
   margin-bottom: 1rem;
   transition: all 0.2s ease;
 }
@@ -1289,10 +1294,11 @@
 .dock-monitor-card {
   margin-top: 1rem;
   padding: 1.15rem 1.25rem;
-  border-radius: 16px;
-  background: #ffffff;
-  border: 1.5px solid rgba(197, 168, 107, 0.28);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
   transition: all 0.25s ease;
 }
 
@@ -1300,9 +1306,10 @@
 :host-context(.theme-dark) .dock-monitor-card,
 :host(.dark) .dock-monitor-card,
 :host(.theme-dark) .dock-monitor-card {
-  background: rgba(15, 23, 42, 0.75);
-  border-color: rgba(255, 255, 255, 0.10);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  background: var(--bg-card-exec);
+  border-color: var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 .dock-monitor-card__header {
@@ -1674,9 +1681,10 @@
   z-index: 20;
   margin-top: 1rem;
   padding: 0.85rem 1.15rem;
-  border-radius: var(--radius-card);
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: var(--shadow-card);
@@ -2014,9 +2022,10 @@ h1, h2, h3, h4, h5, h6 {
    7. UNIDADES EN PLANTA & TARJETAS DE PATIO
    ═════════════════════════════════════════════════════════════════════════════ */
 .unit-yard-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   padding: 1rem 1.25rem;
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
@@ -2042,9 +2051,10 @@ h1, h2, h3, h4, h5, h6 {
 .table-container {
   width: 100%;
   overflow-x: auto;
-  background: var(--table-row-bg);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
 }
@@ -3136,9 +3146,10 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   gap: 0.75rem;
   padding: 1rem 1.15rem;
-  border-radius: var(--radius-card);
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl, 18px);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
   overflow: hidden;

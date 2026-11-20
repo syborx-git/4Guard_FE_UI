@@ -20,6 +20,9 @@
   --gold-light:         #e0c87a;
   --gold-bg:            rgba(197, 168, 107, 0.10);
   --gold-border:        rgba(197, 168, 107, 0.28);
+  --border-card-gold:   rgba(197, 168, 107, 0.32);
+  --bg-card-exec:       linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --radius-xl:          18px;
 
   --success:            #208457;
   --success-dark:       #136240;
@@ -54,6 +57,8 @@
   --gold-light:         #e1c47c;
   --gold-bg:            rgba(208, 175, 103, 0.12);
   --gold-border:        rgba(208, 175, 103, 0.25);
+  --border-card-gold:   rgba(208, 175, 103, 0.28);
+  --bg-card-exec:       linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
 
   --success:            #67c78b;
   --success-dark:       #4caf70;
@@ -264,7 +269,7 @@
   padding: 28px;
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
 }
@@ -654,9 +659,11 @@
   flex-direction: column;
   padding: 15px;
 
-  background: rgba(248, 249, 250, 0.88);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 14px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
 }
 
 .quad-summary__numbers {

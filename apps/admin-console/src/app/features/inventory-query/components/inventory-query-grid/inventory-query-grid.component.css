@@ -48,6 +48,7 @@
   --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
 
   --radius-card:    18px;
+  --radius-xl:      18px;
   --radius-input:   10px;
   --radius-badge:   99px;
   --radius-btn:     10px;
@@ -59,7 +60,7 @@
 /* ── 2. Tokens — Modo Oscuro (.theme-dark / .dark) ── */
 :host-context(.theme-dark),
 :host-context(.dark) {
-  --border-card-gold: rgba(208, 175, 103, 0.24);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
   --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
 
   --bg-page:        #0b1119;
@@ -262,9 +263,10 @@
   justify-content: space-between;
   gap: 16px;
   padding: 14px 18px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: 16px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -411,7 +413,7 @@
 .iq-table-card {
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   overflow: hidden;
@@ -818,9 +820,11 @@
   align-items: center;
   gap: 10px;
   padding: 8px 14px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   flex-wrap: wrap;
 }
 

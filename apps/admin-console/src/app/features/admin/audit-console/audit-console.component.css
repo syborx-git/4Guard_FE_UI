@@ -18,6 +18,22 @@
   color: var(--text-primary, #172033);
 }
 
+:host-context(.theme-dark),
+:host-context(.dark) {
+  --gold:             #d0af67;
+  --gold-light:       #e1c47c;
+  --gold-bg:          rgba(208, 175, 103, 0.12);
+  --gold-border:      rgba(208, 175, 103, 0.28);
+  --border-card-gold: rgba(208, 175, 103, 0.28);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --bg-page:          #0b1119;
+  --bg-card:          rgba(17, 26, 38, 0.94);
+  --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --text-primary:     #edf1f5;
+  --text-secondary:   #9aa6b4;
+  --text-muted:       #667585;
+}
+
 .audit-page {
   display: flex;
   flex-direction: column;
@@ -128,9 +144,9 @@
   gap: 0.7rem;
   padding: 0.85rem 1rem;
   border-radius: var(--radius-xl, 18px);
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
-  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
   box-shadow: var(--shadow-card);
 }
 
@@ -187,9 +203,9 @@
   gap: 0.75rem;
   padding: 1rem;
   border-radius: var(--radius-xl, 18px);
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
-  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
   box-shadow: var(--shadow-card);
 }
 
@@ -326,9 +342,9 @@
 
 .audit-table-card {
   border-radius: var(--radius-xl, 18px);
-  border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
-  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  background: var(--bg-card-exec);
   box-shadow: var(--shadow-card);
   overflow: hidden;
 }

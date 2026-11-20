@@ -23,6 +23,12 @@
   --color-gold-bg:      rgba(197, 168, 107, 0.10);
   --color-shadow:       0 12px 32px rgba(36, 44, 58, 0.08);
 
+  --gold:               #c5a86b;
+  --border-card-gold:   rgba(197, 168, 107, 0.32);
+  --bg-card-exec:       linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --shadow-card:        0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --radius-xl:          18px;
+
   font-family: var(--font-family, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
   color: var(--color-text-primary);
   background: var(--color-bg-base);
@@ -43,6 +49,11 @@
   --color-gold-light:   #e1c47c;
   --color-gold-bg:      rgba(208, 175, 103, 0.12);
   --color-shadow:       0 16px 36px rgba(0, 0, 0, 0.40);
+
+  --gold:               #d0af67;
+  --border-card-gold:   rgba(208, 175, 103, 0.28);
+  --bg-card-exec:       linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --shadow-card:        0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .rc-console {
@@ -61,13 +72,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  background: var(--color-bg-header);
+  background: var(--bg-card-exec);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border-gold);
-  border-radius: 12px;
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   margin-bottom: 1.5rem;
-  box-shadow: var(--color-shadow);
+  box-shadow: var(--shadow-card);
 }
 
 .rc-header-left {
@@ -204,7 +216,7 @@
 .rc-summary-card {
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   padding: 1.25rem 1.5rem;
   box-shadow: var(--shadow-card);
@@ -265,7 +277,7 @@
 .rc-card {
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   overflow: hidden;
   box-shadow: var(--shadow-card);
@@ -726,11 +738,12 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-gold);
-  border-radius: 12px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   margin-top: 0.5rem;
-  box-shadow: var(--color-shadow);
+  box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }

@@ -114,7 +114,7 @@
   overflow: hidden;
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   animation: kpiPerformanceEnter 0.35s ease both;
@@ -220,12 +220,11 @@
   position: relative;
   min-width: 0;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.76);
-  border: 1px solid var(--border-card);
-  border-radius: 15px;
-  box-shadow:
-    0 7px 20px rgba(36, 44, 58, 0.045),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
@@ -1014,15 +1013,12 @@
    DARK MODE — PERFORMANCE ANALYTICS
    ───────────────────────────────────────────────────────────── */
 
-:host-context(.theme-dark) .kpi-performance-panel {
-  background:
-    linear-gradient(145deg,
-      rgba(22, 27, 38, 0.96),
-      rgba(17, 22, 32, 0.92));
-  border-color: rgba(255, 255, 255, 0.075);
-  box-shadow:
-    0 13px 34px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+:host-context(.theme-dark) .kpi-performance-panel,
+:host-context(.dark) .kpi-performance-panel {
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .kpi-performance-panel::before {
@@ -1035,12 +1031,13 @@
 }
 
 :host-context(.theme-dark) .kpi-threshold-map,
-:host-context(.theme-dark) .kpi-history {
-  background: rgba(255, 255, 255, 0.025);
-  border-color: rgba(255, 255, 255, 0.07);
-  box-shadow:
-    0 8px 22px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+:host-context(.theme-dark) .kpi-history,
+:host-context(.dark) .kpi-threshold-map,
+:host-context(.dark) .kpi-history {
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .kpi-threshold-map:hover,
@@ -1514,9 +1511,10 @@
   min-height: 0;
   padding: 1rem;
   overflow: hidden;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
 }
 
@@ -2009,9 +2007,10 @@
 .kpi-detail {
   display: flex;
   flex-direction: column;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   overflow-y: auto;
   max-height: calc(100vh - 320px);
@@ -2059,13 +2058,11 @@
   position: relative;
   overflow: hidden;
   padding: 1.35rem;
-  background:
-    radial-gradient(circle at 95% 0%,
-      rgba(197, 168, 107, 0.09),
-      transparent 16rem),
-    rgba(255, 255, 255, 0.55);
-  border: 1px solid var(--border-card);
-  border-radius: 16px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
 }
 
 .kpi-executive__status-line {
@@ -2916,9 +2913,11 @@
   align-items: center;
   gap: 0.6rem;
   padding: 0.75rem 1rem;
-  background: rgba(245, 244, 240, 0.5);
-  border: 1px dashed var(--border-card);
-  border-radius: 10px;
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
 }
 
 .kpi-audit-card__icon {
@@ -2961,10 +2960,11 @@
 }
 
 .kpi-dialog {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  box-shadow: 0 24px 64px rgba(23, 32, 51, 0.3);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   padding: 1.75rem;
   max-width: 440px;
   width: 90%;
@@ -3152,14 +3152,20 @@
   border-color: var(--border-card);
 }
 
-:host-context(.theme-dark) .kpi-audit-card {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.08);
+:host-context(.theme-dark) .kpi-audit-card,
+:host-context(.dark) .kpi-audit-card {
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
-:host-context(.theme-dark) .kpi-dialog {
-  background: #161b26;
-  border-color: rgba(255, 255, 255, 0.10);
+:host-context(.theme-dark) .kpi-dialog,
+:host-context(.dark) .kpi-dialog {
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .kpi-overlay {
@@ -3181,6 +3187,13 @@
 }
 
 :host-context(.theme-dark) .kpi-directory,
+:host-context(.dark) .kpi-directory {
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
+}
+
 :host-context(.theme-dark) .kpi-item {
   background: var(--bg-card);
 }
@@ -3199,6 +3212,13 @@
 }
 
 :host-context(.theme-dark) .kpi-executive,
+:host-context(.dark) .kpi-executive {
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
+}
+
 :host-context(.theme-dark) .kpi-control-summary,
 :host-context(.theme-dark) .kpi-insight {
   background: rgba(255, 255, 255, 0.025);
@@ -3228,7 +3248,7 @@
   overflow: hidden;
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   box-shadow: var(--shadow-card);
   animation: kpiPerformanceEnter 0.35s ease both;
@@ -3334,12 +3354,11 @@
   position: relative;
   min-width: 0;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.76);
-  border: 1px solid var(--border-card);
-  border-radius: 15px;
-  box-shadow:
-    0 7px 20px rgba(36, 44, 58, 0.045),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
@@ -4128,15 +4147,12 @@
    DARK MODE — PERFORMANCE ANALYTICS
    ───────────────────────────────────────────────────────────── */
 
-:host-context(.theme-dark) .kpi-performance-panel {
-  background:
-    linear-gradient(145deg,
-      rgba(22, 27, 38, 0.96),
-      rgba(17, 22, 32, 0.92));
-  border-color: rgba(255, 255, 255, 0.075);
-  box-shadow:
-    0 13px 34px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+:host-context(.theme-dark) .kpi-performance-panel,
+:host-context(.dark) .kpi-performance-panel {
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .kpi-performance-panel::before {
@@ -4149,12 +4165,13 @@
 }
 
 :host-context(.theme-dark) .kpi-threshold-map,
-:host-context(.theme-dark) .kpi-history {
-  background: rgba(255, 255, 255, 0.025);
-  border-color: rgba(255, 255, 255, 0.07);
-  box-shadow:
-    0 8px 22px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+:host-context(.theme-dark) .kpi-history,
+:host-context(.dark) .kpi-threshold-map,
+:host-context(.dark) .kpi-history {
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  box-shadow: var(--shadow-card);
 }
 
 :host-context(.theme-dark) .kpi-threshold-map:hover,

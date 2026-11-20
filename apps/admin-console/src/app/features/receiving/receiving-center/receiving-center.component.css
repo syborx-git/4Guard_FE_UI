@@ -24,6 +24,12 @@
   --ac-gold-bg:     rgba(197, 168, 107, 0.10);
   --ac-gold-glow:   rgba(197, 168, 107, 0.22);
 
+  --gold:             #c5a86b;
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+  --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --shadow-card:      0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --radius-xl:        18px;
+
   --ac-txt-1:       #1c2940;
   --ac-txt-2:       #5a6477;
   --ac-txt-3:       #8b94a3;
@@ -62,6 +68,11 @@
   --ac-gold-bg:     rgba(208, 175, 103, 0.12);
   --ac-gold-glow:   rgba(208, 175, 103, 0.25);
 
+  --gold:             #d0af67;
+  --border-card-gold: rgba(208, 175, 103, 0.28);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+  --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
   --ac-txt-1:       #edf1f5;
   --ac-txt-2:       #9aa6b4;
   --ac-txt-3:       #667585;
@@ -92,6 +103,12 @@
   --ac-gold-lt:     #e0c87a;
   --ac-gold-bg:     rgba(197, 168, 107, 0.10);
   --ac-gold-glow:   rgba(197, 168, 107, 0.22);
+
+  --gold:             #c5a86b;
+  --border-card-gold: rgba(197, 168, 107, 0.32);
+  --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
+  --shadow-card:      0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --radius-xl:        18px;
   --ac-txt-1:       #1c2940;
   --ac-txt-2:       #5a6477;
   --ac-txt-3:       #8b94a3;
@@ -396,9 +413,11 @@
 
 /* Estado Vacío de Recepción Activa */
 .rc-active-empty-card {
-  background: var(--ac-surface);
-  border: 1px dashed var(--ac-border-mid);
-  border-radius: var(--ac-r-lg);
+  background: var(--bg-card-exec);
+  border: 1.5px solid var(--border-card-gold);
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: var(--shadow-card);
   padding: 0.9rem 1.3rem;
 }
 
@@ -442,7 +461,7 @@
 .rc-kpi-card {
   background: var(--bg-card-exec, var(--bg-card));
   border: 1.5px solid var(--border-card-gold, var(--gold-border));
-  border-top: 3.5px solid var(--gold);
+  border-top: 3.5px solid var(--gold) !important;
   border-radius: var(--radius-xl, 18px);
   padding: 1rem 1.1rem;
   display: flex;
