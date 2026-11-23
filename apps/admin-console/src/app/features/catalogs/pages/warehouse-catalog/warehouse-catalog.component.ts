@@ -514,8 +514,27 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   protected readonly svgBays = computed<SvgBayItem[]>(() => {
     const g = this.BAY_GEOMETRY;
     const allPositions = this.allPositions();
-    const simMap = this.layoutService.getSimulatedPositions();
     const result: SvgBayItem[] = [];
+
+    // Mapeo dinámico de recepciones físicas activas y concluidas en el WMS
+    const allReceptions = this.movementsService.receptions();
+    const realPalletLocations = new Map<string, Array<{ skuDescription?: string; lotNumber?: string }>>();
+    for (const rec of allReceptions) {
+      if (rec.status === 'CANCELLED') continue;
+      const pallets = rec.pallets || [];
+      for (const p of pallets) {
+        const loc = (p.locationCode || rec.storageLocation || (rec as any).storageLocationCode || '').trim().toUpperCase();
+        if (loc) {
+          if (!realPalletLocations.has(loc)) {
+            realPalletLocations.set(loc, []);
+          }
+          realPalletLocations.get(loc)!.push({
+            skuDescription: (p as any).productDescription || (p as any).skuName || rec.productName || 'Mercancía en Almacén',
+            lotNumber: p.lotNumber || rec.lotNumber || 'N/A'
+          });
+        }
+      }
+    }
 
     for (const zone of this.zoneBayLayout()) {
       const zoneCode = zone.zoneCode;
@@ -530,18 +549,27 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
           const candidateCode = `POS-${zoneCode}-${posIdx.toString().padStart(3, '0')}`;
           const pos = zonePositions.find(p => p.code.toUpperCase() === candidateCode) || zonePositions[posIdx - 1] || null;
           const codeKey = (pos?.code || candidateCode).toUpperCase();
-          const sim = simMap[codeKey];
 
-          const currentTarimas = sim?.currentTarimas !== undefined
-            ? sim.currentTarimas
-            : (pos?.currentTarimas || 0);
+          // Comprobar ocupación real (desde backend o desde recepciones operativas)
+          const matchingPallets = realPalletLocations.get(codeKey) || [];
+          const realPalletCount = matchingPallets.length;
 
-          const status: PositionStatus = sim?.status
-            ? (sim.status as PositionStatus)
-            : (pos?.status || (currentTarimas > 0 ? 'OCCUPIED' : 'AVAILABLE'));
+          let currentTarimas = pos?.currentTarimas || 0;
+          let skuDescription = pos?.skuDescription || 'Sin Material Asignado';
+          let batchNumber = pos?.batchNumber || 'N/A';
+          let status: PositionStatus = pos?.status || 'AVAILABLE';
 
-          const skuDescription = sim?.skuDescription || pos?.skuDescription || 'Sin Material Asignado';
-          const batchNumber = sim?.batchNumber || pos?.batchNumber;
+          if (realPalletCount > 0) {
+            currentTarimas = Math.max(currentTarimas, realPalletCount);
+            status = 'OCCUPIED';
+            const firstP = matchingPallets[0];
+            if (firstP.skuDescription) skuDescription = firstP.skuDescription;
+            if (firstP.lotNumber) batchNumber = firstP.lotNumber;
+          } else if (currentTarimas === 0) {
+            status = 'AVAILABLE';
+            skuDescription = 'Posición Disponible';
+            batchNumber = 'N/A';
+          }
 
           const bayItem: SvgBayItem = {
             id: pos?.id || `bay-${zoneCode}-${a.aisleCode}-${posIdx}`,
@@ -602,17 +630,8 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
       { code: 'STAGING-R12', x: 235, y: 825, ramp: 12, label: 'R-12' },
     ];
 
-    const allReceptions = this.movementsService.receptions();
-
     for (const r of rampStagingCoords) {
-      // 1. Buscar en simMap (posiciones simuladas en localStorage con normalización flexible)
-      let sim = simMap[r.code] || simMap[`STAGING-R${r.ramp}`];
-      if (!sim) {
-        const foundKey = Object.keys(simMap).find(k => normalizeRampKey(k) === r.code);
-        if (foundKey) sim = simMap[foundKey];
-      }
-
-      // 2. Buscar en recepciones activas en movementsService
+      // Buscar en recepciones activas en movementsService
       const activeRec = allReceptions.find(rec => {
         if (rec.status === 'CANCELLED') return false;
         const normLoc = normalizeRampKey(rec.storageLocation || (rec as any).storageLocationCode);
@@ -622,19 +641,17 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
         return false;
       });
 
-      let currentTarimas = sim?.currentTarimas !== undefined ? sim.currentTarimas : 0;
-      let skuDesc = sim?.skuDescription;
-      let batchNum = sim?.batchNumber;
-      let lastMove = sim?.lastMovement;
+      let currentTarimas = 0;
+      let skuDesc = 'Sin Material Asignado';
+      let batchNum = 'N/A';
+      let lastMove = 'Sin movimientos';
 
       if (activeRec) {
         const recPallets = (activeRec.pallets?.length || (activeRec as any).totalPallets || (activeRec as any).checkIn?.palletsExpected || 14);
-        if (recPallets > currentTarimas) {
-          currentTarimas = recPallets;
-          skuDesc = activeRec.productName || (activeRec as any).skuName || (activeRec as any).checkIn?.productName || 'Mercancía en Descarga';
-          batchNum = activeRec.lotNumber || (activeRec as any).checkIn?.lotNumber || 'LOT-2026';
-          lastMove = `Descarga en progreso (${activeRec.folio || 'REC-WMS'})`;
-        }
+        currentTarimas = recPallets;
+        skuDesc = activeRec.productName || (activeRec as any).skuName || (activeRec as any).checkIn?.productName || 'Mercancía en Descarga';
+        batchNum = activeRec.lotNumber || (activeRec as any).checkIn?.lotNumber || 'LOT-2026';
+        lastMove = `Descarga en progreso (${activeRec.folio || 'REC-WMS'})`;
       }
 
       const status: PositionStatus = (currentTarimas > 0) ? 'OCCUPIED' : 'AVAILABLE';
@@ -933,28 +950,10 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
       b.code.startsWith(`POS-${secCode}-`)
     );
 
-    if (this.isCleanMode()) {
-      if (!bays || bays.length === 0) return 0;
-      const totalOccupied = bays.reduce((acc, b) => acc + (b.currentTarimas || 0), 0);
-      const totalCap = bays.reduce((acc, b) => acc + (b.capacityTarimas || 22), 0) || (sec.capacidadTarimas || 1);
-      return totalCap > 0 ? Math.min(100, Math.round((totalOccupied / totalCap) * 100)) : 0;
-    }
-
-    // Modo normal / demo: si hay bahías con stock, calcular el porcentaje real
-    if (bays && bays.length > 0) {
-      const totalOccupied = bays.reduce((acc, b) => acc + (b.currentTarimas || 0), 0);
-      const totalCap = bays.reduce((acc, b) => acc + (b.capacityTarimas || 22), 0);
-      if (totalCap > 0 && totalOccupied > 0) {
-        return Math.min(100, Math.round((totalOccupied / totalCap) * 100));
-      }
-    }
-
-    const map: Record<string, number> = {
-      'A': 82, 'B': 65, 'C': 78, 'D': 91, 'E': 45, 'F': 88,
-      'G': 72, 'H': 60, 'I': 85, 'J': 68, 'K': 94, 'L': 79, 'M': 50,
-      'SEC-RAMP': 40, 'SEC-ALM': 25
-    };
-    return map[secCode] || 0;
+    if (!bays || bays.length === 0) return 0;
+    const totalOccupied = bays.reduce((acc, b) => acc + (b.currentTarimas || 0), 0);
+    const totalCap = bays.reduce((acc, b) => acc + (b.capacityTarimas || 22), 0) || (sec.capacidadTarimas || 1);
+    return totalCap > 0 ? Math.min(100, Math.round((totalOccupied / totalCap) * 100)) : 0;
   }
 
   protected resetView(): void {

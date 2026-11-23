@@ -230,52 +230,6 @@
               <span>+ Generar Bahías</span>
             </button>
 
-
-            <!-- Botón Limpiar Almacén / Modo en Ceros -->
-            @if (isCleanMode()) {
-              <button
-                type="button"
-                class="px-3 py-1.5 rounded-lg border border-sky-400 bg-sky-950/60 text-sky-300 font-semibold text-xs flex items-center gap-1.5 shadow-sm hover:bg-sky-900/80 transition-all"
-                (click)="toggleCleanMode()"
-                title="Modo Ceros Activo: Solo se pintan los racks recepcionados. Clic para volver a datos demo"
-              >
-                <span class="material-symbols-outlined text-[15px]">cleaning_services</span>
-                <span>Almacén en Ceros (Activo)</span>
-              </button>
-
-              <button
-                type="button"
-                class="px-2.5 py-1.5 rounded-lg border border-red-500/30 bg-red-950/40 text-red-300 font-medium text-xs flex items-center gap-1 hover:bg-red-900/60 transition-all"
-                (click)="resetAllToZero()"
-                title="Borrar todas las recepciones y dejar absolutamente todos los racks en blanco"
-              >
-                <span class="material-symbols-outlined text-[14px]">delete_sweep</span>
-                <span>Vaciar Todo</span>
-              </button>
-            } @else {
-              <button
-                type="button"
-                class="px-3 py-1.5 rounded-lg border border-white/20 bg-slate-800/80 text-slate-200 font-semibold text-xs flex items-center gap-1.5 hover:border-sky-400 hover:text-sky-300 hover:bg-slate-800 transition-all"
-                (click)="resetAllToZero()"
-                title="Poner todos los racks en blanco (0 tarimas) para que se llenen conforme recepciones en vivo"
-              >
-                <span class="material-symbols-outlined text-[15px]">cleaning_services</span>
-                <span>🧹 Iniciar en Ceros (Modo Real)</span>
-              </button>
-            }
-
-            @if (hasSimulatedPositions()) {
-              <button
-                type="button"
-                class="wmap__reset-sim-btn"
-                (click)="resetAllSimulations()"
-                title="Restablecer bahías simuladas a valores originales"
-              >
-                <span class="material-symbols-outlined text-[15px]">restart_alt</span>
-                <span>Restablecer</span>
-              </button>
-            }
-
             <div class="wmap__legend" id="topo-legend" aria-label="Simbología del mapa térmico">
               <span class="wmap__legend-item" title="Bahía totalmente libre (0 tarimas)">
                 <span class="wmap__legend-dot wmap__legend-dot--vacant"></span>Vacío (0 T)

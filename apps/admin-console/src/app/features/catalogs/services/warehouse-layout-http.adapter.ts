@@ -581,46 +581,13 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
       let batchNumber = 'N/A';
       let blockReason: string | undefined = undefined;
 
-      // 1. Posiciones Bloqueadas QM / Cuarentena (ROJO)
-      if (zoneChar === 'F' && i <= 8) {
-        status = 'BLOCKED';
-        currentTarimas = 12;
-        skuDesc = defaultSku;
-        batchNumber = `LOT-2026-F${i.toString().padStart(2, '0')}`;
-        blockReason = i % 2 === 0 ? 'Desviación de Embalaje / Cuarentena QM' : 'Dictamen de Auditoría Pendiente';
-      } else if (i === 6 || (i % 23 === 0 && i < fixedCount - 5)) {
-        status = 'BLOCKED';
-        currentTarimas = 6;
-        skuDesc = defaultSku;
-        batchNumber = `LOT-QM-${zoneChar}${posNum}`;
-        blockReason = 'Retención de Calidad / Cuarentena QM';
-      }
-      // 2. Posiciones Llenas / Alta Densidad 81% - 100% (AZUL ZAFIRO)
-      else if (i % 5 === 0 || i % 7 === 0) {
-        status = 'OCCUPIED';
-        currentTarimas = 22; // 100% Lleno
-        skuDesc = defaultSku;
-        batchNumber = `LOT-2026-${zoneChar}${posNum}`;
-      } else if (i % 9 === 0) {
-        status = 'OCCUPIED';
-        currentTarimas = 20; // 91% Lleno
-        skuDesc = defaultSku;
-        batchNumber = `LOT-2026-${zoneChar}${posNum}`;
-      }
-      // 3. Posiciones con Ocupación Media 31% - 80% (AMARILLO / ÁMBAR)
-      else if (i % 3 === 0 || i % 4 === 0) {
-        status = 'OCCUPIED';
-        currentTarimas = (i % 2 === 0) ? 14 : 11; // 50% - 64% Ocupación
-        skuDesc = defaultSku;
-        batchNumber = `LOT-2026-${zoneChar}${posNum}`;
-      }
-      // 4. Posiciones Libres / Baja Ocupación 0% - 30% (VERDE ESMERALDA)
-      else {
-        status = 'AVAILABLE';
-        currentTarimas = (i % 11 === 0) ? 4 : 0; // 0% - 18% Ocupación
-        skuDesc = (currentTarimas > 0) ? defaultSku : 'Sin Material Asignado';
-        batchNumber = (currentTarimas > 0) ? `LOT-2026-${zoneChar}${posNum}` : 'N/A';
-      }
+      // Topología en Modo Real: todas las posiciones inician disponibles (0 tarimas)
+      // Se llenan dinámicamente conforme se reciben tarimas físicas en el WMS
+      status = 'AVAILABLE';
+      currentTarimas = 0;
+      skuDesc = 'Sin Material Asignado';
+      batchNumber = 'N/A';
+      blockReason = undefined;
 
       list.push({
         id: `pos-${zoneChar.toLowerCase()}-${posNum}`,
@@ -634,15 +601,14 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
         capacityTarimas: 22,
         currentTarimas,
         batchNumber,
-        lastMovement: status === 'BLOCKED' ? 'Bloqueada por Sistema QM' : (status === 'OCCUPIED' ? 'Recepcionado recientemente' : 'Sin movimientos'),
+        lastMovement: 'Sin movimientos',
         blockReason
       });
     }
 
-    // 2. Temporales (con alerta preventiva amarilla si tienen tarimas activas)
+    // 2. Temporales (Buffer)
     for (let i = 1; i <= tempCount; i++) {
       const posNum = i.toString().padStart(2, '0');
-      const hasPallets = (i <= 2 && ['A', 'K', 'M'].includes(zoneChar));
       list.push({
         id: `pos-${zoneChar.toLowerCase()}-t${posNum}`,
         positionNumber: fixedCount + i,
@@ -650,12 +616,12 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
         sectionId: section.id,
         sectionName: section.name,
         category: 'TEMPORARY_BUFFER',
-        skuDescription: hasPallets ? defaultSku : 'Sin Material Asignado',
-        status: hasPallets ? 'OCCUPIED' : 'AVAILABLE',
+        skuDescription: 'Sin Material Asignado',
+        status: 'AVAILABLE',
         capacityTarimas: 22,
-        currentTarimas: hasPallets ? 16 : 0,
-        batchNumber: hasPallets ? `LOT-TEMP-${zoneChar}${posNum}` : 'N/A',
-        lastMovement: hasPallets ? 'Buffer temporal activo (desalojo pendiente)' : 'Sin movimientos'
+        currentTarimas: 0,
+        batchNumber: 'N/A',
+        lastMovement: 'Sin movimientos'
       });
     }
 
@@ -676,23 +642,6 @@ export class WarehouseLayoutHttpAdapter implements WarehouseLayoutRepositoryPort
         lastMovement: 'Sin movimientos'
       });
     }
-
-    try {
-      const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_simulated_bay_positions') : null;
-      if (stored) {
-        const overrides: Record<string, Partial<PositionDetail>> = JSON.parse(stored);
-        for (const item of list) {
-          const over = overrides[item.code.toUpperCase()];
-          if (over) {
-            item.currentTarimas = over.currentTarimas ?? item.currentTarimas;
-            item.skuDescription = over.skuDescription ?? item.skuDescription;
-            item.batchNumber = over.batchNumber ?? item.batchNumber;
-            item.status = (over.status as PositionStatus) ?? item.status;
-            item.lastMovement = over.lastMovement ?? item.lastMovement;
-          }
-        }
-      }
-    } catch {}
 
     return list;
   }
