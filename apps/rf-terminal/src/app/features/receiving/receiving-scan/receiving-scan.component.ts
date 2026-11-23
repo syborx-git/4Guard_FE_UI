@@ -229,10 +229,127 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
   private receptionsPollTimer: any = null;
 
   ngOnInit(): void {
+    this.loadCatalogProducts();
     this.loadReceptions();
     this.receptionsPollTimer = setInterval(() => {
       this.loadReceptions(true);
-    }, 3000);
+    }, 4000);
+  }
+
+  private isUuid(val?: string | null): boolean {
+    if (!val) return false;
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val.trim());
+  }
+
+  private toBackendPalletType(labelOrKey?: string): string {
+    const clean = (labelOrKey || '').trim().toUpperCase();
+    if (!clean) return 'MADERA_ESTANDAR';
+    if (clean.includes('CHEP') && clean.includes('EXP')) return 'TARIMA_CHEP_EXPORTACION';
+    if (clean.includes('CHEP')) return 'TARIMA_CHEP_NACIONAL';
+    if (clean.includes('OWENS') && clean.includes('PLAST')) return 'PLASTICO_NEGRO_OWENS';
+    if (clean.includes('OWENS')) return 'MADERA_OWENS';
+    if (clean.includes('AZUL')) return 'PLASTICO_AZUL';
+    if (clean.includes('PLAST') || clean.includes('PLÁST')) return 'TARIMA_PLASTICO_NEGRO_ESTANDAR';
+    if (clean.includes('SIN') || clean.includes('DISIN') || clean.includes('GRANEL')) return 'SIN_TARIMA';
+    if (
+      [
+        'MADERA_ESTANDAR',
+        'MADERA_OWENS',
+        'TARIMA_CHEP_NACIONAL',
+        'TARIMA_CHEP_EXPORTACION',
+        'PLASTICO_NEGRO_OWENS',
+        'PLASTICO_AZUL',
+        'TARIMA_PLASTICO_NEGRO_ESTANDAR',
+        'SIN_TARIMA',
+      ].includes(clean)
+    ) {
+      return clean;
+    }
+    return 'MADERA_ESTANDAR';
+  }
+
+  private extractRampNumber(raw: any): number {
+    if (typeof raw?.rampNumber === 'number' && raw.rampNumber > 0) return raw.rampNumber;
+    const str = String(raw?.rampCode || raw?.rampName || raw?.checkIn?.rampNumber || '');
+    const m = str.match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : 1;
+  }
+
+  private normalizeReception(raw: any): ReceptionInfo {
+    const rampNum = this.extractRampNumber(raw);
+    const rampCode = raw?.rampCode || `LOC-RAMP-${String(rampNum).padStart(2, '0')}`;
+    const stagingBay =
+      raw?.stagingBay ||
+      raw?.storageLocationCode ||
+      raw?.destinationLocation ||
+      `STAGING-R${String(rampNum).padStart(2, '0')}`;
+    const seals = Array.isArray(raw?.sealNumbers)
+      ? raw.sealNumbers
+      : Array.isArray(raw?.checkIn?.sealNumbers)
+        ? raw.checkIn.sealNumbers
+        : raw?.sealNumber
+          ? [raw.sealNumber]
+          : [];
+    return {
+      ...raw,
+      id: String(raw?.id || ''),
+      folio: String(raw?.folio || raw?.docNumber || 'S/F'),
+      status: String(raw?.status || 'REGISTERED'),
+      clientName: String(raw?.clientName || raw?.checkIn?.client || 'CLIENTE REGISTRADO'),
+      carrierName: String(raw?.carrierName || raw?.carrierLine || raw?.checkIn?.carrierLine || 'TRANSPORTE'),
+      carrierLine: String(raw?.carrierLine || raw?.carrierName || raw?.checkIn?.carrierLine || 'TRANSPORTE'),
+      rampNumber: rampNum,
+      rampCode,
+      driverName: String(raw?.driverName || raw?.checkIn?.driverName || 'OPERADOR'),
+      tractorPlates: String(raw?.tractorPlates || raw?.checkIn?.tractorPlates || 'S/P'),
+      boxPlates: String(raw?.boxPlates || raw?.checkIn?.boxPlates || 'S/P'),
+      sealNumbers: seals,
+      sealNumber: seals[0] || '',
+      sku: raw?.sku || raw?.skuCode || '',
+      productName: raw?.productName || '',
+      lotNumber: raw?.lotNumber || '',
+      totalPieces: Number(raw?.totalPieces || 0),
+      palletsExpected: Number(raw?.palletsExpected || raw?.totalPallets || 24),
+      totalPallets: Number(raw?.totalPallets || 0),
+      stagingBay,
+      pallets: Array.isArray(raw?.pallets) ? raw.pallets : undefined,
+    };
+  }
+
+  private loadCatalogProducts(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const user = this.authState.user() as any;
+    const orgId = user?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+    const params = new HttpParams().set('organizationId', orgId);
+    this.http.get<any>(`${this.apiBaseUrl}/api/v1/catalogs/products`, { params }).subscribe({
+      next: (res) => {
+        const items = res?.data?.content || res?.data || res || [];
+        if (Array.isArray(items) && items.length > 0) {
+          const mapped: ProductSku[] = items.map((p: any) => ({
+            code: String(p.code || p.sku || p.id),
+            name: String(p.name || p.description || 'Producto'),
+            defaultPieces: Number(p.piecesPerPallet || p.defaultPieces || 135),
+          }));
+          const existingCodes = new Set(mapped.map((m) => m.code));
+          const merged = [...mapped, ...CATALOG_PRODUCTS.filter((c) => !existingCodes.has(c.code))];
+          this.products.set(merged);
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  private broadcastWmsEvent(type: string, data: any): void {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('4g_cross_tab_event', JSON.stringify({ type, data, timestamp: Date.now() }));
+        if ('BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('4guard_wms_events');
+          bc.postMessage({ type, data });
+          bc.close();
+        }
+      }
+    } catch {}
   }
 
   ngOnDestroy(): void {
@@ -276,37 +393,41 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
     const params = new HttpParams().set('organizationId', orgId);
 
     this.http.get<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions`, { params }).pipe(
-      timeout(3000)
+      timeout(15000)
     ).subscribe({
       next: (res) => {
         if (!silent) {
           this.isLoadingReceptions.set(false);
         }
-        const list: ReceptionInfo[] = res?.data || res || [];
-        if (Array.isArray(list) && list.length > 0) {
-          // Filtrar las que no estén completadas ni canceladas
+        const rawList: any[] = res?.data?.content || res?.data || res || [];
+        if (Array.isArray(rawList)) {
+          const list = rawList.map((r) => this.normalizeReception(r));
+          // Filtrar las recepciones activas en andén (no completadas ni canceladas)
           const activeRecs = list.filter(
             (r) => r && r.status !== 'COMPLETED' && r.status !== 'CANCELLED'
           );
-          this.receptions.set(activeRecs.length > 0 ? activeRecs : list);
+          this.receptions.set(activeRecs);
 
-          // Si hay una previamente seleccionada, actualizar sus datos; si no, tomar la primera
           const current = this.selectedReception();
-          if (current) {
+          if (current && this.isUuid(current.id)) {
             const fresh = activeRecs.find(
               (r) => r.id === current.id || r.folio === current.folio
             );
             if (fresh) {
-              if (
-                fresh.status !== current.status ||
-                fresh.rampNumber !== current.rampNumber ||
-                (fresh.pallets && fresh.pallets.length !== (current.pallets?.length || 0))
-              ) {
-                this.selectedReception.set(fresh);
+              this.selectedReception.set({
+                ...current,
+                ...fresh,
+                pallets: current.pallets,
+              });
+              // Si el conteo de tarimas en BD cambió externamente y no estamos procesando un escaneo local, sincronizar detalle
+              if (!this.isProcessingScan() && fresh.totalPallets !== this.scannedPallets().length) {
+                this.loadReceptionDetail(current.id, true);
               }
+            } else if (activeRecs.length > 0 && !silent) {
+              this.selectReception(activeRecs[0], silent);
             }
           } else if (activeRecs.length > 0) {
-            this.selectReception(activeRecs[0]);
+            this.selectReception(activeRecs[0], silent);
           }
         }
       },
@@ -314,66 +435,44 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
         if (!silent) {
           this.isLoadingReceptions.set(false);
         }
-        // Fallback operativo inmediato con datos de la sesión
-        const fallback: ReceptionInfo = {
-          id: 'rec-1793679622029-2oih',
-          folio: 'HEHDHDHHD',
-          status: 'REGISTERED',
-          clientName: 'QUALAMEX S.A. DE C.V.',
-          carrierName: 'TRANSPORTE TUM (TUM TRANSPORTES UNIDOS MEXICANOS)',
-          carrierLine: 'TRANSPORTE TUM',
-          rampNumber: 1,
-          rampCode: 'LOC-RAMP-01',
-          driverName: 'CDBDBDB',
-          tractorPlates: 'HEJDHD',
-          boxPlates: 'HDHHDJD',
-          sealNumbers: ['VDBDBHD'],
-          sealNumber: 'VDBDBHD',
-          sku: '8505641',
-          productName: 'ABUELITA TABLETA 24X540G MX',
-          lotNumber: 'LOT-2026-01',
-          totalPieces: 48,
-          palletsExpected: 24,
-          totalPallets: 24,
-          stagingBay: 'STAGING-R01',
-        };
-        if (silent && this.selectedReception()) {
-          return;
-        }
-        this.receptions.set([fallback]);
-        this.selectReception(fallback, silent);
       },
     });
   }
 
   selectReception(rec: ReceptionInfo, silent = false): void {
-    this.selectedReception.set(rec);
+    const normalized = this.normalizeReception(rec);
+    const prev = this.selectedReception();
+    const isSameReception = prev && (prev.id === normalized.id || prev.folio === normalized.folio);
+
+    this.selectedReception.set(normalized);
     this.showReceptionPicker.set(false);
 
     // Precargar datos en los parámetros activos
-    if (rec.sku) {
-      if (!this.products().some((p) => p.code === rec.sku)) {
+    if (normalized.sku) {
+      if (!this.products().some((p) => p.code === normalized.sku)) {
         this.products.update((list) => [
           {
-            code: rec.sku!,
-            name: rec.productName || 'PRODUCTO DE REMISIÓN',
-            defaultPieces: rec.totalPieces && rec.palletsExpected ? Math.round(rec.totalPieces / rec.palletsExpected) : 135,
+            code: normalized.sku!,
+            name: normalized.productName || 'PRODUCTO DE REMISIÓN',
+            defaultPieces:
+              normalized.totalPieces && normalized.palletsExpected
+                ? Math.round(normalized.totalPieces / normalized.palletsExpected)
+                : 135,
           },
           ...list,
         ]);
       }
-      this.onSkuSelected(rec.sku);
-    } else {
-      this.onSkuSelected(this.products()[0]?.code || '8505641');
+      this.onSkuSelected(normalized.sku);
     }
-    if (rec.lotNumber) {
-      this.activeLot.set(rec.lotNumber);
-      if (!this.availableLots().some((l) => l.lotNumber === rec.lotNumber)) {
+
+    if (normalized.lotNumber) {
+      this.activeLot.set(normalized.lotNumber);
+      if (!this.availableLots().some((l) => l.lotNumber === normalized.lotNumber)) {
         this.availableLots.update((lots) => [
           ...lots,
           {
-            lotNumber: rec.lotNumber!,
-            expirationDate: '2027-11-03',
+            lotNumber: normalized.lotNumber!,
+            expirationDate: (rec as any).expirationDate || '2027-11-03',
             shelfLifePct: 90,
             isCompliant: true,
           },
@@ -381,29 +480,122 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Si ya traía pallets en el backend, inicializarlos en el buffer
-    if (Array.isArray(rec.pallets) && rec.pallets.length > 0) {
-      const mapped: ScannedPallet[] = rec.pallets.map((p, idx) => ({
-        id: p.id || `pal-${idx + 1}`,
-        palletNumber: p.palletNumber || idx + 1,
-        palletCode: p.palletCode || p.sscc || `SSCC-1750123450000000${String(idx + 1).padStart(2, '0')}`,
-        sku: p.sku || rec.sku || this.selectedSku(),
-        productName: p.productName || rec.productName || this.selectedProductName(),
-        lotNumber: p.lotNumber || rec.lotNumber || this.activeLot(),
-        expirationDate: p.expirationDate || '2027-11-03',
-        pieces: Number(p.pieces || p.quantity || 135),
-        palletType: p.palletType || this.selectedPalletType(),
-        scannedAt: p.scannedAt || new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-        observations: p.observations || '',
-      }));
-      this.scannedPallets.set(mapped);
-    } else {
+    // Si el resumen ya incluye pallets, mapearlos; si es la misma recepción, NUNCA borrar el buffer local
+    if (Array.isArray(normalized.pallets) && normalized.pallets.length > 0) {
+      this.hydratePalletsFromBackend(normalized.pallets, normalized);
+    } else if (!isSameReception) {
       this.scannedPallets.set([]);
+    }
+
+    // Cargar detalle completo (pallets + lots + parámetros) desde GET /api/v1/warehouse-receptions/{id}
+    if (this.isUuid(normalized.id)) {
+      this.loadReceptionDetail(normalized.id, true);
     }
 
     if (!silent) {
       this.audioService.playSuccess();
       if (navigator.vibrate) navigator.vibrate(30);
+    }
+  }
+
+  private loadReceptionDetail(receptionId: string, preserveLocalUnsaved = true): void {
+    if (!this.isUuid(receptionId)) return;
+    this.http
+      .get<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions/${receptionId}`)
+      .pipe(timeout(15000))
+      .subscribe({
+        next: (res) => {
+          const detail = res?.data || res;
+          if (!detail) return;
+          const normalized = this.normalizeReception(detail);
+          this.selectedReception.set(normalized);
+
+          // Hidratar SKU y piezas por tarima si vienen configurados en la recepción
+          if (normalized.sku) {
+            if (!this.products().some((p) => p.code === normalized.sku)) {
+              this.products.update((list) => [
+                {
+                  code: normalized.sku!,
+                  name: normalized.productName || 'PRODUCTO DE REMISIÓN',
+                  defaultPieces: Number(detail.piecesPerPallet || 135),
+                },
+                ...list,
+              ]);
+            }
+            this.selectedSku.set(normalized.sku);
+            if (normalized.productName) {
+              this.selectedProductName.set(normalized.productName);
+            }
+          }
+          if (detail.piecesPerPallet && Number(detail.piecesPerPallet) > 0) {
+            this.piecesPerPallet.set(Number(detail.piecesPerPallet));
+          }
+
+          // Hidratar lotes reales desde warehouse_reception_lots
+          if (Array.isArray(detail.lots) && detail.lots.length > 0) {
+            const mappedLots: LotItem[] = detail.lots.map((l: any) => ({
+              lotNumber: String(l.lotNumber || '').toUpperCase(),
+              expirationDate: String(l.expirationDate || '2027-11-03'),
+              elaborationDate: l.elaborationDate ? String(l.elaborationDate) : undefined,
+              shelfLifePct: 95,
+              isCompliant: l.shelfLifeStatus !== 'REJECTED_SHELF_LIFE_POLICY',
+            }));
+            this.availableLots.set(mappedLots);
+            if (normalized.lotNumber && mappedLots.some((l) => l.lotNumber === normalized.lotNumber)) {
+              this.activeLot.set(normalized.lotNumber);
+            } else if (mappedLots.length > 0 && !mappedLots.some((l) => l.lotNumber === this.activeLot())) {
+              this.activeLot.set(mappedLots[0].lotNumber);
+            }
+          } else if (normalized.lotNumber) {
+            this.activeLot.set(normalized.lotNumber);
+          }
+
+          // Hidratar tarimas reales desde warehouse_reception_pallets preservando escaneos locales en vuelo
+          if (Array.isArray(detail.pallets)) {
+            this.hydratePalletsFromBackend(detail.pallets, normalized, preserveLocalUnsaved);
+          }
+        },
+        error: () => {},
+      });
+  }
+
+  private hydratePalletsFromBackend(
+    backendPallets: any[],
+    rec: ReceptionInfo,
+    preserveLocalUnsaved = true
+  ): void {
+    const mappedBackend: ScannedPallet[] = backendPallets.map((p, idx) => ({
+      id: String(p.id || `pal-${idx + 1}`),
+      palletNumber: Number(p.palletNumber || idx + 1),
+      palletCode: String(p.palletCode || p.sscc || p.supplierUaCode || '').toUpperCase(),
+      sku: String(p.skuCode || p.sku || rec.sku || this.selectedSku()),
+      productId: String(p.skuCode || p.sku || rec.sku || this.selectedSku()),
+      productName: String(p.productName || rec.productName || this.selectedProductName()),
+      description: String(p.productName || rec.productName || this.selectedProductName()),
+      lotNumber: String(p.lotNumber || rec.lotNumber || this.activeLot()),
+      expirationDate: String(p.expirationDate || this.activeLotExpiration()),
+      pieces: Number(p.pieces ?? p.quantity ?? 135),
+      palletType: String(p.palletTypeLabel || p.palletType || this.selectedPalletType()),
+      palletTypeId: this.toBackendPalletType(p.palletType || this.selectedPalletType()),
+      palletTypeLabel: String(p.palletTypeLabel || p.palletType || this.selectedPalletType()),
+      scannedAt: p.createdAt
+        ? new Date(p.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+        : new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      observations: p.observations || '',
+    }));
+
+    if (preserveLocalUnsaved) {
+      const backendCodes = new Set(mappedBackend.map((b) => b.palletCode.toUpperCase()));
+      const inFlightLocal = this.scannedPallets().filter(
+        (local) => !this.isUuid(local.id) && !backendCodes.has(local.palletCode.toUpperCase())
+      );
+      const combined = [...inFlightLocal, ...mappedBackend].sort(
+        (a, b) => (b.palletNumber || 0) - (a.palletNumber || 0)
+      );
+      this.scannedPallets.set(combined);
+    } else {
+      const sorted = [...mappedBackend].sort((a, b) => (b.palletNumber || 0) - (a.palletNumber || 0));
+      this.scannedPallets.set(sorted);
     }
   }
 
@@ -475,6 +667,26 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
     this.availableLots.update((lots) => [...lots, newLot]);
     this.activeLot.set(rawLot);
     this.closeAddLotModal();
+
+    const rec = this.selectedReception();
+    if (rec && this.isUuid(rec.id)) {
+      this.http
+        .post<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions/${rec.id}/lots`, {
+          lotNumber: rawLot,
+          elaborationDate: elab || null,
+          expirationDate: exp || null,
+          notes: 'Registrado desde Terminal RF en andén',
+        })
+        .subscribe({
+          next: () => {
+            this.broadcastWmsEvent('RECEPTION_LOT_ADDED', { receptionId: rec.id, lotNumber: rawLot });
+          },
+          error: (err) => {
+            const msg = err?.error?.message || 'Error al persistir lote en el servidor.';
+            this.toast.warning(msg);
+          },
+        });
+    }
 
     this.toast.success(`Lote ${rawLot} registrado y asignado como activo.`);
     this.audioService.playSuccess();
@@ -817,42 +1029,87 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
     newPallet: ScannedPallet,
     allPallets: ScannedPallet[]
   ): void {
-    const payload = {
+    if (!this.isUuid(recId)) return;
+
+    const backendPalletType = this.toBackendPalletType(newPallet.palletTypeId || newPallet.palletType);
+    const paramsPayload = {
+      status: 'IN_PROGRESS',
+      skuCode: newPallet.sku,
+      productName: newPallet.productName,
+      lotNumber: newPallet.lotNumber,
+      expirationDate: newPallet.expirationDate || null,
+      piecesPerPallet: newPallet.pieces,
+      palletType: backendPalletType,
+      forkliftOperatorName: this.operatorName(),
+    };
+
+    const palletPayload = {
       pallets: [
         {
           palletNumber: newPallet.palletNumber,
           palletCode: newPallet.palletCode,
           pieces: newPallet.pieces,
-          palletType: newPallet.palletType,
-          palletTypeId: newPallet.palletTypeId || newPallet.palletType,
-          palletTypeLabel: newPallet.palletTypeLabel || newPallet.palletType,
+          palletType: backendPalletType,
           lotNumber: newPallet.lotNumber,
-          expirationDate: newPallet.expirationDate,
-          observations: newPallet.observations,
-          sku: newPallet.sku,
-          productId: newPallet.productId || newPallet.sku,
-          productName: newPallet.productName,
-          description: newPallet.description || newPallet.productName,
+          expirationDate: newPallet.expirationDate || null,
+          observations: newPallet.observations || 'Escaneada desde Terminal RF',
         },
       ],
     };
 
-    // POST a pallets
-    this.http.post<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions/${recId}/pallets`, payload).subscribe({
-      next: () => {},
-      error: () => {},
-    });
+    // 1. Asegurar parámetros y estatus IN_PROGRESS en la recepción y luego persistir la tarima en BD
+    this.http
+      .put<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions/${recId}/parameters`, paramsPayload)
+      .subscribe({
+        next: () => {
+          this.postPalletToBackend(recId, newPallet, palletPayload);
+        },
+        error: () => {
+          // Intentar persistir la tarima aun si parameters devolvió advertencia
+          this.postPalletToBackend(recId, newPallet, palletPayload);
+        },
+      });
+  }
 
-    // PUT a parameters para actualizar totales de recepción en tiempo real
-    const totalPzas = allPallets.reduce((s, p) => s + p.pieces, 0);
-    this.http.put<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions/${recId}/parameters`, {
-      totalPallets: allPallets.length,
-      totalPieces: totalPzas,
-      status: 'IN_PROGRESS',
-    }).subscribe({
-      next: () => {},
-      error: () => {},
-    });
+  private postPalletToBackend(
+    recId: string,
+    localPallet: ScannedPallet,
+    palletPayload: any
+  ): void {
+    this.http
+      .post<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions/${recId}/pallets`, palletPayload)
+      .subscribe({
+        next: (res) => {
+          const savedList: any[] = res?.data || res || [];
+          const match = Array.isArray(savedList)
+            ? savedList.find(
+                (p) =>
+                  String(p.palletCode || '').toUpperCase() === localPallet.palletCode.toUpperCase()
+              ) || savedList[savedList.length - 1]
+            : null;
+          if (match && match.id) {
+            this.scannedPallets.update((list) =>
+              list.map((p) =>
+                p.palletCode.toUpperCase() === localPallet.palletCode.toUpperCase()
+                  ? {
+                      ...p,
+                      id: String(match.id),
+                      palletNumber: Number(match.palletNumber || p.palletNumber),
+                    }
+                  : p
+              )
+            );
+          }
+          this.broadcastWmsEvent('RECEPTION_PALLET_SCANNED', {
+            receptionId: recId,
+            palletCode: localPallet.palletCode,
+          });
+        },
+        error: (err) => {
+          const msg = err?.error?.message || 'No se pudo guardar la tarima en la base de datos.';
+          this.toast.error(msg);
+        },
+      });
   }
 
   // ─── 6. Simulación Rápida de Escaneo ───────────────────────────────────────
@@ -926,8 +1183,27 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
     this.scannedPallets.set(newPallets);
 
     const rec = this.selectedReception();
-    if (rec) {
-      this.syncPalletWithBackend(rec.id, updated, newPallets);
+    if (rec && this.isUuid(rec.id)) {
+      if (this.isUuid(target.id)) {
+        this.http
+          .put<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions/${rec.id}/pallets/${target.id}`, {
+            pieces: updated.pieces,
+            palletType: this.toBackendPalletType(updated.palletType),
+            lotNumber: updated.lotNumber,
+            expirationDate: updated.expirationDate || null,
+            observations: updated.observations,
+          })
+          .subscribe({
+            next: () => {
+              this.broadcastWmsEvent('RECEPTION_PALLET_UPDATED', { receptionId: rec.id, palletId: target.id });
+            },
+            error: (err) => {
+              this.toast.error(err?.error?.message || 'Error al actualizar tarima en el servidor.');
+            },
+          });
+      } else {
+        this.syncPalletWithBackend(rec.id, updated, newPallets);
+      }
     }
 
     this.toast.success(`Tarima #${target.palletNumber} actualizada: ${pieces} pzas • Lote ${updated.lotNumber}`);
@@ -938,6 +1214,19 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
 
   deletePallet(pallet: ScannedPallet): void {
     this.scannedPallets.update((list) => list.filter((p) => p.id !== pallet.id));
+    const rec = this.selectedReception();
+    if (rec && this.isUuid(rec.id) && this.isUuid(pallet.id)) {
+      this.http
+        .delete<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions/${rec.id}/pallets/${pallet.id}`)
+        .subscribe({
+          next: () => {
+            this.broadcastWmsEvent('RECEPTION_PALLET_DELETED', { receptionId: rec.id, palletId: pallet.id });
+          },
+          error: (err) => {
+            this.toast.error(err?.error?.message || 'No se pudo eliminar la tarima en la base de datos.');
+          },
+        });
+    }
     this.toast.info(`Tarima #${pallet.palletNumber} eliminada del andén.`);
     this.audioService.playSuccess();
   }
@@ -968,30 +1257,52 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
 
     const concludePayload = {
       status: 'DISCHARGED',
-      forkliftOperator: op,
       forkliftOperatorName: op,
-      totalPallets: stream.length,
-      totalPieces: totalPzas,
-      pallets: stream.map((p) => ({
-        ...p,
-        productId: p.productId || p.sku,
-        description: p.description || p.productName,
-        palletTypeId: p.palletTypeId || (p.palletType === 'Madera Estándar' ? 'MADERA_ESTANDAR' : p.palletType),
-        palletTypeLabel: p.palletTypeLabel || p.palletType,
-      })),
+      skuCode: this.selectedSku(),
+      productName: this.selectedProductName(),
+      lotNumber: this.activeLot(),
+      expirationDate: this.activeLotExpiration() || null,
+      piecesPerPallet: this.piecesPerPallet(),
+      palletType: this.toBackendPalletType(this.selectedPalletType()),
       observations: `Descarga física concluida en andén desde Terminal RF por ${op}. Turnado a Mesa de Control para Pauta F01.`,
     };
 
-    // Actualizar parámetros y estatus en el Backend
-    this.http.put<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions/${rec.id}/parameters`, concludePayload).subscribe({
-      next: () => {
-        this.finishConcludeSuccess(rec, stream, totalPzas);
-      },
-      error: () => {
-        // Fallback local
-        this.finishConcludeSuccess(rec, stream, totalPzas);
-      },
-    });
+    const unsaved = stream.filter((p) => !this.isUuid(p.id));
+    const finalizeParams = () => {
+      this.http
+        .put<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions/${rec.id}/parameters`, concludePayload)
+        .subscribe({
+          next: (res) => {
+            this.broadcastWmsEvent('RECEPTION_DISCHARGED', res?.data || rec);
+            this.finishConcludeSuccess(rec, stream, totalPzas);
+          },
+          error: (err) => {
+            this.isConcluding.set(false);
+            this.toast.error(err?.error?.message || 'Error al concluir la descarga en el servidor.');
+          },
+        });
+    };
+
+    if (this.isUuid(rec.id) && unsaved.length > 0) {
+      this.http
+        .post<any>(`${this.apiBaseUrl}/api/v1/warehouse-receptions/${rec.id}/pallets`, {
+          pallets: unsaved.map((p) => ({
+            palletNumber: p.palletNumber,
+            palletCode: p.palletCode,
+            pieces: p.pieces,
+            palletType: this.toBackendPalletType(p.palletTypeId || p.palletType),
+            lotNumber: p.lotNumber,
+            expirationDate: p.expirationDate || null,
+            observations: p.observations || 'Escaneada desde Terminal RF',
+          })),
+        })
+        .subscribe({
+          next: () => finalizeParams(),
+          error: () => finalizeParams(),
+        });
+    } else {
+      finalizeParams();
+    }
   }
 
   private finishConcludeSuccess(
