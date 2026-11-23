@@ -1449,6 +1449,13 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
 
   setUom(uom: 'PZA' | 'KG'): void {
     this.activeUom.set(uom);
+    const currentVal = this.altaForm.get('piecesPerPallet')?.value;
+    if (uom === 'PZA' && currentVal != null) {
+      const num = Number(currentVal);
+      if (!isNaN(num) && num > 0 && !Number.isInteger(num)) {
+        this.altaForm.patchValue({ piecesPerPallet: Math.trunc(num) });
+      }
+    }
   }
 
   constructor() {
@@ -4720,7 +4727,16 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       return;
     }
     const num = Number(trimmed);
-    this.altaForm.patchValue({ piecesPerPallet: isNaN(num) ? ('' as any) : num });
+    if (isNaN(num)) {
+      this.altaForm.patchValue({ piecesPerPallet: '' as any });
+      return;
+    }
+    // Si la unidad es PZA, truncar/forzar a número entero
+    if (this.activeUom() === 'PZA') {
+      this.altaForm.patchValue({ piecesPerPallet: Math.trunc(num) });
+    } else {
+      this.altaForm.patchValue({ piecesPerPallet: num });
+    }
   }
 
   clearPalletTypeSelection(): void {
