@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
+import { concatMap, map, of, catchError } from 'rxjs';
 import { ToastService } from '../../../../core/services/toast.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { AuthState } from '../../../../core/auth/auth.state';
@@ -1189,8 +1190,8 @@ export class TransferSubmoduleComponent implements OnInit {
     this.showConfirmModal.set(false);
   }
 
-  // Resuelve determinísticamente el UUID de una bahía para la API del Backend
-  resolveLocationUuid(locCode: string, isDest = false): string {
+  // Resuelve determinísticamente el UUID de una bahía para la API del Backend (o undefined si no existe)
+  resolveLocationUuid(locCode: string, isDest = false): string | undefined {
     const clean = (locCode || '').toUpperCase().trim();
     const loc = this.movementsService.getLocationInfo(clean);
     if (loc?.locationId && /^[0-9a-fA-F-]{36}$/.test(loc.locationId)) {
@@ -1205,10 +1206,7 @@ export class TransferSubmoduleComponent implements OnInit {
     if (found?.locationId && /^[0-9a-fA-F-]{36}$/.test(found.locationId)) {
       return found.locationId;
     }
-    // Fallbacks deterministas válidos a los UUIDs sembrados en wms.locations
-    return isDest
-      ? 'bdeb00c6-5844-49ab-a22d-718ceab8e45f'
-      : '34c6a900-91ad-46ae-b278-0f2edb55190b';
+    return undefined;
   }
 
   // Ejecutar el Cambio de Almacen -- integrado con el Backend
@@ -1254,7 +1252,20 @@ export class TransferSubmoduleComponent implements OnInit {
       totalPieces: this.selectedTotalPieces(),
     };
 
-    this.movementsApi.createTransfer(bePayload).subscribe({
+    this.movementsApi.createTransfer(bePayload).pipe(
+      concatMap((res: any) => {
+        if (res?.id && /^[0-9a-fA-F-]{36}$/.test(res.id)) {
+          return this.movementsApi.completeTransfer(res.id, locDestId).pipe(
+            map((completedRes: any) => ({ ...res, ...completedRes, status: 'COMPLETED' })),
+            catchError((completeErr) => {
+              console.warn('[Transfer] Error completando traspaso en backend (se mantiene creado):', completeErr);
+              return of(res);
+            })
+          );
+        }
+        return of(res);
+      })
+    ).subscribe({
       next: (res: any) => {
         this.isExecuting.set(false);
         this.showConfirmModal.set(false);

@@ -131,8 +131,8 @@ import { AuthState } from '../../../../core/auth/auth.state';
                   <td class="border-r border-black text-center font-bold font-mono" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.palletNumber || (idx + 1) }}</td>
                   <td class="border-r border-black font-bold font-mono text-slate-900 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.palletCode }}</td>
                   <td class="border-r border-black font-mono font-bold text-amber-900 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.lotNumber || 'N/D' }}</td>
-                  <td class="border-r border-black font-mono font-bold whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.productId || '12572733' }}</td>
-                  <td class="border-r border-black font-semibold" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.description || 'ALIMENTO BALANCEADO PURINA' }}</td>
+                  <td class="border-r border-black font-mono font-bold whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.productId || 'S/N' }}</td>
+                  <td class="border-r border-black font-semibold" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.description || 'Mercancía en Traspaso' }}</td>
                   <td class="border-r border-black text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.pieces | number:'1.0-0' }} PZAS</td>
                   <td class="text-center" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">
                     <span class="inline-block bg-emerald-100 text-emerald-800 rounded font-bold" [ngClass]="densityMode === 'ultra-compact' ? 'px-1 py-0 text-[6px]' : 'px-1.5 py-0.5 text-[9px]'">REVERTIDO</span>
@@ -140,15 +140,9 @@ import { AuthState } from '../../../../core/auth/auth.state';
                 </tr>
               </ng-container>
               <ng-template #defaultCancelledRows>
-                <tr *ngFor="let i of [1,2,3,4,5].slice(0, transfer.totalPallets || 5); let idx = index" class="border-b border-slate-200 hover:bg-slate-50">
-                  <td class="border-r border-black text-center font-bold font-mono" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">{{ idx + 1 }}</td>
-                  <td class="border-r border-black font-bold font-mono text-slate-900" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">UA-{{ 104000 + idx + 1 }}</td>
-                  <td class="border-r border-black font-mono font-bold text-amber-900" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">LOT-2026-A</td>
-                  <td class="border-r border-black font-mono font-bold" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">12572733</td>
-                  <td class="border-r border-black font-semibold" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">ALIMENTO BALANCEADO PURINA</td>
-                  <td class="border-r border-black text-right font-black font-mono" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">45 PZAS</td>
-                  <td class="text-center" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">
-                    <span class="inline-block bg-emerald-100 text-emerald-800 rounded font-bold" [ngClass]="densityMode === 'ultra-compact' ? 'px-1 py-0 text-[6px]' : 'px-1.5 py-0.5 text-[9px]'">REVERTIDO</span>
+                <tr>
+                  <td colspan="7" class="text-center italic py-2 text-slate-500 font-semibold" [ngClass]="densityMode === 'ultra-compact' ? 'text-[7px]' : 'text-xs'">
+                    Sin tarimas individuales especificadas en este folio cancelado.
                   </td>
                 </tr>
               </ng-template>
@@ -303,21 +297,17 @@ import { AuthState } from '../../../../core/auth/auth.state';
                   <td class="border-r border-black text-center font-bold font-mono" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.palletNumber || (idx + 1) }}</td>
                   <td class="border-r border-black font-bold font-mono text-slate-900 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.palletCode }}</td>
                   <td class="border-r border-black font-mono font-bold text-amber-900 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.lotNumber || 'N/D' }}</td>
-                  <td class="border-r border-black font-mono font-bold whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.productId || '12572733' }}</td>
-                  <td class="border-r border-black font-semibold" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.description || 'ALIMENTO BALANCEADO PURINA' }}</td>
+                  <td class="border-r border-black font-mono font-bold whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.productId || 'S/N' }}</td>
+                  <td class="border-r border-black font-semibold" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.description || 'Mercancía en Traspaso' }}</td>
                   <td class="border-r border-black uppercase" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6.5px]' : (densityMode === 'compact' ? 'py-0.5 px-1.5 text-[7.5px]' : 'py-1 px-2 text-[9px]')">{{ item.palletTypeLabel || 'Estándar' }}</td>
                   <td class="text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.pieces | number:'1.0-0' }} PZAS</td>
                 </tr>
               </ng-container>
               <ng-template #defaultPallets>
-                <tr *ngFor="let i of [1,2,3,4,5].slice(0, transfer.totalPallets || 5); let idx = index" class="border-b border-slate-200 hover:bg-slate-50">
-                  <td class="border-r border-black text-center font-bold font-mono" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">{{ idx + 1 }}</td>
-                  <td class="border-r border-black font-bold font-mono text-slate-900" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">UA-{{ 104000 + idx + 1 }}</td>
-                  <td class="border-r border-black font-mono font-bold text-amber-900" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">LOT-2026-A</td>
-                  <td class="border-r border-black font-mono font-bold" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">12572733</td>
-                  <td class="border-r border-black font-semibold" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">ALIMENTO BALANCEADO PURINA</td>
-                  <td class="border-r border-black uppercase" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6.5px]' : 'py-1 px-2 text-[9px]'">Estándar</td>
-                  <td class="text-right font-black font-mono" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-1 px-2'">45 PZAS</td>
+                <tr>
+                  <td colspan="7" class="text-center italic py-2 text-slate-500 font-semibold" [ngClass]="densityMode === 'ultra-compact' ? 'text-[7px]' : 'text-xs'">
+                    Sin tarimas individuales especificadas en este folio de traspaso.
+                  </td>
                 </tr>
               </ng-template>
             </tbody>

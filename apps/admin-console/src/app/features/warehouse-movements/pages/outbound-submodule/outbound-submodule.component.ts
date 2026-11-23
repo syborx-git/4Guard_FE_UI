@@ -2362,44 +2362,15 @@ export class OutboundSubmoduleComponent implements OnInit {
       });
     };
 
-    if (cur.id && cur.id.includes('-')) {
-      this.movementsApi.updateOutbound(cur.id, {
-        status: 'ASSIGNED',
-        rampNumber: rampNum,
-        forkliftOperatorId: isUUID(opId) ? opId : undefined,
-        forkliftOperatorName: opName,
-        observations: this.observations() || undefined,
-      }).subscribe({
-        next: () => {
-          this.isAssigningRamp.set(false);
-          const updated = this.svc.assignOutboundRamp(cur.id || cur.folio, rampNum, opId, opName, user, this.observations());
-          if (updated) {
-            this.selectedOutbound.set(updated);
-            this.loadAuditLogs(updated.id || updated.folio);
-            this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
-            notifyCaseta(updated);
-          }
-        },
-        error: () => {
-          this.isAssigningRamp.set(false);
-          const updated = this.svc.assignOutboundRamp(cur.id || cur.folio, rampNum, opId, opName, user, this.observations());
-          if (updated) {
-            this.selectedOutbound.set(updated);
-            this.loadAuditLogs(updated.id || updated.folio);
-            this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
-            notifyCaseta(updated);
-          }
-        }
-      });
+    this.isAssigningRamp.set(false);
+    const updated = this.svc.assignOutboundRamp(cur.id || cur.folio, rampNum, opId, opName, user, this.observations());
+    if (updated) {
+      this.selectedOutbound.set(updated);
+      this.loadAuditLogs(updated.id || updated.folio);
+      this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
+      notifyCaseta(updated);
     } else {
-      this.isAssigningRamp.set(false);
-      const updated = this.svc.assignOutboundRamp(cur.id || cur.folio, rampNum, opId, opName, user, this.observations());
-      if (updated) {
-        this.selectedOutbound.set(updated);
-        this.loadAuditLogs(updated.id || updated.folio);
-        this.toast.success(`Salida #${updated.folio} asignada a Rampa ${rampNum} y despachada a terminal de ${opName}.`);
-        notifyCaseta(updated);
-      }
+      this.toast.error('No se pudo asignar la rampa y operador.');
     }
   }
 
@@ -2511,7 +2482,7 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.toast.info('Tarimas confirmadas manualmente.');
   }
 
-  // Transición: Iniciar Carga y Confirmación Automática para Mesa Administrativa (ASSIGNED -> LOADED)
+  // Transición 2 -> 3: Inicio de Carga en Terminal Montacarguista (ASSIGNED -> IN_PROGRESS)
   startOutboundLoadingAction(): void {
     const cur = this.selectedOutbound();
     if (!cur) return;
@@ -2522,52 +2493,17 @@ export class OutboundSubmoduleComponent implements OnInit {
       return;
     }
 
-    // Auto-marcar todas las tarimas como verificadas para el manifiesto administrativo
-    this.verifiedPalletCodes.update((set) => {
-      const updated = new Set(set);
-      cur.items.forEach((it) => updated.add(it.palletCode || it.id));
-      return updated;
-    });
-
-    const seals = (cur.sealNumber && cur.sealNumber !== 'PENDIENTE_ANDEN' && cur.sealNumber !== 'PENDIENTE' && cur.sealNumber !== 'S/S')
-      ? cur.sealNumber
-      : (this.tempFinishSealNumber()?.trim() || this.sealNumber()?.trim() || cur.sealNumber || 'S/S');
-
     const opName = cur.forkliftOperator || this.authState.userFullName() || 'Montacarguista';
     this.isStartingLoading.set(true);
 
-    if (cur.id && cur.id.includes('-')) {
-      this.movementsApi.updateOutbound(cur.id, {
-        status: 'LOADED',
-        sealNumber: seals,
-      }).subscribe({
-        next: () => {
-          this.isStartingLoading.set(false);
-          const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, cur.items);
-          if (updated) {
-            this.selectedOutbound.set(updated);
-            this.loadAuditLogs(updated.id || updated.folio);
-            this.toast.success(`Solicitud enviada a ${opName}. Carga física completada en Andén ${cur.rampNumber || ''}. Formato F03 listo.`);
-          }
-        },
-        error: () => {
-          this.isStartingLoading.set(false);
-          const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, cur.items);
-          if (updated) {
-            this.selectedOutbound.set(updated);
-            this.loadAuditLogs(updated.id || updated.folio);
-            this.toast.success(`Solicitud enviada a ${opName}. Carga física completada. Formato F03 listo.`);
-          }
-        }
-      });
+    const updated = this.svc.startOutboundLoading(cur.id || cur.folio, opName);
+    this.isStartingLoading.set(false);
+    if (updated) {
+      this.selectedOutbound.set(updated);
+      this.loadAuditLogs(updated.id || updated.folio);
+      this.toast.success(`Carga iniciada en Andén ${cur.rampNumber || ''}. Solicitud enviada a terminal de ${opName}.`);
     } else {
-      this.isStartingLoading.set(false);
-      const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, cur.items);
-      if (updated) {
-        this.selectedOutbound.set(updated);
-        this.loadAuditLogs(updated.id || updated.folio);
-        this.toast.success(`Solicitud enviada a ${opName}. Carga física completada. Formato F03 listo.`);
-      }
+      this.toast.error('No se pudo iniciar la maniobra de carga.');
     }
   }
 
@@ -2596,38 +2532,14 @@ export class OutboundSubmoduleComponent implements OnInit {
     const opName = cur.forkliftOperator || this.authState.userFullName() || 'Montacarguista';
     this.isFinishingLoading.set(true);
 
-    if (cur.id && cur.id.includes('-')) {
-      this.movementsApi.updateOutbound(cur.id, {
-        status: 'LOADED',
-        sealNumber: seals,
-      }).subscribe({
-        next: () => {
-          this.isFinishingLoading.set(false);
-          const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
-          if (updated) {
-            this.selectedOutbound.set(updated);
-            this.loadAuditLogs(updated.id || updated.folio);
-            this.toast.success(`Carga física finalizada para salida #${updated.folio}. Formato F03 listo para emisión.`);
-          }
-        },
-        error: () => {
-          this.isFinishingLoading.set(false);
-          const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
-          if (updated) {
-            this.selectedOutbound.set(updated);
-            this.loadAuditLogs(updated.id || updated.folio);
-            this.toast.success(`Carga física finalizada para salida #${updated.folio}. Formato F03 listo para emisión.`);
-          }
-        }
-      });
+    const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
+    this.isFinishingLoading.set(false);
+    if (updated) {
+      this.selectedOutbound.set(updated);
+      this.loadAuditLogs(updated.id || updated.folio);
+      this.toast.success(`Carga física finalizada para salida #${updated.folio}. Formato F03 listo para emisión.`);
     } else {
-      this.isFinishingLoading.set(false);
-      const updated = this.svc.finishOutboundLoading(cur.id || cur.folio, seals, opName, items);
-      if (updated) {
-        this.selectedOutbound.set(updated);
-        this.loadAuditLogs(updated.id || updated.folio);
-        this.toast.success(`Carga física finalizada para salida #${updated.folio}. Formato F03 listo para emisión.`);
-      }
+      this.toast.error('No se pudo finalizar la carga física.');
     }
   }
 
@@ -2640,43 +2552,16 @@ export class OutboundSubmoduleComponent implements OnInit {
 
     const currentItems = (cur.items && cur.items.length > 0) ? cur.items : this.selectedPalletItems();
 
-    if (cur.id && cur.id.includes('-')) {
-      this.movementsApi.updateOutbound(cur.id, {
-        status: 'COMPLETED',
-      }).subscribe({
-        next: () => {
-          this.isAuthorizingDispatch.set(false);
-          const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser, currentItems);
-          if (updated) {
-            this.selectedOutbound.set(updated);
-            this.lastCompletedOutbound.set(updated);
-            this.loadAuditLogs(updated.id || updated.folio);
-            this.showPrintPromptModal.set(true);
-            this.toast.success(`Salida #${updated.folio} completada y autorizada formalmente.`);
-          }
-        },
-        error: () => {
-          this.isAuthorizingDispatch.set(false);
-          const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser, currentItems);
-          if (updated) {
-            this.selectedOutbound.set(updated);
-            this.lastCompletedOutbound.set(updated);
-            this.loadAuditLogs(updated.id || updated.folio);
-            this.showPrintPromptModal.set(true);
-            this.toast.success(`Salida #${updated.folio} completada y autorizada formalmente.`);
-          }
-        }
-      });
+    const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser, currentItems);
+    this.isAuthorizingDispatch.set(false);
+    if (updated) {
+      this.selectedOutbound.set(updated);
+      this.lastCompletedOutbound.set(updated);
+      this.loadAuditLogs(updated.id || updated.folio);
+      this.showPrintPromptModal.set(true);
+      this.toast.success(`Salida #${updated.folio} completada y autorizada formalmente.`);
     } else {
-      this.isAuthorizingDispatch.set(false);
-      const updated = this.svc.completeOutboundDispatch(cur.id || cur.folio, adminUser, currentItems);
-      if (updated) {
-        this.selectedOutbound.set(updated);
-        this.lastCompletedOutbound.set(updated);
-        this.loadAuditLogs(updated.id || updated.folio);
-        this.showPrintPromptModal.set(true);
-        this.toast.success(`Salida #${updated.folio} completada y autorizada formalmente.`);
-      }
+      this.toast.error('No se pudo autorizar y completar la salida.');
     }
   }
 
@@ -2883,40 +2768,8 @@ export class OutboundSubmoduleComponent implements OnInit {
     this.currentStep.set(1);
   }
 
-  synthesizeItemsForOutbound(outbound: WarehouseOutbound, full?: any): OutboundItem[] {
-    const totalCount = full?.totalPallets || outbound.totalPallets || 1;
-    const totalPzs = full?.totalPieces || outbound.totalPieces || (totalCount * 45);
-    const avgPzs = Math.floor(totalPzs / totalCount);
-    const remPzs = totalPzs % totalCount;
-
-    const clientBatches = this.allBatches().filter(
-      (b) => !outbound.clientName ||
-             (b.client && b.client.toLowerCase().includes(outbound.clientName.toLowerCase())) ||
-             (outbound.clientName && outbound.clientName.toLowerCase().includes(b.client.toLowerCase()))
-    );
-    const defaultBatch = clientBatches.length > 0 ? clientBatches[0] : (this.allBatches()[0] || null);
-
-    const syntheticItems: OutboundItem[] = [];
-    for (let i = 0; i < totalCount; i++) {
-      const b = clientBatches[i % Math.max(1, clientBatches.length)] || defaultBatch;
-      const cleanFolioNum = outbound.folio ? outbound.folio.replace(/\D/g, '') : '2026';
-      syntheticItems.push({
-        id: `synth-item-${outbound.folio || 'sal'}-${i + 1}`,
-        palletNumber: i + 1,
-        palletCode: `UA-4G-${cleanFolioNum}-${String(i + 1).padStart(3, '0')}`,
-        productId: b?.productId || 'SKU-8500297',
-        description: b?.productName || 'PRODUCTO TERMINADO EN TARIMA',
-        lotNumber: b?.lotNumber || `LT-${new Date().getFullYear()}-${String(i + 1).padStart(2, '0')}`,
-        expirationDate: b?.expirationDate || new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().slice(0, 10),
-        pieces: i === 0 ? (avgPzs + remPzs) : avgPzs,
-        palletTypeId: 'ESTANDAR',
-        palletTypeLabel: 'Estándar',
-        inboundRemisionNo: b?.remisionNo || (outbound.remisionNo ? outbound.remisionNo : 'DOC-INICIAL-01'),
-        clientName: outbound.clientName || 'CLIENTE REGISTRADO',
-        locationCode: b?.locationCode || (outbound.rampNumber ? `RAMPA-${outbound.rampNumber}` : 'ANDÉN-01'),
-      });
-    }
-    return syntheticItems;
+  synthesizeItemsForOutbound(_outbound: WarehouseOutbound, _full?: any): OutboundItem[] {
+    return [];
   }
 
   selectOutboundItem(outbound: WarehouseOutbound): void {
@@ -2930,11 +2783,6 @@ export class OutboundSubmoduleComponent implements OnInit {
       );
       if (cached && cached.items.length > 0) {
         initialItems = [...cached.items];
-      } else if (
-        (outbound.status === 'LOADED' || outbound.status === 'COMPLETED') &&
-        (outbound.totalPallets > 0 || (outbound.totalPieces && outbound.totalPieces > 0))
-      ) {
-        initialItems = this.synthesizeItemsForOutbound(outbound);
       }
     }
 
@@ -2983,15 +2831,8 @@ export class OutboundSubmoduleComponent implements OnInit {
             }));
 
             let finalItems = mappedItems;
-            if (finalItems.length === 0) {
-              if (initialOutbound.items && initialOutbound.items.length > 0) {
-                finalItems = initialOutbound.items;
-              } else if (
-                (outbound.status === 'LOADED' || outbound.status === 'COMPLETED') &&
-                ((full.totalPallets && full.totalPallets > 0) || outbound.totalPallets > 0)
-              ) {
-                finalItems = this.synthesizeItemsForOutbound(outbound, full);
-              }
+            if (finalItems.length === 0 && initialOutbound.items && initialOutbound.items.length > 0) {
+              finalItems = initialOutbound.items;
             }
 
             const currentLoggedIn =
@@ -3536,11 +3377,6 @@ export class OutboundSubmoduleComponent implements OnInit {
             resolvedOutbound.items = [...found.items];
           }
         }
-      }
-
-      // Fallback inteligente: Si totalPallets > 0 pero items viene vacío, sintetizar detalle operativo con lotes
-      if ((!resolvedOutbound.items || resolvedOutbound.items.length === 0) && (resolvedOutbound.totalPallets > 0 || (resolvedOutbound.totalPieces && resolvedOutbound.totalPieces > 0))) {
-        resolvedOutbound.items = this.synthesizeItemsForOutbound(resolvedOutbound);
       }
 
       if (resolvedOutbound.items && resolvedOutbound.items.length > 0) {

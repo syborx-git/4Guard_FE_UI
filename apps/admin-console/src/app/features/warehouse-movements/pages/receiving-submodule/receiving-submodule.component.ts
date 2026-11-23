@@ -3074,6 +3074,22 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     );
 
     this.closeEditPalletModal();
+    const currentRec = this.selectedReception();
+    const isUuid = (v?: string | null): v is string => Boolean(v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v));
+
+    if (currentRec?.id && isUuid(currentRec.id) && isUuid(formVals.id)) {
+      this.movementsApi.updatePallet(currentRec.id, formVals.id, {
+        palletCode: newCode,
+        pieces: Number(formVals.pieces) || formVals.pieces,
+        palletType: pType,
+        lotNumber: formVals.lotNumber ? formVals.lotNumber.toUpperCase() : undefined,
+        expirationDate: formVals.expirationDate || undefined,
+        observations: formVals.observations || undefined,
+      }).subscribe({
+        error: (err) => console.warn('[Receiving] Error al actualizar tarima en backend:', err)
+      });
+    }
+
     this.toast.success(`Tarima #${formVals.palletNumber} actualizada.`);
   }
 
@@ -3097,6 +3113,13 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       const updatedRec: ReceptionHeader = { ...currentRec, pallets: list };
       this.selectedReception.set(updatedRec);
       this.movementsService.updateReception(currentRec.folio, updatedRec, true);
+
+      const isUuid = (v?: string) => Boolean(v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v));
+      if (currentRec.id && isUuid(currentRec.id) && isUuid(palletId)) {
+        this.movementsApi.deletePallet(currentRec.id, palletId).subscribe({
+          error: (err) => console.warn('[Receiving] Error al eliminar tarima de backend:', err)
+        });
+      }
     }
 
     this.toast.info('Tarima removida de la descarga');
@@ -3161,6 +3184,19 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       const updatedRec: ReceptionHeader = { ...currentRec, pallets: remaining };
       this.selectedReception.set(updatedRec);
       this.movementsService.updateReception(currentRec.folio, updatedRec, true);
+
+      const isUuid = (v?: string) => Boolean(v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v));
+      if (currentRec.id && isUuid(currentRec.id)) {
+        const toDeleteUuids = list
+          .filter((p) => (isSelective ? selectedIds.has(p.id) : true))
+          .map((p) => p.id)
+          .filter((id) => isUuid(id));
+        for (const pId of toDeleteUuids) {
+          this.movementsApi.deletePallet(currentRec.id, pId).subscribe({
+            error: (err) => console.warn('[Receiving] Error al eliminar tarima masiva de backend:', err)
+          });
+        }
+      }
     }
 
     this.toast.success(
@@ -4029,35 +4065,64 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
         this.toast.error('No se pudo procesar la homologación de UAs.');
       }
     } else if (action === 'MISSING_PALLETS') {
-      const reopened = this.movementsService.reopenReception(
-        current.folio,
-        fullReason,
-        adminLabel,
-        'MISSING_PALLETS'
-      );
+      const isUuid = (v?: string) => Boolean(v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v));
+      const beId = current.id && isUuid(current.id) ? current.id : null;
 
-      this.isReopening.set(false);
-      this.showReopenModal.set(false);
+      const finishReopen = (reopened: any) => {
+        this.isReopening.set(false);
+        this.showReopenModal.set(false);
+        if (reopened) {
+          this.selectReception(reopened);
+          this.palletStream.set(reopened.pallets ? [...reopened.pallets] : []);
+          this.loadAuditLogs(reopened.id || reopened.folio);
+          this.toast.success(`🔓 Recepción #${reopened.folio} reabierta exitosamente. Andén y escaneo habilitados para tarimas adicionales.`);
 
-      if (reopened) {
-        this.selectReception(reopened);
-        this.palletStream.set(reopened.pallets ? [...reopened.pallets] : []);
-        this.loadAuditLogs(reopened.id || reopened.folio);
-        this.toast.success(`🔓 Recepción #${reopened.folio} reabierta exitosamente. Andén y escaneo habilitados para tarimas adicionales.`);
+          this.smartNotification.dispatch({
+            category: 'RECEIVING',
+            title: '🔓 Recepción Reabierta para Captura Complementaria',
+            message: `La recepción #${reopened.folio} ha sido reabierta por ${adminLabel}. Motivo: ${fullReason}. Habilitada para captura de pallets omitidos.`,
+            referenceFolio: reopened.folio,
+            route: '/movements/receiving',
+            targetRoles: ['ADMIN', 'OPERATIONS_SUPERVISOR', 'WAREHOUSE_OPERATOR', 'FORKLIFT_OPERATOR', 'MONTACARGUISTA'],
+            targetRoutes: ['/movements/receiving'],
+            severity: 'WARNING',
+            data: reopened,
+          });
+        } else {
+          this.toast.error('No se pudo procesar la reapertura de la recepción.');
+        }
+      };
 
-        this.smartNotification.dispatch({
-          category: 'RECEIVING',
-          title: '🔓 Recepción Reabierta para Captura Complementaria',
-          message: `La recepción #${reopened.folio} ha sido reabierta por ${adminLabel}. Motivo: ${fullReason}. Habilitada para captura de pallets omitidos.`,
-          referenceFolio: reopened.folio,
-          route: '/movements/receiving',
-          targetRoles: ['ADMIN', 'OPERATIONS_SUPERVISOR', 'WAREHOUSE_OPERATOR', 'FORKLIFT_OPERATOR', 'MONTACARGUISTA'],
-          targetRoutes: ['/movements/receiving'],
-          severity: 'WARNING',
-          data: reopened,
+      if (beId) {
+        this.movementsApi.reopenReception(beId, {
+          adminUsername: user,
+          adminPassword: pass,
+          reason: fullReason,
+        }).subscribe({
+          next: () => {
+            const reopened = this.movementsService.reopenReception(
+              current.folio,
+              fullReason,
+              adminLabel,
+              'MISSING_PALLETS'
+            );
+            finishReopen(reopened);
+          },
+          error: (err: any) => {
+            this.isReopening.set(false);
+            const msg = err.error?.message || err.message || 'Error al reabrir la recepción en el servidor (valida credenciales de supervisor).';
+            this.reopenErrorMessage.set(msg);
+            this.toast.error(msg);
+          }
         });
       } else {
-        this.toast.error('No se pudo procesar la reapertura de la recepción.');
+        const reopened = this.movementsService.reopenReception(
+          current.folio,
+          fullReason,
+          adminLabel,
+          'MISSING_PALLETS'
+        );
+        finishReopen(reopened);
       }
     } else if (action === 'CASETA_DATA') {
       this.isReopening.set(false);

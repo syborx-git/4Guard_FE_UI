@@ -1020,52 +1020,20 @@ export class WarehouseMovementsService {
       next: (receptions: any) => {
         const mapped = (receptions || []).map((r: any) => this.mapReceptionResponseToHeader(r));
         const uniqueMap = new Map<string, ReceptionHeader>();
-        const statusPriority: Record<string, number> = {
-          COMPLETED: 5,
-          DISCHARGED: 4,
-          IN_PROGRESS: 3,
-          ASSIGNED: 2,
-          REGISTERED: 1,
-          CANCELLED: 0,
-        };
 
-        const mergeItem = (r: ReceptionHeader, isFreshBackend = false) => {
+        for (const r of mapped) {
           const key = (r.folio || r.checkIn?.docNumber || r.id || '').trim().toUpperCase();
-          if (!key) return;
-          const existing = uniqueMap.get(key);
-          if (!existing) {
-            uniqueMap.set(key, r);
-            return;
-          }
-
-          const existingPallets = existing.pallets || [];
-          const newPallets = r.pallets || [];
-          const bestPallets = newPallets.length >= existingPallets.length ? newPallets : existingPallets;
-
-          const existingPri = statusPriority[existing.status] ?? 0;
-          const newPri = statusPriority[r.status] ?? 0;
-          const bestStatus = newPri >= existingPri ? r.status : existing.status;
-
-          const merged: ReceptionHeader = isFreshBackend
-            ? { ...existing, ...r, pallets: bestPallets, status: bestStatus }
-            : { ...r, ...existing, pallets: bestPallets, status: bestStatus };
-
-          if (existing.checkIn && r.checkIn) {
-            merged.checkIn = isFreshBackend ? { ...existing.checkIn, ...r.checkIn } : { ...r.checkIn, ...existing.checkIn };
-          }
-
-          uniqueMap.set(key, merged);
-        };
+          if (key) uniqueMap.set(key, r);
+        }
 
         const currentList = this.receptionsSignal();
         for (const r of currentList) {
           if ((r as any)._offlineCreated || (r as any)._pendingSync) {
-            mergeItem(r, false);
+            const key = (r.folio || r.checkIn?.docNumber || r.id || '').trim().toUpperCase();
+            if (key && !uniqueMap.has(key)) {
+              uniqueMap.set(key, r);
+            }
           }
-        }
-
-        for (const r of mapped) {
-          mergeItem(r, true);
         }
 
         const unique = Array.from(uniqueMap.values());
@@ -1179,17 +1147,7 @@ export class WarehouseMovementsService {
   public reloadTransfers(): void {
     this.movementsApi.getTransfers().subscribe({
       next: (transfers: any) => {
-        const purgedAtStr = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_env_purged_at') : null;
-        const purgedAt = purgedAtStr ? Number(purgedAtStr) : 0;
-        let list = (transfers || []).map((t: any) => this.mapTransferResponseToHeader(t));
-        if (purgedAt > 0) {
-          list = list.filter((t: any) => {
-            const raw = (t as any).rawCreatedAt || t.createdAt || t.date;
-            if (!raw) return false;
-            const time = new Date(raw).getTime();
-            return !isNaN(time) && time > purgedAt;
-          });
-        }
+        const list = (transfers || []).map((t: any) => this.mapTransferResponseToHeader(t));
         this.transfersSignal.set(list);
       },
       error: () => { },
@@ -1210,10 +1168,12 @@ export class WarehouseMovementsService {
           }
         }
         for (const o of this.outboundsSignal()) {
-          const key = (o.folio || o.id || '').trim();
-          if (key && !seen.has(key)) {
-            seen.add(key);
-            unique.push(o);
+          if ((o as any)._offlineCreated || (o as any)._pendingSync) {
+            const key = (o.folio || o.id || '').trim();
+            if (key && !seen.has(key)) {
+              seen.add(key);
+              unique.push(o);
+            }
           }
         }
         this.outboundsSignal.set(unique);
@@ -2668,12 +2628,7 @@ export class WarehouseMovementsService {
             lotNumber: p.lotNumber || formVals.lotNumber || null,
             expirationDate: p.expirationDate || formVals.expirationDate || null,
           }));
-          return this.movementsApi.addReceptionPallets(receptionId, palletPayload).pipe(
-            catchError((err: any) => {
-              console.warn('Sync addReceptionPallets warn:', err);
-              return of([]);
-            })
-          );
+          return this.movementsApi.addReceptionPallets(receptionId, palletPayload);
         } else {
           return of([]);
         }
@@ -3065,7 +3020,10 @@ export class WarehouseMovementsService {
         });
         return mapped;
       }),
-      catchError(() => {
+      catchError((err) => {
+        if (isUuid(recId)) {
+          return throwError(() => err);
+        }
         const updated = this.updateReception(
           folioOrId,
           {
@@ -4004,26 +3962,13 @@ export class WarehouseMovementsService {
     // 2. Si es una bahía de staging vinculada a una rampa ocupada activa
     if (code.startsWith('STAGING-R')) {
       const rampNum = parseInt(code.replace('STAGING-R', ''), 10);
-      const activeRamp = this.rampOccupancyStatus().find(
-        (r) => r.rampNumber === rampNum && r.status === 'OCCUPIED_INBOUND'
+      const activeReception = this.receptionsSignal().find(
+        (r) => r.checkIn?.rampNumber === rampNum && r.status !== 'COMPLETED' && r.status !== 'CANCELLED'
       );
-      if (activeRamp) {
-        const palletCount = 14;
-        const pallets: ReceptionPalletItem[] = Array.from({ length: palletCount }, (_, i) => ({
-          id: `pal-${code}-${i + 1}`,
-          palletCode: `UA-RAMP${rampNum}-${(i + 1).toString().padStart(2, '0')}`,
-          palletNumber: i + 1,
-          productId: 'SKU-INB-' + (1000 + i),
-          description: `Mercancía Remisión ${activeRamp.docNumber || 'S/N'} (${activeRamp.carrierName || 'Inbound'})`,
-          lotNumber: 'LOT-RAMP-2026',
-          pieces: 50,
-          grossWeight: 500,
-          locationCode: code,
-          palletTypeId: 'MADERA_ESTANDAR',
-          palletTypeLabel: 'Madera Estándar',
-          supplierName: activeRamp.carrierName || 'Transportista Inbound',
-          docNumber: activeRamp.docNumber || 'REM-INB',
-        }));
+      if (activeReception) {
+        const pallets = activeReception.pallets || [];
+        const palletCount = pallets.length;
+        const totalPieces = pallets.reduce((sum, p) => sum + (p.pieces || 0), 0);
 
         return {
           locationCode: code,
@@ -4034,9 +3979,9 @@ export class WarehouseMovementsService {
           level: 'Piso Andén',
           capacity: 22,
           occupancy: palletCount,
-          availableCapacity: 8,
+          availableCapacity: Math.max(0, 22 - palletCount),
           totalPallets: palletCount,
-          totalPieces: palletCount * 50,
+          totalPieces: totalPieces,
           pallets,
         };
       }

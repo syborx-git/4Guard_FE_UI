@@ -413,23 +413,6 @@ export class WarehouseMovementsApiService {
         const item = res?.data || body;
         this.saveLocalReception(item);
         return item;
-      }),
-      catchError((err) => {
-        console.warn('[WarehouseMovementsApi] Servidor ocupado o sin conexión directa, usando respaldo local:', err);
-        const fallback = {
-          id: body.id || `rec-${Date.now()}`,
-          folio: body.docNumber ? String(body.docNumber).trim() : `REC-4G-${Date.now().toString().slice(-6)}`,
-          status: 'REGISTERED',
-          createdAt: new Date().toISOString(),
-          checkIn: body,
-          client: body.clientName || body.client || 'Cliente General',
-          carrierLine: body.carrierLine || 'Transportista',
-          rampNumber: body.rampNumber || 1,
-          rampCode: body.rampCode || `LOC-RAMP-${String(body.rampNumber || 1).padStart(2, '0')}`,
-          ...body
-        };
-        this.saveLocalReception(fallback);
-        return of(fallback);
       })
     );
   }
@@ -476,39 +459,13 @@ export class WarehouseMovementsApiService {
       timeout(15000),
       map((res: any) => {
         const backendList = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
-        const localList = this.getLocalReceptions();
-        const mergedMap = new Map<string, any>();
-        for (const item of localList) {
-          const key = (item.folio || item.docNumber || item.id || '').trim().toUpperCase();
-          if (key) mergedMap.set(key, item);
-        }
-        for (const item of backendList) {
-          const key = (item.folio || item.docNumber || item.id || '').trim().toUpperCase();
-          if (key) {
-            const existing = mergedMap.get(key);
-            if (existing) {
-              const isCancelled = existing.status === 'CANCELLED' || item.status === 'CANCELLED';
-              let mergedItem = { ...item, ...existing };
-              if (item.status === 'DISCHARGED' || item.status === 'COMPLETED' || (item.pallets && item.pallets.length > (existing.pallets?.length || 0))) {
-                mergedItem = { ...existing, ...item };
-              }
-              if (isCancelled) {
-                mergedItem.status = 'CANCELLED';
-                mergedItem.cancellationReason = existing.cancellationReason || item.cancellationReason || item.cancellation_reason || '';
-                mergedItem.cancelledAt = existing.cancelledAt || item.cancelledAt || '';
-                mergedItem.cancelledBy = existing.cancelledBy || item.cancelledBy || '';
-              }
-              mergedMap.set(key, mergedItem);
-            } else {
-              mergedMap.set(key, item);
-            }
-          }
-        }
-        const merged = Array.from(mergedMap.values());
-        this.saveAllLocalReceptions(merged);
-        return merged;
+        this.saveAllLocalReceptions(backendList);
+        return backendList;
       }),
-      catchError(() => of(this.getLocalReceptions()))
+      catchError((err) => {
+        console.warn('[WarehouseMovementsApi] Error obteniendo recepciones del servidor:', err);
+        return of(this.getLocalReceptions());
+      })
     );
   }
 
@@ -715,25 +672,6 @@ export class WarehouseMovementsApiService {
         const item = res?.data || body;
         this.saveLocalOutbound(item);
         return item;
-      }),
-      catchError((err) => {
-        console.warn('[WarehouseMovementsApi] Servidor ocupado o sin conexión directa para salida, usando respaldo local:', err);
-        const seq = String(Date.now()).slice(-6);
-        const fallback = {
-          id: body.id || `out-${Date.now()}`,
-          folio: body.remisionNo || body.docNumber ? `OUT-${body.remisionNo || body.docNumber}` : `SAL-2026-${seq}`,
-          status: 'REGISTERED',
-          createdAt: new Date().toISOString(),
-          timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
-          clientName: body.clientName || body.client || 'Cliente General',
-          carrierName: body.carrierName || body.carrierLine || 'Transportista',
-          rampNumber: body.rampNumber || 1,
-          rampCode: body.rampCode || `LOC-RAMP-${String(body.rampNumber || 1).padStart(2, '0')}`,
-          items: [],
-          ...body
-        };
-        this.saveLocalOutbound(fallback);
-        return of(fallback);
       })
     );
   }
@@ -801,21 +739,13 @@ export class WarehouseMovementsApiService {
       timeout(15000),
       map((res: any) => {
         const backendList = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
-        const localList = this.getLocalOutbounds();
-        const mergedMap = new Map<string, any>();
-        for (const item of localList) {
-          const key = (item.id || item.folio || '').trim();
-          if (key) mergedMap.set(key, item);
-        }
-        for (const item of backendList) {
-          const key = (item.id || item.folio || '').trim();
-          if (key) mergedMap.set(key, item);
-        }
-        const merged = Array.from(mergedMap.values());
-        this.saveAllLocalOutbounds(merged);
-        return merged;
+        this.saveAllLocalOutbounds(backendList);
+        return backendList;
       }),
-      catchError(() => of(this.getLocalOutbounds()))
+      catchError((err) => {
+        console.warn('[WarehouseMovementsApi] Error obteniendo salidas del servidor:', err);
+        return of(this.getLocalOutbounds());
+      })
     );
   }
 
