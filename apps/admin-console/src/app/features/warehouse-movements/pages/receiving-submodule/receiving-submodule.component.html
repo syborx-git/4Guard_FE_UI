@@ -485,6 +485,18 @@
             <span class="material-symbols-outlined">arrow_back</span>
             <span>Directorio</span>
           </button>
+          @if (canStepBack(rec)) {
+          <button type="button" (click)="revertToPreviousStep(rec)" class="btn-step-back mr-2"
+            [title]="getStepBackTooltip(rec)">
+            <span class="material-symbols-outlined text-[16px]">undo</span>
+            <span>{{ getStepBackLabel(rec) }}</span>
+          </button>
+          }
+          <button type="button" (click)="openAssignOperatorModal('EDIT')" class="btn-step-back mr-2"
+            title="Asignar o cambiar montacarguista directamente sin reiniciar la descarga">
+            <span class="material-symbols-outlined text-[16px]">forklift</span>
+            <span>{{ (rec.checkIn?.forkliftOperator && rec.checkIn?.forkliftOperator !== 'Por Asignar') ? ('Operador: ' + rec.checkIn.forkliftOperator) : 'Asignar Montacarguista' }}</span>
+          </button>
           <span class="material-symbols-outlined receiving-breadcrumb__icon">local_shipping</span>
           <span class="receiving-breadcrumb__module">Movimientos</span>
           <span class="material-symbols-outlined receiving-breadcrumb__sep">chevron_right</span>

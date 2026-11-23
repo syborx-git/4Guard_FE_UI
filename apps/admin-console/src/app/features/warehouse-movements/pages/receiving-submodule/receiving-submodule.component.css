@@ -6300,6 +6300,45 @@ h6 {
   color: #fbbf24;
 }
 
+/* Step Back Button & Direct Operator Assignment */
+.btn-step-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--bg-card, #ffffff);
+  color: var(--text-primary, #0f172a);
+  border: 1px solid var(--border-card, #cbd5e1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.btn-step-back:hover {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: #d97706;
+  color: #b45309;
+  transform: translateY(-1px);
+}
+
+:host-context(.theme-dark) .btn-step-back,
+:host-context(.dark) .btn-step-back {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #f1f5f9;
+}
+
+:host-context(.theme-dark) .btn-step-back:hover,
+:host-context(.dark) .btn-step-back:hover {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    MODAL DE CAMBIO SELECTIVO DE UAS (SSCC GS1-128) — LIGHT & DARK ADAPTATION
    ═══════════════════════════════════════════════════════════════════════════ */
