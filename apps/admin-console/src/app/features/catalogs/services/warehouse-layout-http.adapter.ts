@@ -158,9 +158,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
     notes: '36 Fijas · 15 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '692,145 856,52 861,52 861,188 732,188 732,328 694,328',
-    labelPosition: { x: 713, y: 258 },
-    sublabelPosition: { x: 713, y: 280 }
+    polygonPoints: '692,145 856,52 861,52 861,188 702,188 694,188',
+    labelPosition: { x: 775, y: 120 },
+    sublabelPosition: { x: 775, y: 140 }
   },
   {
     id: 'sec-f',
@@ -176,25 +176,8 @@ const SEED_SECTIONS: WarehouseSection[] = [
     notes: '91 Fijas · 25 Temporales · 4 Precarga',
     status: 'LOADED',
     polygonPoints: '588,378 702,378 702,459 720,459 720,782 592,782 592,598 588,598',
-    labelPosition: { x: 654, y: 529 },
-    sublabelPosition: { x: 654, y: 551 }
-  },
-  {
-    id: 'sec-l',
-    code: 'L',
-    name: 'Almacén L — Consolidación & Despacho',
-    category: 'Consolidación',
-    posFijas: 132,
-    posTemp: 35,
-    posPreload: 4,
-    capacidadTarimas: 2904,
-    factorEstiba: '22 tarimas/pos',
-    materials: ['COFFEE-MATE ORIGINAL 12X640G N1MX'],
-    notes: '132 Fijas · 35 Temporales · 4 Precarga',
-    status: 'LOADED',
-    polygonPoints: '650,378 702,378 702,520 650,520',
-    labelPosition: { x: 676, y: 440 },
-    sublabelPosition: { x: 676, y: 462 }
+    labelPosition: { x: 654, y: 560 },
+    sublabelPosition: { x: 654, y: 582 }
   },
   {
     id: 'sec-d',
@@ -209,9 +192,9 @@ const SEED_SECTIONS: WarehouseSection[] = [
     materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
     notes: '120 Fijas · 30 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '588,378 650,378 650,782 588,782',
-    labelPosition: { x: 619, y: 550 },
-    sublabelPosition: { x: 619, y: 572 }
+    polygonPoints: '702,188 802,188 802,378 702,378',
+    labelPosition: { x: 752, y: 280 },
+    sublabelPosition: { x: 752, y: 302 }
   },
   {
     id: 'sec-j',

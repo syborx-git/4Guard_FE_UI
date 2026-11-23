@@ -201,9 +201,9 @@ export const OFFICIAL_CAD_SECTIONS: WarehouseSection[] = [
     materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
     notes: '36 Fijas · 15 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '692,145 856,52 861,52 861,188 732,188 732,328 694,328',
-    labelPosition: { x: 713, y: 258 },
-    sublabelPosition: { x: 713, y: 280 }
+    polygonPoints: '692,145 856,52 861,52 861,188 702,188 694,188',
+    labelPosition: { x: 775, y: 120 },
+    sublabelPosition: { x: 775, y: 140 }
   },
   {
     id: 'sec-f',
@@ -219,8 +219,8 @@ export const OFFICIAL_CAD_SECTIONS: WarehouseSection[] = [
     notes: '91 Fijas · 25 Temporales · 4 Precarga',
     status: 'LOADED',
     polygonPoints: '588,378 702,378 702,459 720,459 720,782 592,782 592,598 588,598',
-    labelPosition: { x: 654, y: 529 },
-    sublabelPosition: { x: 654, y: 551 }
+    labelPosition: { x: 654, y: 560 },
+    sublabelPosition: { x: 654, y: 582 }
   },
   {
     id: 'sec-d',
@@ -235,9 +235,9 @@ export const OFFICIAL_CAD_SECTIONS: WarehouseSection[] = [
     materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
     notes: '120 Fijas · 30 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '588,378 650,378 650,782 588,782',
-    labelPosition: { x: 619, y: 550 },
-    sublabelPosition: { x: 619, y: 572 }
+    polygonPoints: '702,188 802,188 802,378 702,378',
+    labelPosition: { x: 752, y: 280 },
+    sublabelPosition: { x: 752, y: 302 }
   },
   {
     id: 'sec-j',
