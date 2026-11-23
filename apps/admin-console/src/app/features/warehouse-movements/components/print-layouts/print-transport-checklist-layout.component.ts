@@ -403,8 +403,14 @@ export interface TransportChecklistPrintData {
         margin: 0 !important;
         border: none !important;
         box-shadow: none !important;
+        zoom: 0.88 !important;
         page-break-after: avoid !important;
         page-break-inside: avoid !important;
+      }
+      .f01-print-sheet td,
+      .f01-print-sheet th {
+        padding-top: 2px !important;
+        padding-bottom: 2px !important;
       }
       table {
         page-break-inside: avoid !important;
