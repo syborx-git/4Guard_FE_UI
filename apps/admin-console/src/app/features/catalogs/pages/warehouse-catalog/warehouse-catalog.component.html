@@ -582,6 +582,24 @@
               <!-- Capa 1: Plano base fiel al DXF "#Layout Almacen principal.dxf" (muros, columnas, cortinas, rampas, oficinas y textos) -->
               <image href="assets/layout_almacen_principal.svg" x="0" y="0" width="1000" height="887.27" preserveAspectRatio="none" class="cad__base-plan"/>
 
+              <!-- Capa 1.5: Zona de Andenes y Rampas de Carga (Visual técnico operativo sin inventario) -->
+              <g class="cad__ramps-overlay" pointer-events="none">
+                <!-- Rampa 1 y 2 (Patio de Maniobras Noreste) -->
+                <polygon
+                  points="802,188 958,188 948,340 802,340"
+                  fill="url(#hazard-stripe)"
+                  stroke="rgba(234, 195, 73, 0.45)"
+                  stroke-width="1.5"
+                  stroke-dasharray="6,4"
+                  class="cad__ramp-polygon"
+                />
+                <g class="cad__ramp-badge" transform="translate(880, 255)">
+                  <rect x="-65" y="-17" width="130" height="34" rx="4" fill="rgba(10, 16, 24, 0.88)" stroke="rgba(234, 195, 73, 0.6)" stroke-width="1"/>
+                  <text x="0" y="-2" text-anchor="middle" fill="#eac349" font-size="10.5" font-weight="700" letter-spacing="1">RAMPAS 1 &amp; 2</text>
+                  <text x="0" y="11" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="8" font-weight="500">Andén de Maniobras</text>
+                </g>
+              </g>
+
               <!-- Capa 4.5: Pasillos de Interconexión de Baterías (Feeder Routes) -->
               @if (showTransitRoutes()) {
                 <g class="cad__feeder-layer">

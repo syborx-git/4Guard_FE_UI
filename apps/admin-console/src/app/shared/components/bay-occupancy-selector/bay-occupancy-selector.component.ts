@@ -201,26 +201,9 @@ export const OFFICIAL_CAD_SECTIONS: WarehouseSection[] = [
     materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
     notes: '36 Fijas · 15 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '692,145 856,52 861,52 861,188 702,188 694,188',
-    labelPosition: { x: 775, y: 120 },
-    sublabelPosition: { x: 775, y: 140 }
-  },
-  {
-    id: 'sec-f',
-    code: 'F',
-    name: 'Almacén F — Cuarentena QM & Auditoría',
-    category: 'Inspección QA / QM',
-    posFijas: 91,
-    posTemp: 25,
-    posPreload: 4,
-    capacidadTarimas: 2002,
-    factorEstiba: '22 tarimas/pos',
-    materials: ['NESP-CAPS-10P · Cápsulas Nespresso'],
-    notes: '91 Fijas · 25 Temporales · 4 Precarga',
-    status: 'LOADED',
-    polygonPoints: '588,378 702,378 702,459 720,459 720,782 592,782 592,598 588,598',
-    labelPosition: { x: 654, y: 560 },
-    sublabelPosition: { x: 654, y: 582 }
+    polygonPoints: '692,145 856,52 861,52 861,188 732,188 732,328 694,328',
+    labelPosition: { x: 713, y: 258 },
+    sublabelPosition: { x: 713, y: 280 }
   },
   {
     id: 'sec-d',
@@ -235,9 +218,26 @@ export const OFFICIAL_CAD_SECTIONS: WarehouseSection[] = [
     materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
     notes: '120 Fijas · 30 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '702,188 802,188 802,378 702,378',
-    labelPosition: { x: 752, y: 280 },
-    sublabelPosition: { x: 752, y: 302 }
+    polygonPoints: '588,378 702,378 702,572 588,572',
+    labelPosition: { x: 645, y: 470 },
+    sublabelPosition: { x: 645, y: 492 }
+  },
+  {
+    id: 'sec-f',
+    code: 'F',
+    name: 'Almacén F — Cuarentena QM & Auditoría',
+    category: 'Inspección QA / QM',
+    posFijas: 91,
+    posTemp: 25,
+    posPreload: 4,
+    capacidadTarimas: 2002,
+    factorEstiba: '22 tarimas/pos',
+    materials: ['NESP-CAPS-10P · Cápsulas Nespresso'],
+    notes: '91 Fijas · 25 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '588,576 720,576 720,782 592,782 592,598 588,598',
+    labelPosition: { x: 654, y: 670 },
+    sublabelPosition: { x: 654, y: 692 }
   },
   {
     id: 'sec-j',
