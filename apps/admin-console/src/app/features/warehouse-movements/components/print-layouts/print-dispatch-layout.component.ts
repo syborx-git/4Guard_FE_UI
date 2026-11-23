@@ -147,7 +147,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
               <td class="border-r border-black leading-snug" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6px]' : 'py-0.5 px-1.5 text-[8px]'">{{ item.clientName || outbound.clientName }}</td>
               <td class="border-r border-black leading-snug" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6px]' : 'py-0.5 px-1.5 text-[8px]'">{{ item.palletTypeLabel || item.palletTypeId || 'TARIMA ESTÁNDAR' }}</td>
               <td class="border-r border-black font-mono text-center font-bold whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-0.5 px-1.5'">{{ formatDateDMY(item.expirationDate) }}</td>
-              <td class="border-r border-black text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-0.5 px-1.5'">{{ item.pieces | number:'1.0-0' }} PZAS</td>
+              <td class="border-r border-black text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : 'py-0.5 px-1.5'">{{ item.pieces | number:'1.0-2' }} {{ item.unit || 'PZAS' }}</td>
               <td class="italic text-slate-600 leading-snug" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6px]' : 'py-0.5 px-1.5 text-[8px]'">{{ item.locationCode || 'ANDÉN' }}</td>
             </tr>
           </tbody>
@@ -159,7 +159,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
            [ngClass]="densityMode === 'ultra-compact' ? 'text-[7.5px] px-2 py-0.5 mb-1' : (densityMode === 'compact' ? 'text-[8.5px] px-2.5 py-0.5 mb-1.5' : 'text-[10px] px-2.5 py-1 mb-3')">
         <div>TOTAL TARIMAS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ outbound.totalPallets }}</span></div>
         <div>SKUS DISTINTOS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ distinctProductsCount }}</span></div>
-        <div>TOTAL PIEZAS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ outbound.totalPieces | number:'1.0-0' }} PZAS</span></div>
+        <div>TOTAL PIEZAS / KGS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ outbound.totalPieces | number:'1.0-2' }}</span></div>
       </div>
 
       <!-- Footer: Elaboró + Recibe de Conformidad -->

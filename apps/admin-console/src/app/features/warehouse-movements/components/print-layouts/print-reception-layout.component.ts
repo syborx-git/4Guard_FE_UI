@@ -213,7 +213,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
                   }
                 </td>
                 <td class="border-r border-black text-center uppercase" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6.5px]' : (densityMode === 'compact' ? 'py-0.5 px-1.5 text-[7.5px]' : 'py-1 px-2 text-[8px]')">{{ item.palletTypeLabel || 'Madera Estándar' }}</td>
-                <td class="text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.pieces | number:'1.0-0' }} PZAS</td>
+                <td class="text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.pieces | number:'1.0-2' }} {{ item.unit || 'PZAS' }}</td>
               </tr>
             </ng-container>
             <ng-template #samplePallets>
@@ -226,7 +226,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
                   <div class="leading-snug pb-[1px] max-w-[210px] break-words">{{ item.description }}</div>
                 </td>
                 <td class="border-r border-black text-center uppercase" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1 text-[6.5px]' : (densityMode === 'compact' ? 'py-0.5 px-1.5 text-[7.5px]' : 'py-1 px-2 text-[8px]')">{{ item.palletTypeLabel }}</td>
-                <td class="text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.pieces | number:'1.0-0' }} PZAS</td>
+                <td class="text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.pieces | number:'1.0-2' }} {{ item.unit || 'PZAS' }}</td>
               </tr>
             </ng-template>
           </tbody>
@@ -242,7 +242,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         <div>FOLIOS / REMISIONES: <span class="font-mono font-black text-slate-900" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-[11px]'">{{ uniqueDocNumbers.length || 1 }}</span></div>
         <div>LOTES TOTALES: <span class="font-mono font-black text-amber-900" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-[11px]'">{{ uniqueLots.length || 1 }}</span></div>
         <div>SKUS DISTINTOS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-[11px]'">{{ uniqueSkusCount }}</span></div>
-        <div>TOTAL PIEZAS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-[11px]'">{{ totalPieces | number:'1.0-0' }} PZAS</span></div>
+        <div>TOTAL PIEZAS / KGS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-[11px]'">{{ totalPieces | number:'1.0-2' }}</span></div>
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════

@@ -133,7 +133,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
                   <td class="border-r border-black font-mono font-bold text-amber-900 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.lotNumber || 'N/D' }}</td>
                   <td class="border-r border-black font-mono font-bold whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.productId || 'S/N' }}</td>
                   <td class="border-r border-black font-semibold" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.description || 'Mercancía en Traspaso' }}</td>
-                  <td class="border-r border-black text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.pieces | number:'1.0-0' }} PZAS</td>
+                  <td class="border-r border-black text-right font-black font-mono whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">{{ item.pieces | number:'1.0-2' }} {{ item.unit || 'PZAS' }}</td>
                   <td class="text-center" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] px-1' : (densityMode === 'compact' ? 'py-0.5 px-1.5' : 'py-1 px-2')">
                     <span class="inline-block bg-emerald-100 text-emerald-800 rounded font-bold" [ngClass]="densityMode === 'ultra-compact' ? 'px-1 py-0 text-[6px]' : 'px-1.5 py-0.5 text-[9px]'">REVERTIDO</span>
                   </td>
@@ -154,7 +154,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         <div class="flex justify-between items-center font-bold border-b-2 border-rose-600 bg-rose-50/70 rounded"
              [ngClass]="densityMode === 'ultra-compact' ? 'text-[7.5px] px-2 py-0.5 mb-1' : (densityMode === 'compact' ? 'text-[9px] px-2.5 py-0.5 mb-2' : 'text-[10px] sm:text-[11px] px-3 py-1 mb-3')">
           <div>TOTAL TARIMAS RESTAURADAS: <span class="font-mono font-black text-rose-900" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ transfer.totalPallets || 5 }}</span></div>
-          <div>TOTAL PIEZAS RESTITUIDAS: <span class="font-mono font-black text-rose-900" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ (transfer.totalPieces || 225) | number:'1.0-0' }} PZAS</span></div>
+          <div>TOTAL PIEZAS / KGS RESTITUIDAS: <span class="font-mono font-black text-rose-900" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ (transfer.totalPieces || 225) | number:'1.0-2' }}</span></div>
         </div>
 
         <!-- Footer Firmas Cancelación -->
@@ -319,7 +319,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
              [ngClass]="densityMode === 'ultra-compact' ? 'text-[7.5px] px-2 py-0.5 mb-1' : (densityMode === 'compact' ? 'text-[9px] px-2.5 py-0.5 mb-2' : 'text-[10px] sm:text-[11px] px-3 py-1 mb-3')">
           <div>TOTAL TARIMAS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ transfer.totalPallets || 5 }}</span></div>
           <div>SKUS DISTINTOS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ transfer.distinctSkus || 1 }}</span></div>
-          <div>TOTAL PIEZAS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ (transfer.totalPieces || 225) | number:'1.0-0' }} PZAS</span></div>
+          <div>TOTAL PIEZAS / KGS: <span class="font-mono font-black" [ngClass]="densityMode === 'ultra-compact' ? 'text-[8.5px]' : 'text-xs'">{{ (transfer.totalPieces || 225) | number:'1.0-2' }}</span></div>
         </div>
 
         <!-- Footer: Responsables + Firmas -->

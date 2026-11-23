@@ -181,7 +181,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
                 {{ formatDateDMY(item.expirationDate || (item && item['expiration_date']) || (item.receptionLot && item.receptionLot.expirationDate) || reception.expirationDate) }}
               </td>
               <td class="px-1 border-r border-black text-right font-black font-mono text-slate-950 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px]' : 'py-0.5'">
-                {{ item.pieces | number:'1.0-0' }} PZAS
+                {{ item.pieces | number:'1.0-2' }} {{ item.unit || 'PZAS' }}
               </td>
               <td class="px-1 text-center font-mono font-black text-rose-800 whitespace-nowrap" [ngClass]="densityMode === 'ultra-compact' ? 'py-[0.5px] text-[6px]' : 'py-0.5 text-[7px]'">
                 REVOCADO
@@ -201,7 +201,7 @@ import { AuthState } from '../../../../core/auth/auth.state';
         <div>TOTAL TARIMAS CANCELADAS: <span class="font-mono font-black text-[10px] text-rose-900">{{ totalPallets }}</span></div>
         <div *ngIf="uniqueDocNumbers.length > 1">FOLIOS / REMISIONES: <span class="font-mono font-black text-[10px] text-slate-950">{{ uniqueDocNumbers.length }}</span></div>
         <div>LOTES TOTALES: <span class="font-mono font-black text-[10px] text-rose-900">{{ uniqueLots.length || 1 }}</span></div>
-        <div>TOTAL PIEZAS ANULADAS: <span class="font-mono font-black text-[10px] text-rose-900">{{ totalPieces | number:'1.0-0' }} PZAS</span></div>
+        <div>TOTAL PIEZAS / KGS ANULADOS: <span class="font-mono font-black text-[10px] text-rose-900">{{ totalPieces | number:'1.0-2' }}</span></div>
       </div>
 
       <!-- 7. Footer Operativo de Auditoría: Firmas Oficiales -->
