@@ -242,14 +242,18 @@ import { AuthState } from '../../../../core/auth/auth.state';
     @media print {
       @page {
         size: letter portrait;
-        margin: 0 !important;
+        margin: 5mm 6mm !important;
       }
       .print-container {
         box-shadow: none !important;
         width: 100% !important;
         max-width: 100% !important;
+        box-sizing: border-box !important;
         margin: 0 !important;
         padding: 0 !important;
+      }
+      th, td {
+        line-height: 1.08 !important;
       }
       .grid.grid-cols-2 {
         display: grid !important;
