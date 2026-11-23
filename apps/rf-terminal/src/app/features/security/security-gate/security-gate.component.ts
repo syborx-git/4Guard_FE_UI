@@ -180,15 +180,15 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
   protected readonly isCustomBoxDimension = signal<boolean>(false);
   protected readonly customBoxDimensionInput = signal<string>('');
 
-  // Conexión con Módulo de Andenes / Rampas (Reactivo)
+  // Conexión con Módulo de Andenes / Rampas (Reactivo 100% desde Base de Datos)
   protected readonly rampOptions = signal([
     { num: 1, label: 'Rampa 01', available: true, occupiedBy: undefined as string | undefined },
     { num: 2, label: 'Rampa 02', available: true, occupiedBy: undefined as string | undefined },
-    { num: 3, label: 'Rampa 03', available: false, occupiedBy: '72-AB-9K' },
+    { num: 3, label: 'Rampa 03', available: true, occupiedBy: undefined as string | undefined },
     { num: 4, label: 'Rampa 04', available: true, occupiedBy: undefined as string | undefined },
     { num: 5, label: 'Rampa 05', available: true, occupiedBy: undefined as string | undefined },
     { num: 6, label: 'Rampa 06', available: true, occupiedBy: undefined as string | undefined },
-    { num: 7, label: 'Rampa 07', available: false, occupiedBy: '33-KZ-4R' },
+    { num: 7, label: 'Rampa 07', available: true, occupiedBy: undefined as string | undefined },
     { num: 8, label: 'Rampa 08', available: true, occupiedBy: undefined as string | undefined },
     { num: 9, label: 'Rampa 09', available: true, occupiedBy: undefined as string | undefined },
     { num: 10, label: 'Rampa 10', available: true, occupiedBy: undefined as string | undefined },
@@ -1058,6 +1058,7 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
       tractorPlates: val.placasTracto?.trim().toUpperCase(),
       noEcoTractor: val.noEcoTractor?.trim(),
       boxPlates: val.placasCaja?.trim().toUpperCase(),
+      noEcoCaja: val.noEcoCaja?.trim(),
       boxDimensions: (this.isCustomBoxDimension() && this.customBoxDimensionInput().trim())
         ? this.customBoxDimensionInput().trim()
         : (val.medidasCaja || ''),
@@ -1065,9 +1066,11 @@ export class SecurityGateRfComponent implements OnInit, OnDestroy {
         ? this.customTransportInput().trim()
         : (val.tipoTransporte || ''),
       docNumber: isOutbound ? val.noCartaPorte : val.remision,
+      noCartaPorte: val.noCartaPorte?.trim(),
       sealNumbers: seals,
       observations: val.docRemisionObs || val.docCartaPorteObs || '',
-      guardNotes: val.responsableVigilanciaNombre || 'Guardia de Turno'
+      guardNotes: val.responsableVigilanciaNombre || 'Guardia de Turno',
+      checklistData: JSON.stringify(val),
     };
 
     const token = this.activeLoadedToken();

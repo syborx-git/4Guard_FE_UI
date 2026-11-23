@@ -633,21 +633,23 @@ export class ForkliftMissionService {
       const key = mapped.id;
       handledIds.add(key);
 
-      if (rec.status !== 'ASSIGNED' && rec.status !== 'IN_PROGRESS' && completedList.some((c) => c.id === key || c.folio === mapped.folio)) {
-        continue;
-      }
-
-      // Si ya existía en la cola activa, preservar el progreso de escaneo del montacarguista
+      // Si ya existía en la cola activa, preservar solo escaneos locales en vuelo (sin UUID aún) sobre la verdad de PostgreSQL
       const existing = currentMissions.find((m) => m.id === key || m.folio === mapped.folio);
       if (existing) {
+        const backendPallets = mapped.pallets || [];
+        const backendCodes = new Set(backendPallets.map((bp) => (bp.ssccBarcode || '').toUpperCase()));
+        const unsavedLocal = (existing.pallets || []).filter(
+          (lp) => !this.isUuid(lp.id) && !backendCodes.has((lp.ssccBarcode || '').toUpperCase())
+        );
+        const mergedPallets = [...backendPallets, ...unsavedLocal];
         mergedList.push({
           ...mapped,
-          status: existing.status,
-          statusLabel: existing.statusLabel,
-          activeScanningLot: existing.activeScanningLot,
-          currentPendingPieces: existing.currentPendingPieces,
+          status: existing.status === 'ACTIVE_DROP' || existing.status === 'ACTIVE_PICK' ? existing.status : mapped.status,
+          statusLabel: existing.statusLabel || mapped.statusLabel,
+          activeScanningLot: existing.activeScanningLot || mapped.activeScanningLot,
+          currentPendingPieces: existing.currentPendingPieces ?? mapped.currentPendingPieces,
           currentPendingSscc: existing.currentPendingSscc,
-          pallets: existing.pallets && existing.pallets.length > 0 ? existing.pallets : mapped.pallets,
+          pallets: mergedPallets,
           notes: existing.notes || mapped.notes,
         });
       } else {
@@ -761,16 +763,12 @@ export class ForkliftMissionService {
       if (handledIds.has(key)) continue;
       handledIds.add(key);
 
-      if (completedList.some((c) => c.id === key || c.folio === mapped.folio)) {
-        continue;
-      }
-
       const existing = currentMissions.find((m) => m.id === key || m.folio === mapped.folio);
       if (existing) {
         mergedList.push({
           ...mapped,
-          status: existing.status,
-          statusLabel: existing.statusLabel,
+          status: existing.status === 'ACTIVE_DROP' || existing.status === 'ACTIVE_PICK' ? existing.status : mapped.status,
+          statusLabel: existing.statusLabel || mapped.statusLabel,
           notes: existing.notes || mapped.notes,
         });
       } else {
@@ -927,7 +925,15 @@ export class ForkliftMissionService {
     const queue = this.getPendingSyncQueue();
     if (queue.length === 0) return;
 
-    const remainingItems: any[] = [];
+    const removeQueuedItem = (targetTimestamp: number, targetId: string) => {
+      try {
+        const currentQueue = this.getPendingSyncQueue().filter(
+          (q) => !(q.timestamp === targetTimestamp && q.id === targetId)
+        );
+        localStorage.setItem(PENDING_SYNC_QUEUE_KEY, JSON.stringify(currentQueue));
+        this.pendingOfflineCount.set(currentQueue.length);
+      } catch (_) {}
+    };
 
     for (const item of queue) {
       if (item.type === 'DISCHARGE_RECEPTION' || item.type === 'COMPLETE_RECEPTION') {
@@ -935,32 +941,26 @@ export class ForkliftMissionService {
           status: 'DISCHARGED',
           observations: item.payload?.notes || item.payload?.observations || 'Descarga concluida desde Terminal RF',
         }).subscribe({
-          next: () => {},
-          error: () => {
-            remainingItems.push(item);
-          }
+          next: () => removeQueuedItem(item.timestamp, item.id),
+          error: () => {}
         });
       } else if (item.type === 'ADD_PALLETS') {
         this.http.post(`/api/v1/warehouse-receptions/${item.id}/pallets`, item.payload).subscribe({
-          next: () => {},
-          error: () => {
-            remainingItems.push(item);
-          }
+          next: () => removeQueuedItem(item.timestamp, item.id),
+          error: () => {}
         });
       } else if (item.type === 'COMPLETE_OUTBOUND_LOAD') {
         this.http.put(`/api/v1/warehouse-outbounds/${item.id}`, item.payload).subscribe({
-          next: () => {},
-          error: () => {
-            remainingItems.push(item);
-          }
+          next: () => removeQueuedItem(item.timestamp, item.id),
+          error: () => {}
+        });
+      } else if (item.type === 'COMPLETE_TRANSFER') {
+        this.http.post(`/api/v1/warehouse-transfers/${item.id}/complete`, item.payload || {}).subscribe({
+          next: () => removeQueuedItem(item.timestamp, item.id),
+          error: () => {}
         });
       }
     }
-
-    try {
-      localStorage.setItem(PENDING_SYNC_QUEUE_KEY, JSON.stringify(remainingItems));
-      this.pendingOfflineCount.set(remainingItems.length);
-    } catch (_) {}
   }
 
   /**
@@ -2608,6 +2608,25 @@ export class ForkliftMissionService {
             type: 'COMPLETE_OUTBOUND_LOAD',
             id: missionId,
             payload,
+            timestamp: Date.now(),
+          });
+        },
+      });
+    } else if (target.type === 'INTERNAL_PUTAWAY' && this.isUuid(missionId)) {
+      const transferPayload = {
+        destinationLocationCode: target.destBarcode || target.destinationLocation,
+        observations: `${target.notes || ''} [Reubicación física completada en Terminal RF a las ${timeStr}]`.trim(),
+      };
+      this.http.post<any>(`/api/v1/warehouse-transfers/${missionId}/complete`, transferPayload).subscribe({
+        next: () => {
+          this.isBackendConnected.set(true);
+          this.toast.success(`Traspaso ${target.folio} completado en Base de Datos y Kardex.`, '✅ BD ACTUALIZADA');
+        },
+        error: () => {
+          this.enqueuePendingSync({
+            type: 'COMPLETE_TRANSFER',
+            id: missionId,
+            payload: transferPayload,
             timestamp: Date.now(),
           });
         },
