@@ -151,8 +151,18 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private refreshIntervalId: any = null;
+  private lastLoadedShiftSessionId: string | null | undefined = undefined;
 
   constructor() {
+    // Sincronizar historial del turno en cuanto ShiftContextService termine de cargar el turno activo
+    effect(() => {
+      const loadingShift = this.shiftContext.isLoading();
+      const shiftSessionId = this.shiftContext.activeShift()?.sessionId || null;
+      if (!loadingShift && shiftSessionId !== this.lastLoadedShiftSessionId) {
+        this.lastLoadedShiftSessionId = shiftSessionId;
+        this.reloadHistoryPasses(true);
+      }
+    }, { allowSignalWrites: true });
     effect(() => {
       const passToLoad = this.smartNotification.requestedPassToLoad();
       if (passToLoad) {
@@ -2133,6 +2143,10 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     }
 
     const currentShiftOnly = !isGlobal;
+    if (currentShiftOnly && this.shiftContext.isLoading()) {
+      this.isLoadingHistory.set(false);
+      return;
+    }
     const shiftSessionId = currentShiftOnly ? (this.shiftContext.activeShift()?.sessionId || undefined) : undefined;
 
     this.movementsService.movementsApi.getPassHistory({
