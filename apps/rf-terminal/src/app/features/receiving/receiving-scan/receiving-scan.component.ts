@@ -330,13 +330,16 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
           totalPallets: 24,
           stagingBay: 'STAGING-R01',
         };
+        if (silent && this.selectedReception()) {
+          return;
+        }
         this.receptions.set([fallback]);
-        this.selectReception(fallback);
+        this.selectReception(fallback, silent);
       },
     });
   }
 
-  selectReception(rec: ReceptionInfo): void {
+  selectReception(rec: ReceptionInfo, silent = false): void {
     this.selectedReception.set(rec);
     this.showReceptionPicker.set(false);
 
@@ -391,8 +394,10 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
       this.scannedPallets.set([]);
     }
 
-    this.audioService.playSuccess();
-    if (navigator.vibrate) navigator.vibrate(30);
+    if (!silent) {
+      this.audioService.playSuccess();
+      if (navigator.vibrate) navigator.vibrate(30);
+    }
   }
 
   // ─── 2. Parámetros Activos (Modificable al Vuelo) ──────────────────────────
@@ -736,7 +741,7 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
       (p) => p.palletCode.toUpperCase() === cleanCode
     );
     if (isDuplicate) {
-      this.isProcessingScan.set(false);
+      setTimeout(() => this.isProcessingScan.set(false), 1500);
       this.audioService.playError();
       if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 150]);
       this.toast.error(`La tarima [${cleanCode}] ya fue escaneada previamente.`);
