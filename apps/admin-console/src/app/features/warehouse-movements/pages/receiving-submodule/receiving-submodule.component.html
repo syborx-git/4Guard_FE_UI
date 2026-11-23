@@ -1883,29 +1883,29 @@
       <!-- FASE 4: DESCARGA CONCLUIDA POR MONTACARGUISTA — AUDITORÍA ADMINISTRATIVA -->
       <div class="space-y-4 pt-1">
         <div
-          class="p-5 rounded-2xl bg-gradient-to-r from-purple-500/15 via-purple-500/10 to-amber-500/10 border-2 border-purple-500/40 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          class="p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-indigo-500/40 dark:border-indigo-500/50 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div class="flex items-center gap-3.5">
             <div
-              class="w-12 h-12 rounded-2xl bg-purple-500 text-white flex items-center justify-center font-bold shadow-md shrink-0">
+              class="w-12 h-12 rounded-2xl bg-indigo-600 dark:bg-indigo-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
               <span class="material-symbols-outlined text-3xl">task_alt</span>
             </div>
             <div>
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-xs font-black uppercase tracking-wider text-purple-950 dark:text-purple-200">
+                <span class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
                   Paso Final: Auditoría Administrativa &amp; Visto Bueno
                 </span>
                 <span
-                  class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/40 font-mono">
+                  class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-mono">
                   Fase 4 de 5 (80%) · Pendiente de Aprobación
                 </span>
               </div>
-              <p class="text-xs text-purple-900 dark:text-purple-200 mt-0.5 font-medium flex items-center gap-1.5 flex-wrap">
+              <p class="text-xs text-slate-700 dark:text-slate-200 mt-1 font-medium flex items-center gap-1.5 flex-wrap">
                 <span>El montacarguista</span>
                 @if (rec.checkIn?.forkliftOperator || altaForm.get('forkliftOperator')?.value; as opName) {
-                  <strong class="text-purple-950 dark:text-purple-100 bg-purple-500/20 px-2 py-0.5 rounded border border-purple-500/30">
+                  <strong class="text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700">
                     {{ opName }}
                   </strong>
-                  <button type="button" (click)="openAssignOperatorModal('EDIT')" class="text-[11px] text-amber-700 dark:text-amber-400 font-bold hover:underline cursor-pointer">
+                  <button type="button" (click)="openAssignOperatorModal('EDIT')" class="text-[11px] text-amber-600 dark:text-amber-400 font-bold hover:underline cursor-pointer">
                     [Cambiar]
                   </button>
                 } @else {
@@ -1914,7 +1914,7 @@
                     <span>+ Asignar Montacarguista</span>
                   </button>
                 }
-                <span>finalizó la descarga de <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong> con destino inicial a <strong class="text-amber-800 dark:text-amber-300 font-mono">{{ selectedBayName() || 'STAGING-R01' }}</strong>.</span>
+                <span>finalizó la descarga de <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong> con destino inicial a <strong class="text-amber-700 dark:text-amber-400 font-mono">{{ selectedBayName() || 'STAGING-R01' }}</strong>.</span>
               </p>
             </div>
           </div>
@@ -1922,7 +1922,7 @@
           <div class="flex items-center gap-2.5 shrink-0 flex-wrap w-full md:w-auto justify-end">
             <!-- Botón Secundario: Solo Previsualizar Borrador -->
             <button type="button" (click)="openPrintPreview(rec)"
-              class="px-3.5 py-2.5 rounded-xl border border-purple-500/40 hover:bg-purple-500/10 text-purple-800 dark:text-purple-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+              class="px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
               title="Previsualizar borrador del formato F01 sin cerrar el proceso">
               <span class="material-symbols-outlined text-sm">visibility</span>
               <span>Previsualizar Borrador</span>
