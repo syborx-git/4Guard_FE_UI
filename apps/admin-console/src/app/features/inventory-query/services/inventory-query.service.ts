@@ -35,15 +35,28 @@ export class InventoryQueryService {
   constructor() {
     this.refreshInventory();
 
-    // Sincronización reactiva con las recepciones de almacén
+    // Sincronización reactiva con las recepciones de almacén y los lotes consolidados de inventario
     effect(() => {
       const _recs = this.movementsService.receptions();
+      const _batches = this.movementsService.inventoryBatches();
       this.refreshInventory();
     }, { allowSignalWrites: true });
 
+    // Carga inicial proactiva desde el backend si las colecciones aún no han sido pobladas
+    if (this.movementsService.receptions().length === 0) {
+      this.movementsService.reloadReceptions();
+    }
+    if (this.movementsService.inventoryBatches().length === 0) {
+      this.movementsService.reloadInventoryBatches();
+    }
+
     if (typeof window !== 'undefined') {
       window.addEventListener('storage', (e) => {
-        if (e.key === '4guard_receptions_cache' || e.key === '4guard_simulated_positions') {
+        if (
+          e.key === '4guard_receptions_cache' ||
+          e.key === '4guard_simulated_positions' ||
+          e.key === '4guard_inventory_batches_cache'
+        ) {
           this.refreshInventory();
         }
       });
@@ -52,6 +65,14 @@ export class InventoryQueryService {
 
   public refreshInventory(): void {
     this._rawInventory.set(this.buildRealInventory());
+  }
+
+  /**
+   * Forzar recarga fresca de datos reales desde el backend (PostgreSQL / Spring Boot)
+   */
+  public forceBackendReload(): void {
+    this.movementsService.reloadReceptions();
+    this.movementsService.reloadInventoryBatches();
   }
 
   /**
@@ -257,26 +278,175 @@ export class InventoryQueryService {
   }
 
   /**
-   * Generar Inventario Real 4GUARD WMS derivado de las recepciones y tarimas reales en almacén.
-   * Si no hay existencias en el sistema, permanece limpio (0 registros) sin mocks.
+   * Resuelve el nombre del Almacén / Nave a partir del código de ubicación topológica.
+   * Mapea limpiamente a las naves oficiales: Almacén A, B, C, D, E, F, G, H, I, J, L.
+   */
+  private resolveWarehouseFromLocation(loc: string): string {
+    if (!loc) return 'Almacén General';
+    const clean = loc.trim().toUpperCase();
+
+    // Patrón POS-{LETRA}-{NUM} ej. POS-A-012 -> Almacén A
+    const posMatch = clean.match(/^POS-([A-Z])-?/);
+    if (posMatch) {
+      return `Almacén ${posMatch[1]}`;
+    }
+
+    // Patrón SEC-{LETRA} o SEC-ALM-{LETRA}
+    const secMatch = clean.match(/^SEC-(?:ALM-)?([A-Z])/);
+    if (secMatch) {
+      return `Almacén ${secMatch[1]}`;
+    }
+
+    if (clean.includes('BODEGA B') || clean.startsWith('B-')) return 'Almacén B';
+    if (clean.includes('BODEGA A') || clean.startsWith('A-')) return 'Almacén A';
+    if (clean.includes('BODEGA C') || clean.startsWith('C-')) return 'Almacén C';
+    if (clean.includes('BODEGA D') || clean.startsWith('D-')) return 'Almacén D';
+    if (clean.includes('BODEGA F') || clean.startsWith('F-')) return 'Almacén F';
+    if (clean.includes('STAGING') || clean.includes('RAMP')) return 'Andén / Tránsito';
+    if (clean.includes('APC')) return 'Bodega APC';
+    if (clean.includes('AT')) return 'Bodega AT';
+
+    return 'Almacén General';
+  }
+
+  /**
+   * Generar Inventario Real 4GUARD WMS derivado de las recepciones físicas y lotes en stock del backend.
+   * Totalmente dinámico, multicliente y sin valores hardcodeados.
    */
   private buildRealInventory(): InventoryRecord[] {
     const receptions = this.movementsService.receptions() || [];
+    const batches = this.movementsService.inventoryBatches() || [];
     const today = new Date();
     const records: InventoryRecord[] = [];
+    const seenBarcodes = new Set<string>();
     let counter = 500000;
 
+    // 1. Procesar Lotes Consolidados de Stock Backend (PostgreSQL / Spring Boot)
+    for (const b of batches) {
+      const bClient = b.client || (b as any).clientName || 'Cliente General';
+      const bSupplier = (b as any).supplierName || bClient || 'Proveedor General';
+      const bEntryDate = b.elaborationDate || today.toISOString().slice(0, 10);
+      const bStayDays = Math.max(0, Math.floor((today.getTime() - new Date(bEntryDate).getTime()) / (1000 * 60 * 60 * 24)));
+
+      if (b.pallets && b.pallets.length > 0) {
+        for (const p of b.pallets) {
+          const barcode = p.palletCode || (p as any).sscc || (p.palletNumber ? `PAL-${p.palletNumber}` : '');
+          if (barcode && seenBarcodes.has(barcode.toUpperCase())) continue;
+          if (barcode) seenBarcodes.add(barcode.toUpperCase());
+
+          counter++;
+          const expDate = p.expirationDate || b.expirationDate || '';
+          let remainingDays = 180;
+          let expStatus: 'EN_TIEMPO' | 'PROXIMO_30_DIAS' | 'CADUCO' = 'EN_TIEMPO';
+
+          if (expDate) {
+            const expTime = new Date(expDate).getTime();
+            remainingDays = Math.ceil((expTime - today.getTime()) / (1000 * 60 * 60 * 24));
+            if (remainingDays <= 0) {
+              expStatus = 'CADUCO';
+            } else if (remainingDays <= 30) {
+              expStatus = 'PROXIMO_30_DIAS';
+            } else {
+              expStatus = 'EN_TIEMPO';
+            }
+          }
+
+          const loc = p.locationCode || b.locationCode || 'STAGING-01';
+          const warehouse = this.resolveWarehouseFromLocation(loc);
+
+          records.push({
+            id: counter,
+            entryDate: bEntryDate,
+            elaborationDate: (p as any).elaborationDate || b.elaborationDate || bEntryDate,
+            expirationDate: expDate,
+            usefulLifeDays: 365,
+            remision: p.docNumber || b.remisionNo || 'REM-S/N',
+            manufacturerBatch: p.lotNumber || b.lotNumber || 'S/L',
+            ssccBarcode: barcode || `UA-${counter}`,
+            sku: p.productId || b.productId || 'SKU-GEN',
+            productDescription: p.description || b.productName || 'Mercancía en Almacén',
+            receptionFolio: b.remisionNo || `REC-${counter}`,
+            measuredQuantity: p.pieces || 0,
+            palletsCount: 1.0,
+            stayDays: bStayDays,
+            warehouse,
+            location: loc,
+            entryNumber: `STK-${counter}`,
+            palletType: ((p.palletTypeLabel || 'MADERA ESTANDAR').toUpperCase()) as PalletType,
+            labeledStatus: 'ETIQUETADO',
+            supplier: bSupplier,
+            remainingLifeDays: remainingDays,
+            client: bClient,
+            expirationStatus: expStatus
+          });
+        }
+      } else if (b.availablePallets && b.availablePallets > 0) {
+        // Lote sin detalle individual de pallets (registro consolidado)
+        counter++;
+        const expDate = b.expirationDate || '';
+        let remainingDays = 180;
+        let expStatus: 'EN_TIEMPO' | 'PROXIMO_30_DIAS' | 'CADUCO' = 'EN_TIEMPO';
+
+        if (expDate) {
+          const expTime = new Date(expDate).getTime();
+          remainingDays = Math.ceil((expTime - today.getTime()) / (1000 * 60 * 60 * 24));
+          if (remainingDays <= 0) {
+            expStatus = 'CADUCO';
+          } else if (remainingDays <= 30) {
+            expStatus = 'PROXIMO_30_DIAS';
+          } else {
+            expStatus = 'EN_TIEMPO';
+          }
+        }
+
+        const loc = b.locationCode || 'STAGING-01';
+        const warehouse = this.resolveWarehouseFromLocation(loc);
+
+        records.push({
+          id: counter,
+          entryDate: bEntryDate,
+          elaborationDate: b.elaborationDate || bEntryDate,
+          expirationDate: expDate,
+          usefulLifeDays: 365,
+          remision: b.remisionNo || 'REM-S/N',
+          manufacturerBatch: b.lotNumber || 'S/L',
+          ssccBarcode: `LOTE-${b.lotNumber || counter}`,
+          sku: b.productId || 'SKU-GEN',
+          productDescription: b.productName || 'Mercancía en Almacén',
+          receptionFolio: b.remisionNo || `REC-${counter}`,
+          measuredQuantity: b.totalPieces || 0,
+          palletsCount: b.availablePallets,
+          stayDays: bStayDays,
+          warehouse,
+          location: loc,
+          entryNumber: `STK-${counter}`,
+          palletType: 'MADERA ESTANDAR',
+          labeledStatus: 'ETIQUETADO',
+          supplier: bSupplier,
+          remainingLifeDays: remainingDays,
+          client: bClient,
+          expirationStatus: expStatus
+        });
+      }
+    }
+
+    // 2. Procesar Recepciones Físicas en Almacén (Tarimas recién descargadas / operativas)
     for (const rec of receptions) {
-      // Omitir canceladas y las que solo están registradas en caseta sin descarga física
       if (rec.status === 'CANCELLED' || rec.status === 'REGISTERED') continue;
 
       const pallets = rec.pallets || [];
       const entryDate = rec.checkIn?.docDate || (rec as any).createdAt?.slice(0, 10) || today.toISOString().slice(0, 10);
       const stayDays = Math.max(0, Math.floor((today.getTime() - new Date(entryDate).getTime()) / (1000 * 60 * 60 * 24)));
+      const recClient = rec.checkIn?.client || (rec as any).clientName || 'Cliente General';
+      const recSupplier = rec.supplierName || rec.checkIn?.carrierLine || 'Proveedor General';
 
       for (let i = 0; i < pallets.length; i++) {
-        counter++;
         const p = pallets[i];
+        const barcode = p.palletCode || (p.palletNumber ? `PAL-${p.palletNumber}` : '');
+        if (barcode && seenBarcodes.has(barcode.toUpperCase())) continue;
+        if (barcode) seenBarcodes.add(barcode.toUpperCase());
+
+        counter++;
         const expDate = p.expirationDate || rec.expirationDate || '';
         let remainingDays = 180;
         let expStatus: 'EN_TIEMPO' | 'PROXIMO_30_DIAS' | 'CADUCO' = 'EN_TIEMPO';
@@ -294,10 +464,7 @@ export class InventoryQueryService {
         }
 
         const loc = p.locationCode || rec.storageLocation || rec.storageLocationCode || 'STAGING-01';
-        let warehouse = 'Bodega A';
-        if (loc.startsWith('B') || loc.includes('BODEGA B')) warehouse = 'Bodega B';
-        else if (loc.includes('APC')) warehouse = 'Bodega APC';
-        else if (loc.includes('AT')) warehouse = 'Bodega AT';
+        const warehouse = this.resolveWarehouseFromLocation(loc);
 
         records.push({
           id: counter,
@@ -307,7 +474,7 @@ export class InventoryQueryService {
           usefulLifeDays: 365,
           remision: rec.checkIn?.docNumber || rec.folio,
           manufacturerBatch: p.lotNumber || rec.lotNumber || 'S/L',
-          ssccBarcode: p.palletCode,
+          ssccBarcode: p.palletCode || `PAL-${counter}`,
           sku: p.productId || rec.productId || rec.skuCode || 'SKU-GEN',
           productDescription: p.description || rec.productName || 'Mercancía en Almacén',
           receptionFolio: rec.folio,
@@ -319,9 +486,9 @@ export class InventoryQueryService {
           entryNumber: `ENT-${rec.folio}`,
           palletType: ((p.palletTypeLabel || rec.selectedPalletType || 'MADERA ESTANDAR').toUpperCase()) as PalletType,
           labeledStatus: p.isUaRelabelled ? 'ETIQUETADO' : 'PENDIENTE',
-          supplier: p.supplierName || rec.supplierName || rec.checkIn?.client || 'Nestlé México',
+          supplier: p.supplierName || recSupplier,
           remainingLifeDays: remainingDays,
-          client: rec.checkIn?.client || 'Nestlé México',
+          client: recClient,
           expirationStatus: expStatus
         });
       }
