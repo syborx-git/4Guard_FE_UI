@@ -1086,20 +1086,7 @@ export class WarehouseMovementsService {
 
         this.knownReceptionFolios = newKnown;
 
-        const purgedAtStr = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_env_purged_at') : null;
-        const purgedAt = purgedAtStr ? Number(purgedAtStr) : 0;
-
-        let finalReceptions = unique;
-        if (purgedAt > 0) {
-          finalReceptions = unique.filter((r) => {
-            const raw = (r as any).rawCreatedAt || r.createdAt || (r.checkIn as any)?.receptionTime;
-            if (!raw) return false;
-            const t = new Date(raw).getTime();
-            return !isNaN(t) && t > purgedAt;
-          });
-        }
-
-        this.receptionsSignal.set(finalReceptions);
+        this.receptionsSignal.set(unique);
 
         if (this.isInitialReceptionsLoaded && newlyArrived) {
           this.latestArrivedReception.set(newlyArrived);
