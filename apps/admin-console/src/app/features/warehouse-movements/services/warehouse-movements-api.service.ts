@@ -7,7 +7,7 @@
 
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { map, timeout, retry, catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import {
@@ -441,7 +441,10 @@ export class WarehouseMovementsApiService {
         this.saveLocalReception(data);
         return data;
       }),
-      catchError(() => {
+      catchError((err) => {
+        if (UUID_REGEX.test(id)) {
+          return throwError(() => err);
+        }
         const local = this.getLocalReceptions().find(r => r.id === id || r.folio === id);
         if (local) {
           Object.assign(local, body);

@@ -5,7 +5,7 @@
  */
 
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Observable, map, concatMap, of, catchError } from 'rxjs';
+import { Observable, map, concatMap, of, catchError, throwError } from 'rxjs';
 import { ForkliftOperatorAdminService } from '../../admin/services/forklift-operator.service';
 import {
   ReceptionHeader,
@@ -3023,7 +3023,10 @@ export class WarehouseMovementsService {
         });
         return mapped;
       }),
-      catchError(() => {
+      catchError((err) => {
+        if (isUuid(recId)) {
+          return throwError(() => err);
+        }
         const updated = this.updateReception(
           folioOrId,
           {

@@ -443,7 +443,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           continue;
         }
         const isCompleted = (r.status as string) === 'COMPLETED';
-        if (isCompleted || r.status !== existing.warehouseStatus) {
+        const rForklift = r.checkIn?.forkliftOperator || (r as any).forkliftOperator || (r as any).forkliftOperatorName || null;
+        const rForkliftId = (r as any).forkliftOperatorId || null;
+        if (isCompleted || r.status !== existing.warehouseStatus || (rForklift && !existing.forkliftOperatorName)) {
           const rStatus = (r.status as string || '').toUpperCase();
           const isPreCompletion = ['REGISTERED', 'PENDING', 'ASSIGNED', 'IN_PROGRESS', 'PAUSED', 'DRAFT', 'DISCHARGED', 'LOADED'].includes(rStatus);
           mergedMap.set(key, {
@@ -451,6 +453,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             warehouseStatus: r.status,
             status: isCompleted ? 'COMPLETED' : existing.status,
             isReadyForExit: isCompleted || (!isPreCompletion && existing.isReadyForExit),
+            forkliftOperator: existing.forkliftOperator || rForklift,
+            forkliftOperatorId: existing.forkliftOperatorId || rForkliftId,
+            forkliftOperatorName: existing.forkliftOperatorName || rForklift,
             cancellationReason: r.cancellationReason || existing.cancellationReason,
             cancelledBy: r.cancelledBy || existing.cancelledBy,
             rampNumber: r.checkIn?.rampNumber ?? existing.rampNumber,
@@ -505,6 +510,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           driverSignedAt: r.checkIn?.driverSignedAt || (r as any).driverSignedAt || (r as any).preCheckin?.driverSignedAt,
           warehouseStatus: r.status || 'REGISTERED',
           isReadyForExit: isReady,
+          forkliftOperator: r.checkIn?.forkliftOperator || (r as any).forkliftOperator || null,
+          forkliftOperatorId: (r as any).forkliftOperatorId || null,
+          forkliftOperatorName: r.checkIn?.forkliftOperator || (r as any).forkliftOperatorName || null,
           cancellationReason: r.cancellationReason || (r as any).reason || '',
           createdAt: r.createdAt
         });
@@ -525,7 +533,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
           continue;
         }
         const isCompleted = (o.status as string) === 'COMPLETED';
-        if (isCompleted || o.status !== existing.warehouseStatus) {
+        const oForklift = (o as any).forkliftOperator || (o as any).forkliftOperatorName || null;
+        const oForkliftId = (o as any).forkliftOperatorId || null;
+        if (isCompleted || o.status !== existing.warehouseStatus || (oForklift && !existing.forkliftOperatorName)) {
           const oStatus = (o.status as string || '').toUpperCase();
           const isPreCompletion = ['REGISTERED', 'PENDING', 'ASSIGNED', 'IN_PROGRESS', 'PAUSED', 'DRAFT', 'DISCHARGED', 'LOADED'].includes(oStatus);
           mergedMap.set(key, {
@@ -533,6 +543,9 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
             warehouseStatus: o.status,
             status: isCompleted ? 'COMPLETED' : existing.status,
             isReadyForExit: isCompleted || (!isPreCompletion && existing.isReadyForExit),
+            forkliftOperator: existing.forkliftOperator || oForklift,
+            forkliftOperatorId: existing.forkliftOperatorId || oForkliftId,
+            forkliftOperatorName: existing.forkliftOperatorName || oForklift,
             rampNumber: o.rampNumber ?? existing.rampNumber,
             rampCode: this.getFormattedRampLabel(o.rampCode ?? existing.rampCode, o.rampNumber ?? existing.rampNumber)
           });
