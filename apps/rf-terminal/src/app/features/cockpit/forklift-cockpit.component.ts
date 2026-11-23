@@ -23,6 +23,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthState, ToastService } from '@4guard/shared-core';
+import { BarcodeDebounceGuard, applyCameraEnhancements } from '../../core/utils/barcode-scanner-guard';
 import {
   ForkliftMissionService,
   ForkliftMission,
@@ -84,6 +85,7 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   protected readonly availableCamerasCount = signal<number>(1);
   private mediaStream: MediaStream | null = null;
   private barcodeDetectorTimer: any = null;
+  private readonly cameraDebounce = new BarcodeDebounceGuard(3000);
 
   // ─── Modal 3: Reporte de Anomalía / Siniestro ─────────────────────────────
   protected readonly showIncidentModal = signal(false);
@@ -297,13 +299,14 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: mode },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
           },
           audio: false,
         });
 
         this.mediaStream = stream;
+        applyCameraEnhancements(stream);
         this.cameraActive.set(true);
         this.cameraLoading.set(false);
 
@@ -337,6 +340,7 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
   }
 
   stopCamera(): void {
+    this.cameraDebounce.reset();
     if (this.barcodeDetectorTimer) {
       clearInterval(this.barcodeDetectorTimer);
       this.barcodeDetectorTimer = null;
@@ -376,7 +380,10 @@ export class ForkliftCockpitComponent implements OnInit, OnDestroy {
             try {
               const barcodes = await detector.detect(this.cameraVideoRef.nativeElement);
               if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-                this.executeScan(barcodes[0].rawValue);
+                const raw = barcodes[0].rawValue.trim();
+                if (raw && this.cameraDebounce.shouldProcess(raw)) {
+                  this.executeScan(raw);
+                }
               }
             } catch {}
           }

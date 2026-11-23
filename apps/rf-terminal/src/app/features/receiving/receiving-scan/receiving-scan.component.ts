@@ -23,6 +23,12 @@ import {
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import {
+  BarcodeDebounceGuard,
+  buildCameraConstraintsLadder,
+  applyCameraEnhancements,
+  createEnhancedZxingReader,
+} from '../../../core/utils/barcode-scanner-guard';
 import { Router } from '@angular/router';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { timeout } from 'rxjs';
@@ -198,6 +204,7 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
   private barcodeDetectorTimer: any = null;
   private zxingReader: any = null;
   private offscreenCanvas: HTMLCanvasElement | null = null;
+  private readonly cameraDebounce = new BarcodeDebounceGuard(3000);
 
   // ─── Escáner Láser / Manual ───────────────────────────────────────────────
   protected readonly manualInput = signal<string>('');
@@ -501,13 +508,8 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
     let stream: MediaStream | null = null;
     let lastError: any = null;
 
-    // Escalera progresiva de compatibilidad para tabletas Android y iOS
-    const attempts: MediaStreamConstraints[] = [
-      { video: { facingMode: { ideal: mode }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-      { video: { facingMode: { ideal: mode } }, audio: false },
-      { video: { facingMode: mode }, audio: false },
-      { video: true, audio: false }
-    ];
+    // Escalera progresiva de compatibilidad (1080p -> 720p -> fallback) para nitidez de códigos 1D/2D
+    const attempts = buildCameraConstraintsLadder(mode);
 
     for (const constraint of attempts) {
       try {
@@ -532,6 +534,7 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
     }
 
     this.mediaStream = stream;
+    applyCameraEnhancements(stream);
     this.cameraActive.set(true);
     this.cameraLoading.set(false);
     this.cameraError.set(null);
@@ -561,6 +564,7 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
   }
 
   stopCamera(): void {
+    this.cameraDebounce.reset();
     if (this.barcodeDetectorTimer) {
       clearInterval(this.barcodeDetectorTimer);
       this.barcodeDetectorTimer = null;
@@ -655,7 +659,7 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
 
             if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
               const code = barcodes[0].rawValue.trim();
-              if (code) {
+              if (code && this.cameraDebounce.shouldProcess(code)) {
                 this.processCode(code);
               }
             }
@@ -680,12 +684,12 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
         if (this.zxingReader) {
           try { this.zxingReader.reset(); } catch (_) {}
         }
-        const codeReader = new ZXing.BrowserMultiFormatReader();
+        const codeReader = createEnhancedZxingReader(ZXing);
         this.zxingReader = codeReader;
         codeReader.decodeFromVideoElement(video, (result: any) => {
           if (result && result.getText && !this.isProcessingScan()) {
             const code = result.getText().trim();
-            if (code) {
+            if (code && this.cameraDebounce.shouldProcess(code)) {
               this.processCode(code);
             }
           }
@@ -805,7 +809,7 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
 
     setTimeout(() => {
       this.isProcessingScan.set(false);
-    }, 400);
+    }, 1000);
   }
 
   private syncPalletWithBackend(

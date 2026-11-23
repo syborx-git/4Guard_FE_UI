@@ -23,6 +23,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { BarcodeDebounceGuard, applyCameraEnhancements } from '../../../core/utils/barcode-scanner-guard';
 import { AuthState, SyncState, ZoneLeaseService, ToastService } from '@4guard/shared-core';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
 
@@ -187,6 +188,7 @@ export class CountingScanComponent implements AfterViewInit, OnDestroy {
   protected readonly zoneLeaseSeconds = signal<number>(1680); // ~28 min restantes
   private leaseTimerInterval: any = null;
   private barcodeDetectorTimer: any = null;
+  private readonly cameraDebounce = new BarcodeDebounceGuard(3000);
 
   // ─── Modo Offline & Cola IndexedDB HU-050 ──────────────────────────────────
   protected readonly isOfflineMode     = signal<boolean>(false);
@@ -361,7 +363,10 @@ export class CountingScanComponent implements AfterViewInit, OnDestroy {
             try {
               const barcodes = await detector.detect(this.cameraVideoRef.nativeElement);
               if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-                this.processScan(barcodes[0].rawValue);
+                const raw = barcodes[0].rawValue.trim();
+                if (raw && this.cameraDebounce.shouldProcess(raw)) {
+                  this.processScan(raw);
+                }
               }
             } catch {}
           }
@@ -406,13 +411,14 @@ export class CountingScanComponent implements AfterViewInit, OnDestroy {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: mode },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
           },
           audio: false,
         });
 
         this.mediaStream = stream;
+        applyCameraEnhancements(stream);
         this.cameraActive.set(true);
         this.cameraLoading.set(false);
 
