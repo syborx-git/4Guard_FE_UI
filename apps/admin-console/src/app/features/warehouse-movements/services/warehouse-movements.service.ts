@@ -149,7 +149,7 @@ export class WarehouseMovementsService {
           capacityTarimas: newCapacity,
         })
         .subscribe({
-          next: () => {},
+          next: () => { },
           error: (err) => console.error(`Error persistiendo capacidad de ${cleanCode} en BD:`, err),
         });
     }
@@ -240,10 +240,10 @@ export class WarehouseMovementsService {
           }
         }
       }
-    } catch {}
+    } catch { }
 
     const activeReceptions = this.receptionsSignal().filter((r) => {
-      if (r.status === 'CANCELLED') return false;
+      if (r.status === 'CANCELLED' || (r.status as string) === 'COMPLETED') return false;
 
       // Si no tiene rampa asignada (null, undefined, 0), no ocupa ningún andén
       const hasRamp = (
@@ -274,7 +274,7 @@ export class WarehouseMovementsService {
     });
 
     const activeOutbounds = this.outboundsSignal().filter((o) => {
-      if (o.status === 'CANCELLED') return false;
+      if (o.status === 'CANCELLED' || (o.status as string) === 'COMPLETED' || (o.status as string) === 'DISPATCHED') return false;
 
       const hasRamp = (
         (o.rampNumber != null && Number(o.rampNumber) > 0) ||
@@ -529,9 +529,9 @@ export class WarehouseMovementsService {
 
     // Consulta directa a locationsSignal como fallback de resiliencia
     const locMap = this.locationsSignal();
-    const locDirect = locMap[clean] || 
-                      (clean.startsWith('LOC-') ? locMap[clean.replace(/^LOC-/, 'POS-')] : undefined) ||
-                      (clean.startsWith('POS-') ? locMap[clean.replace(/^POS-/, 'LOC-')] : undefined);
+    const locDirect = locMap[clean] ||
+      (clean.startsWith('LOC-') ? locMap[clean.replace(/^LOC-/, 'POS-')] : undefined) ||
+      (clean.startsWith('POS-') ? locMap[clean.replace(/^POS-/, 'LOC-')] : undefined);
     if (locDirect && (locDirect.totalPallets > 0 || (locDirect.pallets && locDirect.pallets.length > 0))) {
       const remMap = new Map<string, BayRemisionSummary>();
       for (const p of (locDirect.pallets || [])) {
@@ -622,7 +622,7 @@ export class WarehouseMovementsService {
           }
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // 2. Incorporar bahías temporales de andenes activos según recepciones
     for (const ramp of this.rampOccupancyStatus()) {
@@ -652,7 +652,7 @@ export class WarehouseMovementsService {
           this.globalMaxPalletNumberSignal.set(num);
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // 1. Cargar datos cacheados de LocalStorage inmediatamente para reactividad instantánea
     try {
@@ -666,7 +666,7 @@ export class WarehouseMovementsService {
         const mapped = cachedOutbounds.map((o: any) => this.mapOutboundResponseToHeader(o));
         this.outboundsSignal.set(mapped);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // 2. Escuchar sincronización reactiva entre pestañas de navegador (BroadcastChannel + Storage Event)
     if (typeof window !== 'undefined') {
@@ -692,7 +692,7 @@ export class WarehouseMovementsService {
               ]);
             }
           };
-        } catch (_) {}
+        } catch (_) { }
       }
 
       window.addEventListener('storage', (e) => {
@@ -702,19 +702,19 @@ export class WarehouseMovementsService {
             if (e.key === '4g_env_purged_at' || parsed?.type === 'PURGE_ALL') {
               this.applyLocalStatePurge();
             }
-          } catch (_) {}
+          } catch (_) { }
         } else if (e.key === '4g_warehouse_receptions_cache' && e.newValue) {
           try {
             const parsed = JSON.parse(e.newValue);
             const headers = parsed.map((r: any) => this.mapReceptionResponseToHeader(r));
             this.receptionsSignal.set(headers);
-          } catch (_) {}
+          } catch (_) { }
         } else if (e.key === '4g_warehouse_outbounds_cache' && e.newValue) {
           try {
             const parsed = JSON.parse(e.newValue);
             const headers = parsed.map((o: any) => this.mapOutboundResponseToHeader(o));
             this.outboundsSignal.set(headers);
-          } catch (_) {}
+          } catch (_) { }
         }
       });
     }
@@ -730,7 +730,7 @@ export class WarehouseMovementsService {
           this.updateGlobalMaxPalletNumber(lastNum);
         }
       },
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -740,7 +740,7 @@ export class WarehouseMovementsService {
       this.globalMaxPalletNumberSignal.set(val);
       try {
         localStorage.setItem('4g_global_max_pallet_number', String(val));
-      } catch (_) {}
+      } catch (_) { }
     }
   }
 
@@ -813,8 +813,8 @@ export class WarehouseMovementsService {
 
     // 3. Montacarguistas
     this.forkliftAdminService.loadOperators().subscribe({
-      next: () => {},
-      error: () => {},
+      next: () => { },
+      error: () => { },
     });
 
     this.movementsApi.getForkliftOperators().subscribe({
@@ -831,7 +831,7 @@ export class WarehouseMovementsService {
           );
         }
       },
-      error: () => {},
+      error: () => { },
     });
 
     // 4. Ubicaciones / Bahías y 5. Lotes de inventario (FIFO/FEFO)
@@ -841,7 +841,7 @@ export class WarehouseMovementsService {
         this.syncLocationsAndInventory(this.lastFetchedLocations, this.inventoryBatchesSignal());
         this.syncRamps(this.lastFetchedLocations);
       },
-      error: () => {},
+      error: () => { },
     });
 
     this.reloadInventoryBatches();
@@ -856,7 +856,7 @@ export class WarehouseMovementsService {
           (transfers || []).map((t: any) => this.mapTransferResponseToHeader(t))
         );
       },
-      error: () => {},
+      error: () => { },
     });
 
     // 8. Salidas
@@ -866,7 +866,7 @@ export class WarehouseMovementsService {
           (outbounds || []).map((o: any) => this.mapOutboundResponseToHeader(o))
         );
       },
-      error: () => {},
+      error: () => { },
     });
 
     // Iniciar auto-polling continuo para sincronizar al instante entre Caseta y Gerencia / Almacén
@@ -991,7 +991,7 @@ export class WarehouseMovementsService {
         this.inventoryBatchesSignal.set(fetchedBatches);
         this.syncLocationsAndInventory(this.lastFetchedLocations, fetchedBatches);
       },
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -1151,7 +1151,7 @@ export class WarehouseMovementsService {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem('4g_env_purged_at', String(purgeTime));
       }
-    } catch (_) {}
+    } catch (_) { }
 
     this.applyLocalStatePurge();
 
@@ -1205,7 +1205,7 @@ export class WarehouseMovementsService {
         }
         this.transfersSignal.set(list);
       },
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -1242,7 +1242,7 @@ export class WarehouseMovementsService {
         }
         this.outboundsSignal.set(finalOutbounds);
       },
-      error: () => {},
+      error: () => { },
     });
   }
 
@@ -1479,7 +1479,7 @@ export class WarehouseMovementsService {
       loc.pallets.forEach((pallet) => {
         const codeKey = (pallet.palletCode || '').toUpperCase().trim();
         const match = (codeKey ? receptionPalletByCode.get(codeKey) : undefined) ||
-                      (pallet.id ? receptionPalletById.get(pallet.id) : undefined);
+          (pallet.id ? receptionPalletById.get(pallet.id) : undefined);
 
         if (match) {
           if (match.palletNumber != null) {
@@ -1909,8 +1909,8 @@ export class WarehouseMovementsService {
     const branchId = session.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
 
     const clientItem = this.clientsSignal().find((c) => c.code === data.clientCode || c.name === data.client);
-    const clientId = (clientItem && isUuid(clientItem.code)) 
-      ? clientItem.code 
+    const clientId = (clientItem && isUuid(clientItem.code))
+      ? clientItem.code
       : (isUuid(data.clientCode) ? data.clientCode : 'c73f0907-9fa5-4bdf-87db-2eb5e7683938');
 
     const carrierItem = this.carrierLinesSignal().find((c) => c.code === data.carrierLineCode || c.name === data.carrierLine);
@@ -1942,8 +1942,8 @@ export class WarehouseMovementsService {
     const rampId = (rampItem && isUuid(rampItem.id))
       ? rampItem.id
       : (matchedRampLoc && isUuid(matchedRampLoc.id)
-          ? matchedRampLoc.id
-          : (isUuid(data.rampCode) ? data.rampCode : null));
+        ? matchedRampLoc.id
+        : (isUuid(data.rampCode) ? data.rampCode : null));
 
     // Normalizar hora a formato HH:mm:ss 24h
     let receptionTime = '09:00:00';
@@ -2121,8 +2121,8 @@ export class WarehouseMovementsService {
     const branchId = session.branchId || 'b73f0907-9fa5-4bdf-87db-2eb5e7683936';
 
     const clientItem = this.clientsSignal().find((c) => c.code === data.clientCode || c.name === data.client);
-    const clientId = (clientItem && isUuid(clientItem.code)) 
-      ? clientItem.code 
+    const clientId = (clientItem && isUuid(clientItem.code))
+      ? clientItem.code
       : (isUuid(data.clientCode) ? data.clientCode : 'c73f0907-9fa5-4bdf-87db-2eb5e7683938');
 
     const carrierItem = this.carrierLinesSignal().find((c) => c.code === data.carrierLineCode || c.name === data.carrierLine);
@@ -2149,8 +2149,8 @@ export class WarehouseMovementsService {
     const rampId = (rampItem && isUuid(rampItem.id))
       ? rampItem.id
       : (matchedRampLoc && isUuid(matchedRampLoc.id)
-          ? matchedRampLoc.id
-          : (isUuid(data.rampCode) ? data.rampCode : null));
+        ? matchedRampLoc.id
+        : (isUuid(data.rampCode) ? data.rampCode : null));
 
     const seals: string[] = [];
     const rawSeals: string[] = (data.sealNumbers && data.sealNumbers.length > 0)
@@ -2332,7 +2332,7 @@ export class WarehouseMovementsService {
           maxNum = parsed;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const list = this.receptionsSignal();
     for (const r of list) {
@@ -2363,7 +2363,7 @@ export class WarehouseMovementsService {
   }
 
   // Mapea un ReceptionResponse o ReceptionSummaryResponse a ReceptionHeader completo
-  
+
   setReceptionPriority(receptionId: string, priority: 'NORMAL' | 'URGENT'): Observable<ReceptionHeader> {
     const target = this.receptions().find((r) => r.id === receptionId || r.folio === receptionId);
     const recId = target?.id || receptionId;
@@ -2375,7 +2375,7 @@ export class WarehouseMovementsService {
             const bc = new BroadcastChannel('4guard_wms_events');
             bc.postMessage({ type: 'RECEPTION_PRIORITY_CHANGED', receptionId: recId, priority });
             bc.close();
-          } catch (_) {}
+          } catch (_) { }
         }
         return updated || (target as ReceptionHeader) || ({} as ReceptionHeader);
       })
@@ -2448,10 +2448,10 @@ export class WarehouseMovementsService {
         client: r.clientName || r.client || r.checkIn?.client || '',
         clientCode: r.clientId || r.clientCode || r.checkIn?.clientCode || '',
         rampNumber: (r.rampNumber != null && Number(r.rampNumber) > 0)
-        ? Number(r.rampNumber)
-        : (r.checkIn?.rampNumber != null && Number(r.checkIn.rampNumber) > 0
-          ? Number(r.checkIn.rampNumber)
-          : (r.rampName ? (parseInt(String(r.rampName).replace(/\D/g, ''), 10) || null) : null)),
+          ? Number(r.rampNumber)
+          : (r.checkIn?.rampNumber != null && Number(r.checkIn.rampNumber) > 0
+            ? Number(r.checkIn.rampNumber)
+            : (r.rampName ? (parseInt(String(r.rampName).replace(/\D/g, ''), 10) || null) : null)),
         rampCode: r.rampId || r.rampCode || r.checkIn?.rampCode || '',
         forkliftOperator: opName,
         forkliftOperatorCode: r.forkliftOperatorId || r.forkliftOperatorCode || r.checkIn?.forkliftOperatorCode || '',
@@ -2643,8 +2643,8 @@ export class WarehouseMovementsService {
     const supplierId = (supItem && isUuid(supItem.id))
       ? supItem.id
       : (supItem && isUuid(supItem.code)
-          ? supItem.code
-          : (isUuid(formVals.supplierId) ? formVals.supplierId : null));
+        ? supItem.code
+        : (isUuid(formVals.supplierId) ? formVals.supplierId : null));
 
     const paramPayload = {
       skuId: skuId,
@@ -2875,7 +2875,7 @@ export class WarehouseMovementsService {
     this.receptionsSignal.set(newArr);
     try {
       this.movementsApi.saveLocalReception(updated);
-    } catch (_) {}
+    } catch (_) { }
 
     if (!skipAudit && partial.storageLocation) {
       this.addReceptionAudit(updated.folio, {
@@ -3150,7 +3150,7 @@ export class WarehouseMovementsService {
     this.receptionsSignal.set(newArr);
     try {
       this.movementsApi.saveLocalReception(updated);
-    } catch (_) {}
+    } catch (_) { }
 
     const totalPieces = pallets.reduce((sum, p) => sum + p.pieces, 0);
 
@@ -3268,7 +3268,7 @@ export class WarehouseMovementsService {
     this.receptionsSignal.set(newArr);
     try {
       this.movementsApi.saveLocalReception(updated);
-    } catch (_) {}
+    } catch (_) { }
 
     this.addReceptionAudit(updated.folio || folioOrId, {
       id: `aud-rec-canc-${Date.now()}`,
@@ -3333,7 +3333,7 @@ export class WarehouseMovementsService {
     this.receptionsSignal.set(newArr);
     try {
       this.movementsApi.saveLocalReception(updated);
-    } catch (_) {}
+    } catch (_) { }
 
     // Actualizar también en lotes de inventario/kardex
     this.inventoryBatchesSignal.update((batches) =>
@@ -3417,7 +3417,7 @@ export class WarehouseMovementsService {
     this.receptionsSignal.set(newArr);
     try {
       this.movementsApi.saveLocalReception(updated);
-    } catch (_) {}
+    } catch (_) { }
 
     // Actualizar también en lotes de inventario/kardex si aplica
     this.inventoryBatchesSignal.update((batches) =>
@@ -3494,16 +3494,16 @@ export class WarehouseMovementsService {
     this.receptionsSignal.set(newArr);
     try {
       this.movementsApi.saveLocalReception(updated);
-    } catch (_) {}
+    } catch (_) { }
 
     const actionLabel =
       actionType === 'MISSING_PALLETS'
         ? 'Reapertura para Descarga Complementaria'
         : actionType === 'CASETA_DATA'
-        ? 'Reapertura para Modificación de Ficha'
-        : actionType === 'UA_SWAP'
-        ? 'Homologación de UAs del Cliente'
-        : 'Reapertura Extraordinaria con Autorización';
+          ? 'Reapertura para Modificación de Ficha'
+          : actionType === 'UA_SWAP'
+            ? 'Homologación de UAs del Cliente'
+            : 'Reapertura Extraordinaria con Autorización';
 
     this.addReceptionAudit(updated.folio, {
       id: `aud-rec-reopen-${Date.now()}`,
@@ -4023,7 +4023,7 @@ export class WarehouseMovementsService {
           };
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // 2. Si es una bahía de staging vinculada a una rampa ocupada activa
     if (code.startsWith('STAGING-R')) {
@@ -4225,7 +4225,7 @@ export class WarehouseMovementsService {
         }
         localStorage.setItem('4g_simulated_bay_positions', JSON.stringify(simMap));
       }
-    } catch (_) {}
+    } catch (_) { }
 
     this.transfersSignal.update((list) => [newTransfer, ...list]);
 
