@@ -1216,18 +1216,7 @@ export class WarehouseMovementsService {
             unique.push(o);
           }
         }
-        const purgedAtStr = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_env_purged_at') : null;
-        const purgedAt = purgedAtStr ? Number(purgedAtStr) : 0;
-        let finalOutbounds = unique;
-        if (purgedAt > 0) {
-          finalOutbounds = unique.filter((o) => {
-            const raw = (o as any).rawCreatedAt || (o as any).createdAt || (o as any).timestamp || (o as any).dispatchedAt;
-            if (!raw) return false;
-            const t = new Date(raw).getTime();
-            return !isNaN(t) && t > purgedAt;
-          });
-        }
-        this.outboundsSignal.set(finalOutbounds);
+        this.outboundsSignal.set(unique);
       },
       error: () => { },
     });

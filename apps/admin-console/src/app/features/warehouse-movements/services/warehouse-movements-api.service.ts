@@ -776,7 +776,10 @@ export class WarehouseMovementsApiService {
         this.saveLocalOutbound(data);
         return data;
       }),
-      catchError(() => {
+      catchError((err) => {
+        if (UUID_REGEX.test(id)) {
+          return throwError(() => err);
+        }
         const local = this.getLocalOutbounds().find(o => o.id === id || o.folio === id);
         if (local) {
           Object.assign(local, body);
