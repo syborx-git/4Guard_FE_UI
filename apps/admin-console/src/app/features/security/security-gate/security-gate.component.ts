@@ -398,14 +398,11 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const mergedMap = new Map<string, any>();
     const exitTokensOrFolios = new Set<string>();
 
-    // 1. Folios que ya salieron de la planta (desde historial en memoria) o descartados
+    // 1. Folios que ya salieron de la planta (desde historial en memoria)
     for (const h of this.historyPasses()) {
       if (h.token) exitTokensOrFolios.add(h.token.trim().toUpperCase());
       if (h.generatedFolio) exitTokensOrFolios.add(h.generatedFolio.trim().toUpperCase());
       if (h.id) exitTokensOrFolios.add(h.id.trim().toUpperCase());
-    }
-    for (const d of this.discardedYardFolios()) {
-      exitTokensOrFolios.add(d);
     }
 
     // 2. Pases devueltos por el backend como en patio (In-Yard)
@@ -1964,11 +1961,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
 
   protected reloadActivePasses(): void {
     const session = this.movementsService.movementsApi.getSessionOrg();
-    const role = (this.authState.role() || '').toUpperCase();
-    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO') || role.includes('CONTROL_DESK') || role.includes('MESA');
-    const branchToQuery = isAdminOrManager ? undefined : session.branchId;
 
-    this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: branchToQuery }).subscribe({
+    this.movementsService.movementsApi.getActivePasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
       next: (passes) => {
         this.updateActivePasses(passes || []);
       },
@@ -2070,18 +2064,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     this.movementsService.movementsApi.getInYardPasses({ organizationId: session.organizationId, branchId: session.branchId }).subscribe({
       next: (passes) => {
         this.isLoadingInYard.set(false);
-        const purgedAtStr = typeof localStorage !== 'undefined' ? localStorage.getItem('4g_env_purged_at') : null;
-        const purgedAt = purgedAtStr ? Number(purgedAtStr) : 0;
-        let list = passes || [];
-        if (purgedAt > 0) {
-          list = list.filter(p => {
-            const raw = p.rawCreatedAt || p.createdAt || p.horaEntrada || p.receptionTime;
-            if (!raw) return false;
-            const t = new Date(raw).getTime();
-            return !isNaN(t) && t > purgedAt;
-          });
-        }
-        this.backendInYardPasses.set(list);
+        this.backendInYardPasses.set(passes || []);
       },
       error: () => {
         this.isLoadingInYard.set(false);
@@ -2112,9 +2095,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       this.isLoadingHistory.set(true);
     }
     const session = this.movementsService.movementsApi.getSessionOrg();
-    const role = (this.authState.role() || '').toUpperCase();
-    const isAdminOrManager = role.includes('ADMIN') || role.includes('MANAGER') || role.includes('SUPERVISOR') || role.includes('CEO') || role.includes('CONTROL_DESK') || role.includes('MESA');
-    const branchToQuery = isAdminOrManager ? undefined : session.branchId;
+    const branchToQuery = session.branchId;
     const isGlobal = this.isGlobalHistoryMode();
 
     let from: string | undefined;
