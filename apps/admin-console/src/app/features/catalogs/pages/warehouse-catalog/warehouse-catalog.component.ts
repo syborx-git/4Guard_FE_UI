@@ -72,6 +72,14 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
   private readonly ngZone = inject(NgZone);
   protected readonly Math = Math;
 
+  constructor() {
+    this.movementsService.reloadTransfers();
+    this.movementsService.reloadInventoryBatches();
+    this.movementsService.reloadReceptions();
+    this.layoutService.loadTopology();
+    this.layoutService.loadAllPositions();
+  }
+
   // ─── Sub-Pestañas & Vista ─────────────────────────────────────────────────
   protected readonly activeTab = signal<WarehouseSubTab>('topology');
   protected readonly isKpiCollapsed = signal<boolean>(false);
@@ -187,11 +195,33 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     if (!sec) return [];
     const positions = this.layoutService.getPositionsForSection(sec.id);
     const zoneLetter = this.extractZoneLetter(sec);
-    return positions.filter(p => {
+
+    // Mapeo dinámico y reactivo con las bahías vivas del croquis 2D
+    const bays = this.svgBays();
+    const bayMap = new Map<string, SvgBayItem>();
+    for (const b of bays) {
+      bayMap.set(b.code.toUpperCase(), b);
+    }
+
+    const filtered = positions.filter(p => {
       if (p.sectionId === sec.id) return true;
       if (zoneLetter && p.code && p.code.startsWith(`POS-${zoneLetter}-`)) return true;
       if (sec.name && p.sectionName === sec.name) return true;
       return false;
+    });
+
+    return filtered.map(p => {
+      const b = bayMap.get(p.code.toUpperCase());
+      if (b && (b.currentTarimas > 0 || b.status === 'OCCUPIED')) {
+        return {
+          ...p,
+          currentTarimas: b.currentTarimas,
+          status: b.status,
+          skuDescription: b.skuDescription,
+          batchNumber: b.batchNumber
+        };
+      }
+      return p;
     });
   });
 
@@ -259,7 +289,9 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     const tempCapacity   = tempPos.reduce((acc, p) => acc + (p.capacityTarimas || 22), 0) || (tempCount * 22);
     const totalCapacity  = fixedCapacity + tempCapacity;
 
-    const nominalOccupancyPct = fixedCapacity > 0 ? Math.min(100, Math.round((fixedOccupiedTarimas / fixedCapacity) * 100)) : 0;
+    const nominalOccupancyPct = fixedCapacity > 0 && fixedOccupiedTarimas > 0
+      ? Math.max(1, Math.min(100, Math.round((fixedOccupiedTarimas / fixedCapacity) * 100)))
+      : 0;
     const overflowPct = fixedCapacity > 0 ? Math.round((tempOccupiedTarimas / fixedCapacity) * 100) : 0;
 
     return {
@@ -279,7 +311,9 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
       blocked,
       nominalOccupancyPct,
       overflowPct,
-      occupancyPct: total > 0 ? Math.round((occupied / total) * 100) : 0
+      occupancyPct: total > 0 && occupied > 0
+        ? Math.max(1, Math.min(100, Math.round((occupied / total) * 100)))
+        : 0
     };
   });
 
@@ -516,14 +550,27 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
     const allPositions = this.allPositions();
     const result: SvgBayItem[] = [];
 
-    // Mapeo dinámico de recepciones físicas activas y concluidas en el WMS
-    const allReceptions = this.movementsService.receptions();
+    // Helper para normalizar códigos de bahía a formato estándar POS-X-000
+    const normalizeBayKey = (c?: string | null): string => {
+      if (!c) return '';
+      let k = c.trim().toUpperCase();
+      const m = k.match(/^POS-([A-Z])-0*(\d+)$/i) || k.match(/^([A-Z])-0*(\d+)$/i);
+      if (m) {
+        return `POS-${m[1]}-${m[2].padStart(3, '0')}`;
+      }
+      return k;
+    };
+
     const realPalletLocations = new Map<string, Array<{ skuDescription?: string; lotNumber?: string }>>();
+
+    // 1. Recepciones físicas activas y concluidas
+    const allReceptions = this.movementsService.receptions();
     for (const rec of allReceptions) {
       if (rec.status === 'CANCELLED') continue;
       const pallets = rec.pallets || [];
       for (const p of pallets) {
-        const loc = (p.locationCode || rec.storageLocation || (rec as any).storageLocationCode || '').trim().toUpperCase();
+        const rawLoc = p.locationCode || rec.storageLocation || (rec as any).storageLocationCode || '';
+        const loc = normalizeBayKey(rawLoc);
         if (loc) {
           if (!realPalletLocations.has(loc)) {
             realPalletLocations.set(loc, []);
@@ -533,6 +580,103 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
             lotNumber: p.lotNumber || rec.lotNumber || 'N/A'
           });
         }
+      }
+    }
+
+    // 2. Lotes de inventario registrados (Stock real en bahías)
+    const inventoryBatches = this.movementsService.inventoryBatches();
+    for (const batch of inventoryBatches) {
+      const loc = normalizeBayKey(batch.locationCode || '');
+      if (loc) {
+        if (!realPalletLocations.has(loc)) {
+          realPalletLocations.set(loc, []);
+        }
+        const count = batch.availablePallets || (batch.pallets?.length) || 1;
+        for (let i = 0; i < count; i++) {
+          realPalletLocations.get(loc)!.push({
+            skuDescription: batch.productName ? `${batch.productId ? batch.productId + ' - ' : ''}${batch.productName}` : 'Mercancía en Inventario',
+            lotNumber: batch.lotNumber || 'N/A'
+          });
+        }
+      }
+    }
+
+    // 3. Stock físico vivo en almacén (locationsSignal)
+    const locMap = this.movementsService.locations();
+    for (const [rawCode, locInfo] of Object.entries(locMap)) {
+      const loc = normalizeBayKey(rawCode);
+      if (loc && locInfo.totalPallets > 0) {
+        if (!realPalletLocations.has(loc)) {
+          realPalletLocations.set(loc, []);
+        }
+        const list = realPalletLocations.get(loc)!;
+        const pallets = locInfo.pallets || [];
+        if (pallets.length > 0) {
+          for (const p of pallets) {
+            list.push({
+              skuDescription: p.description || (p as any).productDescription || 'Mercancía en Bahía',
+              lotNumber: p.lotNumber || 'N/A'
+            });
+          }
+        } else {
+          for (let i = 0; i < locInfo.totalPallets; i++) {
+            list.push({
+              skuDescription: 'Mercancía en Bahía',
+              lotNumber: 'N/A'
+            });
+          }
+        }
+      }
+    }
+
+    // 4. Cambios de Almacén (Transfers) ejecutados en el sistema
+    const transfers = this.movementsService.transfers();
+    for (const tr of transfers) {
+      if (tr.status === 'CANCELLED') continue;
+      const originKey = normalizeBayKey(tr.originLocation || '');
+      const destKey = normalizeBayKey(tr.destinationLocation || '');
+      const count = Number(tr.totalPallets) || tr.pallets?.length || 1;
+
+      // Descontar del origen
+      if (originKey && realPalletLocations.has(originKey)) {
+        const cur = realPalletLocations.get(originKey)!;
+        realPalletLocations.set(originKey, cur.slice(count));
+      }
+
+      // Añadir al destino
+      if (destKey) {
+        if (!realPalletLocations.has(destKey)) {
+          realPalletLocations.set(destKey, []);
+        }
+        const firstPallet = tr.pallets?.[0];
+        const skuDesc = firstPallet?.description || (firstPallet as any)?.productDescription || (firstPallet as any)?.productName || (firstPallet as any)?.skuName || 'Mercancía Reubicada';
+        const lotNum = firstPallet?.lotNumber || (firstPallet as any)?.batchNumber || 'LOT-2026-TR';
+        for (let i = 0; i < count; i++) {
+          realPalletLocations.get(destKey)!.push({
+            skuDescription: skuDesc,
+            lotNumber: lotNum
+          });
+        }
+      }
+    }
+
+    // 5. Overrides de simulación / traslados en LocalStorage
+    const simOverrides = this.layoutService.getSimulatedPositions();
+    for (const [codeKey, sim] of Object.entries(simOverrides)) {
+      const cleanKey = normalizeBayKey(codeKey);
+      if (sim.currentTarimas && sim.currentTarimas > 0) {
+        if (!realPalletLocations.has(cleanKey)) {
+          realPalletLocations.set(cleanKey, []);
+        }
+        const existing = realPalletLocations.get(cleanKey)!;
+        while (existing.length < sim.currentTarimas) {
+          existing.push({
+            skuDescription: sim.skuDescription || 'Mercancía en Almacén',
+            lotNumber: sim.batchNumber || 'N/A'
+          });
+        }
+      } else if (sim.currentTarimas === 0) {
+        realPalletLocations.delete(cleanKey);
       }
     }
 
@@ -549,9 +693,10 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
           const candidateCode = `POS-${zoneCode}-${posIdx.toString().padStart(3, '0')}`;
           const pos = zonePositions.find(p => p.code.toUpperCase() === candidateCode) || zonePositions[posIdx - 1] || null;
           const codeKey = (pos?.code || candidateCode).toUpperCase();
+          const normKey = normalizeBayKey(codeKey);
 
-          // Comprobar ocupación real (desde backend o desde recepciones operativas)
-          const matchingPallets = realPalletLocations.get(codeKey) || [];
+          // Comprobar ocupación real (desde backend, transferencias, inventario o recepciones)
+          const matchingPallets = realPalletLocations.get(normKey) || realPalletLocations.get(codeKey) || [];
           const realPalletCount = matchingPallets.length;
 
           let currentTarimas = pos?.currentTarimas || 0;
@@ -945,15 +1090,20 @@ export class WarehouseCatalogComponent implements AfterViewInit, OnDestroy {
 
   protected getSectionOccupancyRate(sec: WarehouseSection): number {
     const secCode = (sec.code || '').toUpperCase().trim();
+    const zoneChar = this.extractZoneLetter(sec);
     const bays = this.svgBays().filter(b =>
       (b.sectionCode || '').toUpperCase().trim() === secCode ||
+      (b.sectionCode || '').toUpperCase().trim() === zoneChar ||
+      (zoneChar && b.code.startsWith(`POS-${zoneChar}-`)) ||
       b.code.startsWith(`POS-${secCode}-`)
     );
 
     if (!bays || bays.length === 0) return 0;
     const totalOccupied = bays.reduce((acc, b) => acc + (b.currentTarimas || 0), 0);
     const totalCap = bays.reduce((acc, b) => acc + (b.capacityTarimas || 22), 0) || (sec.capacidadTarimas || 1);
-    return totalCap > 0 ? Math.min(100, Math.round((totalOccupied / totalCap) * 100)) : 0;
+    return totalCap > 0 && totalOccupied > 0
+      ? Math.max(1, Math.min(100, Math.round((totalOccupied / totalCap) * 100)))
+      : 0;
   }
 
   protected resetView(): void {
