@@ -2718,7 +2718,8 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
     const driver = item.nombreOperador || item.driverName || item.transportistaNombre || formVal.nombreOperador || formVal.transportistaNombre || 'OPERADOR CHOFER';
     const carrier = item.carrierLine || item.carrierLineCode || formVal.carrierLine || 'TRANSPORTE GENERAL';
     const client = item.client || item.clientName || formVal.client || 'CLIENTE GENERAL';
-    const eco = item.noEcoTractor || formVal.noEcoTractor || '-';
+    const eco = item.noEcoTractor || item.checkIn?.noEcoTractor || item.preCheckin?.noEcoTractor || formVal.noEcoTractor || '-';
+    const ecoCaja = item.noEcoCaja || item.checkIn?.noEcoCaja || item.preCheckin?.noEcoCaja || formVal.noEcoCaja || '-';
     const dimensions = item.medidasCaja || item.boxDimensions || formVal.medidasCaja || '53 Pies';
     const transType = item.tipoTransporte || item.transportType || formVal.tipoTransporte || 'Caja Seca';
     const ramp = item.rampCode || (item.rampNumber ? `R-${item.rampNumber}` : (formVal.rampCode || (formVal.rampNumber ? `R-${formVal.rampNumber}` : 'Sin Andén')));
@@ -2760,6 +2761,7 @@ export class SecurityGateComponent implements OnInit, OnDestroy {
       placasTracto: tractor,
       noEcoTractor: eco,
       placasCaja: box,
+      noEcoCaja: ecoCaja,
       medidasCaja: dimensions,
       noSello: sealsString,
       tipoTransporte: transType,

@@ -386,6 +386,14 @@ export interface TransportChecklistPrintData {
     }
     .f01-print-sheet {
       text-transform: uppercase;
+      color: #0f172a !important;
+    }
+    .f01-print-sheet span,
+    .f01-print-sheet strong,
+    .f01-print-sheet td,
+    .f01-print-sheet th,
+    .f01-print-sheet div {
+      color: #0f172a !important;
     }
     @media print {
       body, html {
