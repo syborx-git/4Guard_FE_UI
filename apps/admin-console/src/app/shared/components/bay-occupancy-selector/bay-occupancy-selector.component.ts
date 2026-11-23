@@ -206,23 +206,6 @@ export const OFFICIAL_CAD_SECTIONS: WarehouseSection[] = [
     sublabelPosition: { x: 713, y: 280 }
   },
   {
-    id: 'sec-f',
-    code: 'F',
-    name: 'Almacén F — Cuarentena QM & Auditoría',
-    category: 'Inspección QA / QM',
-    posFijas: 91,
-    posTemp: 25,
-    posPreload: 4,
-    capacidadTarimas: 2002,
-    factorEstiba: '22 tarimas/pos',
-    materials: ['NESP-CAPS-10P · Cápsulas Nespresso'],
-    notes: '91 Fijas · 25 Temporales · 4 Precarga',
-    status: 'LOADED',
-    polygonPoints: '588,378 702,378 702,459 720,459 720,782 592,782 592,598 588,598',
-    labelPosition: { x: 654, y: 529 },
-    sublabelPosition: { x: 654, y: 551 }
-  },
-  {
     id: 'sec-d',
     code: 'D',
     name: 'Almacén D — Insumos & Empaque',
@@ -235,9 +218,26 @@ export const OFFICIAL_CAD_SECTIONS: WarehouseSection[] = [
     materials: ['CASE CORRUGATED NESCAFE CLASICO 12X85G'],
     notes: '120 Fijas · 30 Temporales · 4 Precarga',
     status: 'LOADED',
-    polygonPoints: '588,378 650,378 650,782 588,782',
-    labelPosition: { x: 619, y: 550 },
-    sublabelPosition: { x: 619, y: 572 }
+    polygonPoints: '588,378 702,378 702,572 588,572',
+    labelPosition: { x: 645, y: 470 },
+    sublabelPosition: { x: 645, y: 492 }
+  },
+  {
+    id: 'sec-f',
+    code: 'F',
+    name: 'Almacén F — Cuarentena QM & Auditoría',
+    category: 'Inspección QA / QM',
+    posFijas: 91,
+    posTemp: 25,
+    posPreload: 4,
+    capacidadTarimas: 2002,
+    factorEstiba: '22 tarimas/pos',
+    materials: ['NESP-CAPS-10P · Cápsulas Nespresso'],
+    notes: '91 Fijas · 25 Temporales · 4 Precarga',
+    status: 'LOADED',
+    polygonPoints: '588,576 720,576 720,782 592,782 592,598 588,598',
+    labelPosition: { x: 654, y: 670 },
+    sublabelPosition: { x: 654, y: 692 }
   },
   {
     id: 'sec-j',

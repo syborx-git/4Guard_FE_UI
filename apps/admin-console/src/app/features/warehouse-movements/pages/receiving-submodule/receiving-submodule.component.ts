@@ -1388,6 +1388,62 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     this.formMode.set('idle');
   }
 
+  // ── GESTIÓN DE RETROCESO DE ETAPAS (PASO ANTERIOR EN RECEPCIÓN) ──
+  canStepBack(rec: ReceptionHeader | null): boolean {
+    if (!rec) return false;
+    return rec.status === 'ASSIGNED' || rec.status === 'IN_PROGRESS' || rec.status === 'DISCHARGED';
+  }
+
+  getStepBackLabel(rec: ReceptionHeader | null): string {
+    if (!rec) return 'Paso Anterior';
+    if (rec.status === 'DISCHARGED') return 'Regresar a Descarga Activa';
+    if (rec.status === 'IN_PROGRESS') return 'Regresar a Parámetros / Montacarguista';
+    if (rec.status === 'ASSIGNED') return 'Regresar a Selección de Andén';
+    return 'Paso Anterior';
+  }
+
+  getStepBackTooltip(rec: ReceptionHeader | null): string {
+    if (!rec) return 'Regresar al paso anterior del flujo operativo';
+    if (rec.status === 'DISCHARGED') return 'Revertir estado de "Por Auditar" a "En Descarga Activa"';
+    if (rec.status === 'IN_PROGRESS') return 'Revertir a "Andén Asignado" para editar parámetros, lote o cambiar montacarguista';
+    if (rec.status === 'ASSIGNED') return 'Revertir a "Pre-registro Caseta" para liberar o reasignar rampa';
+    return 'Regresar al paso anterior';
+  }
+
+  revertToPreviousStep(rec: ReceptionHeader): void {
+    if (!this.canStepBack(rec)) return;
+    let targetStatus: any = 'REGISTERED';
+    let msg = '';
+    if (rec.status === 'DISCHARGED') {
+      targetStatus = 'IN_PROGRESS';
+      msg = `Recepción #${rec.folio} regresada a etapa 3: "En Descarga Activa".`;
+    } else if (rec.status === 'IN_PROGRESS') {
+      targetStatus = 'ASSIGNED';
+      msg = `Recepción #${rec.folio} regresada a etapa 2: "Andén Asignado · Captura de Parámetros y Montacarguista".`;
+    } else if (rec.status === 'ASSIGNED') {
+      targetStatus = 'REGISTERED';
+      msg = `Recepción #${rec.folio} regresada a etapa 1: "Pre-registro Caseta · Selección de Andén".`;
+    }
+
+    const recId = rec.id || rec.folio;
+    this.movementsApi.updateReceptionParameters(recId, { status: targetStatus }).subscribe({
+      next: () => {
+        rec.status = targetStatus;
+        this.selectedReception.set({ ...rec });
+        this.movementsService.updateReception(recId, { status: targetStatus }, true);
+        this.patchAltaFormWithReception(rec);
+        this.toast.success(msg);
+      },
+      error: () => {
+        rec.status = targetStatus;
+        this.selectedReception.set({ ...rec });
+        this.movementsService.updateReception(recId, { status: targetStatus }, true);
+        this.patchAltaFormWithReception(rec);
+        this.toast.info(msg);
+      }
+    });
+  }
+
   filteredReceptions = computed(() => {
     const list = this.boardReceptions();
     const q = this.searchQuery().toLowerCase().trim();

@@ -51,6 +51,12 @@ export class WarehouseLayoutService {
   readonly blockReasons = computed(() => this._blockReasons());
 
   constructor() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('4g_simulated_bay_positions');
+        localStorage.removeItem('4g_warehouse_clean_mode');
+      }
+    } catch {}
     if (this.sessionStorageService.isLogged()) {
       this.loadTopology();
       this.loadBlockReasons();
@@ -105,32 +111,15 @@ export class WarehouseLayoutService {
         const isClean = this.isCleanMode();
 
         const processed = positions.map((pos) => {
-          // Si estamos en modo almacén limpio / ceros, arrancamos en 0
-          let base = isClean
-            ? {
-                ...pos,
-                currentTarimas: 0,
-                status: 'AVAILABLE' as PositionStatus,
-                skuDescription: 'Posición Disponible',
-                batchNumber: 'N/A',
-                blockReason: undefined,
-              }
-            : pos;
-
-          // Si tiene movimiento de recepción registrado, aplicarlo encima
-          const override = sim[pos.code.toUpperCase()];
-          if (override) {
-            return {
-              ...base,
-              currentTarimas: override.currentTarimas ?? base.currentTarimas,
-              skuDescription: override.skuDescription ?? base.skuDescription,
-              batchNumber: override.batchNumber ?? base.batchNumber,
-              status: (override.status as PositionStatus) ?? base.status,
-              lastMovement: override.lastMovement ?? base.lastMovement,
-              blockReason: override.blockReason ?? base.blockReason,
-            };
-          }
-          return base;
+          const hasRealStock = pos.currentTarimas !== undefined && pos.currentTarimas !== null && pos.currentTarimas > 0;
+          return {
+            ...pos,
+            currentTarimas: hasRealStock ? pos.currentTarimas : 0,
+            status: hasRealStock ? (pos.status || 'OCCUPIED' as PositionStatus) : (pos.status === 'BLOCKED' ? 'BLOCKED' as PositionStatus : 'AVAILABLE' as PositionStatus),
+            skuDescription: hasRealStock ? (pos.skuDescription || 'Mercancía en Stock') : 'Posición Disponible',
+            batchNumber: hasRealStock ? (pos.batchNumber || 'N/A') : 'N/A',
+            blockReason: pos.blockReason
+          };
         });
 
         this._allPositions.set(processed);
@@ -455,37 +444,6 @@ export class WarehouseLayoutService {
 
     if (fromAll.length > 0) {
       rawPositions = fromAll;
-    }
-
-    if (this.isCleanMode()) {
-      rawPositions = rawPositions.map(p => ({
-        ...p,
-        currentTarimas: 0,
-        status: 'AVAILABLE' as PositionStatus,
-        skuDescription: 'Posición Disponible',
-        batchNumber: 'N/A',
-        blockReason: undefined,
-      }));
-    }
-
-    // Overlay de simulaciones activas
-    const sim = this.getSimulatedPositions();
-    if (Object.keys(sim).length > 0) {
-      return rawPositions.map(pos => {
-        const override = sim[pos.code.toUpperCase()];
-        if (override) {
-          return {
-            ...pos,
-            currentTarimas: override.currentTarimas ?? pos.currentTarimas,
-            skuDescription: override.skuDescription ?? pos.skuDescription,
-            batchNumber: override.batchNumber ?? pos.batchNumber,
-            status: (override.status as PositionStatus) ?? pos.status,
-            lastMovement: override.lastMovement ?? pos.lastMovement,
-            blockReason: override.blockReason ?? pos.blockReason,
-          };
-        }
-        return pos;
-      });
     }
 
     return rawPositions;

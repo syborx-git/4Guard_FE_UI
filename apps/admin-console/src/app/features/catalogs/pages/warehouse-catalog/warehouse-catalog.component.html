@@ -230,52 +230,6 @@
               <span>+ Generar Bahías</span>
             </button>
 
-
-            <!-- Botón Limpiar Almacén / Modo en Ceros -->
-            @if (isCleanMode()) {
-              <button
-                type="button"
-                class="px-3 py-1.5 rounded-lg border border-sky-400 bg-sky-950/60 text-sky-300 font-semibold text-xs flex items-center gap-1.5 shadow-sm hover:bg-sky-900/80 transition-all"
-                (click)="toggleCleanMode()"
-                title="Modo Ceros Activo: Solo se pintan los racks recepcionados. Clic para volver a datos demo"
-              >
-                <span class="material-symbols-outlined text-[15px]">cleaning_services</span>
-                <span>Almacén en Ceros (Activo)</span>
-              </button>
-
-              <button
-                type="button"
-                class="px-2.5 py-1.5 rounded-lg border border-red-500/30 bg-red-950/40 text-red-300 font-medium text-xs flex items-center gap-1 hover:bg-red-900/60 transition-all"
-                (click)="resetAllToZero()"
-                title="Borrar todas las recepciones y dejar absolutamente todos los racks en blanco"
-              >
-                <span class="material-symbols-outlined text-[14px]">delete_sweep</span>
-                <span>Vaciar Todo</span>
-              </button>
-            } @else {
-              <button
-                type="button"
-                class="px-3 py-1.5 rounded-lg border border-white/20 bg-slate-800/80 text-slate-200 font-semibold text-xs flex items-center gap-1.5 hover:border-sky-400 hover:text-sky-300 hover:bg-slate-800 transition-all"
-                (click)="resetAllToZero()"
-                title="Poner todos los racks en blanco (0 tarimas) para que se llenen conforme recepciones en vivo"
-              >
-                <span class="material-symbols-outlined text-[15px]">cleaning_services</span>
-                <span>🧹 Iniciar en Ceros (Modo Real)</span>
-              </button>
-            }
-
-            @if (hasSimulatedPositions()) {
-              <button
-                type="button"
-                class="wmap__reset-sim-btn"
-                (click)="resetAllSimulations()"
-                title="Restablecer bahías simuladas a valores originales"
-              >
-                <span class="material-symbols-outlined text-[15px]">restart_alt</span>
-                <span>Restablecer</span>
-              </button>
-            }
-
             <div class="wmap__legend" id="topo-legend" aria-label="Simbología del mapa térmico">
               <span class="wmap__legend-item" title="Bahía totalmente libre (0 tarimas)">
                 <span class="wmap__legend-dot wmap__legend-dot--vacant"></span>Vacío (0 T)
@@ -581,6 +535,24 @@
 
               <!-- Capa 1: Plano base fiel al DXF "#Layout Almacen principal.dxf" (muros, columnas, cortinas, rampas, oficinas y textos) -->
               <image href="assets/layout_almacen_principal.svg" x="0" y="0" width="1000" height="887.27" preserveAspectRatio="none" class="cad__base-plan"/>
+
+              <!-- Capa 1.5: Zona de Andenes y Rampas de Carga (Visual técnico operativo sin inventario) -->
+              <g class="cad__ramps-overlay" pointer-events="none">
+                <!-- Rampa 1 y 2 (Patio de Maniobras Noreste) -->
+                <polygon
+                  points="802,188 958,188 948,340 802,340"
+                  fill="url(#hazard-stripe)"
+                  stroke="rgba(234, 195, 73, 0.45)"
+                  stroke-width="1.5"
+                  stroke-dasharray="6,4"
+                  class="cad__ramp-polygon"
+                />
+                <g class="cad__ramp-badge" transform="translate(880, 255)">
+                  <rect x="-65" y="-17" width="130" height="34" rx="4" fill="rgba(10, 16, 24, 0.88)" stroke="rgba(234, 195, 73, 0.6)" stroke-width="1"/>
+                  <text x="0" y="-2" text-anchor="middle" fill="#eac349" font-size="10.5" font-weight="700" letter-spacing="1">RAMPAS 1 &amp; 2</text>
+                  <text x="0" y="11" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="8" font-weight="500">Andén de Maniobras</text>
+                </g>
+              </g>
 
               <!-- Capa 4.5: Pasillos de Interconexión de Baterías (Feeder Routes) -->
               @if (showTransitRoutes()) {

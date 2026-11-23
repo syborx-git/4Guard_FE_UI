@@ -36,6 +36,7 @@ export class InventoryQueryGridComponent {
   protected isFilterModalOpen = signal(false);
   protected isAnalyticsModalOpen = signal(false);
   protected analyticsInitialView = signal<'table' | 'chart'>('table');
+  protected isRefreshing = signal(false);
 
   // Búsqueda rápida local y sugerencias predictivas
   protected searchTerm = signal('');
@@ -348,5 +349,13 @@ export class InventoryQueryGridComponent {
     if (page >= 1 && page <= this.totalPages()) {
       this.currentPage.set(page);
     }
+  }
+
+  protected onRefresh(): void {
+    this.isRefreshing.set(true);
+    this.inventoryService.forceBackendReload();
+    setTimeout(() => {
+      this.isRefreshing.set(false);
+    }, 800);
   }
 }

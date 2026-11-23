@@ -256,26 +256,20 @@ export class AuthState {
 
     const normRole = String(rawRole).trim().toUpperCase();
 
-    // 0. Director General / Administradores: Acceso total e irrestricto a todos los módulos
+    // 0. Director General / Administradores / Gerente de Operaciones y Almacén: Acceso total e irrestricto a todos los módulos (incluyendo Calidad)
     if (
       normRole === 'SUPER_ADMIN' ||
       normRole === 'ROLE_SUPER_ADMIN' ||
       normRole === 'ROLE_ADMIN' ||
       normRole === 'ADMIN' ||
       normRole === 'CEO' ||
-      normRole === 'ROLE_CEO'
-    ) {
-      return true;
-    }
-
-    // 1. Gerente de Operaciones y Almacén: Acceso total operativo y administrativo, EXCEPTO Calidad (SoD)
-    if (
+      normRole === 'ROLE_CEO' ||
       normRole === 'OPERATIONS_MANAGER' ||
       normRole === 'ROLE_OPERATIONS_MANAGER' ||
       normRole === 'WAREHOUSE_MANAGER' ||
       normRole === 'ROLE_WAREHOUSE_MANAGER'
     ) {
-      return module !== 'quality';
+      return true;
     }
 
     // 2. Coordinador de Operaciones: Enlace táctico entre gerencia y supervisión

@@ -485,6 +485,18 @@
             <span class="material-symbols-outlined">arrow_back</span>
             <span>Directorio</span>
           </button>
+          @if (canStepBack(rec)) {
+          <button type="button" (click)="revertToPreviousStep(rec)" class="btn-step-back mr-2"
+            [title]="getStepBackTooltip(rec)">
+            <span class="material-symbols-outlined text-[16px]">undo</span>
+            <span>{{ getStepBackLabel(rec) }}</span>
+          </button>
+          }
+          <button type="button" (click)="openAssignOperatorModal('EDIT')" class="btn-step-back mr-2"
+            title="Asignar o cambiar montacarguista directamente sin reiniciar la descarga">
+            <span class="material-symbols-outlined text-[16px]">forklift</span>
+            <span>{{ (rec.checkIn?.forkliftOperator && rec.checkIn?.forkliftOperator !== 'Por Asignar') ? ('Operador: ' + rec.checkIn.forkliftOperator) : 'Asignar Montacarguista' }}</span>
+          </button>
           <span class="material-symbols-outlined receiving-breadcrumb__icon">local_shipping</span>
           <span class="receiving-breadcrumb__module">Movimientos</span>
           <span class="material-symbols-outlined receiving-breadcrumb__sep">chevron_right</span>
@@ -1882,61 +1894,109 @@
       } @else if (rec.status === 'DISCHARGED') {
       <!-- FASE 4: DESCARGA CONCLUIDA POR MONTACARGUISTA — AUDITORÍA ADMINISTRATIVA -->
       <div class="space-y-4 pt-1">
-        <div
-          class="p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-indigo-500/40 dark:border-indigo-500/50 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div class="flex items-center gap-3.5">
-            <div
-              class="w-12 h-12 rounded-2xl bg-indigo-600 dark:bg-indigo-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
+        <div class="reception-audit-card">
+          <!-- 1. Encabezado de la Auditoría con Título e Indicador en Vivo -->
+          <div class="reception-audit-card__top">
+            <div class="reception-audit-card__icon-box">
               <span class="material-symbols-outlined text-3xl">task_alt</span>
             </div>
-            <div>
+            <div class="reception-audit-card__header-info">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                  Paso Final: Auditoría Administrativa &amp; Visto Bueno
+                <h3 class="reception-audit-card__title">
+                  Auditoría Administrativa &amp; Visto Bueno
+                </h3>
+                <span class="reception-audit-card__phase-pill">
+                  Fase 4 de 5 (80%) · Por Auditar
                 </span>
-                <span
-                  class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-mono">
-                  Fase 4 de 5 (80%) · Pendiente de Aprobación
+                <span class="reception-audit-card__live-status">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Descarga Física Concluida</span>
                 </span>
               </div>
-              <p class="text-xs text-slate-700 dark:text-slate-200 mt-1 font-medium flex items-center gap-1.5 flex-wrap">
-                <span>El montacarguista</span>
-                @if (rec.checkIn?.forkliftOperator || altaForm.get('forkliftOperator')?.value; as opName) {
-                  <strong class="text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700">
-                    {{ opName }}
-                  </strong>
-                  <button type="button" (click)="openAssignOperatorModal('EDIT')" class="text-[11px] text-amber-600 dark:text-amber-400 font-bold hover:underline cursor-pointer">
-                    [Cambiar]
-                  </button>
-                } @else {
-                  <button type="button" (click)="openAssignOperatorModal('EDIT')" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold text-xs border border-amber-500/40 hover:bg-amber-500/30 cursor-pointer animate-pulse">
-                    <span class="material-symbols-outlined text-xs">forklift</span>
-                    <span>+ Asignar Montacarguista</span>
-                  </button>
-                }
-                <span>finalizó la descarga de <strong>{{ totalTarimas() }} tarimas ({{ totalPiezas() }} piezas)</strong> con destino inicial a <strong class="text-amber-700 dark:text-amber-400 font-mono">{{ selectedBayName() || 'STAGING-R01' }}</strong>.</span>
+              <p class="reception-audit-card__subtext">
+                Verifica las tarimas y lotes físicos antes de autorizar el ingreso definitivo a inventario y emitir la carátula F01 oficial.
               </p>
             </div>
           </div>
 
-          <div class="flex items-center gap-2.5 shrink-0 flex-wrap w-full md:w-auto justify-end">
-            <!-- Botón Secundario: Solo Previsualizar Borrador -->
+          <!-- 2. Grid de Chips Informativos de Alto Contraste con Colores Vivos -->
+          <div class="reception-audit-card__chips-grid">
+            <!-- Chip Montacarguista -->
+            <div class="reception-audit-chip reception-audit-chip--operator">
+              <div class="reception-audit-chip__icon">
+                <span class="material-symbols-outlined">forklift</span>
+              </div>
+              <div class="reception-audit-chip__content">
+                <span class="reception-audit-chip__label">Montacarguista</span>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  @if (rec.checkIn?.forkliftOperator || altaForm.get('forkliftOperator')?.value; as opName) {
+                  <span class="reception-audit-chip__value">{{ opName }}</span>
+                  <button type="button" (click)="openAssignOperatorModal('EDIT')" class="reception-audit-chip__btn-change" title="Cambiar montacarguista asignado">
+                    [Cambiar]
+                  </button>
+                  } @else {
+                  <button type="button" (click)="openAssignOperatorModal('EDIT')" class="reception-audit-chip__btn-assign">
+                    <span class="material-symbols-outlined text-xs">add</span>
+                    <span>Asignar Operador</span>
+                  </button>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Chip Tarimas -->
+            <div class="reception-audit-chip reception-audit-chip--pallets">
+              <div class="reception-audit-chip__icon">
+                <span class="material-symbols-outlined">inventory_2</span>
+              </div>
+              <div class="reception-audit-chip__content">
+                <span class="reception-audit-chip__label">Tarimas Descargadas</span>
+                <span class="reception-audit-chip__value">{{ totalTarimas() }} UAs</span>
+              </div>
+            </div>
+
+            <!-- Chip Piezas -->
+            <div class="reception-audit-chip reception-audit-chip--pieces">
+              <div class="reception-audit-chip__icon">
+                <span class="material-symbols-outlined">pin</span>
+              </div>
+              <div class="reception-audit-chip__content">
+                <span class="reception-audit-chip__label">Piezas Físicas</span>
+                <span class="reception-audit-chip__value">{{ totalPiezas() }} PZAS</span>
+              </div>
+            </div>
+
+            <!-- Chip Destino Inicial Staging -->
+            <div class="reception-audit-chip reception-audit-chip--dock">
+              <div class="reception-audit-chip__icon">
+                <span class="material-symbols-outlined">share_location</span>
+              </div>
+              <div class="reception-audit-chip__content">
+                <span class="reception-audit-chip__label">Destino Inicial</span>
+                <span class="reception-audit-chip__value">{{ selectedBayName() || 'STAGING-R01' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Botones de Acción de Auditoría -->
+          <div class="reception-audit-card__actions">
+            <!-- Botón Previsualizar Borrador -->
             <button type="button" (click)="openPrintPreview(rec)"
-              class="px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+              class="btn-audit-preview"
               title="Previsualizar borrador del formato F01 sin cerrar el proceso">
-              <span class="material-symbols-outlined text-sm">visibility</span>
-              <span>Previsualizar Borrador</span>
+              <span class="material-symbols-outlined text-base">visibility</span>
+              <span>Previsualizar Borrador F01</span>
             </button>
 
-            <!-- BOTÓN PRINCIPAL UNIFICADO: ALTA VISIBILIDAD (DORADO PRESTIGE) -->
+            <!-- Botón Principal: Aprobar e Ingresar a Stock -->
             <button type="button" [disabled]="isCompleting() || isSavingDraft()" (click)="initiateCompleteReception()"
-              class="btn-gold-action px-5 py-3 rounded-xl font-black text-xs shadow-lg flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+              class="btn-audit-approve"
               title="Autorizar visto bueno, colocar en inventario (100%) y mandar imprimir formato F01">
               @if (isCompleting()) {
               <span class="material-symbols-outlined text-base animate-spin">progress_activity</span>
               <span>Ingresando a Inventario...</span>
               } @else {
-              <span class="material-symbols-outlined text-lg">print</span>
+              <span class="material-symbols-outlined text-xl">verified</span>
               <span>Aprobar, Ingresar a Stock e Imprimir F01</span>
               }
             </button>
@@ -2713,11 +2773,14 @@
         </div>
 
         @if (selectedModalOperator()) {
-        <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
-          <span class="text-xs text-amber-800 dark:text-amber-300">
-            Operador Seleccionado: <strong class="font-mono font-bold">{{ selectedModalOperator() }}</strong>
-          </span>
-          <button type="button" (click)="selectedModalOperator.set('')" class="text-[11px] text-amber-700 dark:text-amber-400 font-bold hover:underline cursor-pointer">
+        <div class="p-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/5 border-2 border-amber-500 flex items-center justify-between shadow-sm">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">check_circle</span>
+            <span class="text-xs text-slate-800 dark:text-slate-100">
+              Operador Seleccionado: <strong class="font-bold text-amber-900 dark:text-amber-300 font-mono">{{ selectedModalOperator() }}</strong>
+            </span>
+          </div>
+          <button type="button" (click)="selectedModalOperator.set('')" class="text-[11px] text-amber-800 dark:text-amber-400 font-bold hover:underline cursor-pointer px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25">
             Limpiar
           </button>
         </div>

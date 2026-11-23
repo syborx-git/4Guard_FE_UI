@@ -140,6 +140,18 @@
     <!-- Grupo de Botones de Acción -->
     <div class="iq-actions-group">
       
+      <!-- Botón Sincronizar Stock Real -->
+      <button
+        type="button"
+        (click)="onRefresh()"
+        id="iq-btn-refresh-stock"
+        class="iq-btn iq-btn-secondary"
+        title="Sincronizar existencias reales con el backend y base de datos"
+      >
+        <span class="material-symbols-outlined" [class.animate-spin]="isRefreshing()">sync</span>
+        <span>ACTUALIZAR STOCK</span>
+      </button>
+
       <!-- Botón Filtros Multicriterio -->
       <button
         type="button"
