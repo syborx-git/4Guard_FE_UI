@@ -97,17 +97,17 @@
           <div class="manifest-grid">
             <div class="manifest-field">
               <span class="field-label">Cliente Destinatario</span>
-              <span class="field-value font-bold text-slate-100 truncate">{{ rec.clientName }}</span>
+              <span class="field-value font-bold truncate">{{ rec.clientName }}</span>
             </div>
 
             <div class="manifest-field">
               <span class="field-label">Transportista / Operador</span>
-              <span class="field-value text-slate-200 truncate">{{ rec.carrierName }} • {{ rec.driverName }}</span>
+              <span class="field-value truncate">{{ rec.carrierName }} • {{ rec.driverName }}</span>
             </div>
 
             <div class="manifest-field">
               <span class="field-label">Placas Tractor / Caja</span>
-              <span class="field-value font-mono text-amber-300">T: {{ rec.tractorPlates || 'N/A' }} • C: {{ rec.boxPlates || 'N/A' }}</span>
+              <span class="field-value field-value--plates font-mono">T: {{ rec.tractorPlates || 'N/A' }} • C: {{ rec.boxPlates || 'N/A' }}</span>
             </div>
 
             <div class="manifest-field">
@@ -123,17 +123,38 @@
       </div>
     </section>
   } @else {
-    <div class="rf-no-reception-card">
-      <span class="material-symbols-outlined text-4xl text-amber-500">pending_actions</span>
-      <div>
-        <h3 class="text-base font-bold text-slate-100">Sin unidades en andén actualmente</h3>
-        <p class="text-xs text-slate-400">Espera a que Caseta de Seguridad registre un arribo o recarga la pantalla.</p>
+    <section class="rf-manifest-banner">
+      <div class="rf-no-reception-card">
+        <div class="no-rec-glow"></div>
+        <div class="no-rec-left">
+          <div class="no-rec-icon-box">
+            <span class="material-symbols-outlined text-3xl">dock_to_bottom</span>
+          </div>
+          <div class="no-rec-info">
+            <div class="no-rec-badge">
+              <span class="no-rec-dot"></span>
+              <span>ANDÉN EN ESPERA DE ASIGNACIÓN</span>
+            </div>
+            <h3 class="no-rec-title">Sin unidades en andén actualmente</h3>
+            <p class="no-rec-sub">
+              Espera a que Caseta de Seguridad o Mesa de Control asigne una unidad a rampa, o sincroniza para consultar nuevos arribos en patio.
+            </p>
+          </div>
+        </div>
+        <div class="no-rec-actions">
+          @if (receptions().length > 0) {
+            <button type="button" (click)="showReceptionPicker.set(true)" class="btn-change-reception">
+              <span class="material-symbols-outlined text-base">swap_horiz</span>
+              <span>Seleccionar Unidad ({{ receptions().length }})</span>
+            </button>
+          }
+          <button type="button" (click)="loadReceptions()" class="btn-primary-rf">
+            <span class="material-symbols-outlined text-base" [class.animate-spin]="isLoadingReceptions()">refresh</span>
+            <span>{{ isLoadingReceptions() ? 'Buscando...' : 'Buscar Arribos' }}</span>
+          </button>
+        </div>
       </div>
-      <button type="button" (click)="loadReceptions()" class="btn-primary-rf">
-        <span class="material-symbols-outlined text-base">refresh</span>
-        <span>Buscar Arribos</span>
-      </button>
-    </div>
+    </section>
   }
 
   <!-- ── 3. BARRA DE PARÁMETROS ACTIVOS (TACTICAL CONTROL BAR) ────── -->
@@ -552,7 +573,7 @@
             <span class="metric-label">Lote en Proceso</span>
             <span class="material-symbols-outlined text-xs text-sky-400">sell</span>
           </div>
-          <div class="metric-val font-mono text-slate-100 font-bold truncate">
+          <div class="metric-val metric-val--lot font-mono font-bold truncate">
             {{ activeLot() }}
           </div>
         </div>
@@ -562,7 +583,7 @@
             <span class="metric-label">Rampa de Descarga</span>
             <span class="material-symbols-outlined text-xs text-purple-400">warehouse</span>
           </div>
-          <div class="metric-val text-purple-300 font-bold font-mono truncate">
+          <div class="metric-val metric-val--ramp font-bold font-mono truncate">
             Rampa {{ selectedReception()?.rampNumber || 11 }}
           </div>
         </div>
@@ -638,9 +659,9 @@
       } @empty {
         <div class="buffer-empty-state">
           <div class="empty-radar-ring"></div>
-          <span class="material-symbols-outlined text-5xl text-amber-400/80">pallet</span>
-          <div class="text-slate-100 font-bold text-base mt-2">No hay tarimas escaneadas aún</div>
-          <div class="text-slate-400 text-xs max-w-sm mt-1">Usa la cámara de la tableta, el lector láser o los botones de simulación arriba para registrar la primera tarima.</div>
+          <span class="material-symbols-outlined text-5xl text-amber-500">pallet</span>
+          <div class="buffer-empty-title font-bold text-base mt-2">No hay tarimas escaneadas aún</div>
+          <div class="buffer-empty-sub text-xs max-w-sm mt-1">Usa la cámara de la tableta, el lector láser o los botones de simulación arriba para registrar la primera tarima.</div>
         </div>
       }
     </div>

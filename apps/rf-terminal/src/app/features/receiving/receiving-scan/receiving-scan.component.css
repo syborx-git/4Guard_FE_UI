@@ -2023,23 +2023,174 @@
   font-weight: 700;
 }
 
+/* ── TARJETA HERO DE ESTADO VACÍO (SIN UNIDADES EN ANDÉN) ─────── */
+.rf-no-reception-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.88) 0%, rgba(10, 16, 31, 0.96) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.32);
+  border-top: 3px solid #f59e0b;
+  border-radius: 1.125rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.no-rec-glow {
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 140px;
+  height: 140px;
+  background: rgba(245, 158, 11, 0.12);
+  border-radius: 50%;
+  filter: blur(32px);
+  pointer-events: none;
+}
+
+.no-rec-left {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  flex: 1;
+  min-width: 260px;
+}
+
+.no-rec-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1));
+  border: 1.5px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.18);
+}
+
+.no-rec-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.no-rec-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  width: fit-content;
+}
+
+.no-rec-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+  animation: pulse-live 1.8s infinite;
+}
+
+.no-rec-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.no-rec-sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.no-rec-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.field-value--plates {
+  color: #fbbf24;
+}
+
+.metric-val--lot {
+  color: #f8fafc;
+}
+
+.metric-val--ramp {
+  color: #d8b4fe;
+}
+
+.buffer-empty-title {
+  color: #f8fafc;
+}
+
+.buffer-empty-sub {
+  color: #94a3b8;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   HOMOLOGACIÓN MODO CLARO (.theme-light / .light)
+   HOMOLOGACIÓN SDD MODO CLARO (.theme-light / .light)
+   Estándar SDD Linen / Ivory (#f5f4f0), Tarjetas Cálidas & Navy (#0f172a)
    ═══════════════════════════════════════════════════════════════════════════ */
 :host-context(.theme-light) .rf-receiving-workspace,
-:host-context(.light) .rf-receiving-workspace {
-  background-color: #f8fafc !important;
+:host-context(.light) .rf-receiving-workspace,
+:host-context([data-theme='light']) .rf-receiving-workspace {
+  background-color: #f5f4f0 !important;
   background-image:
-    radial-gradient(ellipse at top right, rgba(245, 158, 11, 0.06), transparent 50%),
-    linear-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px) !important;
+    radial-gradient(ellipse at top right, rgba(197, 168, 107, 0.12), transparent 50%),
+    linear-gradient(rgba(36, 44, 58, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(36, 44, 58, 0.025) 1px, transparent 1px) !important;
   color: #0f172a !important;
 }
 
+/* 1. Topbar en Modo Claro SDD */
 :host-context(.theme-light) .rf-topbar,
-:host-context(.light) .rf-topbar {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border-bottom-color: #e2e8f0 !important;
+:host-context(.light) .rf-topbar,
+:host-context([data-theme='light']) .rf-topbar {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-bottom: 1.5px solid rgba(197, 168, 107, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(36, 44, 58, 0.06) !important;
+}
+
+:host-context(.theme-light) .topbar-icon-wrap,
+:host-context(.light) .topbar-icon-wrap {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.12) !important;
+}
+
+:host-context(.theme-light) .topbar-icon-wrap .material-symbols-outlined,
+:host-context(.light) .topbar-icon-wrap .material-symbols-outlined {
+  color: #b45309 !important;
+}
+
+:host-context(.theme-light) .topbar-badge,
+:host-context(.light) .topbar-badge {
+  color: #475569 !important;
+}
+
+:host-context(.theme-light) .badge-gold,
+:host-context(.light) .badge-gold {
+  color: #92400e !important;
+  font-weight: 800 !important;
 }
 
 :host-context(.theme-light) .topbar-title,
@@ -2050,24 +2201,143 @@
 :host-context(.light) .progress-title,
 :host-context(.theme-light) .buffer-title,
 :host-context(.light) .buffer-title,
-:host-context(.theme-light) .modal-title,
-:host-context(.light) .modal-title {
+:host-context(.theme-light) .rf-modal-title,
+:host-context(.light) .rf-modal-title,
+:host-context(.theme-light) .celebration-title,
+:host-context(.light) .celebration-title,
+:host-context(.theme-light) .no-rec-title,
+:host-context(.light) .no-rec-title {
   color: #0f172a !important;
 }
 
-:host-context(.theme-light) .telemetry-chip,
-:host-context(.light) .telemetry-chip,
-:host-context(.theme-light) .btn-topbar-back,
-:host-context(.light) .btn-topbar-back,
-:host-context(.theme-light) .btn-topbar-refresh,
-:host-context(.light) .btn-topbar-refresh {
-  background: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
+:host-context(.theme-light) .btn-back,
+:host-context(.light) .btn-back,
+:host-context(.theme-light) .btn-topbar-action,
+:host-context(.light) .btn-topbar-action {
+  background: #ffffff !important;
+  border: 1.5px solid rgba(76, 86, 105, 0.2) !important;
   color: #1e293b !important;
+  box-shadow: 0 2px 6px rgba(36, 44, 58, 0.05) !important;
 }
 
+:host-context(.theme-light) .btn-back:hover,
+:host-context(.light) .btn-back:hover,
+:host-context(.theme-light) .btn-topbar-action:hover,
+:host-context(.light) .btn-topbar-action:hover {
+  background: #fef3c7 !important;
+  border-color: #d97706 !important;
+  color: #92400e !important;
+}
+
+:host-context(.theme-light) .telemetry-chip,
+:host-context(.light) .telemetry-chip {
+  background: #ffffff !important;
+  border: 1.5px solid rgba(76, 86, 105, 0.16) !important;
+  box-shadow: 0 2px 6px rgba(36, 44, 58, 0.04) !important;
+}
+
+:host-context(.theme-light) .ramp-chip,
+:host-context(.light) .ramp-chip {
+  background: #fffbeb !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+}
+
+:host-context(.theme-light) .operator-chip,
+:host-context(.light) .operator-chip {
+  background: #ecfdf5 !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+:host-context(.theme-light) .operator-chip .material-symbols-outlined,
+:host-context(.light) .operator-chip .material-symbols-outlined {
+  color: #059669 !important;
+}
+
+:host-context(.theme-light) .telemetry-label,
+:host-context(.light) .telemetry-label {
+  color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+:host-context(.theme-light) .telemetry-val,
+:host-context(.light) .telemetry-val {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+/* 2. Tarjetas Principales SDD (Linen / Ivory Luxury) */
 :host-context(.theme-light) .manifest-card,
 :host-context(.light) .manifest-card,
+:host-context(.theme-light) .rf-no-reception-card,
+:host-context(.light) .rf-no-reception-card {
+  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 55%, #f7f0e1 100%) !important;
+  border: 1.5px solid rgba(197, 168, 107, 0.38) !important;
+  border-top: 3.5px solid #d97706 !important;
+  box-shadow: 0 8px 24px rgba(36, 44, 58, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  color: #0f172a !important;
+}
+
+:host-context(.theme-light) .no-rec-icon-box,
+:host-context(.light) .no-rec-icon-box {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+  border-color: rgba(217, 119, 6, 0.4) !important;
+  color: #b45309 !important;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.14) !important;
+}
+
+:host-context(.theme-light) .no-rec-badge,
+:host-context(.light) .no-rec-badge {
+  background: #fef3c7 !important;
+  border-color: rgba(217, 119, 6, 0.4) !important;
+  color: #92400e !important;
+}
+
+:host-context(.theme-light) .no-rec-sub,
+:host-context(.light) .no-rec-sub {
+  color: #475569 !important;
+}
+
+:host-context(.theme-light) .manifest-header,
+:host-context(.light) .manifest-header,
+:host-context(.theme-light) .rf-modal-header,
+:host-context(.light) .rf-modal-header {
+  border-bottom-color: rgba(76, 86, 105, 0.14) !important;
+}
+
+:host-context(.theme-light) .manifest-folio-val,
+:host-context(.light) .manifest-folio-val {
+  color: #b45309 !important;
+  text-shadow: none !important;
+}
+
+:host-context(.theme-light) .manifest-status-badge,
+:host-context(.light) .manifest-status-badge {
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+  color: #166534 !important;
+}
+
+:host-context(.theme-light) .manifest-status-badge.badge--in-progress,
+:host-context(.light) .manifest-status-badge.badge--in-progress {
+  background: #fef3c7 !important;
+  border-color: #fcd34d !important;
+  color: #92400e !important;
+}
+
+:host-context(.theme-light) .field-value--plates,
+:host-context(.light) .field-value--plates {
+  color: #92400e !important;
+  font-weight: 800 !important;
+}
+
+:host-context(.theme-light) .bay-highlight,
+:host-context(.light) .bay-highlight {
+  background: #f3e8ff !important;
+  border-color: #d8b4fe !important;
+  color: #6b21a8 !important;
+}
+
+/* 3. Parámetros Activos, Scanner, Progreso y Buffer en Modo Claro SDD */
 :host-context(.theme-light) .param-box,
 :host-context(.light) .param-box,
 :host-context(.theme-light) .scanner-card,
@@ -2079,9 +2349,20 @@
 :host-context(.theme-light) .rf-modal-card,
 :host-context(.light) .rf-modal-card {
   background: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+  border: 1.5px solid rgba(76, 86, 105, 0.15) !important;
+  box-shadow: 0 8px 24px rgba(36, 44, 58, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
   color: #0f172a !important;
+}
+
+:host-context(.theme-light) .params-icon-pill,
+:host-context(.light) .params-icon-pill {
+  background: #fef3c7 !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+}
+
+:host-context(.theme-light) .params-icon-pill .material-symbols-outlined,
+:host-context(.light) .params-icon-pill .material-symbols-outlined {
+  color: #b45309 !important;
 }
 
 :host-context(.theme-light) .params-title,
@@ -2091,19 +2372,68 @@
   color: #0f172a !important;
 }
 
+:host-context(.theme-light) .params-sub,
+:host-context(.light) .params-sub,
+:host-context(.theme-light) .field-label,
+:host-context(.light) .field-label,
+:host-context(.theme-light) .scanner-mode-sub,
+:host-context(.light) .scanner-mode-sub,
+:host-context(.theme-light) .rf-modal-desc,
+:host-context(.light) .rf-modal-desc {
+  color: #475569 !important;
+}
+
+:host-context(.theme-light) .params-live-badge,
+:host-context(.light) .params-live-badge,
+:host-context(.theme-light) .pill-emerald,
+:host-context(.light) .pill-emerald,
+:host-context(.theme-light) .buffer-badge,
+:host-context(.light) .buffer-badge {
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+  color: #166534 !important;
+}
+
+:host-context(.theme-light) .pill-cyan,
+:host-context(.light) .pill-cyan {
+  background: #e0f2fe !important;
+  border-color: #7dd3fc !important;
+  color: #075985 !important;
+}
+
+:host-context(.theme-light) .pill-amber,
+:host-context(.light) .pill-amber {
+  background: #fef3c7 !important;
+  border-color: #fcd34d !important;
+  color: #92400e !important;
+}
+
 :host-context(.theme-light) .field-value,
 :host-context(.light) .field-value,
 :host-context(.theme-light) .param-label,
 :host-context(.light) .param-label,
 :host-context(.theme-light) .picker-client,
-:host-context(.light) .picker-client {
-  color: #1e293b !important;
+:host-context(.light) .picker-client,
+:host-context(.theme-light) .buffer-code,
+:host-context(.light) .buffer-code,
+:host-context(.theme-light) .metric-val--lot,
+:host-context(.light) .metric-val--lot,
+:host-context(.theme-light) .stat-val,
+:host-context(.light) .stat-val,
+:host-context(.theme-light) .buffer-empty-title,
+:host-context(.light) .buffer-empty-title {
+  color: #0f172a !important;
 }
 
-:host-context(.theme-light) .field-label,
-:host-context(.light) .field-label,
-:host-context(.theme-light) .params-subtitle,
-:host-context(.light) .params-subtitle {
+:host-context(.theme-light) .metric-val--ramp,
+:host-context(.light) .metric-val--ramp {
+  color: #6b21a8 !important;
+}
+
+:host-context(.theme-light) .buffer-product,
+:host-context(.light) .buffer-product,
+:host-context(.theme-light) .buffer-empty-sub,
+:host-context(.light) .buffer-empty-sub {
   color: #475569 !important;
 }
 
@@ -2115,15 +2445,28 @@
 :host-context(.light) .laser-input-wrap,
 :host-context(.theme-light) .form-input,
 :host-context(.light) .form-input {
-  background: #f8fafc !important;
-  border-color: #cbd5e1 !important;
+  background: #f8f9fa !important;
+  border: 1.5px solid rgba(76, 86, 105, 0.22) !important;
   color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+:host-context(.theme-light) .param-input-pieces,
+:host-context(.light) .param-input-pieces {
+  color: #b45309 !important;
+  background: #fffbeb !important;
+  border-color: rgba(217, 119, 6, 0.38) !important;
 }
 
 :host-context(.theme-light) .param-select option,
 :host-context(.light) .param-select option {
   background: #ffffff !important;
   color: #0f172a !important;
+}
+
+:host-context(.theme-light) .custom-select-arrow,
+:host-context(.light) .custom-select-arrow {
+  color: #475569 !important;
 }
 
 :host-context(.theme-light) .laser-input-field,
@@ -2135,13 +2478,104 @@
 :host-context(.light) .btn-step,
 :host-context(.theme-light) .btn-preset,
 :host-context(.light) .btn-preset,
-:host-context(.theme-light) .btn-change-unit,
-:host-context(.light) .btn-change-unit,
-:host-context(.theme-light) .btn-bottom-back,
-:host-context(.light) .btn-bottom-back {
+:host-context(.theme-light) .btn-change-reception,
+:host-context(.light) .btn-change-reception,
+:host-context(.theme-light) .btn-scanner-action,
+:host-context(.light) .btn-scanner-action,
+:host-context(.theme-light) .btn-bottom-secondary,
+:host-context(.light) .btn-bottom-secondary,
+:host-context(.theme-light) .btn-modal-close,
+:host-context(.light) .btn-modal-close,
+:host-context(.theme-light) .btn-modal-cancel,
+:host-context(.light) .btn-modal-cancel {
   background: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
+  border: 1.5px solid rgba(76, 86, 105, 0.2) !important;
   color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+:host-context(.theme-light) .btn-preset.preset--active,
+:host-context(.light) .btn-preset.preset--active {
+  background: #fef3c7 !important;
+  border-color: #d97706 !important;
+  color: #92400e !important;
+}
+
+:host-context(.theme-light) .btn-preset--pico,
+:host-context(.light) .btn-preset--pico {
+  background: #e0f2fe !important;
+  border-color: #38bdf8 !important;
+  color: #0369a1 !important;
+}
+
+:host-context(.theme-light) .btn-add-lot,
+:host-context(.light) .btn-add-lot {
+  background: #f3e8ff !important;
+  border: 1.5px solid #c084fc !important;
+  color: #6b21a8 !important;
+  font-weight: 800 !important;
+}
+
+:host-context(.theme-light) .btn-add-lot:hover,
+:host-context(.light) .btn-add-lot:hover {
+  background: #e9d5ff !important;
+  color: #581c87 !important;
+}
+
+/* Botones de Simulación Rápida en Modo Claro */
+:host-context(.theme-light) .btn-cyber-sim--full,
+:host-context(.light) .btn-cyber-sim--full {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+  border: 1.5px solid #34d399 !important;
+}
+
+:host-context(.theme-light) .btn-cyber-sim--full .cyber-btn-title,
+:host-context(.light) .btn-cyber-sim--full .cyber-btn-title {
+  color: #065f46 !important;
+}
+
+:host-context(.theme-light) .btn-cyber-sim--full .cyber-btn-sub,
+:host-context(.light) .btn-cyber-sim--full .cyber-btn-sub {
+  color: #047857 !important;
+}
+
+:host-context(.theme-light) .btn-cyber-sim--full .cyber-btn-icon,
+:host-context(.light) .btn-cyber-sim--full .cyber-btn-icon {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #047857 !important;
+}
+
+:host-context(.theme-light) .btn-cyber-sim--pico,
+:host-context(.light) .btn-cyber-sim--pico {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+  border: 1.5px solid #38bdf8 !important;
+}
+
+:host-context(.theme-light) .btn-cyber-sim--pico .cyber-btn-title,
+:host-context(.light) .btn-cyber-sim--pico .cyber-btn-title {
+  color: #075985 !important;
+}
+
+:host-context(.theme-light) .btn-cyber-sim--pico .cyber-btn-sub,
+:host-context(.light) .btn-cyber-sim--pico .cyber-btn-sub {
+  color: #0369a1 !important;
+}
+
+:host-context(.theme-light) .btn-cyber-sim--pico .cyber-btn-icon,
+:host-context(.light) .btn-cyber-sim--pico .cyber-btn-icon {
+  background: rgba(14, 165, 233, 0.2) !important;
+  color: #0369a1 !important;
+}
+
+/* Progreso y Métricas en Modo Claro */
+:host-context(.theme-light) .progress-badge,
+:host-context(.light) .progress-badge {
+  color: #1e293b !important;
+}
+
+:host-context(.theme-light) .progress-track,
+:host-context(.light) .progress-track {
+  background: #e2e8f0 !important;
 }
 
 :host-context(.theme-light) .metric-box,
@@ -2152,13 +2586,58 @@
 :host-context(.light) .conclude-stat-box,
 :host-context(.theme-light) .reception-picker-item,
 :host-context(.light) .reception-picker-item {
-  background: #f8fafc !important;
-  border-color: #e2e8f0 !important;
+  background: #f8f9fa !important;
+  border: 1.5px solid rgba(76, 86, 105, 0.14) !important;
   color: #0f172a !important;
 }
 
+:host-context(.theme-light) .metric-label,
+:host-context(.light) .metric-label,
+:host-context(.theme-light) .stat-lbl,
+:host-context(.light) .stat-lbl {
+  color: #475569 !important;
+}
+
+:host-context(.theme-light) .tag-lot,
+:host-context(.light) .tag-lot {
+  background: #fef3c7 !important;
+  border-color: #fcd34d !important;
+  color: #92400e !important;
+}
+
+:host-context(.theme-light) .tag-type,
+:host-context(.light) .tag-type {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+:host-context(.theme-light) .buffer-pieces-badge,
+:host-context(.light) .buffer-pieces-badge {
+  background: #ecfdf5 !important;
+  border-color: #6ee7b7 !important;
+}
+
+:host-context(.theme-light) .buffer-pieces-num,
+:host-context(.light) .buffer-pieces-num,
+:host-context(.theme-light) .buffer-pieces-unit,
+:host-context(.light) .buffer-pieces-unit {
+  color: #065f46 !important;
+}
+
+/* Barra Fija Inferior en Modo Claro SDD */
 :host-context(.theme-light) .rf-bottom-bar,
 :host-context(.light) .rf-bottom-bar {
   background: rgba(255, 255, 255, 0.96) !important;
-  border-top-color: #e2e8f0 !important;
+  border-top: 1.5px solid rgba(197, 168, 107, 0.35) !important;
+  box-shadow: 0 -4px 16px rgba(36, 44, 58, 0.06) !important;
+}
+
+:host-context(.theme-light) .btn-bottom-conclude[disabled],
+:host-context(.light) .btn-bottom-conclude[disabled] {
+  background: #e2e8f0 !important;
+  color: #475569 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  opacity: 1 !important;
+  filter: none !important;
 }
