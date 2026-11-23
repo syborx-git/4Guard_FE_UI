@@ -118,6 +118,7 @@ export interface ProductSkuItem {
   code: string;
   name: string;
   defaultPieces: number;
+  unit?: string;
 }
 
 export const STANDARD_PRODUCTS: ProductSkuItem[] = [
@@ -216,7 +217,8 @@ export interface ReceptionPalletItem {
   description: string;      // Descripción SKU
   productId: string;        // SKU (ej. 12572733)
   supplierName?: string;    // Proveedor (ej. LE MEXICO S.A DE C.V)
-  pieces: number;           // Cant X Tarima (ej. 40.00)
+  pieces: number;           // Cant X Tarima (ej. 40.00 o 20.41 kg)
+  unit?: string;            // Unidad de medida ('PZA' | 'KG')
   observations?: string;    // Observaciones
   palletTypeId: PalletType; // Tipo Tarima key
   palletTypeLabel: string;  // Tipo Tarima nombre legible

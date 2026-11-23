@@ -1152,7 +1152,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     productId: ['', [Validators.required]],
     productName: [''],
     supplierName: ['', [Validators.required]],
-    piecesPerPallet: [0, [Validators.required, Validators.min(1)]],
+    piecesPerPallet: [0, [Validators.required, Validators.min(0.01)]],
     selectedPalletType: ['' as any, [Validators.required]],
     observations: [''],
   });
@@ -1441,7 +1441,15 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     const set = new Set(this.palletStream().map((p) => p.productId));
     return set.size;
   });
-  totalPiezas = computed(() => this.palletStream().reduce((acc, p) => acc + p.pieces, 0));
+  totalPiezas = computed(() => {
+    const sum = this.palletStream().reduce((acc, p) => acc + (Number(p.pieces) || 0), 0);
+    return Math.round((sum + Number.EPSILON) * 100) / 100;
+  });
+  activeUom = signal<'PZA' | 'KG'>('PZA');
+
+  setUom(uom: 'PZA' | 'KG'): void {
+    this.activeUom.set(uom);
+  }
 
   constructor() {
     // Estado inicial: Siempre iniciar en Sin selección (Empty State WMS)
@@ -4394,13 +4402,30 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
     }
   }
 
-  selectProductSku(prod: { id: string; code: string; name: string; defaultPieces: number }): void {
+  selectProductSku(prod: { id: string; code: string; name: string; defaultPieces: number; unit?: string }): void {
     this.altaForm.patchValue({
       productId: prod.code || prod.id,
       productName: prod.name,
     });
     if (prod.defaultPieces && (!this.altaForm.get('piecesPerPallet')?.value || this.altaForm.get('piecesPerPallet')?.value === 0)) {
       this.altaForm.patchValue({ piecesPerPallet: prod.defaultPieces });
+    }
+    // Detección inteligente de UOM (KG vs PZA)
+    const upperName = (prod.name || '').toUpperCase();
+    const upperCode = (prod.code || '').toUpperCase();
+    if (
+      prod.unit?.toUpperCase() === 'KG' ||
+      upperName.includes(' KG') ||
+      upperName.includes('KG ') ||
+      upperName.endsWith('KG') ||
+      upperName.includes('KILO') ||
+      upperName.includes('ADHESIVO') ||
+      upperName.includes('GRANEL') ||
+      upperName.includes('BULK')
+    ) {
+      this.activeUom.set('KG');
+    } else {
+      this.activeUom.set('PZA');
     }
     this.skuSearchQuery.set(`${prod.code} - ${prod.name}`);
     this.isSkuDropdownOpen.set(false);
@@ -4879,6 +4904,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       productId: prodId,
       supplierName: suppName,
       pieces: pzas,
+      unit: this.activeUom(),
       observations: this.uaObsInput().trim() || undefined,
       palletTypeId: pType,
       palletTypeLabel: label,

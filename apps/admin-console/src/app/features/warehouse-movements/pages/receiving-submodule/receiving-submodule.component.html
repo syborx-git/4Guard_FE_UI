@@ -1447,11 +1447,21 @@
             }
           </div>
 
-          <!-- Piezas por Tarima: 2 columnas -->
+          <!-- Piezas o Kilos por Tarima: 2 columnas -->
           <div class="fg-field col-span-1 sm:col-span-1 lg:col-span-2">
-            <label class="fg-label fg-label--required">Piezas por Tarima</label>
-            <input type="number" formControlName="piecesPerPallet" class="fg-input font-mono text-center font-black"
-              placeholder="0" />
+            <div class="flex items-center justify-between mb-1">
+              <label class="fg-label fg-label--required mb-0">{{ activeUom() === 'KG' ? 'Kilos x Tarima' : 'Piezas x Tarima' }}</label>
+              <div class="inline-flex rounded-lg p-0.5 bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                <button type="button" (click)="setUom('PZA')"
+                  [class]="activeUom() === 'PZA' ? 'bg-amber-600 text-white font-black' : 'text-slate-600 dark:text-slate-400 font-bold'"
+                  class="px-1.5 py-0.5 rounded text-[10px] transition-all">PZA</button>
+                <button type="button" (click)="setUom('KG')"
+                  [class]="activeUom() === 'KG' ? 'bg-amber-600 text-white font-black' : 'text-slate-600 dark:text-slate-400 font-bold'"
+                  class="px-1.5 py-0.5 rounded text-[10px] transition-all">KG</button>
+              </div>
+            </div>
+            <input type="number" step="any" min="0.01" formControlName="piecesPerPallet" class="fg-input font-mono text-center font-black"
+              [placeholder]="activeUom() === 'KG' ? '0.00' : '0'" />
           </div>
 
           <!-- Observaciones: 6 columnas -->
@@ -1724,20 +1734,29 @@
                   </div>
                 </div>
 
-                <!-- 2. Piezas por Tarima (2 cols) - Ajustable para estándar 135 o picos 121 / 37 -->
+                <!-- 2. Piezas o Kilos por Tarima (2 cols) - Ajustable para estándar 135 o picos 121 / 37 o pesados 20.41 kg -->
                 <div class="lg:col-span-2 flex flex-col gap-1">
-                  <label
-                    class="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between"
-                    title="Piezas de cada tarima. Cámbialo aquí cuando sea tarima pico.">
-                    <span class="flex items-center gap-1">
-                      <span class="material-symbols-outlined text-xs text-amber-600">pin</span>
-                      <span>Pzas x Tarima:</span>
-                    </span>
-                  </label>
-                  <input type="number" [value]="altaForm.get('piecesPerPallet')?.value ?? ''"
+                  <div class="flex items-center justify-between">
+                    <label
+                      class="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1"
+                      title="Cantidad o peso de cada tarima. Soporta piezas enteras y kilos con decimales.">
+                      <span class="material-symbols-outlined text-xs text-amber-600">scale</span>
+                      <span>{{ activeUom() === 'KG' ? 'Kgs x Tarima:' : 'Pzas x Tarima:' }}</span>
+                    </label>
+                    <!-- Selector Rápido Inteligente UOM -->
+                    <div class="inline-flex rounded-lg p-0.5 bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                      <button type="button" (click)="setUom('PZA')"
+                        [class]="activeUom() === 'PZA' ? 'bg-amber-600 text-white font-black shadow-xs' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'"
+                        class="px-1.5 py-0.5 rounded text-[10px] transition-all cursor-pointer">PZA</button>
+                      <button type="button" (click)="setUom('KG')"
+                        [class]="activeUom() === 'KG' ? 'bg-amber-600 text-white font-black shadow-xs' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'"
+                        class="px-1.5 py-0.5 rounded text-[10px] transition-all cursor-pointer">KG</button>
+                    </div>
+                  </div>
+                  <input type="number" step="any" min="0.01" [value]="altaForm.get('piecesPerPallet')?.value ?? ''"
                     (input)="onPiecesPerPalletInput($any($event.target).value)"
                     class="w-full text-xs font-mono font-black text-center rounded-xl px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-amber-700 dark:text-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 shadow-xs"
-                    placeholder="0" />
+                    [placeholder]="activeUom() === 'KG' ? '0.00' : '0'" />
                 </div>
 
                 <!-- 3. Tipo de Tarima (3 cols) con chevron visible -->
@@ -2138,8 +2157,8 @@
             <span class="tarimas-summary-val--sku">{{ totalProductos() }}</span>
           </div>
           <div>
-            <span class="tarimas-summary-label">Piezas Totales</span>
-            <span class="tarimas-summary-val--pieces">{{ totalPiezas() }} PZAS</span>
+            <span class="tarimas-summary-label">Total {{ activeUom() === 'KG' ? 'Kilos' : 'Piezas' }}</span>
+            <span class="tarimas-summary-val--pieces">{{ totalPiezas() | number:'1.0-2' }} {{ activeUom() === 'KG' ? 'KG' : 'PZAS' }}</span>
           </div>
         </div>
       </div>
@@ -2231,7 +2250,7 @@
               <td class="tarimas-cell-pieces">
                 <span
                   class="font-black font-mono text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                  {{ pallet.pieces }} PZAS
+                  {{ pallet.pieces | number:'1.0-2' }} {{ pallet.unit || (activeUom() === 'KG' ? 'KG' : 'PZAS') }}
                 </span>
               </td>
               <td class="tarimas-cell-obs">
@@ -2755,8 +2774,8 @@
               <input type="text" formControlName="productId" class="fg-input font-mono w-full font-bold" />
             </div>
             <div>
-              <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">CANT X TARIMA:</label>
-              <input type="number" formControlName="pieces" class="fg-input font-mono w-full font-bold" />
+              <label class="font-bold text-amber-700 dark:text-amber-400 uppercase block mb-1">CANT X TARIMA ({{ activeUom() }}):</label>
+              <input type="number" step="any" min="0.01" formControlName="pieces" class="fg-input font-mono w-full font-bold" />
             </div>
           </div>
 
@@ -3323,8 +3342,8 @@
             <span class="modal-summary-val modal-summary-val--gold">{{ totalTarimas() }} UAs</span>
           </div>
           <div>
-            <span class="modal-summary-label">Piezas Totales:</span>
-            <span class="modal-summary-val modal-summary-val--emerald">{{ totalPiezas() }} PZAS</span>
+            <span class="modal-summary-label">Total {{ activeUom() === 'KG' ? 'Kilos' : 'Piezas' }}:</span>
+            <span class="modal-summary-val modal-summary-val--emerald">{{ totalPiezas() | number:'1.0-2' }} {{ activeUom() === 'KG' ? 'KG' : 'PZAS' }}</span>
           </div>
         </div>
 
