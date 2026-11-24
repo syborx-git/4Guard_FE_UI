@@ -1,27 +1,38 @@
 /**
  * @file picking-list.component.ts
- * @description P9 — Picking FEFO Guiado [HU-071].
- * Lista de recolección con validación FEFO crítica.
- * Si el operador escanea un SSCC que viola FEFO → pantalla ROJA + chicharra.
+ * @description Módulo de Carga de Camión (Salida / Embarque FEFO) — Terminal RF 4GUARD WMS.
+ * Conectado 100% a PostgreSQL (/api/v1/warehouse-outbounds) bajo ADR-007 (Cero Mocks)
+ * y homologado visualmente con el diseño SDD Dual-Theme (Linen/Ivory & Midnight Navy).
  */
 
 import {
   Component,
-  signal,
-  computed,
+  OnInit,
+  OnDestroy,
+  AfterViewInit,
   ViewChild,
   ElementRef,
-  AfterViewInit,
+  signal,
+  computed,
+  inject,
+  PLATFORM_ID,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { timeout } from 'rxjs';
+import { AuthState, ToastService } from '@4guard/shared-core';
+import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
 
-interface PickLine {
+export interface PickLine {
   lineId: string;
+  itemId?: string;
   sku: string;
   description: string;
   qty: number;
   qtyDone: number;
+  unit: string;
   location: string;
   sscc: string;
   lot: string;
@@ -31,6 +42,22 @@ interface PickLine {
   commercialAgreementFolio?: string;
 }
 
+export interface OutboundSummary {
+  id: string;
+  folio: string;
+  status: string;
+  clientName: string;
+  carrierName: string;
+  driverName: string;
+  tractorPlates: string;
+  boxPlates: string;
+  rampNumber: number;
+  rampCode: string;
+  totalPallets: number;
+  totalPieces: number;
+  sealNumber?: string;
+}
+
 @Component({
   selector: 'fg-picking-list',
   standalone: true,
@@ -38,95 +65,251 @@ interface PickLine {
   templateUrl: './picking-list.component.html',
   styleUrl: './picking-list.component.css',
 })
-export class PickingListComponent implements AfterViewInit {
-  @ViewChild('pickScanInput') scanInput!: ElementRef<HTMLInputElement>;
+export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('pickScanInput') scanInput?: ElementRef<HTMLInputElement>;
+
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly authState = inject(AuthState);
+  private readonly toast = inject(ToastService);
+  private readonly audioService = inject(AudioFeedbackService);
+
+  protected readonly outbounds = signal<OutboundSummary[]>([]);
+  protected readonly selectedOutbound = signal<OutboundSummary | null>(null);
+  protected readonly isLoading = signal<boolean>(false);
+  protected readonly isConcluding = signal<boolean>(false);
+  protected readonly showOutboundPicker = signal<boolean>(false);
 
   protected readonly currentInput = signal('');
   protected readonly fefoViolation = signal(false);
   protected readonly violationSSCC = signal('');
-  protected readonly successFlash  = signal(false);
+  protected readonly successFlash = signal(false);
   protected readonly currentLineIdx = signal(0);
 
   // Regla de Despacho (FEFO Automático vs Selección Manual por Acuerdo Comercial)
   protected readonly dispatchRule = signal<'FEFO_AUTO' | 'MANUAL_OVERRIDE'>('FEFO_AUTO');
-  protected readonly commercialOverrideReason = signal<string>('Convenio comercial con cliente (Lote específico autorizado)');
-  protected readonly commercialAgreementFolio = signal<string>('AC-2026-NSP-04');
-
-  protected toggleDispatchRule(): void {
-    const next = this.dispatchRule() === 'FEFO_AUTO' ? 'MANUAL_OVERRIDE' : 'FEFO_AUTO';
-    this.dispatchRule.set(next);
-  }
-
-  // Orden de picking FEFO (ordenado por fecha de vencimiento — más antiguo primero)
-  protected readonly pickLines = signal<PickLine[]>([
-    {
-      lineId: 'PL-001',
-      sku: 'SKU-CAFE-001',
-      description: 'Café Molido Premium 500g',
-      qty: 12, qtyDone: 0,
-      location: 'A-1-01',
-      sscc: 'SSCC-0001',
-      lot: 'L2024-001',
-      expiresAt: '2025-06-10',
-      status: 'IN_PROGRESS',
-    },
-    {
-      lineId: 'PL-002',
-      sku: 'SKU-CAFE-001',
-      description: 'Café Molido Premium 500g',
-      qty: 6, qtyDone: 0,
-      location: 'A-1-02',
-      sscc: 'SSCC-0002',
-      lot: 'L2024-002',
-      expiresAt: '2025-06-12',
-      status: 'PENDING',
-    },
-    {
-      lineId: 'PL-003',
-      sku: 'SKU-CEREAL-006',
-      description: 'Cereal Integral 750g',
-      qty: 24, qtyDone: 0,
-      location: 'A-2-01',
-      sscc: 'SSCC-0008',
-      lot: 'L2024-008',
-      expiresAt: '2025-03-15',
-      status: 'PENDING',
-    },
-  ]);
-
-  protected readonly currentLine = computed(() =>
-    this.pickLines()[this.currentLineIdx()] ?? null
+  protected readonly commercialOverrideReason = signal<string>(
+    'Convenio comercial con cliente (Lote específico autorizado)'
   );
+  protected readonly commercialAgreementFolio = signal<string>('AC-COMERCIAL');
+
+  protected readonly pickLines = signal<PickLine[]>([]);
+
+  protected readonly operatorName = computed(() => {
+    return this.authState.userFullName() || this.authState.user()?.fullName || 'Operador Montacargas';
+  });
+
+  protected readonly currentLine = computed(() => {
+    const lines = this.pickLines();
+    if (lines.length === 0) return null;
+    return lines[this.currentLineIdx()] ?? lines.find((l) => l.status !== 'DONE') ?? null;
+  });
 
   protected readonly completedCount = computed(() =>
-    this.pickLines().filter(l => l.status === 'DONE').length
+    this.pickLines().filter((l) => l.status === 'DONE').length
   );
 
   protected readonly totalCount = computed(() => this.pickLines().length);
 
-  protected readonly progressPct = computed(() =>
-    Math.round((this.completedCount() / this.totalCount()) * 100)
+  protected readonly totalPiecesLoaded = computed(() =>
+    this.pickLines()
+      .filter((l) => l.status === 'DONE')
+      .reduce((acc, l) => acc + (Number(l.qty) || 0), 0)
   );
 
-  protected readonly isComplete = computed(() =>
-    this.completedCount() === this.totalCount()
-  );
+  protected readonly progressPct = computed(() => {
+    const total = this.totalCount();
+    if (total <= 0) return 0;
+    return Math.round((this.completedCount() / total) * 100);
+  });
 
-  // Paso 4: Pre-certificación de Carga y Estiba en Andén (HU-072 / F03)
+  protected readonly isComplete = computed(() => {
+    const total = this.totalCount();
+    return total > 0 && this.completedCount() === total;
+  });
+
   protected readonly stagingChecklistPassed = signal<boolean>(false);
-  protected toggleStagingChecklist(): void {
-    this.stagingChecklistPassed.update((v) => !v);
-  }
-
-  // Web Audio API — chicharra
+  private pollTimer: any = null;
   private audioCtx: AudioContext | null = null;
 
+  ngOnInit(): void {
+    this.loadOutbounds();
+    this.pollTimer = setInterval(() => {
+      this.loadOutbounds(true);
+    }, 5000);
+  }
+
   ngAfterViewInit(): void {
-    this.scanInput?.nativeElement?.focus();
+    this.focusScan();
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  private isUuid(val?: string | null): boolean {
+    if (!val) return false;
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+      val.trim()
+    );
+  }
+
+  loadOutbounds(silent = false): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    if (!silent) {
+      this.isLoading.set(true);
+    }
+
+    const user = this.authState.user() as any;
+    const orgId = user?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+    const params = new HttpParams().set('organizationId', orgId);
+
+    this.http
+      .get<any>('/api/v1/warehouse-outbounds', { params })
+      .pipe(timeout(15000))
+      .subscribe({
+        next: (res) => {
+          if (!silent) this.isLoading.set(false);
+          const rawList: any[] = res?.data?.content || res?.data || res || [];
+          if (!Array.isArray(rawList)) return;
+
+          const activeList: OutboundSummary[] = rawList
+            .filter(
+              (o) =>
+                o &&
+                o.status !== 'COMPLETED' &&
+                o.status !== 'CANCELLED' &&
+                o.status !== 'LOADED'
+            )
+            .map((o) => this.normalizeOutbound(o));
+
+          this.outbounds.set(activeList);
+
+          const current = this.selectedOutbound();
+          if (current) {
+            const match = activeList.find((o) => o.id === current.id || o.folio === current.folio);
+            if (match) {
+              this.selectedOutbound.set({ ...current, ...match });
+            } else if (activeList.length > 0 && !silent) {
+              this.selectOutbound(activeList[0], silent);
+            } else if (activeList.length === 0) {
+              this.selectedOutbound.set(null);
+              this.pickLines.set([]);
+            }
+          } else if (activeList.length > 0) {
+            this.selectOutbound(activeList[0], silent);
+          }
+        },
+        error: () => {
+          if (!silent) this.isLoading.set(false);
+        },
+      });
+  }
+
+  private normalizeOutbound(raw: any): OutboundSummary {
+    const rampNum = Number(raw?.rampNumber || 1);
+    return {
+      id: String(raw?.id || ''),
+      folio: String(raw?.folio || raw?.remisionNo || raw?.docNumber || 'S/F'),
+      status: String(raw?.status || 'ASSIGNED'),
+      clientName: String(raw?.clientName || raw?.destinationName || 'CLIENTE DESTINO'),
+      carrierName: String(raw?.carrierName || raw?.carrierLine || 'TRANSPORTE'),
+      driverName: String(raw?.driverName || 'OPERADOR'),
+      tractorPlates: String(raw?.tractorPlates || 'S/P'),
+      boxPlates: String(raw?.boxPlates || 'S/P'),
+      rampNumber: rampNum,
+      rampCode: raw?.rampCode || `LOC-RAMP-${String(rampNum).padStart(2, '0')}`,
+      totalPallets: Number(raw?.totalPallets || 0),
+      totalPieces: Number(raw?.totalPieces || 0),
+      sealNumber: raw?.sealNumber || '',
+    };
+  }
+
+  selectOutbound(out: OutboundSummary, silent = false): void {
+    this.selectedOutbound.set(out);
+    this.showOutboundPicker.set(false);
+    this.currentLineIdx.set(0);
+    this.stagingChecklistPassed.set(false);
+
+    if (this.isUuid(out.id)) {
+      this.loadOutboundDetail(out.id);
+    }
+
+    if (!silent) {
+      this.audioService.playSuccess();
+    }
+  }
+
+  private loadOutboundDetail(outboundId: string): void {
+    this.http
+      .get<any>(`/api/v1/warehouse-outbounds/${outboundId}`)
+      .pipe(timeout(15000))
+      .subscribe({
+        next: (res) => {
+          const detail = res?.data || res;
+          if (!detail) return;
+          const normalized = this.normalizeOutbound(detail);
+          this.selectedOutbound.set(normalized);
+
+          const rawItems: any[] = Array.isArray(detail.items) ? detail.items : [];
+          // Ordenar FEFO: fecha de caducidad más próxima primero
+          const sorted = [...rawItems].sort((a, b) => {
+            const da = a.expirationDate ? new Date(a.expirationDate).getTime() : Number.MAX_SAFE_INTEGER;
+            const db = b.expirationDate ? new Date(b.expirationDate).getTime() : Number.MAX_SAFE_INTEGER;
+            return da - db;
+          });
+
+          const existingDone = new Set(
+            this.pickLines()
+              .filter((l) => l.status === 'DONE')
+              .map((l) => l.sscc.toUpperCase())
+          );
+
+          const mappedLines: PickLine[] = sorted.map((it, idx) => {
+            const sscc = String(it.palletCode || it.sscc || `UA-${idx + 1}`).toUpperCase();
+            const isDone = existingDone.has(sscc);
+            const qty = Number(it.pieces ?? it.quantity ?? 0);
+            return {
+              lineId: String(it.id || `PL-${idx + 1}`),
+              itemId: it.itemId ? String(it.itemId) : undefined,
+              sku: String(it.skuCode || it.productId || 'SKU'),
+              description: String(it.skuDescription || it.productName || 'Mercancía de Salida'),
+              qty,
+              qtyDone: isDone ? qty : 0,
+              unit: String(it.unit || 'PZAS'),
+              location: String(it.locationCode || 'ALMACÉN'),
+              sscc,
+              lot: String(it.lotNumber || 'S/L').toUpperCase(),
+              expiresAt: String(it.expirationDate || 'N/A'),
+              status: isDone ? 'DONE' : idx === 0 ? 'IN_PROGRESS' : 'PENDING',
+            };
+          });
+
+          this.pickLines.set(mappedLines);
+          const firstPending = mappedLines.findIndex((l) => l.status !== 'DONE');
+          this.currentLineIdx.set(firstPending !== -1 ? firstPending : 0);
+        },
+        error: () => {},
+      });
+  }
+
+  protected toggleDispatchRule(): void {
+    const next = this.dispatchRule() === 'FEFO_AUTO' ? 'MANUAL_OVERRIDE' : 'FEFO_AUTO';
+    this.dispatchRule.set(next);
+    this.audioService.playSuccess();
+  }
+
+  protected toggleStagingChecklist(): void {
+    this.stagingChecklistPassed.update((v) => !v);
+    this.audioService.playSuccess();
   }
 
   protected focusScan(): void {
-    this.scanInput?.nativeElement?.focus();
+    setTimeout(() => this.scanInput?.nativeElement?.focus(), 80);
   }
 
   protected onKeydown(event: KeyboardEvent): void {
@@ -139,122 +322,156 @@ export class PickingListComponent implements AfterViewInit {
     }
   }
 
+  protected onManualSubmit(): void {
+    const val = this.currentInput().trim();
+    if (val) {
+      this.validateScan(val);
+      this.currentInput.set('');
+    }
+  }
+
   protected simulateScan(sscc: string): void {
     this.validateScan(sscc);
   }
 
   protected simulateWrongScan(): void {
-    // Simula escaneo del 2do SSCC cuando corresponde el 1ro
-    const wrongSSCC = 'SSCC-0002';
-    this.validateScan(wrongSSCC);
+    const lines = this.pickLines();
+    const other = lines.find((l) => l.sscc !== this.currentLine()?.sscc && l.status !== 'DONE');
+    this.validateScan(other?.sscc || 'SSCC-NO-FEFO-999');
   }
 
-  private validateScan(sscc: string): void {
+  validateScan(rawSscc: string): void {
+    const sscc = (rawSscc || '').trim().toUpperCase();
     const lines = this.pickLines();
     const current = this.currentLine();
-    if (!current) return;
+    const out = this.selectedOutbound();
+    if (!current || !out) return;
+
+    // Si la orden estaba en ASSIGNED o REGISTERED, transicionar a IN_PROGRESS en BD
+    if (this.isUuid(out.id) && (out.status === 'ASSIGNED' || out.status === 'REGISTERED')) {
+      this.http
+        .put<any>(`/api/v1/warehouse-outbounds/${out.id}`, { status: 'IN_PROGRESS' })
+        .subscribe({
+          next: () => {
+            this.selectedOutbound.update((curr) => (curr ? { ...curr, status: 'IN_PROGRESS' } : curr));
+          },
+          error: () => {},
+        });
+    }
 
     // ─ Modo Acuerdo Comercial (MANUAL_OVERRIDE) ────────────────
     if (this.dispatchRule() === 'MANUAL_OVERRIDE') {
-      const matchIdx = lines.findIndex(l => l.sscc === sscc && l.status !== 'DONE');
+      const matchIdx = lines.findIndex((l) => l.sscc.toUpperCase() === sscc && l.status !== 'DONE');
       if (matchIdx !== -1) {
-        // Escaneo de tarima autorizada por acuerdo comercial sin chicharra
-        this.pickLines.update(items =>
-          items.map((l, i) => {
-            if (i === matchIdx) {
-              return {
-                ...l,
-                qtyDone: l.qty,
-                status: 'DONE' as const,
-                isManualOverride: true,
-                commercialAgreementFolio: this.commercialAgreementFolio(),
-              };
-            }
-            return l;
-          })
-        );
-
-        this.successFlash.set(true);
-        setTimeout(() => {
-          this.successFlash.set(false);
-          const nextIdx = this.pickLines().findIndex(l => l.status !== 'DONE');
-          if (nextIdx !== -1) {
-            this.currentLineIdx.set(nextIdx);
-          }
-        }, 800);
+        this.markLineDone(matchIdx, true);
         return;
       } else {
-        // El SSCC escaneado no pertenece a ninguna línea de la orden
-        this.fefoViolation.set(true);
-        this.violationSSCC.set(sscc);
-        this.playBuzzer();
-        setTimeout(() => {
-          this.fefoViolation.set(false);
-          this.violationSSCC.set('');
-        }, 3000);
+        this.triggerFefoViolation(sscc);
         return;
       }
     }
 
     // ─ Validación FEFO Estricta ─────────────────────────────
-    if (sscc !== current.sscc) {
-      // ¡VIOLACIÓN FEFO! Pantalla roja + chicharra
-      this.fefoViolation.set(true);
-      this.violationSSCC.set(sscc);
-      this.playBuzzer();
-
-      // Auto-reset después de 3s
-      setTimeout(() => {
-        this.fefoViolation.set(false);
-        this.violationSSCC.set('');
-      }, 3000);
+    if (sscc !== current.sscc.toUpperCase()) {
+      this.triggerFefoViolation(sscc);
       return;
     }
 
-    // ─ Escaneo correcto FEFO ─────────────────────────────────
-    this.pickLines.update(items =>
+    this.markLineDone(this.currentLineIdx(), false);
+  }
+
+  private markLineDone(targetIdx: number, isManual: boolean): void {
+    this.pickLines.update((items) =>
       items.map((l, i) => {
-        if (i === this.currentLineIdx()) {
-          return { ...l, qtyDone: l.qty, status: 'DONE' as const };
+        if (i === targetIdx) {
+          return {
+            ...l,
+            qtyDone: l.qty,
+            status: 'DONE' as const,
+            isManualOverride: isManual,
+            commercialAgreementFolio: isManual ? this.commercialAgreementFolio() : undefined,
+          };
         }
         return l;
       })
     );
 
+    this.audioService.playSuccess();
     this.successFlash.set(true);
     setTimeout(() => {
       this.successFlash.set(false);
-      // Avanzar a la siguiente línea pendiente
-      const nextIdx = this.pickLines().findIndex(
-        (l, i) => i > this.currentLineIdx() && l.status !== 'DONE'
-      );
+      const nextIdx = this.pickLines().findIndex((l) => l.status !== 'DONE');
       if (nextIdx !== -1) {
         this.currentLineIdx.set(nextIdx);
       }
-    }, 800);
+    }, 500);
+  }
+
+  private triggerFefoViolation(sscc: string): void {
+    this.fefoViolation.set(true);
+    this.violationSSCC.set(sscc);
+    this.playBuzzer();
+    setTimeout(() => {
+      this.fefoViolation.set(false);
+      this.violationSSCC.set('');
+    }, 3000);
+  }
+
+  concludeOutboundLoad(): void {
+    const out = this.selectedOutbound();
+    if (!out || !this.isUuid(out.id)) return;
+
+    this.isConcluding.set(true);
+    const op = this.operatorName();
+    const payload = {
+      status: 'LOADED',
+      forkliftOperatorName: op,
+      observations: `Carga física completada en andén desde Terminal RF por ${op} (${this.completedCount()} tarimas / ${this.totalPiecesLoaded()} unidades). Lista para despacho F03.`,
+    };
+
+    this.http.put<any>(`/api/v1/warehouse-outbounds/${out.id}`, payload).subscribe({
+      next: (res) => {
+        this.isConcluding.set(false);
+        this.audioService.playFriendlyArrivalChime(1.0);
+        this.toast.success(
+          `Embarque #${out.folio} reportado como CARGADO a Mesa de Control.`,
+          '✅ CARGA CONCLUIDA'
+        );
+        try {
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('4guard_wms_events');
+            bc.postMessage({ type: 'OUTBOUND_LOADED', data: res?.data || out });
+            bc.close();
+          }
+        } catch {}
+        this.loadOutbounds();
+      },
+      error: (err) => {
+        this.isConcluding.set(false);
+        this.toast.error(err?.error?.message || 'Error al concluir la carga en el servidor.');
+      },
+    });
+  }
+
+  goToMenu(): void {
+    this.router.navigate(['/menu']);
   }
 
   private playBuzzer(): void {
     try {
       this.audioCtx ??= new AudioContext();
-      const osc  = this.audioCtx.createOscillator();
+      const osc = this.audioCtx.createOscillator();
       const gain = this.audioCtx.createGain();
-
       osc.connect(gain);
       gain.connect(this.audioCtx.destination);
-
       osc.type = 'square';
       osc.frequency.setValueAtTime(320, this.audioCtx.currentTime);
       osc.frequency.setValueAtTime(200, this.audioCtx.currentTime + 0.15);
       osc.frequency.setValueAtTime(320, this.audioCtx.currentTime + 0.3);
-
       gain.gain.setValueAtTime(0.4, this.audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.6);
-
       osc.start(this.audioCtx.currentTime);
       osc.stop(this.audioCtx.currentTime + 0.6);
-    } catch {
-      // Fallback silencioso si AudioContext no está disponible
-    }
+    } catch {}
   }
 }

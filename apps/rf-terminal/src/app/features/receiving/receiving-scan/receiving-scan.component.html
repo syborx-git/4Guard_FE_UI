@@ -584,7 +584,7 @@
             <span class="material-symbols-outlined text-xs text-purple-400">warehouse</span>
           </div>
           <div class="metric-val metric-val--ramp font-bold font-mono truncate">
-            Rampa {{ selectedReception()?.rampNumber || 11 }}
+            {{ selectedReception()?.rampNumber ? ('Rampa ' + selectedReception()?.rampNumber) : 'Sin Rampa' }}
           </div>
         </div>
       </div>
@@ -686,7 +686,7 @@
       <span class="material-symbols-outlined text-2xl">verified</span>
       <div class="flex flex-col text-left">
         <span class="font-extrabold text-sm tracking-wide">CONCLUIR DESCARGA FÍSICA (F01)</span>
-        <span class="text-[11px] opacity-90 font-mono">{{ scannedCount() }} Tarimas • {{ totalPiecesScanned() | number }} Pzas • Rampa {{ selectedReception()?.rampNumber || 11 }}</span>
+        <span class="text-[11px] opacity-90 font-mono">{{ scannedCount() }} Tarimas • {{ totalPiecesScanned() | number:'1.0-2' }} Pzas • {{ selectedReception()?.rampNumber ? ('Rampa ' + selectedReception()?.rampNumber) : 'En Espera de Andén' }}</span>
       </div>
     </button>
   </footer>

@@ -1,41 +1,54 @@
 /**
  * @file putaway-scan.component.ts
- * @description P9 — Módulo de Ubicación en Rack (Putaway) RF.
- * Implementa la Regla de Pablo (Coordinador): El operador no sugiere rack;
- * la coordinación preasigna la Rampa y el Rack destino.
- * Validación guiada en 2 pasos: Escaneo de SSCC en Rampa ➔ Escaneo estricto de Rack Asignado.
+ * @description Módulo de Acomodo en Racks / Cambios de Almacén (Putaway / Transfers) — Terminal RF 4GUARD WMS.
+ * Conectado 100% a PostgreSQL (/api/v1/warehouse-transfers) bajo ADR-007 (Cero Mocks)
+ * y homologado visualmente con el diseño SDD Dual-Theme de la Foto 1 (Linen/Ivory & Midnight Navy).
  */
 
 import {
   Component,
+  OnInit,
+  OnDestroy,
+  AfterViewInit,
+  ViewChild,
+  ElementRef,
   signal,
   computed,
   inject,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
+  PLATFORM_ID,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { timeout } from 'rxjs';
+import { AuthState, ToastService } from '@4guard/shared-core';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
-import { WarehouseLayoutSyncService } from '../../../core/services/warehouse-layout-sync.service';
 
 export type PutawayStep = 'SCAN_PALLET' | 'SCAN_RACK' | 'BATCH_COMPLETED';
 
 export interface AssignedPutawayTask {
+  id: string;
   folio: string;
+  status: string;
   rampCode: string;
+  destinationCode: string;
+  destinationLocationId?: string;
   assignedBy: string;
-  supplier: string;
   totalPallets: number;
+  totalPieces: number;
 }
 
 export interface PutawayItem {
+  id: string;
+  transferId: string;
+  destinationLocationId?: string;
   sscc: string;
   sku: string;
   description: string;
   pieces: number;
+  unit: string;
+  originCode: string;
   assignedRack: string;
   levelInfo: string;
   status: 'PENDING' | 'IN_TRANSIT' | 'STORED';
@@ -49,102 +62,182 @@ export interface PutawayItem {
   templateUrl: './putaway-scan.component.html',
   styleUrl: './putaway-scan.component.css',
 })
-export class PutawayScanComponent implements AfterViewInit {
-  @ViewChild('scanInput') scanInput!: ElementRef<HTMLInputElement>;
+export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('scanInput') scanInput?: ElementRef<HTMLInputElement>;
 
-  private readonly router     = inject(Router);
-  private readonly audio      = inject(AudioFeedbackService);
-  private readonly layoutSync = inject(WarehouseLayoutSyncService);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly authState = inject(AuthState);
+  private readonly toast = inject(ToastService);
+  private readonly audio = inject(AudioFeedbackService);
 
-  // Datos de la orden de recepción preasignada por Pablo
-  protected readonly assignedTask = signal<AssignedPutawayTask>({
-    folio: 'REC-2026-000042',
-    rampCode: 'RAMPA 03 (Andén Norte)',
-    assignedBy: 'Pablo R. (Coordinación)',
-    supplier: 'Distribuidora Internacional de Alimentos S.A.',
-    totalPallets: 5,
+  protected readonly transfers = signal<AssignedPutawayTask[]>([]);
+  protected readonly assignedTask = signal<AssignedPutawayTask | null>(null);
+  protected readonly isLoading = signal<boolean>(false);
+
+  protected readonly currentStep = signal<PutawayStep>('SCAN_PALLET');
+  protected readonly currentInput = signal('');
+  protected readonly isProcessing = signal(false);
+  protected readonly lastError = signal<string | null>(null);
+  protected readonly activePallet = signal<PutawayItem | null>(null);
+
+  // Tarimas reales provenientes de PostgreSQL (/api/v1/warehouse-transfers/{id})
+  protected readonly pendingPallets = signal<PutawayItem[]>([]);
+  protected readonly storedBuffer = signal<PutawayItem[]>([]);
+
+  protected readonly operatorName = computed(() => {
+    return this.authState.userFullName() || this.authState.user()?.fullName || 'Operador Montacargas';
   });
 
-  // Estado del flujo guiado
-  protected readonly currentStep      = signal<PutawayStep>('SCAN_PALLET');
-  protected readonly currentInput     = signal('');
-  protected readonly isProcessing     = signal(false);
-  protected readonly lastError        = signal<string | null>(null);
-  protected readonly activePallet     = signal<PutawayItem | null>(null);
-
-  // Base de tarimas de la recepción asignada
-  protected readonly pendingPallets = signal<PutawayItem[]>([
-    {
-      sscc: 'SSCC-175012345000000018',
-      sku: 'SKU-ACEITE-001',
-      description: 'Aceite Vegetal Comestible 12x1L',
-      pieces: 576,
-      assignedRack: 'RACK A-04-02',
-      levelInfo: 'Nivel 2, Posición 1',
-      status: 'PENDING',
-    },
-    {
-      sscc: 'SSCC-175012345000000025',
-      sku: 'SKU-ARROZ-003',
-      description: 'Arroz Super Extra Bolsa 24x900g',
-      pieces: 480,
-      assignedRack: 'RACK A-04-05',
-      levelInfo: 'Nivel 1, Posición 2',
-      status: 'PENDING',
-    },
-    {
-      sscc: 'SSCC-175012345000000032',
-      sku: 'SKU-ATUN-007',
-      description: 'Atún en Agua Lata 180g (Pack 48)',
-      pieces: 1152,
-      assignedRack: 'RACK A-04-08',
-      levelInfo: 'Nivel 3, Posición 1',
-      status: 'PENDING',
-    },
-    {
-      sscc: 'SSCC-175012345000000049',
-      sku: 'SKU-CAFE-001',
-      description: 'Café Tostado y Molido Gourmet 500g',
-      pieces: 720,
-      assignedRack: 'RACK A-05-01',
-      levelInfo: 'Nivel 1, Posición 1',
-      status: 'PENDING',
-    },
-  ]);
-
-  // Tarimas ya guardadas exitosamente en rack
-  protected readonly storedBuffer = signal<PutawayItem[]>([
-    {
-      sscc: 'SSCC-175012345000000001',
-      sku: 'SKU-AGUA-002',
-      description: 'Agua Purificada Botella 1.5L',
-      pieces: 600,
-      assignedRack: 'RACK A-04-01',
-      levelInfo: 'Nivel 1, Posición 1',
-      status: 'STORED',
-      scannedAt: new Date(Date.now() - 15 * 60000),
-    },
-  ]);
-
   protected readonly storedCount = computed(() => this.storedBuffer().length);
-  protected readonly totalCount  = computed(() => this.storedBuffer().length + this.pendingPallets().length);
+  protected readonly totalCount = computed(
+    () => this.storedBuffer().length + this.pendingPallets().length
+  );
+
+  private pollTimer: any = null;
+
+  ngOnInit(): void {
+    this.loadTransfers();
+    this.pollTimer = setInterval(() => {
+      this.loadTransfers(true);
+    }, 5000);
+  }
 
   ngAfterViewInit(): void {
     this.focusScanInput();
   }
 
-  protected focusScanInput(): void {
-    setTimeout(() => this.scanInput?.nativeElement?.focus(), 100);
+  ngOnDestroy(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
   }
 
-  /** Procesa entrada de lector láser */
-  protected onScanInput(event: Event): void {
-    const val = (event.target as HTMLInputElement).value.trim();
-    if (val.length >= 4) {
-      this.handleScannedCode(val);
-      this.currentInput.set('');
-      (event.target as HTMLInputElement).value = '';
+  private isUuid(val?: string | null): boolean {
+    if (!val) return false;
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+      val.trim()
+    );
+  }
+
+  loadTransfers(silent = false): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    if (!silent) {
+      this.isLoading.set(true);
     }
+
+    const user = this.authState.user() as any;
+    const orgId = user?.organizationId || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';
+    const params = new HttpParams().set('organizationId', orgId).set('scope', 'CURRENT');
+
+    this.http
+      .get<any>('/api/v1/warehouse-transfers', { params })
+      .pipe(timeout(15000))
+      .subscribe({
+        next: (res) => {
+          if (!silent) this.isLoading.set(false);
+          const rawList: any[] = res?.data?.content || res?.data || res || [];
+          if (!Array.isArray(rawList)) return;
+
+          const activeList: AssignedPutawayTask[] = rawList
+            .filter((t) => t && t.status !== 'COMPLETED' && t.status !== 'CANCELLED')
+            .map((t) => this.normalizeTransferTask(t));
+
+          this.transfers.set(activeList);
+
+          const current = this.assignedTask();
+          if (current) {
+            const match = activeList.find((t) => t.id === current.id || t.folio === current.folio);
+            if (match) {
+              this.assignedTask.set({ ...current, ...match });
+            } else if (activeList.length > 0 && !silent) {
+              this.selectTransferTask(activeList[0], silent);
+            } else if (activeList.length === 0 && this.currentStep() !== 'BATCH_COMPLETED') {
+              this.assignedTask.set(null);
+              this.pendingPallets.set([]);
+            }
+          } else if (activeList.length > 0) {
+            this.selectTransferTask(activeList[0], silent);
+          }
+        },
+        error: () => {
+          if (!silent) this.isLoading.set(false);
+        },
+      });
+  }
+
+  private normalizeTransferTask(raw: any): AssignedPutawayTask {
+    return {
+      id: String(raw?.id || ''),
+      folio: String(raw?.folio || 'S/F'),
+      status: String(raw?.status || 'ASSIGNED'),
+      rampCode: String(raw?.originLocationCode || raw?.originLocationName || 'ANDÉN / STAGING'),
+      destinationCode: String(
+        raw?.destinationLocationCode || raw?.destinationLocationName || 'RACK ASIGNADO'
+      ),
+      destinationLocationId: raw?.destinationLocationId ? String(raw.destinationLocationId) : undefined,
+      assignedBy: String(raw?.createdBy || raw?.forkliftOperatorName || 'Coordinación WMS'),
+      totalPallets: Number(raw?.totalPallets || 0),
+      totalPieces: Number(raw?.totalPieces || 0),
+    };
+  }
+
+  selectTransferTask(task: AssignedPutawayTask, silent = false): void {
+    this.assignedTask.set(task);
+    this.lastError.set(null);
+    this.activePallet.set(null);
+    this.currentStep.set('SCAN_PALLET');
+
+    if (this.isUuid(task.id)) {
+      this.loadTransferDetail(task.id);
+    }
+
+    if (!silent) {
+      this.audio.playSuccess();
+    }
+  }
+
+  private loadTransferDetail(transferId: string): void {
+    this.http
+      .get<any>(`/api/v1/warehouse-transfers/${transferId}`)
+      .pipe(timeout(15000))
+      .subscribe({
+        next: (res) => {
+          const detail = res?.data || res;
+          if (!detail) return;
+          const task = this.normalizeTransferTask(detail);
+          this.assignedTask.set(task);
+
+          const rawItems: any[] = Array.isArray(detail.items) ? detail.items : [];
+          const storedSet = new Set(this.storedBuffer().map((s) => s.sscc.toUpperCase()));
+
+          const mapped: PutawayItem[] = rawItems
+            .filter((it) => !storedSet.has(String(it.palletCode || it.sscc || '').toUpperCase()))
+            .map((it, idx) => ({
+              id: String(it.id || it.itemId || `item-${idx + 1}`),
+              transferId: task.id,
+              destinationLocationId: task.destinationLocationId,
+              sscc: String(it.palletCode || it.sscc || `UA-${idx + 1}`).toUpperCase(),
+              sku: String(it.skuCode || it.productId || 'SKU'),
+              description: String(it.skuDescription || it.productName || 'Mercancía en Traspaso'),
+              pieces: Number(it.pieces ?? it.quantity ?? 0),
+              unit: String(it.unit || 'PZAS'),
+              originCode: task.rampCode,
+              assignedRack: task.destinationCode,
+              levelInfo: `Origen: ${task.rampCode} ➔ Destino: ${task.destinationCode}`,
+              status: 'PENDING' as const,
+            }));
+
+          this.pendingPallets.set(mapped);
+        },
+        error: () => {},
+      });
+  }
+
+  protected focusScanInput(): void {
+    setTimeout(() => this.scanInput?.nativeElement?.focus(), 100);
   }
 
   protected onKeydown(event: KeyboardEvent): void {
@@ -157,10 +250,17 @@ export class PutawayScanComponent implements AfterViewInit {
     }
   }
 
-  /**
-   * Manejador central de escaneo con validación estricta de 2 pasos
-   */
-  protected handleScannedCode(code: string): void {
+  protected onManualSubmit(): void {
+    const val = this.currentInput().trim();
+    if (val) {
+      this.handleScannedCode(val);
+      this.currentInput.set('');
+    }
+  }
+
+  protected handleScannedCode(rawCode: string): void {
+    const code = (rawCode || '').trim().toUpperCase();
+    if (!code) return;
     this.lastError.set(null);
     const step = this.currentStep();
 
@@ -171,36 +271,41 @@ export class PutawayScanComponent implements AfterViewInit {
     }
   }
 
-  /** Paso 1: Valida el SSCC escaneado en Rampa */
+  /** Paso 1: Valida el SSCC escaneado en Ubicación Origen */
   private processPalletScan(code: string): void {
-    // Verificar si ya fue guardado
-    if (this.storedBuffer().some(item => item.sscc === code)) {
-      this.lastError.set(`⚠️ Tarima Duplicada: El SSCC ${code} ya fue guardado en su rack.`);
+    if (this.storedBuffer().some((item) => item.sscc.toUpperCase() === code)) {
+      this.lastError.set(`⚠️ Tarima Duplicada: La UA ${code} ya fue ubicada en su rack destino.`);
       this.audio.playError();
       return;
     }
 
-    // Buscar en las tarimas pendientes de la recepción
-    const found = this.pendingPallets().find(item => item.sscc === code);
+    const found = this.pendingPallets().find((item) => item.sscc.toUpperCase() === code);
     if (!found) {
-      // Tarima no pertenece a esta recepción asignada
-      this.lastError.set(`❌ Tarima no asignada a esta recepción: ${code}. Verifica con Pablo (Coordinación).`);
+      this.lastError.set(
+        `❌ La tarima ${code} no pertenece a esta orden de acomodo/traspaso (#${this.assignedTask()?.folio || ''}).`
+      );
       this.audio.playError();
       return;
     }
 
-    // Tarima válida encontrada
     this.isProcessing.set(true);
+    if (this.isUuid(found.transferId)) {
+      this.http.post<any>(`/api/v1/warehouse-transfers/${found.transferId}/start`, {}).subscribe({
+        next: () => {},
+        error: () => {},
+      });
+    }
+
     setTimeout(() => {
       this.activePallet.set({ ...found, status: 'IN_TRANSIT' });
       this.currentStep.set('SCAN_RACK');
       this.isProcessing.set(false);
       this.audio.playSuccess();
       this.focusScanInput();
-    }, 250);
+    }, 150);
   }
 
-  /** Paso 2: Valida que el operario esté en el Rack exactamente preasignado */
+  /** Paso 2: Valida el Rack Destino y ejecuta completeTransfer en PostgreSQL */
   private processRackScan(code: string): void {
     const pallet = this.activePallet();
     if (!pallet) {
@@ -208,75 +313,80 @@ export class PutawayScanComponent implements AfterViewInit {
       return;
     }
 
-    // Normalizar códigos de rack para comparación insensible a espacios o mayúsculas
     const normalizedScanned = code.toUpperCase().replace(/\s+/g, '-');
     const normalizedExpected = pallet.assignedRack.toUpperCase().replace(/\s+/g, '-');
 
-    if (normalizedScanned !== normalizedExpected && !normalizedScanned.includes(normalizedExpected.replace('RACK-', ''))) {
-      // Error de colocación: El operario intentó escanear otro rack
-      this.lastError.set(`❌ RACK INCORRECTO: Escaneaste '${code}'. La regla de coordinación de Pablo exige colocarlo en: ${pallet.assignedRack}.`);
+    if (
+      normalizedScanned !== normalizedExpected &&
+      !normalizedScanned.includes(normalizedExpected.replace('RACK-', ''))
+    ) {
+      this.lastError.set(
+        `❌ UBICACIÓN INCORRECTA: Escaneaste '${code}'. La orden exige colocar la tarima en: ${pallet.assignedRack}.`
+      );
       this.audio.playError();
       return;
     }
 
-    // Rack correcto: Guardado exitoso y transición FSM a Estado 40 (Almacenado)
     this.isProcessing.set(true);
-    setTimeout(() => {
+    const remainingAfterThis = this.pendingPallets().filter(
+      (p) => p.sscc.toUpperCase() !== pallet.sscc.toUpperCase()
+    );
+
+    const finalizeLocalStore = () => {
       const storedItem: PutawayItem = {
         ...pallet,
         status: 'STORED',
         scannedAt: new Date(),
       };
-
-      // Mover de pendiente a guardado
-      this.pendingPallets.update(list => list.filter(p => p.sscc !== pallet.sscc));
-      this.storedBuffer.update(list => [storedItem, ...list]);
-
-      // Sincronizar ocupación en el Layout 2D (WarehouseLayoutService)
-      this.layoutSync.recordMovement(
-        pallet.assignedRack,
-        1,
-        pallet.description,
-        undefined,
-        `Putaway en Rack (${this.assignedTask().folio})`
-      );
-
+      this.pendingPallets.set(remainingAfterThis);
+      this.storedBuffer.update((list) => [storedItem, ...list]);
       this.activePallet.set(null);
       this.isProcessing.set(false);
       this.audio.playSuccess();
 
-      if (this.pendingPallets().length === 0) {
+      if (remainingAfterThis.length === 0) {
         this.currentStep.set('BATCH_COMPLETED');
       } else {
         this.currentStep.set('SCAN_PALLET');
       }
-
       this.focusScanInput();
-    }, 400);
-  }
+    };
 
-  /** Simulación Paso 1: Escanear siguiente tarima pendiente en rampa */
-  protected simulateScanNextPallet(): void {
-    const next = this.pendingPallets()[0];
-    if (next) {
-      this.handleScannedCode(next.sscc);
+    // Si es la última tarima del traspaso, confirmar formalmente en PostgreSQL (mueve stock y Kardex)
+    if (remainingAfterThis.length === 0 && this.isUuid(pallet.transferId)) {
+      const payload: Record<string, any> = {};
+      if (this.isUuid(pallet.destinationLocationId)) {
+        payload['destinationLocationId'] = pallet.destinationLocationId;
+      }
+      this.http
+        .post<any>(`/api/v1/warehouse-transfers/${pallet.transferId}/complete`, payload)
+        .subscribe({
+          next: (res) => {
+            finalizeLocalStore();
+            this.toast.success(
+              `Traspaso #${this.assignedTask()?.folio} completado en PostgreSQL y Kardex.`,
+              '✅ ACOMODO COMPLETADO'
+            );
+            try {
+              if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+                const bc = new BroadcastChannel('4guard_wms_events');
+                bc.postMessage({ type: 'TRANSFER_COMPLETED', data: res?.data || pallet });
+                bc.close();
+              }
+            } catch {}
+          },
+          error: (err) => {
+            this.isProcessing.set(false);
+            this.toast.error(
+              err?.error?.message || 'Error al completar el acomodo en la base de datos.'
+            );
+          },
+        });
+    } else {
+      finalizeLocalStore();
     }
   }
 
-  /** Simulación Paso 2: Escanear el rack asignado correcto */
-  protected simulateScanCorrectRack(): void {
-    const pallet = this.activePallet();
-    if (pallet) {
-      this.handleScannedCode(pallet.assignedRack);
-    }
-  }
-
-  /** Simulación Paso 2: Escanear un rack incorrecto para probar validación y sonido de error */
-  protected simulateScanWrongRack(): void {
-    this.handleScannedCode('RACK B-99-99');
-  }
-
-  /** Cancelar traslado actual y volver al paso 1 */
   protected cancelCurrentTransit(): void {
     this.activePallet.set(null);
     this.lastError.set(null);

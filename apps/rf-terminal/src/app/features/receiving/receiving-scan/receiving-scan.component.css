@@ -2265,79 +2265,63 @@
   font-weight: 800 !important;
 }
 
-/* 2. Tarjetas Principales SDD (Linen / Ivory Luxury) */
+/* 2. Tarjetas Principales SDD (Linen / Ivory Luxury + Midnight Navy Hero Banner como Foto 1) */
 :host-context(.theme-light) .manifest-card,
-:host-context(.light) .manifest-card,
-:host-context(.theme-light) .rf-no-reception-card,
-:host-context(.light) .rf-no-reception-card {
-  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 55%, #f7f0e1 100%) !important;
-  border: 1.5px solid rgba(197, 168, 107, 0.38) !important;
-  border-top: 3.5px solid #d97706 !important;
-  box-shadow: 0 8px 24px rgba(36, 44, 58, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+:host-context(.light) .manifest-card {
+  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%) !important;
+  border: 1.5px solid rgba(197, 168, 107, 0.32) !important;
+  border-top: 3.5px solid var(--gold, #c5a86b) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 24px rgba(36, 44, 58, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
   color: #0f172a !important;
 }
 
-:host-context(.theme-light) .no-rec-icon-box,
-:host-context(.light) .no-rec-icon-box {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-  border-color: rgba(217, 119, 6, 0.4) !important;
-  color: #b45309 !important;
-  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.14) !important;
+:host-context(.theme-light) .rf-no-reception-card,
+:host-context(.light) .rf-no-reception-card {
+  background: linear-gradient(145deg, #172033 0%, #25324a 100%) !important;
+  border: 1px solid rgba(197, 168, 107, 0.35) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 12px 32px rgba(23, 32, 51, 0.22) !important;
+  color: #ffffff !important;
 }
 
-:host-context(.theme-light) .no-rec-badge,
-:host-context(.light) .no-rec-badge {
-  background: #fef3c7 !important;
-  border-color: rgba(217, 119, 6, 0.4) !important;
-  color: #92400e !important;
+:host-context(.theme-light) .rf-no-reception-card .no-rec-title,
+:host-context(.light) .rf-no-reception-card .no-rec-title {
+  color: #ffffff !important;
 }
 
-:host-context(.theme-light) .no-rec-sub,
-:host-context(.light) .no-rec-sub {
-  color: #475569 !important;
+:host-context(.theme-light) .rf-no-reception-card .no-rec-sub,
+:host-context(.light) .rf-no-reception-card .no-rec-sub {
+  color: #cbd5e1 !important;
 }
 
-:host-context(.theme-light) .manifest-header,
-:host-context(.light) .manifest-header,
-:host-context(.theme-light) .rf-modal-header,
-:host-context(.light) .rf-modal-header {
-  border-bottom-color: rgba(76, 86, 105, 0.14) !important;
+:host-context(.theme-light) .rf-no-reception-card .no-rec-icon-box,
+:host-context(.light) .rf-no-reception-card .no-rec-icon-box {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(197, 168, 107, 0.38) !important;
+  color: #e0c87a !important;
+  box-shadow: none !important;
 }
 
-:host-context(.theme-light) .manifest-folio-val,
-:host-context(.light) .manifest-folio-val {
-  color: #b45309 !important;
-  text-shadow: none !important;
+:host-context(.theme-light) .rf-no-reception-card .no-rec-badge,
+:host-context(.light) .rf-no-reception-card .no-rec-badge {
+  background: rgba(197, 168, 107, 0.2) !important;
+  border: 1px solid rgba(197, 168, 107, 0.45) !important;
+  color: #e0c87a !important;
 }
 
-:host-context(.theme-light) .manifest-status-badge,
-:host-context(.light) .manifest-status-badge {
-  background: #dcfce7 !important;
-  border-color: #86efac !important;
-  color: #166534 !important;
+:host-context(.theme-light) .rf-no-reception-card .btn-primary-rf,
+:host-context(.light) .rf-no-reception-card .btn-primary-rf {
+  background: linear-gradient(135deg, #c5a86b 0%, #b3924f 100%) !important;
+  color: #172033 !important;
+  border: 1px solid #e0c87a !important;
+  border-radius: 12px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  box-shadow: 0 6px 18px rgba(197, 168, 107, 0.35) !important;
 }
 
-:host-context(.theme-light) .manifest-status-badge.badge--in-progress,
-:host-context(.light) .manifest-status-badge.badge--in-progress {
-  background: #fef3c7 !important;
-  border-color: #fcd34d !important;
-  color: #92400e !important;
-}
-
-:host-context(.theme-light) .field-value--plates,
-:host-context(.light) .field-value--plates {
-  color: #92400e !important;
-  font-weight: 800 !important;
-}
-
-:host-context(.theme-light) .bay-highlight,
-:host-context(.light) .bay-highlight {
-  background: #f3e8ff !important;
-  border-color: #d8b4fe !important;
-  color: #6b21a8 !important;
-}
-
-/* 3. Parámetros Activos, Scanner, Progreso y Buffer en Modo Claro SDD */
+/* 3. Parámetros Activos, Scanner, Progreso y Buffer en Modo Claro SDD (Crema/Marfil con borde dorado superior) */
 :host-context(.theme-light) .param-box,
 :host-context(.light) .param-box,
 :host-context(.theme-light) .scanner-card,
@@ -2348,9 +2332,11 @@
 :host-context(.light) .buffer-card,
 :host-context(.theme-light) .rf-modal-card,
 :host-context(.light) .rf-modal-card {
-  background: #ffffff !important;
-  border: 1.5px solid rgba(76, 86, 105, 0.15) !important;
-  box-shadow: 0 8px 24px rgba(36, 44, 58, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+  background: linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%) !important;
+  border: 1.5px solid rgba(197, 168, 107, 0.32) !important;
+  border-top: 3.5px solid var(--gold, #c5a86b) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 24px rgba(36, 44, 58, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
   color: #0f172a !important;
 }
 
