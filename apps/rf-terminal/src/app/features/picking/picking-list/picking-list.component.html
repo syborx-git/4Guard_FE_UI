@@ -1,17 +1,16 @@
 <!-- ================================================================
      Carga de Camión (Salida / Embarque FEFO) — Terminal RF 4GUARD WMS
-     Homologado 100% con el Diseño SDD Dual-Theme (Linen/Ivory & Midnight Navy)
-     Conectado a PostgreSQL (/api/v1/warehouse-outbounds) — Cero Mocks (ADR-007)
+     Misma anatomía operativa que Descargar + Paleta SDD (Linen/Ivory & Midnight Navy)
+     Conectado 100% a PostgreSQL (/api/v1/warehouse-outbounds)
      ================================================================ -->
 <div
-  class="sdd-picking-workspace"
-  [class.sdd-picking--fefo-violation]="fefoViolation()"
-  [class.sdd-picking--success]="successFlash()"
+  class="rf-picking-workspace"
+  [class.picking--fefo-violation]="fefoViolation()"
+  [class.picking--success]="successFlash()"
   role="main"
-  (click)="focusScan()"
-  aria-label="Pantalla de Carga de Camión FEFO">
+  aria-label="Módulo de Carga de Camión FEFO">
 
-  <!-- Input oculto para lector láser -->
+  <!-- Input Oculto para Lector Láser -->
   <input
     #pickScanInput
     type="text"
@@ -22,7 +21,7 @@
     autocomplete="off"
     aria-label="Escáner láser de picking" />
 
-  <!-- ══ ALERTA DE VIOLACIÓN FEFO (PANTALLA ROJA) ══════════════════ -->
+  <!-- ══ PANTALLA ROJA: VIOLACIÓN FEFO ═══════════════════════════ -->
   @if (fefoViolation()) {
     <div class="fefo-alert" role="alert" aria-live="assertive" aria-atomic="true">
       <div class="fefo-alert__icon" aria-hidden="true">🚫</div>
@@ -43,283 +42,395 @@
   }
 
   @if (!fefoViolation()) {
-    <!-- ── 1. SECCIÓN SUPERIOR SDD (TARJETA INFO + HERO BANNER AZUL MARINO) ── -->
-    <section class="sdd-top-grid">
-      <!-- Tarjeta Izquierda: Identidad del Módulo SDD Crema/Marfil -->
-      <div class="sdd-info-card">
-        <div class="sdd-card-glow"></div>
-        <div>
-          <div class="sdd-pill-badge">
-            <span class="sdd-pill-dot"></span>
-            <span>TERMINAL RF • SALIDAS F03</span>
-          </div>
-          <h1 class="sdd-card-title">Carga de Camión (Salida)</h1>
-          <p class="sdd-card-desc">
-            Escaneo y verificación FEFO de tarimas al subir a la caja del tráiler para embarques a clientes.
-          </p>
+    <!-- ── 1. BARRA SUPERIOR OPERATIVA (.rf-topbar) ──────────────── -->
+    <header class="rf-topbar">
+      <div class="topbar-left">
+        <button type="button" (click)="goToMenu()" class="btn-back" title="Volver al Menú" aria-label="Volver">
+          <span class="material-symbols-outlined text-xl">arrow_back</span>
+        </button>
+
+        <div class="topbar-icon-wrap">
+          <span class="material-symbols-outlined text-xl">local_shipping</span>
         </div>
-        <div class="sdd-card-footer">
-          <span class="sdd-footer-label">OPERADOR EN PISO</span>
-          <span class="sdd-footer-sep">•</span>
-          <span class="sdd-footer-status">{{ operatorName() }}</span>
+
+        <div class="topbar-title-wrap">
+          <div class="topbar-badge">
+            <span class="badge-dot-live"></span>
+            <span>Terminal RF</span>
+            <span class="sep">•</span>
+            <span class="badge-gold">Carga en Andén (F03)</span>
+          </div>
+          <h1 class="topbar-title">Carga de Camión (Salidas)</h1>
         </div>
       </div>
 
-      <!-- Hero Banner Derecho: Azul Marino con Botón Dorado (Idéntico a Foto 1) -->
-      @if (selectedOutbound(); as out) {
-        <div class="sdd-hero-banner">
-          <div class="sdd-hero-skew"></div>
-          <div class="sdd-hero-left">
-            <div class="sdd-hero-icon">
-              <span class="material-symbols-outlined">local_shipping</span>
-            </div>
-            <div class="sdd-hero-content">
-              <div class="sdd-hero-badges">
-                <span class="sdd-hero-tag">EMBARQUE ACTIVO</span>
-                <span class="sdd-hero-folio">#{{ out.folio }}</span>
-                <span class="sdd-hero-ramp">RAMPA {{ out.rampNumber }}</span>
-              </div>
-              <h2 class="sdd-hero-title">{{ out.clientName }}</h2>
-              <p class="sdd-hero-sub">
-                <span class="sdd-hero-dot"></span>
-                <span>{{ out.carrierName }} ({{ out.driverName }}) • Placas T: {{ out.tractorPlates }} / C: {{ out.boxPlates }} • {{ completedCount() }}/{{ totalCount() }} Tarimas</span>
-              </p>
+      <div class="topbar-right">
+        @if (selectedOutbound(); as out) {
+          <div class="telemetry-chip ramp-chip" title="Rampa de Carga">
+            <span class="material-symbols-outlined text-amber-600 text-lg">door_front</span>
+            <div class="telemetry-text">
+              <span class="telemetry-label">Andén</span>
+              <span class="telemetry-val">Rampa {{ out.rampNumber }}</span>
             </div>
           </div>
+        }
 
-          <div class="sdd-hero-actions">
-            @if (outbounds().length > 1) {
-              <button
-                type="button"
-                class="sdd-btn-gold"
-                (click)="showOutboundPicker.set(true); $event.stopPropagation()">
-                <span class="material-symbols-outlined">swap_horiz</span>
-                <span>CAMBIAR ({{ outbounds().length }})</span>
-              </button>
-            }
-            <button
-              type="button"
-              class="sdd-btn-gold"
-              (click)="loadOutbounds(); $event.stopPropagation()">
-              <span class="material-symbols-outlined" [class.animate-spin]="isLoading()">refresh</span>
-              <span>ACTUALIZAR</span>
-            </button>
+        <div class="telemetry-chip operator-chip" title="Operador en Turno">
+          <span class="material-symbols-outlined text-emerald-600 text-lg">person</span>
+          <div class="telemetry-text">
+            <span class="telemetry-label">Montacarguista</span>
+            <span class="telemetry-val">{{ operatorName() }}</span>
+          </div>
+        </div>
+
+        <button type="button" (click)="loadOutbounds()" class="btn-topbar-action" title="Actualizar embarques">
+          <span class="material-symbols-outlined text-xl" [class.animate-spin]="isLoading()">refresh</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ── 2. FICHA DEL EMBARQUE ACTIVO / HERO BANNER VACÍO ──────── -->
+    <section class="rf-manifest-banner">
+      @if (selectedOutbound(); as out) {
+        <div class="manifest-card">
+          <div class="manifest-content">
+            <div class="manifest-header">
+              <div class="manifest-folio-wrap">
+                <span class="manifest-tag-icon">
+                  <span class="material-symbols-outlined text-base">local_shipping</span>
+                </span>
+                <div class="flex flex-col">
+                  <span class="manifest-folio-lbl">Orden de Salida / Embarque</span>
+                  <span class="manifest-folio-val font-mono">#{{ out.folio }}</span>
+                </div>
+                <span class="manifest-status-badge">
+                  <span class="status-pulse-dot"></span>
+                  <span>{{ isComplete() ? 'Carga Completa' : 'En Carga FEFO' }}</span>
+                </span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  (click)="toggleDispatchRule()"
+                  class="btn-change-reception"
+                  [title]="dispatchRule() === 'FEFO_AUTO' ? 'Cambiar a Acuerdo Comercial' : 'Volver a FEFO Estricto'">
+                  <span class="material-symbols-outlined text-sm">gavel</span>
+                  <span>{{ dispatchRule() === 'FEFO_AUTO' ? 'FEFO Estricto' : 'Acuerdo Comercial' }}</span>
+                </button>
+                @if (outbounds().length > 1) {
+                  <button type="button" (click)="showOutboundPicker.set(true)" class="btn-change-reception">
+                    <span class="material-symbols-outlined text-sm">swap_horiz</span>
+                    <span>Cambiar ({{ outbounds().length }})</span>
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="manifest-grid">
+              <div class="manifest-field">
+                <span class="field-label">Cliente Destino</span>
+                <span class="field-value font-bold truncate">{{ out.clientName }}</span>
+              </div>
+              <div class="manifest-field">
+                <span class="field-label">Transportista / Chofer</span>
+                <span class="field-value truncate">{{ out.carrierName }} • {{ out.driverName }}</span>
+              </div>
+              <div class="manifest-field">
+                <span class="field-label">Placas Tractor / Caja</span>
+                <span class="field-value field-value--plates font-mono">T: {{ out.tractorPlates }} • C: {{ out.boxPlates }}</span>
+              </div>
+              <div class="manifest-field">
+                <span class="field-label">Avance de Carga</span>
+                <span class="field-value font-mono font-black">{{ completedCount() }} / {{ totalCount() }} Tarimas ({{ progressPct() }}%)</span>
+              </div>
+            </div>
           </div>
         </div>
       } @else {
-        <div class="sdd-hero-banner">
-          <div class="sdd-hero-skew"></div>
-          <div class="sdd-hero-left">
-            <div class="sdd-hero-icon">
-              <span class="material-symbols-outlined">verified</span>
+        <div class="rf-no-reception-card">
+          <div class="no-rec-left">
+            <div class="no-rec-icon-box">
+              <span class="material-symbols-outlined text-3xl">local_shipping</span>
             </div>
-            <div class="sdd-hero-content">
-              <div class="sdd-hero-badges">
-                <span class="sdd-hero-tag">AL DÍA</span>
-                <span class="sdd-hero-folio">SIN ASIGNACIONES</span>
+            <div class="no-rec-info">
+              <div class="no-rec-badge">
+                <span class="no-rec-dot"></span>
+                <span>AL DÍA • SIN ASIGNACIONES</span>
               </div>
-              <h2 class="sdd-hero-title">Cola de Embarques Despejada • Sin Salidas Pendientes</h2>
-              <p class="sdd-hero-sub">
-                <span class="sdd-hero-dot"></span>
-                <span>Esperando que Mesa de Control o Coordinación asigne una orden de salida a rampa de carga.</span>
+              <h3 class="no-rec-title">Cola de Embarques Despejada • Sin Salidas Pendientes</h3>
+              <p class="no-rec-sub">
+                Esperando que Mesa de Control o Coordinación asigne una orden de salida a rampa de carga.
               </p>
             </div>
           </div>
-
-          <div class="sdd-hero-actions">
-            <button
-              type="button"
-              class="sdd-btn-gold"
-              (click)="loadOutbounds(); $event.stopPropagation()">
-              <span class="material-symbols-outlined" [class.animate-spin]="isLoading()">refresh</span>
-              <span>{{ isLoading() ? 'BUSCANDO...' : 'BUSCAR EMBARQUES' }}</span>
+          <div class="no-rec-actions">
+            <button type="button" (click)="loadOutbounds()" class="btn-primary-rf">
+              <span class="material-symbols-outlined text-base" [class.animate-spin]="isLoading()">refresh</span>
+              <span>{{ isLoading() ? 'Buscando...' : 'Buscar Embarques' }}</span>
             </button>
           </div>
         </div>
       }
     </section>
 
-    <!-- ── 2. ÁREA OPERATIVA DE PICKING Y CARGA FEFO (CUANDO HAY ORDEN ACTIVA) ── -->
+    <!-- ── 3. TARJETA DE SIGUIENTE TARIMA FEFO + VISOR DE CÁMARA ─── -->
     @if (selectedOutbound(); as out) {
-      <section class="sdd-operational-grid">
-        <!-- Tarjeta Principal: Tarima Actual a Cargar -->
-        <div class="sdd-card">
-          <div class="sdd-card-header">
-            <div class="sdd-card-header__left">
-              <div class="sdd-icon-box sdd-icon-box--amber">
-                <span class="material-symbols-outlined">qr_code_scanner</span>
+      @if (currentLine() && !isComplete()) {
+        <section class="rf-section-pad">
+          <div class="sdd-fefo-target-card">
+            <div class="fefo-target-header">
+              <span class="fefo-step-pill">
+                {{ dispatchRule() === 'MANUAL_OVERRIDE' ? 'TARIMA SUGERIDA (ACUERDO COMERCIAL) →' : 'SIGUIENTE TARIMA REQUERIDA (FEFO) →' }}
+              </span>
+              <span class="fefo-qty-pill font-mono">{{ currentLine()!.qty | number:'1.0-2' }} {{ currentLine()!.unit }}</span>
+            </div>
+            <div class="fefo-target-grid">
+              <div>
+                <span class="field-label">Ubicación Origen</span>
+                <div class="fefo-loc-val font-mono">📍 {{ currentLine()!.location }}</div>
               </div>
               <div>
-                <h3 class="sdd-section-title">
-                  {{ isComplete() ? 'Tarimas de la Orden Verificadas' : 'Siguiente Tarima a Cargar (FEFO)' }}
-                </h3>
-                <span class="sdd-section-sub">
-                  {{ dispatchRule() === 'MANUAL_OVERRIDE' ? 'Modo Acuerdo Comercial Autorizado' : 'Validación estricta por fecha de caducidad (FEFO)' }}
-                </span>
+                <span class="field-label">UA / SSCC Esperado</span>
+                <div class="fefo-sscc-val font-mono">{{ currentLine()!.sscc }}</div>
+              </div>
+              <div>
+                <span class="field-label">Producto (SKU)</span>
+                <div class="field-value font-bold">{{ currentLine()!.sku }} — {{ currentLine()!.description }}</div>
+              </div>
+              <div>
+                <span class="field-label">Lote / Caducidad</span>
+                <div class="field-value font-mono">{{ currentLine()!.lot }} · Cad: {{ currentLine()!.expiresAt }}</div>
               </div>
             </div>
+          </div>
+        </section>
+      }
 
-            <button
-              type="button"
-              class="sdd-btn-outline"
-              (click)="toggleDispatchRule(); $event.stopPropagation()">
-              <span class="material-symbols-outlined text-base">gavel</span>
-              <span>{{ dispatchRule() === 'FEFO_AUTO' ? 'Acuerdo Comercial' : 'FEFO Estricto' }}</span>
+      @if (isComplete()) {
+        <section class="rf-section-pad">
+          <div class="sdd-complete-box">
+            <span class="material-symbols-outlined text-4xl text-emerald-600">task_alt</span>
+            <h3 class="text-lg font-black m-0">¡Tarimas Verificadas al 100%!</h3>
+            <p class="text-xs text-slate-600 m-0">
+              Confirma la pre-revisión física de estiba en rampa y presiona <strong>CONCLUIR CARGA DE CAMIÓN (F03)</strong> en la barra inferior.
+            </p>
+            <button type="button" (click)="toggleStagingChecklist()" class="btn-change-reception mt-1">
+              <span class="material-symbols-outlined text-base">
+                {{ stagingChecklistPassed() ? 'check_box' : 'check_box_outline_blank' }}
+              </span>
+              <span>{{ stagingChecklistPassed() ? '✓ Estiba Física Verificada en Rampa ' + out.rampNumber : 'Confirmar Pre-Revisión Física en Rampa ' + out.rampNumber }}</span>
             </button>
           </div>
+        </section>
+      }
 
-          @if (currentLine() && !isComplete()) {
-            <div class="sdd-target-box">
-              <div class="sdd-target-top">
-                <span class="sdd-target-step">
-                  {{ dispatchRule() === 'MANUAL_OVERRIDE' ? 'TARIMA SUGERIDA →' : 'RECOGER EN UBICACIÓN →' }}
+      <!-- ── 4. VISOR DE CÁMARA EN VIVO + PISTOLA LÁSER (IDÉNTICO A DESCARGAR) ── -->
+      <section class="rf-scanner-section">
+        <div class="scanner-card">
+          <div class="scanner-control-bar">
+            <div class="scanner-status-indicator">
+              <span class="scanner-pulse-dot" [class.scanner-pulse-dot--active]="cameraActive()"></span>
+              <span class="material-symbols-outlined text-lg">
+                {{ cameraActive() ? 'photo_camera' : 'barcode_scanner' }}
+              </span>
+              <div class="flex flex-col">
+                <span class="scanner-mode-title">
+                  {{ cameraActive() ? (currentFacingMode() === 'environment' ? 'Cámara Trasera HD Activa' : 'Cámara Frontal HD Activa') : 'Sensor de Escaneo de Carga en Espera' }}
                 </span>
-                <span class="sdd-target-qty">
-                  {{ currentLine()!.qty | number:'1.0-2' }} {{ currentLine()!.unit }}
+                <span class="scanner-mode-sub">
+                  {{ cameraActive() ? 'Lectura óptica continua FEFO (Anti-rebote 3s)' : 'Lector láser 2D listo • Apunta o enciende cámara' }}
                 </span>
-              </div>
-
-              <div class="sdd-target-loc">
-                <span class="material-symbols-outlined">location_on</span>
-                <span>{{ currentLine()!.location }}</span>
-              </div>
-
-              <div class="sdd-target-meta">
-                <div class="sdd-meta-chip">
-                  <span class="sdd-meta-lbl">CÓDIGO UA / SSCC</span>
-                  <span class="sdd-meta-val font-mono">{{ currentLine()!.sscc }}</span>
-                </div>
-                <div class="sdd-meta-chip">
-                  <span class="sdd-meta-lbl">PRODUCTO (SKU)</span>
-                  <span class="sdd-meta-val">{{ currentLine()!.sku }} — {{ currentLine()!.description }}</span>
-                </div>
-                <div class="sdd-meta-chip">
-                  <span class="sdd-meta-lbl">LOTE / CADUCIDAD</span>
-                  <span class="sdd-meta-val font-mono">{{ currentLine()!.lot }} · Cad: {{ currentLine()!.expiresAt }}</span>
-                </div>
-              </div>
-
-              <!-- Captura Manual / Pistola Láser -->
-              <div class="sdd-laser-bar" (click)="$event.stopPropagation()">
-                <span class="material-symbols-outlined sdd-laser-icon">barcode_scanner</span>
-                <input
-                  type="text"
-                  class="sdd-laser-input"
-                  [ngModel]="currentInput()"
-                  (ngModelChange)="currentInput.set($event)"
-                  (keydown)="onKeydown($event)"
-                  placeholder="Dispara con el lector láser o escribe el código UA/SSCC..." />
-                <button type="button" class="sdd-btn-action" (click)="onManualSubmit()">
-                  <span>VALIDAR UA</span>
-                  <span class="material-symbols-outlined">arrow_forward</span>
-                </button>
               </div>
             </div>
-          }
 
-          @if (isComplete()) {
-            <div class="sdd-complete-box">
-              <div class="sdd-complete-icon">
-                <span class="material-symbols-outlined">task_alt</span>
-              </div>
-              <h3 class="sdd-complete-title">¡Tarimas Verificadas al 100%!</h3>
-              <p class="sdd-complete-desc">
-                Se verificaron las <strong>{{ totalCount() }} tarimas</strong> ({{ totalPiecesLoaded() | number:'1.0-2' }} unidades) del embarque <strong>#{{ out.folio }}</strong>.
-              </p>
+            <div class="scanner-actions-group">
+              <button
+                type="button"
+                (click)="toggleScanOrientation()"
+                class="btn-scanner-action"
+                [class.btn-scanner-action--vertical]="scanOrientation() === 'vertical'">
+                <span class="material-symbols-outlined text-base">
+                  {{ scanOrientation() === 'vertical' ? 'swap_vert' : 'swap_horiz' }}
+                </span>
+                <span>{{ scanOrientation() === 'vertical' ? 'Láser Vertical' : 'Láser Horizontal' }}</span>
+              </button>
 
-              <div class="sdd-audit-box" (click)="$event.stopPropagation()">
-                <div class="sdd-audit-header">
-                  <span class="sdd-audit-title">📋 Pre-Certificación Física de Estiba en Andén (F03)</span>
-                  <span class="sdd-audit-badge" [class.sdd-audit-badge--ok]="stagingChecklistPassed()">
-                    {{ stagingChecklistPassed() ? ' ESTIBA VERIFICADA' : 'PENDIENTE' }}
-                  </span>
-                </div>
-                <button type="button" class="sdd-btn-outline w-full" (click)="toggleStagingChecklist()">
-                  <span class="material-symbols-outlined">
-                    {{ stagingChecklistPassed() ? 'check_box' : 'check_box_outline_blank' }}
-                  </span>
-                  <span>Confirmar Pre-Revisión Física de Caja y Estiba en Rampa {{ out.rampNumber }}</span>
+              @if (cameraActive()) {
+                <button type="button" (click)="switchCamera()" class="btn-scanner-action">
+                  <span class="material-symbols-outlined text-base">flip_camera_ios</span>
+                  <span>Girar</span>
                 </button>
-              </div>
+              }
 
               <button
                 type="button"
-                class="sdd-btn-gold sdd-btn-gold--full"
-                [disabled]="isConcluding()"
-                (click)="concludeOutboundLoad(); $event.stopPropagation()">
-                <span class="material-symbols-outlined">verified</span>
-                <span>{{ isConcluding() ? 'REPORTANDO A MESA DE CONTROL...' : 'CONCLUIR CARGA DE CAMIÓN (F03)' }}</span>
+                (click)="toggleCamera()"
+                class="btn-scanner-action"
+                [class.btn-scanner-action--active]="cameraActive()">
+                <span class="material-symbols-outlined text-base">{{ cameraActive() ? 'videocam_off' : 'photo_camera' }}</span>
+                <span>{{ cameraActive() ? 'Pausar Cámara' : 'Activar Cámara' }}</span>
               </button>
             </div>
-          }
-        </div>
-
-        <!-- Tarjeta Derecha: Manifiesto de Tarimas de la Orden -->
-        <div class="sdd-card">
-          <div class="sdd-card-header">
-            <div class="sdd-card-header__left">
-              <div class="sdd-icon-box sdd-icon-box--sky">
-                <span class="material-symbols-outlined">list_alt</span>
-              </div>
-              <div>
-                <h3 class="sdd-section-title">Manifiesto de Tarimas ({{ completedCount() }}/{{ totalCount() }})</h3>
-                <span class="sdd-section-sub">Toca una tarima o escanéala con el lector láser para confirmar su carga</span>
-              </div>
-            </div>
           </div>
 
-          <div class="sdd-lines-list" role="list">
-            @for (line of pickLines(); track line.lineId) {
-              <div
-                class="sdd-line-item"
-                [class.sdd-line-item--active]="line.lineId === currentLine()?.lineId && line.status !== 'DONE'"
-                [class.sdd-line-item--done]="line.status === 'DONE'"
-                (click)="validateScan(line.sscc); $event.stopPropagation()"
-                role="listitem">
-                <div class="sdd-line-status">
-                  <span class="material-symbols-outlined">
-                    {{ line.status === 'DONE' ? 'check_circle' : line.lineId === currentLine()?.lineId ? 'play_circle' : 'radio_button_unchecked' }}
-                  </span>
-                </div>
-                <div class="sdd-line-info">
-                  <div class="sdd-line-top">
-                    <span class="sdd-line-sscc font-mono">{{ line.sscc }}</span>
-                    <span class="sdd-line-loc font-mono">{{ line.location }}</span>
-                  </div>
-                  <div class="sdd-line-desc">{{ line.sku }} — {{ line.description }}</div>
-                  <div class="sdd-line-meta">
-                    Lote: {{ line.lot }} · Cad: {{ line.expiresAt }}
-                  </div>
-                </div>
-                <div class="sdd-line-qty font-mono">
-                  <span class="sdd-line-qty-val">{{ line.qty | number:'1.0-2' }}</span>
-                  <span class="sdd-line-qty-unit">{{ line.unit }}</span>
-                </div>
-              </div>
-            } @empty {
-              <div class="sdd-empty-lines">
-                <span class="material-symbols-outlined">inventory_2</span>
-                <span>Esta orden de salida aún no tiene tarimas asignadas en el manifiesto.</span>
+          <div class="scanner-reticle" [class.scanner-reticle--active]="cameraActive()">
+            <video
+              #cameraVideo
+              class="camera-feed"
+              [class.camera-feed--active]="cameraActive()"
+              autoplay
+              playsinline
+              webkit-playsinline
+              muted></video>
+
+            @if (!cameraActive()) {
+              <div class="camera-off-overlay">
+                <span class="material-symbols-outlined scanner-icon-glyph">qr_code_scanner</span>
+                <div class="camera-off-title">Apunta el lector láser o activa la cámara</div>
+                <div class="camera-off-sub">Escanea el código UA/SSCC de la tarima para validar el orden FEFO</div>
+
+                @if (cameraError()) {
+                  <div class="text-xs text-rose-400 font-semibold">{{ cameraError() }}</div>
+                }
+
+                <button
+                  type="button"
+                  (click)="startCamera(); $event.stopPropagation()"
+                  class="btn-turn-on-cam"
+                  [disabled]="cameraLoading()">
+                  <span class="material-symbols-outlined text-xl">photo_camera</span>
+                  <span>{{ cameraLoading() ? 'Iniciando Cámara...' : 'Abrir Cámara de la Tablet' }}</span>
+                </button>
               </div>
             }
+
+            <div class="laser-sweep-line" [class.laser-sweep-line--active]="cameraActive()"></div>
+            <div class="corner-bracket corner-tl"></div>
+            <div class="corner-bracket corner-tr"></div>
+            <div class="corner-bracket corner-bl"></div>
+            <div class="corner-bracket corner-br"></div>
           </div>
+
+          <!-- Input Láser Manual -->
+          <div class="laser-input-wrap mt-3">
+            <span class="material-symbols-outlined text-amber-600">barcode_scanner</span>
+            <input
+              type="text"
+              class="laser-input-field font-mono"
+              [ngModel]="currentInput()"
+              (ngModelChange)="currentInput.set($event)"
+              (keydown)="onKeydown($event)"
+              placeholder="Pistola láser lista... o escribe el código UA / SSCC" />
+            <button type="button" class="btn-laser-submit" (click)="onManualSubmit()">
+              <span class="material-symbols-outlined">keyboard_return</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 5. MANIFIESTO DE TARIMAS DE LA ORDEN ────────────────── -->
+      <section class="rf-buffer-section">
+        <div class="buffer-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-600 text-lg">list_alt</span>
+            <h3 class="buffer-title">Manifiesto de Tarimas ({{ completedCount() }}/{{ totalCount() }})</h3>
+          </div>
+        </div>
+
+        <div class="buffer-list">
+          @for (line of pickLines(); track line.lineId) {
+            <div
+              class="buffer-card"
+              [class.buffer-card--active]="line.lineId === currentLine()?.lineId && line.status !== 'DONE'"
+              [class.buffer-card--done]="line.status === 'DONE'"
+              (click)="validateScan(line.sscc)">
+              <div class="buffer-card-left">
+                <div class="buffer-num-badge">
+                  <span class="material-symbols-outlined text-base">
+                    {{ line.status === 'DONE' ? 'check_circle' : line.lineId === currentLine()?.lineId ? 'play_arrow' : 'radio_button_unchecked' }}
+                  </span>
+                </div>
+                <div class="buffer-info">
+                  <div class="buffer-code-row">
+                    <span class="buffer-code font-mono">{{ line.sscc }}</span>
+                    <span class="tag-lot font-mono">{{ line.location }}</span>
+                  </div>
+                  <div class="buffer-product truncate">{{ line.sku }} — {{ line.description }}</div>
+                  <div class="buffer-tags">
+                    <span class="tag-type font-mono">Lote: {{ line.lot }} · Cad: {{ line.expiresAt }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="buffer-card-right">
+                <div class="buffer-pieces-badge font-mono">
+                  <span class="buffer-pieces-num">{{ line.qty | number:'1.0-2' }}</span>
+                  <span class="buffer-pieces-unit">{{ line.unit }}</span>
+                </div>
+              </div>
+            </div>
+          } @empty {
+            <div class="buffer-empty-state">
+              <span class="material-symbols-outlined text-4xl text-amber-500">inventory_2</span>
+              <div class="buffer-empty-title font-bold text-sm mt-2">Sin tarimas en el manifiesto</div>
+            </div>
+          }
         </div>
       </section>
     }
 
-    <!-- Barra Inferior de Hardware y Regreso (Idéntica a Foto 1) -->
-    <footer class="sdd-hardware-footer">
-      <div class="sdd-hw-left">
-        <span class="sdd-hw-label">HARDWARE:</span>
-        <span class="sdd-hw-chip"><span class="sdd-hw-dot"></span>Láser 2D Activo</span>
-        <span class="sdd-hw-chip"><span class="sdd-hw-dot"></span>Validador FEFO en Línea</span>
-      </div>
-      <div class="sdd-hw-right">
-        <button type="button" class="sdd-btn-outline" (click)="goToMenu(); $event.stopPropagation()">
-          <span class="material-symbols-outlined">arrow_back</span>
-          <span>VOLVER AL MENÚ</span>
-        </button>
-      </div>
+    <!-- ── 6. BARRA FIJA INFERIOR (.rf-bottom-bar) ──────────────── -->
+    <footer class="rf-bottom-bar">
+      <button type="button" (click)="goToMenu()" class="btn-bottom-secondary">
+        <span class="material-symbols-outlined text-lg">arrow_back</span>
+        <span>Menú</span>
+      </button>
+
+      <button
+        type="button"
+        (click)="concludeOutboundLoad()"
+        class="btn-bottom-conclude"
+        [disabled]="!isComplete() || isConcluding()">
+        <span class="material-symbols-outlined text-2xl">verified</span>
+        <div class="flex flex-col text-left">
+          <span class="font-extrabold text-sm tracking-wide">CONCLUIR CARGA DE CAMIÓN (F03)</span>
+          <span class="text-[11px] opacity-90 font-mono">
+            {{ completedCount() }}/{{ totalCount() }} Tarimas • {{ totalPiecesLoaded() | number:'1.0-2' }} Uds • {{ selectedOutbound()?.rampNumber ? ('Rampa ' + selectedOutbound()?.rampNumber) : 'En Espera de Andén' }}
+          </span>
+        </div>
+      </button>
     </footer>
+
+    <!-- ── MODAL SELECTOR DE ORDEN DE SALIDA ─────────────────────── -->
+    @if (showOutboundPicker()) {
+      <div class="rf-modal-backdrop" (click)="showOutboundPicker.set(false)">
+        <div class="rf-modal-card" (click)="$event.stopPropagation()">
+          <div class="rf-modal-header">
+            <h3 class="rf-modal-title">Seleccionar Embarque en Andén</h3>
+            <button type="button" (click)="showOutboundPicker.set(false)" class="btn-modal-close">
+              <span class="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+          <div class="rf-modal-body">
+            @for (o of outbounds(); track o.id) {
+              <div
+                class="reception-picker-item"
+                [class.picker-item--active]="selectedOutbound()?.id === o.id"
+                (click)="selectOutbound(o)">
+                <div class="picker-item-left">
+                  <div class="picker-ramp-badge font-mono">R{{ o.rampNumber }}</div>
+                  <div>
+                    <div class="picker-folio font-mono font-bold">#{{ o.folio }}</div>
+                    <div class="picker-client">{{ o.clientName }}</div>
+                  </div>
+                </div>
+                <span class="font-mono text-xs font-bold">{{ o.totalPallets }} tarimas</span>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
   }
 </div>

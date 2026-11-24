@@ -1,8 +1,9 @@
 /**
  * @file picking-list.component.ts
- * @description Módulo de Carga de Camión (Salida / Embarque FEFO) — Terminal RF 4GUARD WMS.
- * Conectado 100% a PostgreSQL (/api/v1/warehouse-outbounds) bajo ADR-007 (Cero Mocks)
- * y homologado visualmente con el diseño SDD Dual-Theme (Linen/Ivory & Midnight Navy).
+ * @description Módulo Operativo de Carga de Camión (Salida / Embarque FEFO) — Terminal RF 4GUARD WMS.
+ * Misma anatomía operativa que Descarga (Topbar + Manifiesto/Hero + Cámara HD con anti-rebote + Pistola Láser + Barra Fija Inferior),
+ * conservando todas las reglas de negocio de Salidas (FEFO estricto, Acuerdo Comercial, Alerta Roja y Pre-Certificación F03)
+ * conectadas 100% a PostgreSQL (/api/v1/warehouse-outbounds).
  */
 
 import {
@@ -24,6 +25,12 @@ import { Router } from '@angular/router';
 import { timeout } from 'rxjs';
 import { AuthState, ToastService } from '@4guard/shared-core';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
+import {
+  BarcodeDebounceGuard,
+  buildCameraConstraintsLadder,
+  applyCameraEnhancements,
+  createEnhancedZxingReader,
+} from '../../../core/utils/barcode-scanner-guard';
 
 export interface PickLine {
   lineId: string;
@@ -66,6 +73,7 @@ export interface OutboundSummary {
   styleUrl: './picking-list.component.css',
 })
 export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('cameraVideo') cameraVideoRef?: ElementRef<HTMLVideoElement>;
   @ViewChild('pickScanInput') scanInput?: ElementRef<HTMLInputElement>;
 
   private readonly platformId = inject(PLATFORM_ID);
@@ -81,13 +89,26 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly isConcluding = signal<boolean>(false);
   protected readonly showOutboundPicker = signal<boolean>(false);
 
+  // ─── Cámara en Vivo (Tableta / Móvil) con Anti-Rebote 3s ──────────────────
+  protected readonly cameraActive = signal<boolean>(false);
+  protected readonly cameraLoading = signal<boolean>(false);
+  protected readonly cameraError = signal<string | null>(null);
+  protected readonly currentFacingMode = signal<'environment' | 'user'>('environment');
+  protected readonly scanOrientation = signal<'horizontal' | 'vertical'>('horizontal');
+  private mediaStream: MediaStream | null = null;
+  private barcodeDetectorTimer: any = null;
+  private zxingReader: any = null;
+  private offscreenCanvas: HTMLCanvasElement | null = null;
+  private readonly cameraDebounce = new BarcodeDebounceGuard(3000);
+
+  // ─── Escáner & Estado FEFO ────────────────────────────────────────────────
   protected readonly currentInput = signal('');
+  protected readonly isProcessingScan = signal<boolean>(false);
   protected readonly fefoViolation = signal(false);
   protected readonly violationSSCC = signal('');
   protected readonly successFlash = signal(false);
   protected readonly currentLineIdx = signal(0);
 
-  // Regla de Despacho (FEFO Automático vs Selección Manual por Acuerdo Comercial)
   protected readonly dispatchRule = signal<'FEFO_AUTO' | 'MANUAL_OVERRIDE'>('FEFO_AUTO');
   protected readonly commercialOverrideReason = signal<string>(
     'Convenio comercial con cliente (Lote específico autorizado)'
@@ -95,6 +116,7 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly commercialAgreementFolio = signal<string>('AC-COMERCIAL');
 
   protected readonly pickLines = signal<PickLine[]>([]);
+  protected readonly stagingChecklistPassed = signal<boolean>(false);
 
   protected readonly operatorName = computed(() => {
     return this.authState.userFullName() || this.authState.user()?.fullName || 'Operador Montacargas';
@@ -129,7 +151,6 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
     return total > 0 && this.completedCount() === total;
   });
 
-  protected readonly stagingChecklistPassed = signal<boolean>(false);
   private pollTimer: any = null;
   private audioCtx: AudioContext | null = null;
 
@@ -145,6 +166,7 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopCamera();
     if (this.pollTimer) {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
@@ -158,6 +180,7 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
+  // ─── 1. Carga de Embarques desde PostgreSQL ───────────────────────────────
   loadOutbounds(silent = false): void {
     if (!isPlatformBrowser(this.platformId)) return;
     if (!silent) {
@@ -256,7 +279,6 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
           this.selectedOutbound.set(normalized);
 
           const rawItems: any[] = Array.isArray(detail.items) ? detail.items : [];
-          // Ordenar FEFO: fecha de caducidad más próxima primero
           const sorted = [...rawItems].sort((a, b) => {
             const da = a.expirationDate ? new Date(a.expirationDate).getTime() : Number.MAX_SAFE_INTEGER;
             const db = b.expirationDate ? new Date(b.expirationDate).getTime() : Number.MAX_SAFE_INTEGER;
@@ -297,6 +319,214 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
       });
   }
 
+  // ─── 2. Cámara en Vivo con BarcodeDetector + ZXing TRY_HARDER ────────────
+  async startCamera(facingMode?: 'environment' | 'user'): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const mode = facingMode || this.currentFacingMode();
+    this.currentFacingMode.set(mode);
+    this.cameraError.set(null);
+    this.cameraLoading.set(true);
+
+    if (this.mediaStream) {
+      try {
+        this.mediaStream.getTracks().forEach((t) => t.stop());
+      } catch {}
+      this.mediaStream = null;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      this.cameraLoading.set(false);
+      this.cameraActive.set(false);
+      const msg = 'Acceso a cámara no disponible. Verifica que estás navegando por HTTPS.';
+      this.cameraError.set(msg);
+      this.toast.error(msg);
+      return;
+    }
+
+    let stream: MediaStream | null = null;
+    let lastError: any = null;
+    for (const constraint of buildCameraConstraintsLadder(mode)) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraint);
+        if (stream && stream.getVideoTracks().length > 0) break;
+      } catch (err: any) {
+        lastError = err;
+      }
+    }
+
+    if (!stream) {
+      this.cameraLoading.set(false);
+      this.cameraActive.set(false);
+      const errorMsg =
+        lastError?.name === 'NotAllowedError'
+          ? 'Permiso de cámara denegado. Permite el acceso a la cámara en Chrome.'
+          : `No se pudo iniciar la cámara (${lastError?.name || 'Error'}).`;
+      this.cameraError.set(errorMsg);
+      this.toast.error(errorMsg);
+      return;
+    }
+
+    this.mediaStream = stream;
+    applyCameraEnhancements(stream);
+    this.cameraActive.set(true);
+    this.cameraLoading.set(false);
+
+    setTimeout(async () => {
+      const video = this.cameraVideoRef?.nativeElement;
+      if (video) {
+        video.srcObject = stream;
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.muted = true;
+        try {
+          await video.play();
+        } catch {}
+        this.initBarcodeDetector();
+      }
+    }, 150);
+  }
+
+  stopCamera(): void {
+    this.cameraDebounce.reset();
+    if (this.barcodeDetectorTimer) {
+      clearInterval(this.barcodeDetectorTimer);
+      this.barcodeDetectorTimer = null;
+    }
+    if (this.zxingReader) {
+      try {
+        this.zxingReader.reset();
+      } catch {}
+      this.zxingReader = null;
+    }
+    if (this.mediaStream) {
+      try {
+        this.mediaStream.getTracks().forEach((t) => t.stop());
+      } catch {}
+      this.mediaStream = null;
+    }
+    if (this.cameraVideoRef?.nativeElement) {
+      this.cameraVideoRef.nativeElement.srcObject = null;
+    }
+    this.cameraActive.set(false);
+    this.cameraLoading.set(false);
+  }
+
+  toggleCamera(): void {
+    if (this.cameraActive()) {
+      this.stopCamera();
+    } else {
+      this.startCamera();
+    }
+  }
+
+  toggleScanOrientation(): void {
+    const next = this.scanOrientation() === 'horizontal' ? 'vertical' : 'horizontal';
+    this.scanOrientation.set(next);
+    this.audioService.playSuccess();
+    this.toast.info(next === 'vertical' ? 'Escaneo Vertical activo (90°)' : 'Escaneo Horizontal activo');
+  }
+
+  async switchCamera(): Promise<void> {
+    const newMode = this.currentFacingMode() === 'environment' ? 'user' : 'environment';
+    this.audioService.playSuccess();
+    await this.startCamera(newMode);
+  }
+
+  private getRotatedCanvas(video: HTMLVideoElement): HTMLCanvasElement | null {
+    if (!video.videoWidth || !video.videoHeight) return null;
+    if (!this.offscreenCanvas) {
+      this.offscreenCanvas = document.createElement('canvas');
+    }
+    const canvas = this.offscreenCanvas;
+    canvas.width = video.videoHeight;
+    canvas.height = video.videoWidth;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(video, -video.videoWidth / 2, -video.videoHeight / 2);
+    ctx.restore();
+    return canvas;
+  }
+
+  private initBarcodeDetector(): void {
+    if (this.barcodeDetectorTimer) {
+      clearInterval(this.barcodeDetectorTimer);
+      this.barcodeDetectorTimer = null;
+    }
+
+    if (typeof (window as any).BarcodeDetector !== 'undefined') {
+      try {
+        const detector = new (window as any).BarcodeDetector({
+          formats: ['code_128', 'code_39', 'ean_13', 'qr_code', 'data_matrix', 'itf', 'upc_a', 'upc_e'],
+        });
+
+        this.barcodeDetectorTimer = setInterval(async () => {
+          if (!this.cameraActive() || this.isProcessingScan() || this.fefoViolation()) return;
+          const video = this.cameraVideoRef?.nativeElement;
+          if (!video || video.readyState < 2) return;
+
+          try {
+            let barcodes = await detector.detect(video);
+            if ((!barcodes || barcodes.length === 0) && this.scanOrientation() === 'vertical') {
+              const rotated = this.getRotatedCanvas(video);
+              if (rotated) barcodes = await detector.detect(rotated);
+            }
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              const code = barcodes[0].rawValue.trim();
+              if (code && this.cameraDebounce.shouldProcess(code)) {
+                this.validateScan(code);
+              }
+            }
+          } catch {}
+        }, 280);
+        return;
+      } catch {}
+    }
+
+    this.initZXingFallbackScanner();
+  }
+
+  private initZXingFallbackScanner(): void {
+    const video = this.cameraVideoRef?.nativeElement;
+    if (!video) return;
+
+    const startReader = (ZXing: any) => {
+      try {
+        if (this.zxingReader) {
+          try {
+            this.zxingReader.reset();
+          } catch {}
+        }
+        const reader = createEnhancedZxingReader(ZXing);
+        this.zxingReader = reader;
+        reader.decodeFromVideoElement(video, (result: any) => {
+          if (result && result.getText && !this.isProcessingScan() && !this.fefoViolation()) {
+            const code = result.getText().trim();
+            if (code && this.cameraDebounce.shouldProcess(code)) {
+              this.validateScan(code);
+            }
+          }
+        });
+      } catch {}
+    };
+
+    if (typeof (window as any).ZXing !== 'undefined') {
+      startReader((window as any).ZXing);
+    } else if (!document.getElementById('zxing-cdn-script')) {
+      const script = document.createElement('script');
+      script.id = 'zxing-cdn-script';
+      script.src = 'https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';
+      script.async = true;
+      script.onload = () => {
+        if (typeof (window as any).ZXing !== 'undefined') startReader((window as any).ZXing);
+      };
+      document.head.appendChild(script);
+    }
+  }
+
+  // ─── 3. Validación FEFO & Acuerdo Comercial ───────────────────────────────
   protected toggleDispatchRule(): void {
     const next = this.dispatchRule() === 'FEFO_AUTO' ? 'MANUAL_OVERRIDE' : 'FEFO_AUTO';
     this.dispatchRule.set(next);
@@ -330,24 +560,15 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  protected simulateScan(sscc: string): void {
-    this.validateScan(sscc);
-  }
-
-  protected simulateWrongScan(): void {
-    const lines = this.pickLines();
-    const other = lines.find((l) => l.sscc !== this.currentLine()?.sscc && l.status !== 'DONE');
-    this.validateScan(other?.sscc || 'SSCC-NO-FEFO-999');
-  }
-
   validateScan(rawSscc: string): void {
     const sscc = (rawSscc || '').trim().toUpperCase();
     const lines = this.pickLines();
     const current = this.currentLine();
     const out = this.selectedOutbound();
-    if (!current || !out) return;
+    if (!sscc || !current || !out || this.isProcessingScan()) return;
 
-    // Si la orden estaba en ASSIGNED o REGISTERED, transicionar a IN_PROGRESS en BD
+    this.isProcessingScan.set(true);
+
     if (this.isUuid(out.id) && (out.status === 'ASSIGNED' || out.status === 'REGISTERED')) {
       this.http
         .put<any>(`/api/v1/warehouse-outbounds/${out.id}`, { status: 'IN_PROGRESS' })
@@ -359,7 +580,6 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
         });
     }
 
-    // ─ Modo Acuerdo Comercial (MANUAL_OVERRIDE) ────────────────
     if (this.dispatchRule() === 'MANUAL_OVERRIDE') {
       const matchIdx = lines.findIndex((l) => l.sscc.toUpperCase() === sscc && l.status !== 'DONE');
       if (matchIdx !== -1) {
@@ -371,7 +591,6 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
 
-    // ─ Validación FEFO Estricta ─────────────────────────────
     if (sscc !== current.sscc.toUpperCase()) {
       this.triggerFefoViolation(sscc);
       return;
@@ -400,11 +619,12 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.successFlash.set(true);
     setTimeout(() => {
       this.successFlash.set(false);
+      this.isProcessingScan.set(false);
       const nextIdx = this.pickLines().findIndex((l) => l.status !== 'DONE');
       if (nextIdx !== -1) {
         this.currentLineIdx.set(nextIdx);
       }
-    }, 500);
+    }, 800);
   }
 
   private triggerFefoViolation(sscc: string): void {
@@ -414,6 +634,7 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
     setTimeout(() => {
       this.fefoViolation.set(false);
       this.violationSSCC.set('');
+      this.isProcessingScan.set(false);
     }, 3000);
   }
 
@@ -432,6 +653,7 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.http.put<any>(`/api/v1/warehouse-outbounds/${out.id}`, payload).subscribe({
       next: (res) => {
         this.isConcluding.set(false);
+        this.stopCamera();
         this.audioService.playFriendlyArrivalChime(1.0);
         this.toast.success(
           `Embarque #${out.folio} reportado como CARGADO a Mesa de Control.`,
@@ -454,6 +676,7 @@ export class PickingListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   goToMenu(): void {
+    this.stopCamera();
     this.router.navigate(['/menu']);
   }
 

@@ -1,8 +1,9 @@
 /**
  * @file putaway-scan.component.ts
- * @description Módulo de Acomodo en Racks / Cambios de Almacén (Putaway / Transfers) — Terminal RF 4GUARD WMS.
- * Conectado 100% a PostgreSQL (/api/v1/warehouse-transfers) bajo ADR-007 (Cero Mocks)
- * y homologado visualmente con el diseño SDD Dual-Theme de la Foto 1 (Linen/Ivory & Midnight Navy).
+ * @description Módulo Operativo de Acomodo en Racks / Cambios de Almacén — Terminal RF 4GUARD WMS.
+ * Misma anatomía operativa que Descarga (Topbar + Manifiesto/Hero + Cámara HD con anti-rebote + Pistola Láser + Barra Fija Inferior),
+ * conservando el flujo guiado en 2 pasos (1. Escanear UA en Origen -> /start, 2. Validar Rack Destino -> /complete)
+ * conectado 100% a PostgreSQL (/api/v1/warehouse-transfers).
  */
 
 import {
@@ -24,6 +25,12 @@ import { Router } from '@angular/router';
 import { timeout } from 'rxjs';
 import { AuthState, ToastService } from '@4guard/shared-core';
 import { AudioFeedbackService } from '../../../core/services/audio-feedback.service';
+import {
+  BarcodeDebounceGuard,
+  buildCameraConstraintsLadder,
+  applyCameraEnhancements,
+  createEnhancedZxingReader,
+} from '../../../core/utils/barcode-scanner-guard';
 
 export type PutawayStep = 'SCAN_PALLET' | 'SCAN_RACK' | 'BATCH_COMPLETED';
 
@@ -63,6 +70,7 @@ export interface PutawayItem {
   styleUrl: './putaway-scan.component.css',
 })
 export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('cameraVideo') cameraVideoRef?: ElementRef<HTMLVideoElement>;
   @ViewChild('scanInput') scanInput?: ElementRef<HTMLInputElement>;
 
   private readonly platformId = inject(PLATFORM_ID);
@@ -75,14 +83,27 @@ export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly transfers = signal<AssignedPutawayTask[]>([]);
   protected readonly assignedTask = signal<AssignedPutawayTask | null>(null);
   protected readonly isLoading = signal<boolean>(false);
+  protected readonly showTransferPicker = signal<boolean>(false);
 
+  // ─── Cámara en Vivo (Tableta / Móvil) con Anti-Rebote 3s ──────────────────
+  protected readonly cameraActive = signal<boolean>(false);
+  protected readonly cameraLoading = signal<boolean>(false);
+  protected readonly cameraError = signal<string | null>(null);
+  protected readonly currentFacingMode = signal<'environment' | 'user'>('environment');
+  protected readonly scanOrientation = signal<'horizontal' | 'vertical'>('horizontal');
+  private mediaStream: MediaStream | null = null;
+  private barcodeDetectorTimer: any = null;
+  private zxingReader: any = null;
+  private offscreenCanvas: HTMLCanvasElement | null = null;
+  private readonly cameraDebounce = new BarcodeDebounceGuard(3000);
+
+  // ─── Flujo 2 Pasos ────────────────────────────────────────────────────────
   protected readonly currentStep = signal<PutawayStep>('SCAN_PALLET');
   protected readonly currentInput = signal('');
   protected readonly isProcessing = signal(false);
   protected readonly lastError = signal<string | null>(null);
   protected readonly activePallet = signal<PutawayItem | null>(null);
 
-  // Tarimas reales provenientes de PostgreSQL (/api/v1/warehouse-transfers/{id})
   protected readonly pendingPallets = signal<PutawayItem[]>([]);
   protected readonly storedBuffer = signal<PutawayItem[]>([]);
 
@@ -109,6 +130,7 @@ export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopCamera();
     if (this.pollTimer) {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
@@ -122,6 +144,7 @@ export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
+  // ─── 1. Carga de Traspasos desde PostgreSQL ───────────────────────────────
   loadTransfers(silent = false): void {
     if (!isPlatformBrowser(this.platformId)) return;
     if (!silent) {
@@ -186,6 +209,7 @@ export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
 
   selectTransferTask(task: AssignedPutawayTask, silent = false): void {
     this.assignedTask.set(task);
+    this.showTransferPicker.set(false);
     this.lastError.set(null);
     this.activePallet.set(null);
     this.currentStep.set('SCAN_PALLET');
@@ -236,6 +260,214 @@ export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
       });
   }
 
+  // ─── 2. Cámara en Vivo con BarcodeDetector + ZXing TRY_HARDER ────────────
+  async startCamera(facingMode?: 'environment' | 'user'): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const mode = facingMode || this.currentFacingMode();
+    this.currentFacingMode.set(mode);
+    this.cameraError.set(null);
+    this.cameraLoading.set(true);
+
+    if (this.mediaStream) {
+      try {
+        this.mediaStream.getTracks().forEach((t) => t.stop());
+      } catch {}
+      this.mediaStream = null;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      this.cameraLoading.set(false);
+      this.cameraActive.set(false);
+      const msg = 'Acceso a cámara no disponible. Verifica que estás navegando por HTTPS.';
+      this.cameraError.set(msg);
+      this.toast.error(msg);
+      return;
+    }
+
+    let stream: MediaStream | null = null;
+    let lastError: any = null;
+    for (const constraint of buildCameraConstraintsLadder(mode)) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraint);
+        if (stream && stream.getVideoTracks().length > 0) break;
+      } catch (err: any) {
+        lastError = err;
+      }
+    }
+
+    if (!stream) {
+      this.cameraLoading.set(false);
+      this.cameraActive.set(false);
+      const errorMsg =
+        lastError?.name === 'NotAllowedError'
+          ? 'Permiso de cámara denegado. Permite el acceso a la cámara en Chrome.'
+          : `No se pudo iniciar la cámara (${lastError?.name || 'Error'}).`;
+      this.cameraError.set(errorMsg);
+      this.toast.error(errorMsg);
+      return;
+    }
+
+    this.mediaStream = stream;
+    applyCameraEnhancements(stream);
+    this.cameraActive.set(true);
+    this.cameraLoading.set(false);
+
+    setTimeout(async () => {
+      const video = this.cameraVideoRef?.nativeElement;
+      if (video) {
+        video.srcObject = stream;
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.muted = true;
+        try {
+          await video.play();
+        } catch {}
+        this.initBarcodeDetector();
+      }
+    }, 150);
+  }
+
+  stopCamera(): void {
+    this.cameraDebounce.reset();
+    if (this.barcodeDetectorTimer) {
+      clearInterval(this.barcodeDetectorTimer);
+      this.barcodeDetectorTimer = null;
+    }
+    if (this.zxingReader) {
+      try {
+        this.zxingReader.reset();
+      } catch {}
+      this.zxingReader = null;
+    }
+    if (this.mediaStream) {
+      try {
+        this.mediaStream.getTracks().forEach((t) => t.stop());
+      } catch {}
+      this.mediaStream = null;
+    }
+    if (this.cameraVideoRef?.nativeElement) {
+      this.cameraVideoRef.nativeElement.srcObject = null;
+    }
+    this.cameraActive.set(false);
+    this.cameraLoading.set(false);
+  }
+
+  toggleCamera(): void {
+    if (this.cameraActive()) {
+      this.stopCamera();
+    } else {
+      this.startCamera();
+    }
+  }
+
+  toggleScanOrientation(): void {
+    const next = this.scanOrientation() === 'horizontal' ? 'vertical' : 'horizontal';
+    this.scanOrientation.set(next);
+    this.audio.playSuccess();
+    this.toast.info(next === 'vertical' ? 'Escaneo Vertical activo (90°)' : 'Escaneo Horizontal activo');
+  }
+
+  async switchCamera(): Promise<void> {
+    const newMode = this.currentFacingMode() === 'environment' ? 'user' : 'environment';
+    this.audio.playSuccess();
+    await this.startCamera(newMode);
+  }
+
+  private getRotatedCanvas(video: HTMLVideoElement): HTMLCanvasElement | null {
+    if (!video.videoWidth || !video.videoHeight) return null;
+    if (!this.offscreenCanvas) {
+      this.offscreenCanvas = document.createElement('canvas');
+    }
+    const canvas = this.offscreenCanvas;
+    canvas.width = video.videoHeight;
+    canvas.height = video.videoWidth;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(video, -video.videoWidth / 2, -video.videoHeight / 2);
+    ctx.restore();
+    return canvas;
+  }
+
+  private initBarcodeDetector(): void {
+    if (this.barcodeDetectorTimer) {
+      clearInterval(this.barcodeDetectorTimer);
+      this.barcodeDetectorTimer = null;
+    }
+
+    if (typeof (window as any).BarcodeDetector !== 'undefined') {
+      try {
+        const detector = new (window as any).BarcodeDetector({
+          formats: ['code_128', 'code_39', 'ean_13', 'qr_code', 'data_matrix', 'itf', 'upc_a', 'upc_e'],
+        });
+
+        this.barcodeDetectorTimer = setInterval(async () => {
+          if (!this.cameraActive() || this.isProcessing()) return;
+          const video = this.cameraVideoRef?.nativeElement;
+          if (!video || video.readyState < 2) return;
+
+          try {
+            let barcodes = await detector.detect(video);
+            if ((!barcodes || barcodes.length === 0) && this.scanOrientation() === 'vertical') {
+              const rotated = this.getRotatedCanvas(video);
+              if (rotated) barcodes = await detector.detect(rotated);
+            }
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              const code = barcodes[0].rawValue.trim();
+              if (code && this.cameraDebounce.shouldProcess(code)) {
+                this.handleScannedCode(code);
+              }
+            }
+          } catch {}
+        }, 280);
+        return;
+      } catch {}
+    }
+
+    this.initZXingFallbackScanner();
+  }
+
+  private initZXingFallbackScanner(): void {
+    const video = this.cameraVideoRef?.nativeElement;
+    if (!video) return;
+
+    const startReader = (ZXing: any) => {
+      try {
+        if (this.zxingReader) {
+          try {
+            this.zxingReader.reset();
+          } catch {}
+        }
+        const reader = createEnhancedZxingReader(ZXing);
+        this.zxingReader = reader;
+        reader.decodeFromVideoElement(video, (result: any) => {
+          if (result && result.getText && !this.isProcessing()) {
+            const code = result.getText().trim();
+            if (code && this.cameraDebounce.shouldProcess(code)) {
+              this.handleScannedCode(code);
+            }
+          }
+        });
+      } catch {}
+    };
+
+    if (typeof (window as any).ZXing !== 'undefined') {
+      startReader((window as any).ZXing);
+    } else if (!document.getElementById('zxing-cdn-script')) {
+      const script = document.createElement('script');
+      script.id = 'zxing-cdn-script';
+      script.src = 'https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';
+      script.async = true;
+      script.onload = () => {
+        if (typeof (window as any).ZXing !== 'undefined') startReader((window as any).ZXing);
+      };
+      document.head.appendChild(script);
+    }
+  }
+
+  // ─── 3. Flujo Guiado en 2 Pasos (Origen -> Rack Destino) ─────────────────
   protected focusScanInput(): void {
     setTimeout(() => this.scanInput?.nativeElement?.focus(), 100);
   }
@@ -260,7 +492,7 @@ export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
 
   protected handleScannedCode(rawCode: string): void {
     const code = (rawCode || '').trim().toUpperCase();
-    if (!code) return;
+    if (!code || this.isProcessing()) return;
     this.lastError.set(null);
     const step = this.currentStep();
 
@@ -271,7 +503,6 @@ export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /** Paso 1: Valida el SSCC escaneado en Ubicación Origen */
   private processPalletScan(code: string): void {
     if (this.storedBuffer().some((item) => item.sscc.toUpperCase() === code)) {
       this.lastError.set(`⚠️ Tarima Duplicada: La UA ${code} ya fue ubicada en su rack destino.`);
@@ -305,7 +536,6 @@ export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
     }, 150);
   }
 
-  /** Paso 2: Valida el Rack Destino y ejecuta completeTransfer en PostgreSQL */
   private processRackScan(code: string): void {
     const pallet = this.activePallet();
     if (!pallet) {
@@ -352,7 +582,6 @@ export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
       this.focusScanInput();
     };
 
-    // Si es la última tarima del traspaso, confirmar formalmente en PostgreSQL (mueve stock y Kardex)
     if (remainingAfterThis.length === 0 && this.isUuid(pallet.transferId)) {
       const payload: Record<string, any> = {};
       if (this.isUuid(pallet.destinationLocationId)) {
@@ -396,6 +625,7 @@ export class PutawayScanComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   protected goBack(): void {
+    this.stopCamera();
     this.router.navigate(['/menu']);
   }
 
