@@ -165,8 +165,26 @@ export class ReceivingExcelExportService {
     const ws2 = XLSX.utils.aoa_to_sheet([[]]);
     XLSX.utils.book_append_sheet(wb, ws2, 'Hoja 2');
 
-    // Descarga directa con el nombre exacto solicitado
-    XLSX.writeFile(wb, 'INVENTARIOS 4GUARD .XLSX');
+    // Descarga binaria nativa con MIME type oficial para evitar bloqueos de seguridad del navegador
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const fileName = 'INVENTARIOS_4GUARD.xlsx';
+
+    if (typeof window !== 'undefined') {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 200);
+    }
   }
 
   /**

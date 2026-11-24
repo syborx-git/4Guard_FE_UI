@@ -222,7 +222,7 @@ export class ReceivingSubmoduleComponent implements OnInit, OnDestroy {
       return;
     }
     this.excelExportService.exportInventarioExcel(targetRec, pallets);
-    this.toast.success(`Archivo Excel 'INVENTARIOS 4GUARD .XLSX' descargado con ${pallets.length} tarimas.`);
+    this.toast.success(`Archivo Excel 'INVENTARIOS_4GUARD.xlsx' descargado con ${pallets.length} tarimas.`);
   }
 
   isImportingExcel = signal<boolean>(false);
