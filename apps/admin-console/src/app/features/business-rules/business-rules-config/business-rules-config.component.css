@@ -1608,3 +1608,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   HOMOLOGACIÓN FULLWIDTH WMS (.wms-selector-bar)
+   ───────────────────────────────────────────────────────────── */
+.br-split-view {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+}
+
+.br-form-panel {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 100% !important;
+}
+
+.wms-dropdown-popover .br-catalog-panel {
+  flex: 1 1 100% !important;
+  max-width: 100% !important;
+  min-width: 100% !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}

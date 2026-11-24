@@ -45,57 +45,142 @@
       </div>
     </div>
 
-    <!-- ── KPI CARDS (4 columnas homologadas) ────────────────────────── -->
-    <div class="carriers-kpi-grid" aria-label="Indicadores clave de alertas">
-      <div class="carriers-kpi-card" id="kpi-active-alerts">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-icons-round">notifications</span>
-        </div>
-        <div class="carriers-kpi-card__body">
-          <span class="carriers-kpi-card__value">{{ kpis().activeAlerts }}</span>
-          <span class="carriers-kpi-card__label">Alertas Activas</span>
-        </div>
+    <!-- ── KPI CARDS (Sección Métricas Colapsable Homologada) ────────── -->
+    <section aria-label="Métricas de Alertas" class="wms-kpi-section">
+      <div class="wms-kpi-header">
+        <span class="wms-kpi-header__title">
+          <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+          <span>Métricas de Alertas y Notificaciones</span>
+        </span>
+        <button
+          type="button"
+          (click)="toggleKpiCollapse()"
+          class="wms-kpi-toggle-btn"
+          [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+        >
+          <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+          <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+        </button>
       </div>
 
-      <div class="carriers-kpi-card carriers-kpi-card--danger" id="kpi-critical-alerts">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-icons-round">error</span>
+      @if (isKpiCollapsed()) {
+        <!-- Vista Compacta Resumida -->
+        <div class="wms-kpi-summary-bar animate-fade-in">
+          <div class="wms-kpi-summary-items">
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+              <span class="wms-kpi-summary-label">Activas:</span>
+              <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ kpis().activeAlerts }}</strong>
+            </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--danger"></span>
+              <span class="wms-kpi-summary-label">Críticas:</span>
+              <strong class="wms-kpi-summary-value text-red-500">{{ kpis().criticalAlerts }}</strong>
+            </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--warning"></span>
+              <span class="wms-kpi-summary-label">Canales:</span>
+              <strong class="wms-kpi-summary-value text-amber-500">{{ kpis().configuredChannels }}</strong>
+            </div>
+            <div class="wms-kpi-summary-item">
+              <span class="wms-kpi-summary-dot wms-kpi-summary-dot--inactive"></span>
+              <span class="wms-kpi-summary-label">Escalamientos:</span>
+              <strong class="wms-kpi-summary-value text-slate-500">{{ kpis().escalationsConfigured }}</strong>
+            </div>
+          </div>
         </div>
-        <div class="carriers-kpi-card__body">
-          <span class="carriers-kpi-card__value">{{ kpis().criticalAlerts }}</span>
-          <span class="carriers-kpi-card__label">Alertas Críticas</span>
-        </div>
-      </div>
+      } @else {
+        <!-- Grid Completo de Tarjetas Grandes -->
+        <div class="carriers-kpi-grid animate-fade-in" aria-label="Indicadores clave de alertas">
+          <div class="carriers-kpi-card" id="kpi-active-alerts">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-icons-round">notifications</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              <span class="carriers-kpi-card__value">{{ kpis().activeAlerts }}</span>
+              <span class="carriers-kpi-card__label">Alertas Activas</span>
+            </div>
+          </div>
 
-      <div class="carriers-kpi-card carriers-kpi-card--warning" id="kpi-channels">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-icons-round">campaign</span>
-        </div>
-        <div class="carriers-kpi-card__body">
-          <span class="carriers-kpi-card__value">{{ kpis().configuredChannels }}</span>
-          <span class="carriers-kpi-card__label">Canales Configurados</span>
-        </div>
-      </div>
+          <div class="carriers-kpi-card carriers-kpi-card--danger" id="kpi-critical-alerts">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-icons-round">error</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              <span class="carriers-kpi-card__value">{{ kpis().criticalAlerts }}</span>
+              <span class="carriers-kpi-card__label">Alertas Críticas</span>
+            </div>
+          </div>
 
-      <div class="carriers-kpi-card carriers-kpi-card--inactive" id="kpi-escalations">
-        <div class="carriers-kpi-card__icon-wrap">
-          <span class="material-icons-round">schedule_send</span>
+          <div class="carriers-kpi-card carriers-kpi-card--warning" id="kpi-channels">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-icons-round">campaign</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              <span class="carriers-kpi-card__value">{{ kpis().configuredChannels }}</span>
+              <span class="carriers-kpi-card__label">Canales Configurados</span>
+            </div>
+          </div>
+
+          <div class="carriers-kpi-card carriers-kpi-card--inactive" id="kpi-escalations">
+            <div class="carriers-kpi-card__icon-wrap">
+              <span class="material-icons-round">schedule_send</span>
+            </div>
+            <div class="carriers-kpi-card__body">
+              <span class="carriers-kpi-card__value">{{ kpis().escalationsConfigured }}</span>
+              <span class="carriers-kpi-card__label">Escalamientos</span>
+            </div>
+          </div>
         </div>
-        <div class="carriers-kpi-card__body">
-          <span class="carriers-kpi-card__value">{{ kpis().escalationsConfigured }}</span>
-          <span class="carriers-kpi-card__label">Escalamientos</span>
-        </div>
-      </div>
-    </div>
+      }
+    </section>
   </header>
 
-  <!-- ═══════════════════════════════════════════
-       MASTER-DETAIL SPLIT VIEW (35% / 65%)
-       ═══════════════════════════════════════════ -->
-  <main class="ac-split" id="ac-master-detail">
+  <!-- ═══════════════════════════════════════════════════════════════════
+       BARRA DE SELECCIÓN FLOTANTE HOMOLOGADA WMS (.wms-selector-bar)
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="wms-selector-bar">
+    <div class="wms-selector-dropdown-wrap">
+      <button
+        type="button"
+        class="wms-selector-btn"
+        (click)="toggleAlertDropdown($event)"
+        [class.wms-selector-btn--open]="isAlertDropdownOpen()"
+        aria-haspopup="listbox"
+        [attr.aria-expanded]="isAlertDropdownOpen()"
+        aria-label="Abrir directorio de alertas y notificaciones">
+        <div class="wms-selector-btn__avatar">
+          <span class="material-icons-round text-amber-500">notifications</span>
+        </div>
+        <div class="wms-selector-btn__text">
+          <span class="wms-selector-btn__eyebrow">
+            {{ formMode() === 'CREATE' ? 'ALTA DE NUEVA REGLA' : 'REGLA DE ALERTA SELECCIONADA' }}
+          </span>
+          <span class="wms-selector-btn__title">
+            {{ selectedAlert() ? (selectedAlert()!.name + ' (' + selectedAlert()!.event + ')') : 'Directorio de Alertas — Clic para seleccionar...' }}
+          </span>
+        </div>
+        <span class="material-symbols-outlined wms-selector-btn__chevron">
+          {{ isAlertDropdownOpen() ? 'expand_less' : 'expand_more' }}
+        </span>
+      </button>
 
-    <!-- ── IZQUIERDA: CENTRO DE ALERTAS (35%) ─────────────────────────────── -->
-    <aside class="ac-split__left" aria-label="Directorio de alertas">
+      <!-- Panel Popover Flotante de Selección -->
+      @if (isAlertDropdownOpen()) {
+        <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+          <div class="wms-dropdown-popover__header">
+            <div class="wms-dropdown-popover__title-box">
+              <span class="material-icons-round text-amber-500">notifications</span>
+              <span>Directorio de Alertas ({{ filteredAlerts().length }} registradas)</span>
+            </div>
+            <button type="button" class="wms-dropdown-popover__close" (click)="closeAlertDropdown()" title="Cerrar selector">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- Contenedor scrollable con el directorio completo -->
+          <div class="wms-dropdown-popover__scrollable">
+            <aside class="ac-split__left wms-directory--popover" aria-label="Directorio de alertas">
       <div class="ac-dir__toolbar">
 
         <!-- Buscador principal -->
@@ -251,10 +336,31 @@
           </span>
         </div>
       }
-    </aside>
+            </aside>
+          </div>
+        </div>
+      }
+    </div>
 
-    <!-- ── DERECHA: CONFIGURACIÓN Y EDITOR (65%) ────────────────────────── -->
-    <section class="ac-split__right" aria-label="Editor de regla de alerta">
+    <div class="wms-selector-actions">
+      <button
+        type="button"
+        class="ac-btn ac-btn--primary"
+        id="btn-new-alert"
+        (click)="createNewAlert()">
+        <span class="material-icons-round">add_alert</span>
+        Nueva alerta
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       DETALLE / EDITOR FULLWIDTH
+       ═══════════════════════════════════════════ -->
+  <main class="ac-split wms-detail--fullwidth" id="ac-master-detail">
+
+    <!-- ── DERECHA: CONFIGURACIÓN Y EDITOR (FULLWIDTH) ──────────────────── -->
+    <section class="ac-split__right wms-detail--fullwidth" aria-label="Editor de regla de alerta">
       <div class="ac-editor">
 
         <!-- Editor Header -->

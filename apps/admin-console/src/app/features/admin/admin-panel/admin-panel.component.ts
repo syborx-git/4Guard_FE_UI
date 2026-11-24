@@ -128,9 +128,24 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
 
   // Estados de navegación e interfaz
   protected readonly selectedModule = signal<string | null>(null);
+  protected readonly isMovementDropdownOpen = signal<boolean>(false);
+  protected readonly isKpiCollapsed = signal<boolean>(true);
   protected readonly searchTerm = signal<string>('');
   protected readonly currentPage = signal<number>(1);
   protected readonly pageSize = signal<number>(20);
+
+  toggleMovementDropdown(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.isMovementDropdownOpen.update(v => !v);
+  }
+
+  closeMovementDropdown(): void {
+    this.isMovementDropdownOpen.set(false);
+  }
+
+  toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update(v => !v);
+  }
 
   // Exponer Math al template
   protected readonly Math = Math;
@@ -745,6 +760,19 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       this.router.navigate(['/business-rules']);
       return;
     }
+    if (moduleId === 'inventory') {
+      this.router.navigate(['/inventory-query']);
+      return;
+    }
+    if (moduleId === 'incidences') {
+      this.router.navigate(['/quality']);
+      return;
+    }
+    if (moduleId === 'notifications') {
+      this.router.navigate(['/alerts-config']);
+      return;
+    }
+    this.closeMovementDropdown();
     this.selectedModule.set(moduleId);
 
     this.searchTerm.set('');

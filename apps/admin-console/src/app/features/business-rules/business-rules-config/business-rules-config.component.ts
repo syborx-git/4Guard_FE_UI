@@ -79,6 +79,22 @@ export class BusinessRulesConfigComponent implements OnInit, OnDestroy {
   /** Indica si hay cambios sin guardar en el formulario */
   protected readonly isFormDirty = signal<boolean>(false);
 
+  protected readonly isRuleDropdownOpen = signal<boolean>(false);
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  toggleRuleDropdown(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.isRuleDropdownOpen.update((v) => !v);
+  }
+
+  closeRuleDropdown(): void {
+    this.isRuleDropdownOpen.set(false);
+  }
+
+  toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
+
   // ─── Constantes para opciones en plantilla ────────────────────────────────
 
   protected readonly allModules = WMS_RULE_MODULES;
@@ -186,11 +202,13 @@ export class BusinessRulesConfigComponent implements OnInit, OnDestroy {
   protected selectRule(rule: BusinessRule): void {
     this.isEditMode.set(true);
     this.rulesService.selectRule(rule.id);
+    this.closeRuleDropdown();
     this.populateForm(rule);
   }
 
   protected startNewRule(): void {
     this.isEditMode.set(false);
+    this.closeRuleDropdown();
     this.ruleForm.reset({
       id: '',
       code: '',

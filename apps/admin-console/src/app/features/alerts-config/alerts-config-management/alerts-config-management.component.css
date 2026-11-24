@@ -1547,3 +1547,29 @@
   .ac-hero { flex-direction: column; align-items: flex-start; gap: 0.7rem; }
   .ac-hero__actions { width: 100%; justify-content: flex-end; }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   HOMOLOGACIÓN FULLWIDTH WMS (.wms-selector-bar)
+   ───────────────────────────────────────────────────────────── */
+.ac-split {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  gap: 1.25rem !important;
+}
+
+.ac-split__right {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 100% !important;
+}
+
+.wms-dropdown-popover .ac-split__left {
+  flex: 1 1 100% !important;
+  max-width: 100% !important;
+  min-width: 100% !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}

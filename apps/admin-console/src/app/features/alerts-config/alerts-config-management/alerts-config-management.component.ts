@@ -109,6 +109,21 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
   protected readonly formMode = signal<FormMode>('CREATE');
   protected readonly selectedAlert = signal<AlertConfiguration | null>(null);
   protected readonly remoteAuditLogs = signal<AlertConfigAuditResponse[]>([]);
+  protected readonly isAlertDropdownOpen = signal<boolean>(false);
+  protected readonly isKpiCollapsed = signal<boolean>(true);
+
+  toggleAlertDropdown(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.isAlertDropdownOpen.update((v) => !v);
+  }
+
+  closeAlertDropdown(): void {
+    this.isAlertDropdownOpen.set(false);
+  }
+
+  toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update((v) => !v);
+  }
 
   // Filtros
   protected readonly searchQuery = signal('');
@@ -340,6 +355,7 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
   protected selectAlert(alert: AlertConfiguration): void {
     this.selectedAlert.set(alert);
     this.formMode.set('EDIT');
+    this.closeAlertDropdown();
     this.loadAuditLogs(alert.id);
 
     this.form.reset({
@@ -390,6 +406,7 @@ export class AlertsConfigManagementComponent implements OnInit, OnDestroy {
   protected createNewAlert(): void {
     this.selectedAlert.set(null);
     this.formMode.set('CREATE');
+    this.closeAlertDropdown();
 
     this.form.reset({
       name: '',

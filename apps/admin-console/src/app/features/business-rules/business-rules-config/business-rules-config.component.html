@@ -79,70 +79,115 @@
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════
-       KPIS — 5 TARJETAS PREMIUM
+       KPIS — SECCIÓN MÉTRICAS COLAPSABLE HOMOLOGADA
        ═══════════════════════════════════════════════════════════ -->
-  <section class="br-kpis" aria-label="Indicadores del motor de reglas">
-    
-    <!-- 1. Reglas configuradas -->
-    <div class="br-kpi-card br-kpi-card--configured">
-      <div class="br-kpi-card__icon">
-        <span class="material-symbols-outlined">tune</span>
-      </div>
-      <div class="br-kpi-card__body">
-        <span class="br-kpi-card__value">{{ kpis().totalConfigured }}</span>
-        <span class="br-kpi-card__label">Reglas configuradas</span>
-        <span class="br-kpi-card__desc">Catálogo total registrado</span>
-      </div>
+  <section class="wms-kpi-section" aria-label="Indicadores del motor de reglas">
+    <div class="wms-kpi-header">
+      <span class="wms-kpi-header__title">
+        <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+        <span>Métricas del Motor de Reglas</span>
+      </span>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="wms-kpi-toggle-btn"
+        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+      >
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
     </div>
 
-    <!-- 2. Reglas activas -->
-    <div class="br-kpi-card br-kpi-card--active">
-      <div class="br-kpi-card__icon">
-        <span class="material-symbols-outlined">check_circle</span>
+    @if (isKpiCollapsed()) {
+      <!-- Vista Compacta Resumida -->
+      <div class="wms-kpi-summary-bar animate-fade-in">
+        <div class="wms-kpi-summary-items">
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+            <span class="wms-kpi-summary-label">Configuradas:</span>
+            <strong class="wms-kpi-summary-value">{{ kpis().totalConfigured }}</strong>
+          </div>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+            <span class="wms-kpi-summary-label">Activas:</span>
+            <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ kpis().totalActive }}</strong>
+          </div>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--danger"></span>
+            <span class="wms-kpi-summary-label">Críticas:</span>
+            <strong class="wms-kpi-summary-value text-red-500">{{ kpis().totalCritical }}</strong>
+          </div>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--inactive"></span>
+            <span class="wms-kpi-summary-label">Inactivas:</span>
+            <strong class="wms-kpi-summary-value text-slate-500">{{ kpis().totalInactive }}</strong>
+          </div>
+        </div>
       </div>
-      <div class="br-kpi-card__body">
-        <span class="br-kpi-card__value">{{ kpis().totalActive }}</span>
-        <span class="br-kpi-card__label">Reglas activas</span>
-        <span class="br-kpi-card__desc">Ejecución en tiempo real</span>
-      </div>
-    </div>
+    } @else {
+      <!-- 5 TARJETAS PREMIUM -->
+      <div class="br-kpis animate-fade-in" aria-label="Indicadores del motor de reglas">
+        <!-- 1. Reglas configuradas -->
+        <div class="br-kpi-card br-kpi-card--configured">
+          <div class="br-kpi-card__icon">
+            <span class="material-symbols-outlined">tune</span>
+          </div>
+          <div class="br-kpi-card__body">
+            <span class="br-kpi-card__value">{{ kpis().totalConfigured }}</span>
+            <span class="br-kpi-card__label">Reglas configuradas</span>
+            <span class="br-kpi-card__desc">Catálogo total registrado</span>
+          </div>
+        </div>
 
-    <!-- 3. Reglas inactivas -->
-    <div class="br-kpi-card br-kpi-card--inactive">
-      <div class="br-kpi-card__icon">
-        <span class="material-symbols-outlined">pause_circle</span>
-      </div>
-      <div class="br-kpi-card__body">
-        <span class="br-kpi-card__value">{{ kpis().totalInactive }}</span>
-        <span class="br-kpi-card__label">Reglas inactivas</span>
-        <span class="br-kpi-card__desc">Pausadas o en borrador</span>
-      </div>
-    </div>
+        <!-- 2. Reglas activas -->
+        <div class="br-kpi-card br-kpi-card--active">
+          <div class="br-kpi-card__icon">
+            <span class="material-symbols-outlined">check_circle</span>
+          </div>
+          <div class="br-kpi-card__body">
+            <span class="br-kpi-card__value">{{ kpis().totalActive }}</span>
+            <span class="br-kpi-card__label">Reglas activas</span>
+            <span class="br-kpi-card__desc">Ejecución en tiempo real</span>
+          </div>
+        </div>
 
-    <!-- 4. Reglas críticas -->
-    <div class="br-kpi-card br-kpi-card--critical">
-      <div class="br-kpi-card__icon">
-        <span class="material-symbols-outlined">dangerous</span>
-      </div>
-      <div class="br-kpi-card__body">
-        <span class="br-kpi-card__value">{{ kpis().totalCritical }}</span>
-        <span class="br-kpi-card__label">Reglas críticas</span>
-        <span class="br-kpi-card__desc">Impacto de alta prioridad</span>
-      </div>
-    </div>
+        <!-- 3. Reglas inactivas -->
+        <div class="br-kpi-card br-kpi-card--inactive">
+          <div class="br-kpi-card__icon">
+            <span class="material-symbols-outlined">pause_circle</span>
+          </div>
+          <div class="br-kpi-card__body">
+            <span class="br-kpi-card__value">{{ kpis().totalInactive }}</span>
+            <span class="br-kpi-card__label">Reglas inactivas</span>
+            <span class="br-kpi-card__desc">Pausadas o en borrador</span>
+          </div>
+        </div>
 
-    <!-- 5. Modificadas recientemente -->
-    <div class="br-kpi-card br-kpi-card--recent">
-      <div class="br-kpi-card__icon">
-        <span class="material-symbols-outlined">history_toggle_off</span>
-      </div>
-      <div class="br-kpi-card__body">
-        <span class="br-kpi-card__value">{{ kpis().recentlyModified }}</span>
-        <span class="br-kpi-card__label">Modificadas recientemente</span>
-        <span class="br-kpi-card__desc">Últimos 14 días</span>
-      </div>
-    </div>
+        <!-- 4. Reglas críticas -->
+        <div class="br-kpi-card br-kpi-card--critical">
+          <div class="br-kpi-card__icon">
+            <span class="material-symbols-outlined">dangerous</span>
+          </div>
+          <div class="br-kpi-card__body">
+            <span class="br-kpi-card__value">{{ kpis().totalCritical }}</span>
+            <span class="br-kpi-card__label">Reglas críticas</span>
+            <span class="br-kpi-card__desc">Impacto de alta prioridad</span>
+          </div>
+        </div>
 
+        <!-- 5. Modificadas recientemente -->
+        <div class="br-kpi-card br-kpi-card--recent">
+          <div class="br-kpi-card__icon">
+            <span class="material-symbols-outlined">history_toggle_off</span>
+          </div>
+          <div class="br-kpi-card__body">
+            <span class="br-kpi-card__value">{{ kpis().recentlyModified }}</span>
+            <span class="br-kpi-card__label">Modificadas recientemente</span>
+            <span class="br-kpi-card__desc">Últimos 14 días</span>
+          </div>
+        </div>
+      </div>
+    }
   </section>
 
   <!-- ═══════════════════════════════════════════════════════════
@@ -235,15 +280,51 @@
     </form>
   </section>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       SPLIT VIEW 35% / 65% (CATÁLOGO / FORMULARIO)
-       ═══════════════════════════════════════════════════════════ -->
-  <main class="br-split-view">
+  <!-- ═══════════════════════════════════════════════════════════════════
+       BARRA DE SELECCIÓN FLOTANTE HOMOLOGADA WMS (.wms-selector-bar)
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="wms-selector-bar">
+    <div class="wms-selector-dropdown-wrap">
+      <button
+        type="button"
+        class="wms-selector-btn"
+        (click)="toggleRuleDropdown($event)"
+        [class.wms-selector-btn--open]="isRuleDropdownOpen()"
+        aria-haspopup="listbox"
+        [attr.aria-expanded]="isRuleDropdownOpen()"
+        aria-label="Abrir directorio de reglas de negocio">
+        <div class="wms-selector-btn__avatar">
+          <span class="material-symbols-outlined text-amber-500">gavel</span>
+        </div>
+        <div class="wms-selector-btn__text">
+          <span class="wms-selector-btn__eyebrow">
+            {{ isEditMode() ? 'REGLA DE NEGOCIO SELECCIONADA' : 'NUEVA REGLA DE NEGOCIO' }}
+          </span>
+          <span class="wms-selector-btn__title">
+            {{ selectedRule() ? (selectedRule()!.name + ' (' + selectedRule()!.code + ')') : 'Directorio de Reglas — Clic para seleccionar...' }}
+          </span>
+        </div>
+        <span class="material-symbols-outlined wms-selector-btn__chevron">
+          {{ isRuleDropdownOpen() ? 'expand_less' : 'expand_more' }}
+        </span>
+      </button>
 
-    <!-- ─────────────────────────────────────────────────────────
-         PANEL IZQUIERDO (35%): Catálogo de Reglas
-         ───────────────────────────────────────────────────────── -->
-    <aside class="br-catalog-panel" aria-label="Catálogo de reglas de negocio">
+      <!-- Panel Popover Flotante de Selección -->
+      @if (isRuleDropdownOpen()) {
+        <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+          <div class="wms-dropdown-popover__header">
+            <div class="wms-dropdown-popover__title-box">
+              <span class="material-symbols-outlined text-amber-500">folder_special</span>
+              <span>Directorio de Reglas ({{ filteredRules().length }} encontradas)</span>
+            </div>
+            <button type="button" class="wms-dropdown-popover__close" (click)="closeRuleDropdown()" title="Cerrar selector">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- Contenedor scrollable con el catálogo completo -->
+          <div class="wms-dropdown-popover__scrollable">
+            <aside class="br-catalog-panel wms-directory--popover" aria-label="Catálogo de reglas de negocio">
       
       <div class="br-catalog-header">
         <div class="br-catalog-header__left">
@@ -349,12 +430,29 @@
 
       </div>
 
-    </aside>
+            </aside>
+          </div>
+        </div>
+      }
+    </div>
 
-    <!-- ─────────────────────────────────────────────────────────
-         PANEL DERECHO (65%): Formulario Enterprise
-         ───────────────────────────────────────────────────────── -->
-    <section class="br-form-panel" aria-label="Parámetros de configuración de regla">
+    <div class="wms-selector-actions">
+      <button
+        class="br-btn br-btn--primary"
+        (click)="startNewRule()"
+        aria-label="Crear nueva regla de negocio">
+        <span class="material-symbols-outlined">add_circle</span>
+        Nueva Configuración
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       FORMULARIO ENTERPRISE FULLWIDTH
+       ════════════════════════════════════════════════════════════════ -->
+  <main class="br-split-view wms-detail--fullwidth">
+    <!-- PANEL DERECHO (FULLWIDTH): Formulario Enterprise -->
+    <section class="br-form-panel wms-detail--fullwidth" aria-label="Parámetros de configuración de regla">
       
       <!-- Encabezado del Formulario -->
       <div class="br-form-header">

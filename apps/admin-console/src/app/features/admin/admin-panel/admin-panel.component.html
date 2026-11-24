@@ -412,200 +412,170 @@
 
   } @else {
 
-  <!-- ==================== CRUD WORKSPACE (DUAL PANE LAYOUT) ==================== -->
-  <div class="crud-layout">
-
-    <!-- SUB-MODULES NAVIGATION SIDEBAR -->
-    <aside class="crud-sidebar">
-      <button class="back-dashboard-btn" (click)="selectModule(null)">
-        <span class="material-symbols-outlined">arrow_back</span>
-        <span>Volver al Dashboard</span>
-      </button>
-
-      <div class="sidebar-category">
-        <span class="sidebar-category__title">Estructura WMS</span>
-        <ul class="sidebar-menu">
-          <li [class.active]="selectedModule() === 'organizations'" (click)="selectModule('organizations')">
-            <span class="material-symbols-outlined">corporate_fare</span> Organizaciones
-          </li>
-          <li [class.active]="selectedModule() === 'branches'" (click)="selectModule('branches')">
-            <span class="material-symbols-outlined">domain</span> Sucursales
-          </li>
-          <li [class.active]="selectedModule() === 'sections'" (click)="selectModule('sections')">
-            <span class="material-symbols-outlined">grid_view</span> Secciones
-          </li>
-          <li [class.active]="selectedModule() === 'locations'" (click)="selectModule('locations')">
-            <span class="material-symbols-outlined">location_on</span> Ubicaciones
-          </li>
-        </ul>
-      </div>
-
-      <div class="sidebar-category">
-        <span class="sidebar-category__title">Mercancía</span>
-        <ul class="sidebar-menu">
-          <li [class.active]="selectedModule() === 'clients'" (click)="selectModule('clients')">
-            <span class="material-symbols-outlined">partner_exchange</span> Clientes / Owners
-          </li>
-          <li [class.active]="selectedModule() === 'skus'" (click)="selectModule('skus')">
-            <span class="material-symbols-outlined">inventory</span> Catálogo SKUs
-          </li>
-          <li [class.active]="selectedModule() === 'carriers'" (click)="selectModule('carriers')">
-            <span class="material-symbols-outlined">local_shipping</span> Transportistas
-          </li>
-          <li [class.active]="selectedModule() === 'suppliers'" (click)="selectModule('suppliers')">
-            <span class="material-symbols-outlined">storefront</span> Proveedores
-          </li>
-        </ul>
-      </div>
-
-      <div class="sidebar-category">
-        <span class="sidebar-category__title">Seguridad</span>
-        <ul class="sidebar-menu">
-          <li [class.active]="selectedModule() === 'users'" (click)="selectModule('users')">
-            <span class="material-symbols-outlined">manage_accounts</span> Usuarios
-          </li>
-          <li [class.active]="selectedModule() === 'roles'" (click)="selectModule('roles')">
-            <span class="material-symbols-outlined">shield_person</span> Roles y Permisos
-          </li>
-          <li (click)="selectModule('shifts')">
-            <span class="material-symbols-outlined">schedule</span> Turnos y Horarios
-          </li>
-          <li (click)="selectModule('sessions')">
-            <span class="material-symbols-outlined">group</span> Sesiones Activas
-          </li>
-        </ul>
-      </div>
-
-
-      <div class="sidebar-category">
-        <span class="sidebar-category__title">Monitoreo y Soporte</span>
-        <ul class="sidebar-menu">
-          <li [class.active]="selectedModule() === 'inventory'" (click)="selectModule('inventory')">
-            <span class="material-symbols-outlined">shelves</span> Inventario Activo
-          </li>
-          <li [class.active]="selectedModule() === 'movements'" (click)="selectModule('movements')">
-            <span class="material-symbols-outlined">history</span> Bitácora Movs
-          </li>
-          <li [class.active]="selectedModule() === 'incidences'" (click)="selectModule('incidences')">
-            <span class="material-symbols-outlined">report_problem</span> Calidad / Incidencias
-            @if (activeIncidencesCount() > 0) {
-            <span class="menu-badge bg-danger">{{ activeIncidencesCount() }}</span>
-            }
-          </li>
-          <li [class.active]="selectedModule() === 'audit'" (click)="selectModule('audit')">
-            <span class="material-symbols-outlined">find_in_page</span> Logs de Auditoría
-          </li>
-          <li [class.active]="selectedModule() === 'user-activity'" (click)="selectModule('user-activity')">
-            <span class="material-symbols-outlined">manage_search</span> Actividad por Usuario
-          </li>
-          <li (click)="selectModule('remission-history')">
-            <span class="material-symbols-outlined">receipt_long</span> Historial de Remisiones
-          </li>
-          <li [class.active]="selectedModule() === 'notifications'" (click)="selectModule('notifications')">
-            <span class="material-symbols-outlined">notifications_active</span> Alertas Técnicas
-            @if (unreadNotificationsCount() > 0) {
-            <span class="menu-badge bg-warning">{{ unreadNotificationsCount() }}</span>
-            }
-          </li>
-          <li (click)="selectModule('business-rules')">
-            <span class="material-symbols-outlined">gavel</span> Reglas de Negocio
-          </li>
-        </ul>
-      </div>
-    </aside>
+  <!-- ==================== CRUD WORKSPACE (GOLDEN STANDARD FULLWIDTH) ==================== -->
+  <div class="crud-layout wms-detail--fullwidth">
 
     <!-- ACTIVE CRUD WORKSPACE -->
-    <main class="crud-main catalog-workspace">
-      <!-- HEADER -->
+    <main class="crud-main catalog-workspace wms-detail--fullwidth">
+      <!-- HEADER PRINCIPAL HOMOLOGADO WMS -->
       <header class="catalog-header">
         @if (activeModuleMeta(); as meta) {
           <div class="catalog-header__top">
-            <span class="catalog-eyebrow">
-              <span class="material-symbols-outlined catalog-eyebrow-icon">{{ meta.icon }}</span>
-              <span class="catalog-eyebrow-category">{{ meta.categoryLabel }}</span>
-            </span>
-          </div>
-
-          <div class="catalog-header__title-row">
-            <div class="catalog-title-group">
-              <span class="catalog-breadcrumb">ADMINISTRACIÓN / {{ selectedModule() | uppercase }}</span>
-              <h2 class="catalog-title">
-                {{ meta.title }}
-                <span class="catalog-title-sub">· Consola Administrativa</span>
-              </h2>
+            <div class="flex items-center gap-3">
+              <button
+                type="button"
+                class="branches-header__eyebrow-tag cursor-pointer"
+                (click)="selectModule(null)"
+                style="background: rgba(197, 168, 107, 0.15); border: 1px solid rgba(197, 168, 107, 0.4); color: #c5a86b; border-radius: 8px; padding: 6px 14px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;">
+                <span class="material-symbols-outlined" style="font-size: 1.1rem;">arrow_back</span>
+                <span>Administración WMS</span>
+              </button>
+              <span class="catalog-eyebrow-sep text-stone-400">·</span>
+              <span class="catalog-eyebrow-category text-xs tracking-wider uppercase font-semibold text-amber-500">{{ meta.categoryLabel }}</span>
             </div>
           </div>
 
-          <p class="catalog-description">
-            {{ meta.description }}
-          </p>
+          <div class="catalog-header__title-row mt-3">
+            <div class="catalog-title-group">
+              <h1 class="catalog-title text-2xl font-bold flex items-center gap-3 text-stone-800 dark:text-stone-100">
+                <span class="material-symbols-outlined text-amber-500 text-3xl">{{ meta.icon }}</span>
+                <span>{{ meta.title }}</span>
+                <span class="catalog-title-sub text-base font-normal text-stone-500">· Consola Administrativa</span>
+              </h1>
+              <p class="catalog-description text-sm text-stone-500 mt-1">
+                {{ meta.description }}
+              </p>
+            </div>
+          </div>
         }
 
-        <!-- METRICS GRID -->
+        <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
         @if (activeModuleMetrics().length > 0) {
-          <section
-            class="catalog-metrics"
-            [attr.data-count]="activeModuleMetrics().length"
-            aria-label="Resumen del catálogo"
-          >
-            @for (metric of activeModuleMetrics(); track metric.label) {
-              <article
-                class="catalog-metric-card"
-                [attr.data-tone]="metric.tone"
+          <section aria-label="Métricas del catálogo" class="wms-kpi-section mt-4 mb-4">
+            <div class="wms-kpi-header">
+              <span class="wms-kpi-header__title">
+                <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+                <span>Métricas de Operación y Registro</span>
+              </span>
+              <button
+                type="button"
+                (click)="toggleKpiCollapse()"
+                class="wms-kpi-toggle-btn"
+                [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
               >
-                <div class="catalog-metric-card__icon">
-                  <span class="material-symbols-outlined">
-                    {{ metric.icon }}
-                  </span>
-                </div>
+                <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+                <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+              </button>
+            </div>
 
-                <div class="catalog-metric-card__content">
-                  <span class="catalog-metric-card__label">
-                    {{ metric.label }}
-                  </span>
-
-                  <strong class="catalog-metric-card__value">
-                    {{ metric.value | number }}
-                  </strong>
-
-                  @if (metric.description) {
-                    <span class="catalog-metric-card__description">
-                      {{ metric.description }}
-                    </span>
+            @if (isKpiCollapsed()) {
+              <!-- Vista Compacta Resumida (Barra Horizontal Delgada) -->
+              <div class="wms-kpi-summary-bar animate-fade-in">
+                <div class="wms-kpi-summary-items">
+                  @for (metric of activeModuleMetrics(); track metric.label) {
+                    <div class="wms-kpi-summary-item">
+                      <span class="wms-kpi-summary-dot" [attr.data-tone]="metric.tone"></span>
+                      <span class="wms-kpi-summary-label">{{ metric.label }}:</span>
+                      <strong class="wms-kpi-summary-value">{{ metric.value | number }}</strong>
+                    </div>
                   }
                 </div>
-              </article>
+              </div>
+            } @else {
+              <!-- Grid Completo de Tarjetas Grandes -->
+              <div class="catalog-metrics animate-fade-in" [attr.data-count]="activeModuleMetrics().length">
+                @for (metric of activeModuleMetrics(); track metric.label) {
+                  <article class="catalog-metric-card" [attr.data-tone]="metric.tone">
+                    <div class="catalog-metric-card__icon">
+                      <span class="material-symbols-outlined">{{ metric.icon }}</span>
+                    </div>
+                    <div class="catalog-metric-card__content">
+                      <span class="catalog-metric-card__label">{{ metric.label }}</span>
+                      <strong class="catalog-metric-card__value">{{ metric.value | number }}</strong>
+                      @if (metric.description) {
+                        <span class="catalog-metric-card__description">{{ metric.description }}</span>
+                      }
+                    </div>
+                  </article>
+                }
+              </div>
             }
           </section>
         }
 
-        <!-- TOOLBAR -->
-        <div class="catalog-toolbar">
-          <!-- Search bar -->
-          <div class="search-wrapper">
-            <span class="material-symbols-outlined search-icon">search</span>
-            <input type="text" class="search-input" [placeholder]="'Buscar registros en ' + selectedModule() + '...'"
-              [value]="searchTerm()" (input)="onSearch($event)">
+        <!-- ── BARRA DE SELECCIÓN FLOTANTE HOMOLOGADA WMS (.wms-selector-bar) ── -->
+        <div class="wms-selector-bar">
+          <div class="wms-selector-dropdown-wrap">
+            <button
+              type="button"
+              class="wms-selector-btn"
+              (click)="toggleMovementDropdown($event)"
+              [class.wms-selector-btn--open]="isMovementDropdownOpen()"
+              aria-haspopup="listbox"
+              [attr.aria-expanded]="isMovementDropdownOpen()"
+              aria-label="Filtrar y buscar registros">
+              <div class="wms-selector-btn__avatar">
+                <span class="material-symbols-outlined text-amber-600 dark:text-amber-400">
+                  {{ activeModuleMeta() ? activeModuleMeta()!.icon : 'list' }}
+                </span>
+              </div>
+              <div class="wms-selector-btn__text">
+                <span class="wms-selector-btn__eyebrow">
+                  {{ (activeModuleMeta()?.title | uppercase) || 'REGISTROS' }}
+                </span>
+                <span class="wms-selector-btn__title">
+                  {{ searchTerm() ? ('Filtrando por: "' + searchTerm() + '"') : ('Directorio y Búsqueda — Clic para filtrar registros...') }}
+                </span>
+              </div>
+              <span class="material-symbols-outlined wms-selector-btn__chevron">
+                {{ isMovementDropdownOpen() ? 'expand_less' : 'expand_more' }}
+              </span>
+            </button>
+
+            <!-- Panel Popover Flotante de Selección -->
+            @if (isMovementDropdownOpen()) {
+              <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+                <div class="wms-dropdown-popover__header">
+                  <div class="wms-dropdown-popover__title-box">
+                    <span class="material-symbols-outlined text-amber-500">search</span>
+                    <span>Búsqueda y Filtros de Registros</span>
+                  </div>
+                  <button type="button" class="wms-dropdown-popover__close" (click)="closeMovementDropdown()" title="Cerrar selector">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+
+                <div class="p-4 flex flex-col gap-3">
+                  <div class="search-wrapper w-full">
+                    <span class="material-symbols-outlined search-icon">search</span>
+                    <input
+                      type="text"
+                      class="search-input w-full"
+                      [placeholder]="'Buscar registros en ' + (selectedModule() || 'módulo') + '...'"
+                      [value]="searchTerm()"
+                      (input)="onSearch($event)"
+                      autofocus>
+                  </div>
+                  <div class="flex items-center justify-between pt-2 border-t border-stone-200 dark:border-stone-700 text-xs text-stone-500">
+                    <span>Tamaño de página:</span>
+                    <select class="page-size-select" [value]="pageSize()" (change)="updatePageSize($event)">
+                      <option value="20">20 registros</option>
+                      <option value="30">30 registros</option>
+                      <option value="50">50 registros</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            }
           </div>
 
-          <div class="catalog-toolbar__actions">
-            <!-- Page Size Dropdown -->
-            <div class="page-size-wrapper">
-              <span class="page-size-label">MOSTRAR</span>
-              <select class="page-size-select" [value]="pageSize()" (change)="updatePageSize($event)">
-                <option value="20">20</option>
-                <option value="30">30</option>
-                <option value="50">50</option>
-              </select>
-            </div>
-
-            <!-- Create Button (omit for read-only tables: movements, audit) -->
-            @if (selectedModule() !== 'movements' && selectedModule() !== 'audit' && selectedModule() !== 'notifications'
-            && selectedModule() !== 'inventory') {
-            <button class="add-record-btn" (click)="openAddModal()">
-              <span class="material-symbols-outlined">add</span>
-              <span>Añadir Registro</span>
-            </button>
+          <!-- Acciones de cabecera -->
+          <div class="wms-selector-actions">
+            @if (selectedModule() !== 'movements' && selectedModule() !== 'audit' && selectedModule() !== 'notifications' && selectedModule() !== 'inventory') {
+              <button class="add-record-btn" (click)="openAddModal()">
+                <span class="material-symbols-outlined">add</span>
+                <span>Añadir Registro</span>
+              </button>
             }
           </div>
         </div>

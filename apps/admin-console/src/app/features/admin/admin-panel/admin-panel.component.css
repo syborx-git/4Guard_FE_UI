@@ -2655,4 +2655,21 @@
 }
 
 
-
+
+
+/* ─────────────────────────────────────────────────────────────
+   HOMOLOGACIÓN FULLWIDTH WMS (SIN CRUD-SIDEBAR)
+   ───────────────────────────────────────────────────────────── */
+.crud-layout.wms-detail--fullwidth {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 1.5rem !important;
+}
+
+.crud-main.catalog-workspace.wms-detail--fullwidth {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 100% !important;
+}
