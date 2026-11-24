@@ -472,9 +472,18 @@
               <div class="carriers-timeline-preview__header">
                 <div class="carriers-timeline-preview__title">
                   <span class="material-symbols-outlined text-base">timeline</span>
-                  <span>Línea de Tiempo de Auditoría</span>
+                  <span>Línea de Tiempo de Auditoría (Trazabilidad WMS)</span>
                 </div>
-                <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
+                <div class="flex items-center gap-2">
+                  <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
+                  <button
+                    type="button"
+                    class="carriers-btn-icon"
+                    (click)="loadAuditLogs(selectedOrg()!.id); $event.stopPropagation()"
+                    title="Actualizar bitácora">
+                    <span class="material-symbols-outlined text-sm" [class.spin]="isLoadingAudit()">refresh</span>
+                  </button>
+                </div>
               </div>
 
               @if (isLoadingAudit()) {

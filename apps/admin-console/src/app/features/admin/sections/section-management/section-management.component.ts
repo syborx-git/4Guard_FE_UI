@@ -309,8 +309,9 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
 
   // ─── Auditoría ────────────────────────────────────────────────────────────────
 
-  private loadAuditLogs(sectionId: string): void {
+  protected loadAuditLogs(sectionId: string): void {
     this.isLoadingAudit.set(true);
+    this.auditEntries.set([]);
     this.sectionService
       .getSectionAudit(sectionId)
       .pipe(takeUntil(this.destroy$))

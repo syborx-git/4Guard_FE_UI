@@ -120,6 +120,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   protected readonly saveSuccess = signal<boolean>(false);
   protected readonly backendError = signal<string | null>(null);
   protected readonly auditEntries = signal<CarrierAuditEntry[]>([]);
+  protected readonly isLoadingAudit = signal<boolean>(false);
 
   // ── Validaciones asíncronas de RFC en el evento blur ───────────────────────
   protected readonly rfcValidating = signal<boolean>(false);
@@ -509,14 +510,18 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
 
   // ─── Guardar ──────────────────────────────────────────────────────────────────
 
-  private loadAuditLogs(id: string): void {
+  protected loadAuditLogs(id: string): void {
+    this.isLoadingAudit.set(true);
+    this.auditEntries.set([]);
     this.carrierService.getCarrierAudit(id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
+          this.isLoadingAudit.set(false);
           this.auditEntries.set(res.data || []);
         },
         error: (err) => {
+          this.isLoadingAudit.set(false);
           console.error('Error al cargar historial de auditoría:', err);
         }
       });

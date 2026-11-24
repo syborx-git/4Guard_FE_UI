@@ -114,6 +114,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
   protected readonly backendError = signal<string | null>(null);
   protected readonly showUnsavedDialog = signal<boolean>(false);
   protected readonly auditEntries = signal<SupplierAuditEntry[]>([]);
+  protected readonly isLoadingAudit = signal<boolean>(false);
 
   private pendingSupplier: Supplier | null = null;
   private pendingAction: 'select' | 'new' | 'cancel' | null = null;
@@ -411,13 +412,17 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadAuditHistory(id: string): void {
+  protected loadAuditHistory(id: string): void {
     if (!this.canViewAudit()) return;
+    this.isLoadingAudit.set(true);
+    this.auditEntries.set([]);
     this.supplierService.getSupplierAudit(id).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res) => {
+        this.isLoadingAudit.set(false);
         this.auditEntries.set(res.data || []);
       },
       error: () => {
+        this.isLoadingAudit.set(false);
         this.auditEntries.set([]);
       }
     });

@@ -696,61 +696,69 @@
                   </div>
                 </div>
 
-                <!-- ── Bitácora Transaccional en Tiempo Real (GET /api/v1/forklift-operators/{id}/audit) ── -->
+                <!-- ── LÍNEA DE TIEMPO DE AUDITORÍA HOMOLOGADA (TRAZABILIDAD WMS) ── -->
                 <div class="carriers-timeline-preview">
                   <div class="carriers-timeline-preview__header">
-                    <div class="flex items-center gap-2">
-                      <span class="material-symbols-outlined">timeline</span>
-                      <span>Historial de Auditoría Transaccional (WMS Backend)</span>
+                    <div class="carriers-timeline-preview__title">
+                      <span class="material-symbols-outlined text-base">timeline</span>
+                      <span>Línea de Tiempo de Auditoría (Trazabilidad WMS)</span>
                     </div>
-                    <button
-                      type="button"
-                      class="carriers-btn-icon"
-                      (click)="loadAuditLogs(selectedOperator()!.id)"
-                      title="Actualizar bitácora">
-                      <span class="material-symbols-outlined" [class.spin]="isLoadingAudit()">refresh</span>
-                    </button>
+                    <div class="flex items-center gap-2">
+                      <span class="carriers-timeline-preview__count">{{ auditEntries().length }} evento(s)</span>
+                      <button
+                        type="button"
+                        class="carriers-btn-icon"
+                        (click)="loadAuditLogs(selectedOperator()!.id); $event.stopPropagation()"
+                        title="Actualizar bitácora">
+                        <span class="material-symbols-outlined text-sm" [class.spin]="isLoadingAudit()">refresh</span>
+                      </button>
+                    </div>
                   </div>
 
                   @if (isLoadingAudit()) {
                     <div class="carriers-timeline-preview__loading">
-                      <span class="material-symbols-outlined spin">sync</span>
-                      <span>Consultando bitácora de auditoría desde el servidor…</span>
+                      <span class="material-symbols-outlined spin text-sm">sync</span>
+                      <span>Cargando bitácora de auditoría desde el servidor…</span>
                     </div>
                   } @else if (auditEntries().length === 0) {
-                    <p class="carriers-timeline-preview__empty">
+                    <div class="carriers-timeline-preview__empty">
                       No se encontraron registros de auditoría para este operador.
-                    </p>
+                    </div>
                   } @else {
                     <div class="carriers-timeline-preview__nodes">
                       @for (entry of auditEntries(); track entry.logId; let last = $last) {
                         <div class="carriers-tl-node {{ getAuditColorClass(entry.action) }}">
                           <div class="carriers-tl-node__dot">
-                            <span class="material-symbols-outlined">{{ getAuditIcon(entry.action) }}</span>
+                            <span class="material-symbols-outlined text-sm">{{ getAuditIcon(entry.action) }}</span>
                           </div>
-                          <div class="carriers-tl-node__line" [class.carriers-tl-node__line--last]="last"></div>
+                          @if (!last) {
+                            <div class="carriers-tl-node__line"></div>
+                          }
                           <div class="carriers-tl-node__content">
                             <div class="carriers-tl-node__header">
                               <span class="carriers-tl-node__action">{{ getAuditSummary(entry.action) }}</span>
-                              <span class="carriers-tl-node__tag">{{ entry.action }}</span>
+                              <span class="carriers-tl-node__tag">&#64;{{ entry.username }}</span>
                             </div>
 
                             @if (entry.details && entry.details.length > 0) {
-                              <div class="carriers-tl-node__diffs">
+                              <div class="carriers-tl-node__diffs space-y-1.5 my-1.5 p-2 rounded-lg bg-surface border border-subtle">
                                 @for (det of entry.details; track det.fieldName) {
-                                  <div class="carriers-tl-diff">
-                                    <span class="carriers-tl-diff__field">{{ det.fieldName }}:</span>
-                                    <span class="carriers-tl-diff__old">{{ det.oldValue !== null ? det.oldValue : 'null' }}</span>
-                                    <span class="material-symbols-outlined carriers-tl-diff__arrow">arrow_forward</span>
-                                    <span class="carriers-tl-diff__new">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
+                                  <div class="carriers-tl-diff flex items-center gap-2 text-xs flex-wrap">
+                                    <span class="carriers-tl-diff__field font-bold text-slate-700 dark:text-slate-300">{{ det.fieldName }}:&nbsp;</span>
+                                    @if (det.oldValue !== null && det.oldValue !== undefined && det.oldValue !== '' && det.oldValue !== 'null' && det.oldValue !== det.newValue) {
+                                      <span class="carriers-tl-diff__old line-through text-rose-500 font-mono text-[11px] mr-1">{{ det.oldValue }}</span>
+                                      <span class="carriers-tl-diff__arrow text-slate-400 mx-1.5 font-bold">➔</span>
+                                    }
+                                    <span class="carriers-tl-diff__new text-emerald-700 dark:text-emerald-400 font-mono font-bold text-[11px] ml-0.5">{{ det.newValue !== null ? det.newValue : 'null' }}</span>
                                   </div>
                                 }
                               </div>
                             }
 
-                            <div class="carriers-tl-node__meta">
-                              Ejecutado por <strong>&#64;{{ entry.username }}</strong> · {{ entry.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}
-                            </div>
+                            <span class="carriers-tl-node__meta flex items-center gap-1.5 mt-1">
+                              <span class="material-symbols-outlined text-[13px]">schedule</span>
+                              <span>{{ entry.createdAt | date:'dd/MM/yyyy, hh:mm:ss a' }}</span>
+                            </span>
                           </div>
                         </div>
                       }
