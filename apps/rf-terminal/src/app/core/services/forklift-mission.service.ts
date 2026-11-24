@@ -2512,7 +2512,6 @@ export class ForkliftMissionService {
 
     // 2. Disparar POST /api/v1/quality/blocks al backend central Spring Boot
     const blockPayload = {
-      itemId: this.isUuid(target.id) ? target.id : undefined,
       sscc: palletCode,
       stage: 'INBOUND_UNLOAD',
       defectCategory: defectCategory,

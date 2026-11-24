@@ -3,7 +3,7 @@
  * @description Shell Principal del Módulo de Calidad (QM) con Hero Header, Bento KPIs y Router Outlet.
  */
 
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { QualityStateService } from '../../services/quality-state.service';
@@ -16,9 +16,13 @@ import { SpecularGlowDirective } from '../../../../shared/directives/specular-gl
   templateUrl: './quality-shell.component.html',
   styleUrl: './quality-shell.component.css'
 })
-export class QualityShellComponent {
+export class QualityShellComponent implements OnInit {
   protected readonly qualityState = inject(QualityStateService);
   private readonly router = inject(Router);
+
+  ngOnInit(): void {
+    this.qualityState.loadInitialData();
+  }
 
   onRegisterNoConformity(): void {
     if (!this.router.url.includes('/quality/blocks')) {

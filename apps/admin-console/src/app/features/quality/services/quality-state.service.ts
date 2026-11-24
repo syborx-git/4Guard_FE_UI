@@ -53,39 +53,35 @@ export class QualityStateService {
     }
 
     this.qualityAdapter.getBlocks().subscribe({
-      next: (data) => {
-        if (data && data.length > 0) {
-          this.blocks.set(data);
-        }
-      },
-      error: (err) => console.debug('[QualityStateService] Info bloqueos:', err?.message || err)
+      next: (data) => this.blocks.set(data ?? []),
+      error: (err) => {
+        console.debug('[QualityStateService] Info bloqueos:', err?.message || err);
+        this.blocks.set([]);
+      }
     });
 
     this.qualityAdapter.getReleases().subscribe({
-      next: (data) => {
-        if (data && data.length > 0) {
-          this.releases.set(data);
-        }
-      },
-      error: (err) => console.debug('[QualityStateService] Info liberaciones:', err?.message || err)
+      next: (data) => this.releases.set(data ?? []),
+      error: (err) => {
+        console.debug('[QualityStateService] Info liberaciones:', err?.message || err);
+        this.releases.set([]);
+      }
     });
 
     this.qualityAdapter.getVerifications().subscribe({
-      next: (data) => {
-        if (data && data.length > 0) {
-          this.loadVerifications.set(data);
-        }
-      },
-      error: (err) => console.debug('[QualityStateService] Info verificaciones:', err?.message || err)
+      next: (data) => this.loadVerifications.set(data ?? []),
+      error: (err) => {
+        console.debug('[QualityStateService] Info verificaciones:', err?.message || err);
+        this.loadVerifications.set([]);
+      }
     });
 
     this.qualityAdapter.getClaims().subscribe({
-      next: (data) => {
-        if (data && data.length > 0) {
-          this.claims.set(data);
-        }
-      },
-      error: (err) => console.debug('[QualityStateService] Info reclamos:', err?.message || err)
+      next: (data) => this.claims.set(data ?? []),
+      error: (err) => {
+        console.debug('[QualityStateService] Info reclamos:', err?.message || err);
+        this.claims.set([]);
+      }
     });
   }
 
