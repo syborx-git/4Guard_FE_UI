@@ -63,6 +63,7 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
 
   protected readonly selectedRole = signal<Role | null>(null);
+  protected readonly isRoleDropdownOpen = signal<boolean>(false);
   protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
@@ -245,9 +246,21 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ─── Selector Bar Dropdown Popover ──────────────────────────────────────────
+
+  toggleRoleDropdown(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.isRoleDropdownOpen.update(v => !v);
+  }
+
+  closeRoleDropdown(): void {
+    this.isRoleDropdownOpen.set(false);
+  }
+
   // ─── Selección y Modos de Formulario ─────────────────────────────────────────
 
   protected selectRole(role: Role): void {
+    this.closeRoleDropdown();
     this.selectedRole.set(role);
     this.formMode.set('edit');
     this.populateForm(role);
@@ -258,6 +271,7 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
   }
 
   protected startNewRole(): void {
+    this.closeRoleDropdown();
     this.selectedRole.set(null);
     this.formMode.set('new');
     this.form.reset({

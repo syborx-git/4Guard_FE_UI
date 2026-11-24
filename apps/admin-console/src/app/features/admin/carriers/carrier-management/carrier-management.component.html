@@ -36,19 +36,6 @@
         </div>
       </div>
 
-      @if (canCreate()) {
-        <button
-          id="btn-new-carrier"
-          class="carriers-btn carriers-btn--primary"
-          type="button"
-          (click)="startNewCarrier()"
-          [disabled]="isSaving"
-          aria-label="Registrar nuevo transportista">
-          <span class="material-symbols-outlined">add</span>
-          Nuevo transportista
-        </button>
-      }
-
     </div>
 
     <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
@@ -176,10 +163,48 @@
        ════════════════════════════════════════════════════════════════ -->
   <div class="carriers-split" [class.carriers-split--form-open]="formMode() !== 'idle'">
 
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA — Directorio (35%)
-         ───────────────────────────────────────────────────────────── -->
-    <aside class="carriers-directory" aria-label="Directorio de transportistas">
+    <div class="wms-selector-bar">
+      <div class="wms-selector-dropdown-wrap">
+        <button
+          type="button"
+          class="wms-selector-btn"
+          (click)="toggleCarrierDropdown($event)"
+          [class.wms-selector-btn--open]="isCarrierDropdownOpen()"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="isCarrierDropdownOpen()"
+          aria-label="Abrir directorio desplegable de transportistas">
+          <div class="wms-selector-btn__avatar">
+            {{ selectedCarrier() ? getInitials(selectedCarrier()!) : '🚛' }}
+          </div>
+          <div class="wms-selector-btn__text">
+            <span class="wms-selector-btn__eyebrow">
+              {{ formMode() === 'new' ? 'Alta de Nuevo Transportista' : 'Transportista Seleccionado' }}
+            </span>
+            <span class="wms-selector-btn__title">
+              {{ selectedCarrier() ? (selectedCarrier()!.tradeName + ' (' + (selectedCarrier()!.rfc || 'S/RFC') + ')') : 'Directorio de Transportistas — Clic para seleccionar...' }}
+            </span>
+          </div>
+          <span class="material-symbols-outlined wms-selector-btn__chevron">
+            {{ isCarrierDropdownOpen() ? 'expand_less' : 'expand_more' }}
+          </span>
+        </button>
+
+        <!-- Panel Popover Flotante de Selección -->
+        @if (isCarrierDropdownOpen()) {
+          <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+            <div class="wms-dropdown-popover__header">
+              <div class="wms-dropdown-popover__title-box">
+                <span class="material-symbols-outlined text-amber-500">local_shipping</span>
+                <span>Directorio de Transportistas ({{ filteredCarriers().length }} registrados)</span>
+              </div>
+              <button type="button" class="wms-dropdown-popover__close" (click)="closeCarrierDropdown()" title="Cerrar selector">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <!-- Contenedor scrollable con el directorio completo -->
+            <div class="wms-dropdown-popover__scrollable">
+              <aside class="carriers-directory wms-directory--popover" aria-label="Directorio de transportistas">
 
       <!-- Buscador y filtros -->
       <div class="carriers-directory__filters">
@@ -365,11 +390,32 @@
       }
 
     </aside>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Botón de Acción Principal -->
+      <div class="flex items-center gap-2">
+        @if (canCreate()) {
+          <button
+            id="btn-new-carrier-bar"
+            class="carriers-btn carriers-btn--primary"
+            type="button"
+            (click)="startNewCarrier(); closeCarrierDropdown()"
+            [disabled]="isSaving"
+            aria-label="Registrar nuevo transportista">
+            <span class="material-symbols-outlined">add</span>
+            + Nuevo transportista
+          </button>
+        }
+      </div>
+    </div>
 
     <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA DERECHA — Detalle / Formulario (65%)
+         COLUMNA DERECHA — Detalle / Formulario Fullwidth
          ───────────────────────────────────────────────────────────── -->
-    <main class="carriers-detail" aria-label="Detalle del transportista">
+    <main class="carriers-detail wms-detail--fullwidth" aria-label="Detalle del transportista">
 
       <div class="carriers-form-container">
 

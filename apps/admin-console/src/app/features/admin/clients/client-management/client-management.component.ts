@@ -68,6 +68,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
 
   protected readonly selectedClient = signal<Client | null>(null);
+  protected readonly isClientDropdownOpen = signal<boolean>(false);
   protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
@@ -250,9 +251,21 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
     this.filterStatus.set('');
   }
 
+  // ─── Selector Bar Dropdown Popover ──────────────────────────────────────────
+
+  toggleClientDropdown(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.isClientDropdownOpen.update(v => !v);
+  }
+
+  closeClientDropdown(): void {
+    this.isClientDropdownOpen.set(false);
+  }
+
   // ─── Selección y Modos de Formulario ─────────────────────────────────────────
 
   protected selectClient(client: Client): void {
+    this.closeClientDropdown();
     this.selectedClient.set(client);
     this.formMode.set('edit');
     this.populateForm(client);
@@ -263,6 +276,7 @@ export class ClientManagementComponent implements OnInit, OnDestroy {
   }
 
   protected startNewClient(): void {
+    this.closeClientDropdown();
     this.selectedClient.set(null);
     this.formMode.set('new');
     const defaultOrg = this.availableOrganizations()[0]?.id || 'a53f0907-9fa5-4bdf-87db-2eb5e7683935';

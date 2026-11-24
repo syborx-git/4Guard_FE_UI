@@ -115,6 +115,16 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
   protected readonly showUnsavedDialog = signal<boolean>(false);
   protected readonly auditEntries = signal<SupplierAuditEntry[]>([]);
   protected readonly isLoadingAudit = signal<boolean>(false);
+  protected readonly isSupplierDropdownOpen = signal<boolean>(false);
+
+  protected toggleSupplierDropdown(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.isSupplierDropdownOpen.update((v) => !v);
+  }
+
+  protected closeSupplierDropdown(): void {
+    this.isSupplierDropdownOpen.set(false);
+  }
 
   private pendingSupplier: Supplier | null = null;
   private pendingAction: 'select' | 'new' | 'cancel' | null = null;
@@ -393,6 +403,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
 
   protected selectSupplier(supplier: Supplier): void {
     if (this.checkUnsavedChanges('select', supplier)) return;
+    this.closeSupplierDropdown();
     this.submitAttempted.set(false);
     this.backendError.set(null);
     this.saveSuccess.set(false);
@@ -430,6 +441,7 @@ export class SupplierManagementComponent implements OnInit, OnDestroy {
 
   protected startNewSupplier(): void {
     if (this.checkUnsavedChanges('new')) return;
+    this.closeSupplierDropdown();
     this.selectedSupplier.set(null);
     this.formMode.set('new');
     this.form.reset({

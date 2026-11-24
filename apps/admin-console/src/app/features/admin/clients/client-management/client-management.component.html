@@ -36,19 +36,6 @@
         </div>
       </div>
 
-      @if (canCreate()) {
-        <button
-          id="btn-new-client"
-          class="clients-btn clients-btn--primary"
-          type="button"
-          (click)="startNewClient()"
-          [disabled]="isSaving"
-          aria-label="Registrar nuevo cliente">
-          <span class="material-symbols-outlined">add</span>
-          Nuevo cliente
-        </button>
-      }
-
     </div>
 
     <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
@@ -176,10 +163,48 @@
        ════════════════════════════════════════════════════════════════ -->
   <div class="clients-split" [class.clients-split--form-open]="formMode() !== 'idle'">
 
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA — Directorio Master (35%)
-         ───────────────────────────────────────────────────────────── -->
-    <aside class="clients-directory" aria-label="Directorio de clientes">
+    <div class="wms-selector-bar">
+      <div class="wms-selector-dropdown-wrap">
+        <button
+          type="button"
+          class="wms-selector-btn"
+          (click)="toggleClientDropdown($event)"
+          [class.wms-selector-btn--open]="isClientDropdownOpen()"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="isClientDropdownOpen()"
+          aria-label="Abrir directorio desplegable de clientes">
+          <div class="wms-selector-btn__avatar">
+            {{ selectedClient() ? getInitials(selectedClient()!) : '🏢' }}
+          </div>
+          <div class="wms-selector-btn__text">
+            <span class="wms-selector-btn__eyebrow">
+              {{ formMode() === 'new' ? 'Alta de Nuevo Cliente' : 'Cliente Seleccionado' }}
+            </span>
+            <span class="wms-selector-btn__title">
+              {{ selectedClient() ? (selectedClient()!.name + ' (' + (selectedClient()!.externalId || 'S/C') + ')') : 'Directorio de Clientes — Clic para seleccionar...' }}
+            </span>
+          </div>
+          <span class="material-symbols-outlined wms-selector-btn__chevron">
+            {{ isClientDropdownOpen() ? 'expand_less' : 'expand_more' }}
+          </span>
+        </button>
+
+        <!-- Panel Popover Flotante de Selección -->
+        @if (isClientDropdownOpen()) {
+          <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+            <div class="wms-dropdown-popover__header">
+              <div class="wms-dropdown-popover__title-box">
+                <span class="material-symbols-outlined text-amber-500">partner_exchange</span>
+                <span>Directorio de Clientes ({{ filteredClients().length }} registrados)</span>
+              </div>
+              <button type="button" class="wms-dropdown-popover__close" (click)="closeClientDropdown()" title="Cerrar selector">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <!-- Contenedor scrollable con el directorio completo -->
+            <div class="wms-dropdown-popover__scrollable">
+              <aside class="clients-directory wms-directory--popover" aria-label="Directorio de clientes">
 
       <!-- Buscador y filtros -->
       <div class="clients-directory__filters">
@@ -338,11 +363,32 @@
       }
 
     </aside>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Botón de Acción Principal -->
+      <div class="flex items-center gap-2">
+        @if (canCreate()) {
+          <button
+            id="btn-new-client-bar"
+            class="clients-btn clients-btn--primary"
+            type="button"
+            (click)="startNewClient(); closeClientDropdown()"
+            [disabled]="isSaving"
+            aria-label="Registrar nuevo cliente">
+            <span class="material-symbols-outlined">add</span>
+            + Nuevo cliente
+          </button>
+        }
+      </div>
+    </div>
 
     <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA DERECHA — Detalle / Formulario (65%)
+         COLUMNA DERECHA — Detalle / Formulario Fullwidth
          ───────────────────────────────────────────────────────────── -->
-    <main class="clients-detail" aria-label="Detalle del cliente">
+    <main class="clients-detail wms-detail--fullwidth" aria-label="Detalle del cliente">
 
       <div class="clients-form-container">
 

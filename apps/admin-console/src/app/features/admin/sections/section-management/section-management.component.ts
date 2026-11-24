@@ -77,6 +77,7 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la vista ──────────────────────────────────────────────────────
 
   protected readonly selectedSection = signal<WarehouseSection | null>(null);
+  protected readonly isSectionDropdownOpen = signal<boolean>(false);
   protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
@@ -268,9 +269,21 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
     this.filterStatus.set('');
   }
 
+  // ─── Selector Bar Dropdown Popover ──────────────────────────────────────────
+
+  toggleSectionDropdown(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.isSectionDropdownOpen.update(v => !v);
+  }
+
+  closeSectionDropdown(): void {
+    this.isSectionDropdownOpen.set(false);
+  }
+
   // ─── Selección del directorio ─────────────────────────────────────────────────
 
   protected selectSection(section: WarehouseSection): void {
+    this.closeSectionDropdown();
     this.selectedSection.set(section);
     this.formMode.set('edit');
     this.populateForm(section);
@@ -281,6 +294,7 @@ export class SectionManagementComponent implements OnInit, OnDestroy {
   }
 
   protected startNewSection(): void {
+    this.closeSectionDropdown();
     const firstBranch = this.branchService.branches()[0];
     this.selectedSection.set(null);
     this.formMode.set('new');

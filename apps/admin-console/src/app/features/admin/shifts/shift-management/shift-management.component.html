@@ -19,16 +19,6 @@
         Gestión operativa de jornadas, horarios de almacén y disponibilidad temporal.
       </p>
     </div>
-
-    <div class="hero-header__actions">
-      @if (canCreateOrEdit()) {
-      <button type="button" class="shift-btn shift-btn--primary" (click)="onClickNewShift()"
-        [disabled]="formMode() === 'new' || isSubmitting()">
-        <span class="material-symbols-outlined">add</span>
-        <span>Nuevo Turno</span>
-      </button>
-      }
-    </div>
   </header>
 
   <!-- ==================== METRICAS SUPERIORES (KPIs) ==================== -->
@@ -197,10 +187,49 @@
 
   <!-- ==================== MASTER-DETAIL SPLIT VIEW (35/65) ==================== -->
   <div class="shift-split-view">
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA: DIRECTORIO DE TURNOS (35%)
-         ───────────────────────────────────────────────────────────── -->
-    <aside class="shift-directory">
+
+    <div class="wms-selector-bar">
+      <div class="wms-selector-dropdown-wrap">
+        <button
+          type="button"
+          class="wms-selector-btn"
+          (click)="toggleShiftDropdown($event)"
+          [class.wms-selector-btn--open]="isShiftDropdownOpen()"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="isShiftDropdownOpen()"
+          aria-label="Abrir directorio desplegable de turnos">
+          <div class="wms-selector-btn__avatar">
+            {{ shiftService.selectedShift() ? getShiftInitials(shiftService.selectedShift()!) : '⏰' }}
+          </div>
+          <div class="wms-selector-btn__text">
+            <span class="wms-selector-btn__eyebrow">
+              {{ formMode() === 'new' ? 'Alta de Nuevo Turno' : 'Turno Seleccionado' }}
+            </span>
+            <span class="wms-selector-btn__title">
+              {{ shiftService.selectedShift() ? (shiftService.selectedShift()!.name + ' (' + shiftService.selectedShift()!.code + ')') : 'Directorio de Turnos WMS — Clic para seleccionar...' }}
+            </span>
+          </div>
+          <span class="material-symbols-outlined wms-selector-btn__chevron">
+            {{ isShiftDropdownOpen() ? 'expand_less' : 'expand_more' }}
+          </span>
+        </button>
+
+        <!-- Panel Popover Flotante de Selección -->
+        @if (isShiftDropdownOpen()) {
+          <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+            <div class="wms-dropdown-popover__header">
+              <div class="wms-dropdown-popover__title-box">
+                <span class="material-symbols-outlined text-amber-500">schedule</span>
+                <span>Directorio de Turnos ({{ shiftService.filteredShifts().length }} registrados)</span>
+              </div>
+              <button type="button" class="wms-dropdown-popover__close" (click)="closeShiftDropdown()" title="Cerrar selector">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <!-- Contenedor scrollable con el directorio completo -->
+            <div class="wms-dropdown-popover__scrollable">
+              <aside class="shift-directory wms-directory--popover">
       <!-- Toolbar de Búsqueda y Filtros -->
       <div class="shift-directory__toolbar">
         <div class="shift-search-input-wrap">
@@ -322,11 +351,32 @@
           turnos</span>
       </footer>
     </aside>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Botón de Acción Principal -->
+      <div class="flex items-center gap-2">
+        @if (canCreateOrEdit()) {
+          <button
+            id="btn-new-shift-bar"
+            class="shift-btn shift-btn--primary"
+            type="button"
+            (click)="onClickNewShift(); closeShiftDropdown()"
+            [disabled]="formMode() === 'new' || isSubmitting()"
+            aria-label="Registrar nuevo turno">
+            <span class="material-symbols-outlined">add</span>
+            + Nuevo Turno
+          </button>
+        }
+      </div>
+    </div>
 
     <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA DERECHA: FORMULARIO REACTIVO DE TURNO (65%)
+         COLUMNA DERECHA: FORMULARIO REACTIVO DE TURNO FULLWIDTH
          ───────────────────────────────────────────────────────────── -->
-    <main class="shift-editor">
+    <main class="shift-editor wms-detail--fullwidth">
       <!-- Banner de Aviso para Rol de Solo Lectura (SHIFT_LEADER) -->
       @if (isShiftLeaderReadOnly()) {
       <div class="shift-banner shift-banner--info">

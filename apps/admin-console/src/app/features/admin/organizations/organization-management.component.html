@@ -31,14 +31,6 @@
         </div>
       </div>
 
-      <button
-        id="btn-new-org"
-        class="orgs-btn orgs-btn--primary"
-        type="button"
-        (click)="openNewForm()">
-        <span class="material-symbols-outlined">add</span>
-        Nueva organización
-      </button>
     </div>
 
     <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
@@ -166,10 +158,48 @@
        ════════════════════════════════════════════════════════════════ -->
   <div class="orgs-split">
 
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA: Directorio (35%)
-         ───────────────────────────────────────────────────────────── -->
-    <aside class="orgs-directory" aria-label="Directorio de organizaciones">
+    <div class="wms-selector-bar">
+      <div class="wms-selector-dropdown-wrap">
+        <button
+          type="button"
+          class="wms-selector-btn"
+          (click)="toggleOrgDropdown($event)"
+          [class.wms-selector-btn--open]="isOrgDropdownOpen()"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="isOrgDropdownOpen()"
+          aria-label="Abrir directorio desplegable de organizaciones">
+          <div class="wms-selector-btn__avatar">
+            {{ selectedOrg() ? selectedOrg()!.code.substring(0, 2).toUpperCase() : '🏛️' }}
+          </div>
+          <div class="wms-selector-btn__text">
+            <span class="wms-selector-btn__eyebrow">
+              {{ formMode() === 'new' ? 'Alta de Nueva Organización' : 'Organización Seleccionada' }}
+            </span>
+            <span class="wms-selector-btn__title">
+              {{ selectedOrg() ? (selectedOrg()!.name + ' (' + selectedOrg()!.code + ')') : 'Directorio de Organizaciones — Clic para seleccionar...' }}
+            </span>
+          </div>
+          <span class="material-symbols-outlined wms-selector-btn__chevron">
+            {{ isOrgDropdownOpen() ? 'expand_less' : 'expand_more' }}
+          </span>
+        </button>
+
+        <!-- Panel Popover Flotante de Selección -->
+        @if (isOrgDropdownOpen()) {
+          <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+            <div class="wms-dropdown-popover__header">
+              <div class="wms-dropdown-popover__title-box">
+                <span class="material-symbols-outlined text-amber-500">corporate_fare</span>
+                <span>Directorio de Organizaciones ({{ filteredOrganizations().length }} registradas)</span>
+              </div>
+              <button type="button" class="wms-dropdown-popover__close" (click)="closeOrgDropdown()" title="Cerrar selector">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <!-- Contenedor scrollable con el directorio completo -->
+            <div class="wms-dropdown-popover__scrollable">
+              <aside class="orgs-directory wms-directory--popover" aria-label="Directorio de organizaciones">
       
       <!-- Buscador y Filtros -->
       <div class="orgs-directory__header">
@@ -298,11 +328,29 @@
       </div>
 
     </aside>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Botón de Acción Principal -->
+      <div class="flex items-center gap-2">
+        <button
+          id="btn-new-org-bar"
+          class="orgs-btn orgs-btn--primary"
+          type="button"
+          (click)="openNewForm(); closeOrgDropdown()"
+          aria-label="Registrar nueva organización">
+          <span class="material-symbols-outlined">add</span>
+          + Nueva organización
+        </button>
+      </div>
+    </div>
 
     <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA DERECHA: Detalle / Formulario (65%)
+         COLUMNA DERECHA: Detalle / Formulario Fullwidth
          ───────────────────────────────────────────────────────────── -->
-    <main class="orgs-detail" aria-label="Detalle de la organización">
+    <main class="orgs-detail wms-detail--fullwidth" aria-label="Detalle de la organización">
 
       <!-- Formulario Activo Homologado -->
       <div class="orgs-form-wrap">

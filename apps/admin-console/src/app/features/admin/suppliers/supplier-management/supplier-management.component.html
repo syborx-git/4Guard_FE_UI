@@ -36,19 +36,6 @@
         </div>
       </div>
 
-      @if (canCreate()) {
-        <button
-          id="btn-new-supplier"
-          class="supplier-btn supplier-btn--primary"
-          type="button"
-          (click)="startNewSupplier()"
-          [disabled]="isSaving"
-          aria-label="Registrar nuevo proveedor">
-          <span class="material-symbols-outlined">add</span>
-          Nuevo proveedor
-        </button>
-      }
-
     </div>
 
     <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
@@ -172,14 +159,52 @@
   </header>
 
   <!-- ═══════════════════════════════════════════════════════════════════
-       SPLIT VIEW
+       BARRA DE SELECCIÓN FLOTANTE HOMOLOGADA (OPCIÓN A - FULLWIDTH)
        ════════════════════════════════════════════════════════════════ -->
   <div class="supplier-split" [class.supplier-split--form-open]="formMode() !== 'idle'">
 
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA — Directorio (35%)
-         ───────────────────────────────────────────────────────────── -->
-    <aside class="supplier-directory" aria-label="Directorio de proveedores">
+    <div class="wms-selector-bar">
+      <div class="wms-selector-dropdown-wrap">
+        <button
+          type="button"
+          class="wms-selector-btn"
+          (click)="toggleSupplierDropdown($event)"
+          [class.wms-selector-btn--open]="isSupplierDropdownOpen()"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="isSupplierDropdownOpen()"
+          aria-label="Abrir directorio desplegable de proveedores">
+          <div class="wms-selector-btn__avatar">
+            {{ selectedSupplier() ? getInitials(selectedSupplier()!) : '🏬' }}
+          </div>
+          <div class="wms-selector-btn__text">
+            <span class="wms-selector-btn__eyebrow">
+              {{ formMode() === 'new' ? 'Alta de Nuevo Proveedor' : 'Proveedor Seleccionado' }}
+            </span>
+            <span class="wms-selector-btn__title">
+              {{ selectedSupplier() ? ((selectedSupplier()!.commercialName || selectedSupplier()!.legalName) + ' (' + selectedSupplier()!.code + ')') : 'Directorio de Proveedores WMS — Clic para seleccionar...' }}
+            </span>
+          </div>
+          <span class="material-symbols-outlined wms-selector-btn__chevron">
+            {{ isSupplierDropdownOpen() ? 'expand_less' : 'expand_more' }}
+          </span>
+        </button>
+
+        <!-- Panel Popover Flotante de Selección -->
+        @if (isSupplierDropdownOpen()) {
+          <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+            <div class="wms-dropdown-popover__header">
+              <div class="wms-dropdown-popover__title-box">
+                <span class="material-symbols-outlined text-amber-500">storefront</span>
+                <span>Directorio de Proveedores ({{ filteredSuppliers().length }} registrados)</span>
+              </div>
+              <button type="button" class="wms-dropdown-popover__close" (click)="closeSupplierDropdown()" title="Cerrar selector">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <!-- Contenedor scrollable con el directorio completo -->
+            <div class="wms-dropdown-popover__scrollable">
+              <aside class="supplier-directory wms-directory--popover" aria-label="Directorio de proveedores">
 
       <!-- Buscador y filtros -->
       <div class="supplier-directory__filters">
@@ -377,11 +402,32 @@
         </ul>
       }
     </aside>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Botón de Acción Principal -->
+      <div class="flex items-center gap-2">
+        @if (canCreate()) {
+          <button
+            id="btn-new-supplier-bar"
+            class="users-btn users-btn--primary"
+            type="button"
+            (click)="startNewSupplier(); closeSupplierDropdown()"
+            [disabled]="isSaving"
+            aria-label="Registrar nuevo proveedor">
+            <span class="material-symbols-outlined">add</span>
+            + Nuevo proveedor
+          </button>
+        }
+      </div>
+    </div>
 
     <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA DERECHA — Formulario (65%)
+         FORMULARIO FULLWIDTH (HOMOLOGADO)
          ───────────────────────────────────────────────────────────── -->
-    <section class="supplier-detail" aria-label="Detalle del proveedor">
+    <section class="supplier-detail wms-detail--fullwidth" aria-label="Detalle del proveedor">
 
         <form [formGroup]="form" (ngSubmit)="saveSupplier()" class="supplier-form" autocomplete="off">
 

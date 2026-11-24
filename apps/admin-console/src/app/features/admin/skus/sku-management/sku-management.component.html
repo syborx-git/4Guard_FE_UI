@@ -37,19 +37,6 @@
         </div>
       </div>
 
-      @if (canCreate()) {
-        <button
-          id="btn-new-sku"
-          class="skus-btn skus-btn--primary"
-          type="button"
-          (click)="startNewSku()"
-          [disabled]="isSaving"
-          aria-label="Registrar nuevo producto / SKU">
-          <span class="material-symbols-outlined">add</span>
-          Nuevo SKU
-        </button>
-      }
-
     </div>
 
     <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
@@ -155,10 +142,48 @@
        ════════════════════════════════════════════════════════════════ -->
   <div class="skus-split" [class.skus-split--form-open]="formMode() !== 'idle'">
 
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA — Directorio (35%)
-         ───────────────────────────────────────────────────────────── -->
-    <aside class="skus-directory" aria-label="Directorio de SKUs">
+    <div class="wms-selector-bar">
+      <div class="wms-selector-dropdown-wrap">
+        <button
+          type="button"
+          class="wms-selector-btn"
+          (click)="toggleSkuDropdown($event)"
+          [class.wms-selector-btn--open]="isSkuDropdownOpen()"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="isSkuDropdownOpen()"
+          aria-label="Abrir directorio desplegable de productos">
+          <div class="wms-selector-btn__avatar">
+            {{ selectedSku() ? getInitials(selectedSku()!) : '📦' }}
+          </div>
+          <div class="wms-selector-btn__text">
+            <span class="wms-selector-btn__eyebrow">
+              {{ formMode() === 'new' ? 'Alta de Nuevo SKU' : 'SKU Seleccionado' }}
+            </span>
+            <span class="wms-selector-btn__title">
+              {{ selectedSku() ? (selectedSku()!.name + ' (' + selectedSku()!.code + ')') : 'Directorio de SKUs — Clic para seleccionar...' }}
+            </span>
+          </div>
+          <span class="material-symbols-outlined wms-selector-btn__chevron">
+            {{ isSkuDropdownOpen() ? 'expand_less' : 'expand_more' }}
+          </span>
+        </button>
+
+        <!-- Panel Popover Flotante de Selección -->
+        @if (isSkuDropdownOpen()) {
+          <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+            <div class="wms-dropdown-popover__header">
+              <div class="wms-dropdown-popover__title-box">
+                <span class="material-symbols-outlined text-amber-500">inventory_2</span>
+                <span>Directorio de SKUs ({{ filteredSkus().length }} registrados)</span>
+              </div>
+              <button type="button" class="wms-dropdown-popover__close" (click)="closeSkuDropdown()" title="Cerrar selector">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <!-- Contenedor scrollable con el directorio completo -->
+            <div class="wms-dropdown-popover__scrollable">
+              <aside class="skus-directory wms-directory--popover" aria-label="Directorio de SKUs">
 
       <!-- Buscador y filtros -->
       <div class="skus-directory__filters">
@@ -365,11 +390,32 @@
       }
 
     </aside>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Botón de Acción Principal -->
+      <div class="flex items-center gap-2">
+        @if (canCreate()) {
+          <button
+            id="btn-new-sku-bar"
+            class="skus-btn skus-btn--primary"
+            type="button"
+            (click)="startNewSku(); closeSkuDropdown()"
+            [disabled]="isSaving"
+            aria-label="Registrar nuevo producto / SKU">
+            <span class="material-symbols-outlined">add</span>
+            + Nuevo SKU
+          </button>
+        }
+      </div>
+    </div>
 
     <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA DERECHA — Detalle / Formulario (65%)
+         COLUMNA DERECHA — Detalle / Formulario Fullwidth
          ───────────────────────────────────────────────────────────── -->
-    <main class="skus-detail" aria-label="Detalle del producto">
+    <main class="skus-detail wms-detail--fullwidth" aria-label="Detalle del producto">
 
       <div class="skus-form-container">
 

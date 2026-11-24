@@ -61,6 +61,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
 
   protected readonly selectedSku = signal<ProductSku | null>(null);
+  protected readonly isSkuDropdownOpen = signal<boolean>(false);
   protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
@@ -261,9 +262,21 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ─── Selector Bar Dropdown Popover ──────────────────────────────────────────
+
+  toggleSkuDropdown(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.isSkuDropdownOpen.update(v => !v);
+  }
+
+  closeSkuDropdown(): void {
+    this.isSkuDropdownOpen.set(false);
+  }
+
   // ─── Selección y Modos de Formulario ─────────────────────────────────────────
 
   protected selectSku(sku: ProductSku): void {
+    this.closeSkuDropdown();
     this.selectedSku.set(sku);
     this.formMode.set('edit');
     this.populateForm(sku);
@@ -274,6 +287,7 @@ export class SkuManagementComponent implements OnInit, OnDestroy {
   }
 
   protected startNewSku(): void {
+    this.closeSkuDropdown();
     this.selectedSku.set(null);
     this.formMode.set('new');
     const defaultClient = this.availableClients()[0]?.id || '';

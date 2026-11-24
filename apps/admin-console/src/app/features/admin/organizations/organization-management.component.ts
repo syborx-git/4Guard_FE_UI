@@ -44,6 +44,7 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
 
   // ── Estado de la vista ───────────────────────────────────
   protected readonly selectedOrg = signal<Organization | null>(null);
+  protected readonly isOrgDropdownOpen = signal<boolean>(false);
   protected readonly formMode = signal<FormMode>('new');
   protected readonly submitAttempted = signal<boolean>(false);
   protected readonly saveSuccess = signal<boolean>(false);
@@ -183,7 +184,18 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
     this.filterType.set('');
   }
 
+  // ── Selector Bar Dropdown Popover ──────────────────────────
+  toggleOrgDropdown(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.isOrgDropdownOpen.update(v => !v);
+  }
+
+  closeOrgDropdown(): void {
+    this.isOrgDropdownOpen.set(false);
+  }
+
   protected selectOrg(org: Organization): void {
+    this.closeOrgDropdown();
     this.selectedOrg.set(org);
     this.formMode.set('edit');
     this.populateForm(org);
@@ -191,6 +203,7 @@ export class OrganizationManagementComponent implements OnInit, OnDestroy {
   }
 
   protected openNewForm(): void {
+    this.closeOrgDropdown();
     this.selectedOrg.set(null);
     this.formMode.set('new');
     this.submitAttempted.set(false);

@@ -36,19 +36,6 @@
         </div>
       </div>
 
-      @if (canCreate()) {
-        <button
-          id="btn-new-branch"
-          class="branches-btn branches-btn--primary"
-          type="button"
-          (click)="startNewBranch()"
-          [disabled]="isSaving"
-          aria-label="Registrar nueva sucursal">
-          <span class="material-symbols-outlined">add</span>
-          Nueva sucursal
-        </button>
-      }
-
     </div>
 
     <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
@@ -154,10 +141,48 @@
        ════════════════════════════════════════════════════════════════ -->
   <div class="branches-split" [class.branches-split--form-open]="formMode() !== 'idle'">
 
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA — Directorio (35%)
-         ───────────────────────────────────────────────────────────── -->
-    <aside class="branches-directory" aria-label="Directorio de sucursales">
+    <div class="wms-selector-bar">
+      <div class="wms-selector-dropdown-wrap">
+        <button
+          type="button"
+          class="wms-selector-btn"
+          (click)="toggleBranchDropdown($event)"
+          [class.wms-selector-btn--open]="isBranchDropdownOpen()"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="isBranchDropdownOpen()"
+          aria-label="Abrir directorio desplegable de sucursales">
+          <div class="wms-selector-btn__avatar">
+            {{ selectedBranch() ? getInitials(selectedBranch()!) : '🏢' }}
+          </div>
+          <div class="wms-selector-btn__text">
+            <span class="wms-selector-btn__eyebrow">
+              {{ formMode() === 'new' ? 'Alta de Nueva Sucursal' : 'Sucursal Seleccionada' }}
+            </span>
+            <span class="wms-selector-btn__title">
+              {{ selectedBranch() ? (selectedBranch()!.name + ' (' + selectedBranch()!.code + ')') : 'Directorio de Sucursales — Clic para seleccionar...' }}
+            </span>
+          </div>
+          <span class="material-symbols-outlined wms-selector-btn__chevron">
+            {{ isBranchDropdownOpen() ? 'expand_less' : 'expand_more' }}
+          </span>
+        </button>
+
+        <!-- Panel Popover Flotante de Selección -->
+        @if (isBranchDropdownOpen()) {
+          <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+            <div class="wms-dropdown-popover__header">
+              <div class="wms-dropdown-popover__title-box">
+                <span class="material-symbols-outlined text-amber-500">domain</span>
+                <span>Directorio de Sucursales ({{ filteredBranches().length }} registradas)</span>
+              </div>
+              <button type="button" class="wms-dropdown-popover__close" (click)="closeBranchDropdown()" title="Cerrar selector">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <!-- Contenedor scrollable con el directorio completo -->
+            <div class="wms-dropdown-popover__scrollable">
+              <aside class="branches-directory wms-directory--popover" aria-label="Directorio de sucursales">
 
       <!-- Buscador y filtros -->
       <div class="branches-directory__filters">
@@ -297,11 +322,32 @@
       }
 
     </aside>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Botón de Acción Principal -->
+      <div class="flex items-center gap-2">
+        @if (canCreate()) {
+          <button
+            id="btn-new-branch-bar"
+            class="branches-btn branches-btn--primary"
+            type="button"
+            (click)="startNewBranch(); closeBranchDropdown()"
+            [disabled]="isSaving"
+            aria-label="Registrar nueva sucursal">
+            <span class="material-symbols-outlined">add</span>
+            + Nueva sucursal
+          </button>
+        }
+      </div>
+    </div>
 
     <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA DERECHA — Detalle / Formulario (65%)
+         COLUMNA DERECHA — Detalle / Formulario Fullwidth
          ───────────────────────────────────────────────────────────── -->
-    <main class="branches-detail" aria-label="Detalle de la sucursal">
+    <main class="branches-detail wms-detail--fullwidth" aria-label="Detalle de la sucursal">
 
       <div class="branches-form-container">
 

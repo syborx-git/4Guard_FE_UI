@@ -114,6 +114,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   // ─── Estado de la vista ──────────────────────────────────────────────────────
 
   protected readonly selectedCarrier = signal<Carrier | null>(null);
+  protected readonly isCarrierDropdownOpen = signal<boolean>(false);
   protected readonly formMode = signal<FormMode>('new');
   protected readonly statusDialogMode = signal<StatusDialogMode>('none');
   protected readonly submitAttempted = signal<boolean>(false);
@@ -299,9 +300,21 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
     this.onFilterChange();
   }
 
+  // ─── Selector Bar Dropdown Popover ──────────────────────────────────────────
+
+  toggleCarrierDropdown(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.isCarrierDropdownOpen.update(v => !v);
+  }
+
+  closeCarrierDropdown(): void {
+    this.isCarrierDropdownOpen.set(false);
+  }
+
   // ─── Selección del directorio ─────────────────────────────────────────────────
 
   protected selectCarrier(carrier: Carrier): void {
+    this.closeCarrierDropdown();
     this.selectedCarrier.set(carrier);
     this.formMode.set('edit');
     this.populateForm(carrier);
@@ -326,6 +339,7 @@ export class CarrierManagementComponent implements OnInit, OnDestroy {
   }
 
   protected startNewCarrier(): void {
+    this.closeCarrierDropdown();
     this.selectedCarrier.set(null);
     this.formMode.set('new');
     this.form.reset({

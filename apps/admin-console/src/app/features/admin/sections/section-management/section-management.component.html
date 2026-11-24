@@ -37,17 +37,6 @@
         </div>
       </div>
 
-      <button
-        id="btn-new-section"
-        class="sections-btn sections-btn--primary"
-        type="button"
-        (click)="startNewSection()"
-        [disabled]="isSaving()"
-        aria-label="Registrar nueva sección">
-        <span class="material-symbols-outlined">add</span>
-        Nueva sección
-      </button>
-
     </div>
 
     <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
@@ -175,10 +164,48 @@
        ════════════════════════════════════════════════════════════════ -->
   <div class="sections-split" [class.sections-split--form-open]="formMode() !== 'idle'">
 
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA — Directorio (35%)
-         ───────────────────────────────────────────────────────────── -->
-    <aside class="sections-directory" aria-label="Directorio de secciones">
+    <div class="wms-selector-bar">
+      <div class="wms-selector-dropdown-wrap">
+        <button
+          type="button"
+          class="wms-selector-btn"
+          (click)="toggleSectionDropdown($event)"
+          [class.wms-selector-btn--open]="isSectionDropdownOpen()"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="isSectionDropdownOpen()"
+          aria-label="Abrir directorio desplegable de secciones">
+          <div class="wms-selector-btn__avatar">
+            {{ selectedSection() ? getInitials(selectedSection()!) : '🗄️' }}
+          </div>
+          <div class="wms-selector-btn__text">
+            <span class="wms-selector-btn__eyebrow">
+              {{ formMode() === 'new' ? 'Alta de Nueva Sección' : 'Sección Seleccionada' }}
+            </span>
+            <span class="wms-selector-btn__title">
+              {{ selectedSection() ? (selectedSection()!.name + ' (' + selectedSection()!.code + ')') : 'Directorio de Secciones — Clic para seleccionar...' }}
+            </span>
+          </div>
+          <span class="material-symbols-outlined wms-selector-btn__chevron">
+            {{ isSectionDropdownOpen() ? 'expand_less' : 'expand_more' }}
+          </span>
+        </button>
+
+        <!-- Panel Popover Flotante de Selección -->
+        @if (isSectionDropdownOpen()) {
+          <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+            <div class="wms-dropdown-popover__header">
+              <div class="wms-dropdown-popover__title-box">
+                <span class="material-symbols-outlined text-amber-500">grid_view</span>
+                <span>Directorio de Secciones ({{ filteredSections().length }} registradas)</span>
+              </div>
+              <button type="button" class="wms-dropdown-popover__close" (click)="closeSectionDropdown()" title="Cerrar selector">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <!-- Contenedor scrollable con el directorio completo -->
+            <div class="wms-dropdown-popover__scrollable">
+              <aside class="sections-directory wms-directory--popover" aria-label="Directorio de secciones">
 
       <!-- Buscador y filtros -->
       <div class="sections-directory__filters">
@@ -344,11 +371,30 @@
       }
 
     </aside>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Botón de Acción Principal -->
+      <div class="flex items-center gap-2">
+        <button
+          id="btn-new-section-bar"
+          class="sections-btn sections-btn--primary"
+          type="button"
+          (click)="startNewSection(); closeSectionDropdown()"
+          [disabled]="isSaving()"
+          aria-label="Registrar nueva sección">
+          <span class="material-symbols-outlined">add</span>
+          + Nueva sección
+        </button>
+      </div>
+    </div>
 
     <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA DERECHA — Detalle / Formulario (65%)
+         COLUMNA DERECHA — Detalle / Formulario Fullwidth
          ───────────────────────────────────────────────────────────── -->
-    <main class="sections-detail" aria-label="Detalle de la sección">
+    <main class="sections-detail wms-detail--fullwidth" aria-label="Detalle de la sección">
 
       <div class="sections-form-container">
 

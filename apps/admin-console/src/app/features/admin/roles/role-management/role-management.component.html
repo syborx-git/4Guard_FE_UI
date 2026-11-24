@@ -37,19 +37,6 @@
         </div>
       </div>
 
-      @if (canCreate()) {
-        <button
-          id="btn-new-role"
-          class="roles-btn roles-btn--primary"
-          type="button"
-          (click)="startNewRole()"
-          [disabled]="isSaving"
-          aria-label="Registrar nuevo rol de usuario">
-          <span class="material-symbols-outlined">add_moderator</span>
-          Nuevo Rol
-        </button>
-      }
-
     </div>
 
     <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
@@ -155,10 +142,48 @@
        ════════════════════════════════════════════════════════════════ -->
   <div class="roles-split" [class.roles-split--form-open]="formMode() !== 'idle'">
 
-    <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA IZQUIERDA — Directorio (35%)
-         ───────────────────────────────────────────────────────────── -->
-    <aside class="roles-directory" aria-label="Directorio de roles">
+    <div class="wms-selector-bar">
+      <div class="wms-selector-dropdown-wrap">
+        <button
+          type="button"
+          class="wms-selector-btn"
+          (click)="toggleRoleDropdown($event)"
+          [class.wms-selector-btn--open]="isRoleDropdownOpen()"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="isRoleDropdownOpen()"
+          aria-label="Abrir directorio desplegable de roles">
+          <div class="wms-selector-btn__avatar">
+            {{ selectedRole() ? getInitials(selectedRole()!) : '🛡️' }}
+          </div>
+          <div class="wms-selector-btn__text">
+            <span class="wms-selector-btn__eyebrow">
+              {{ formMode() === 'new' ? 'Alta de Nuevo Rol' : 'Rol Seleccionado' }}
+            </span>
+            <span class="wms-selector-btn__title">
+              {{ selectedRole() ? (selectedRole()!.name + ' (Nivel ' + selectedRole()!.level + ')') : 'Directorio de Roles — Clic para seleccionar...' }}
+            </span>
+          </div>
+          <span class="material-symbols-outlined wms-selector-btn__chevron">
+            {{ isRoleDropdownOpen() ? 'expand_less' : 'expand_more' }}
+          </span>
+        </button>
+
+        <!-- Panel Popover Flotante de Selección -->
+        @if (isRoleDropdownOpen()) {
+          <div class="wms-dropdown-popover shadow-2xl animate-fade-in" (click)="$event.stopPropagation()">
+            <div class="wms-dropdown-popover__header">
+              <div class="wms-dropdown-popover__title-box">
+                <span class="material-symbols-outlined text-amber-500">admin_panel_settings</span>
+                <span>Directorio de Roles ({{ filteredRoles().length }} registrados)</span>
+              </div>
+              <button type="button" class="wms-dropdown-popover__close" (click)="closeRoleDropdown()" title="Cerrar selector">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <!-- Contenedor scrollable con el directorio completo -->
+            <div class="wms-dropdown-popover__scrollable">
+              <aside class="roles-directory wms-directory--popover" aria-label="Directorio de roles">
 
       <!-- Buscador y filtros -->
       <div class="roles-directory__filters">
@@ -343,11 +368,32 @@
       }
 
     </aside>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Botón de Acción Principal -->
+      <div class="flex items-center gap-2">
+        @if (canCreate()) {
+          <button
+            id="btn-new-role-bar"
+            class="roles-btn roles-btn--primary"
+            type="button"
+            (click)="startNewRole(); closeRoleDropdown()"
+            [disabled]="isSaving"
+            aria-label="Registrar nuevo rol de usuario">
+            <span class="material-symbols-outlined">add_moderator</span>
+            + Nuevo Rol
+          </button>
+        }
+      </div>
+    </div>
 
     <!-- ─────────────────────────────────────────────────────────────
-         COLUMNA DERECHA — Detalle / Formulario y Matriz RBAC (65%)
+         COLUMNA DERECHA — Detalle / Formulario y Matriz RBAC Fullwidth
          ───────────────────────────────────────────────────────────── -->
-    <main class="roles-detail" aria-label="Detalle de rol y matriz de permisos">
+    <main class="roles-detail wms-detail--fullwidth" aria-label="Detalle de rol y matriz de permisos">
 
       <div class="roles-form-container">
 

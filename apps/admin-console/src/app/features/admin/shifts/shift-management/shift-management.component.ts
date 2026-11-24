@@ -375,6 +375,7 @@ export class ShiftManagementComponent implements OnInit, OnDestroy {
   ];
 
   // Estados locales con Signals
+  protected readonly isShiftDropdownOpen = signal<boolean>(false);
   protected readonly formMode = signal<FormMode>('new');
   protected readonly isSubmitting = signal<boolean>(false);
   protected readonly formError = signal<string | null>(null);
@@ -554,9 +555,21 @@ protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() =>
     return String(value);
   }
 
+  // ─── Selector Bar Dropdown Popover ──────────────────────────────────────────
+
+  toggleShiftDropdown(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.isShiftDropdownOpen.update(v => !v);
+  }
+
+  closeShiftDropdown(): void {
+    this.isShiftDropdownOpen.set(false);
+  }
+
   // ─── Gestión de Selección y Navegación ────────────────────────────────────
 
   protected onSelectShift(id: string): void {
+    this.closeShiftDropdown();
     if (this.shiftService.selectedShiftId() === id && this.formMode() === 'edit') {
       return;
     }
@@ -571,6 +584,7 @@ protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() =>
   }
 
   private forceSelectShift(id: string): void {
+    this.closeShiftDropdown();
     this.shiftService.selectShift(id);
     const selected = this.shiftService.selectedShift();
     if (selected) {
@@ -583,6 +597,7 @@ protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() =>
   }
 
   protected onClickNewShift(): void {
+    this.closeShiftDropdown();
     if (this.isShiftLeaderReadOnly()) return;
 
     if (this.shiftForm.dirty) {
@@ -595,6 +610,7 @@ protected readonly calculatedDuration = computed<ShiftDurationCalculation>(() =>
   }
 
   private forceStartNewShift(): void {
+    this.closeShiftDropdown();
     this.shiftService.selectShift(null);
     this.resetFormForNew();
     this.auditLogs.set([]);
