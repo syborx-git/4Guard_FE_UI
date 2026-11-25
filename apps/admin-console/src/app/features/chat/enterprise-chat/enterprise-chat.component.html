@@ -88,7 +88,8 @@
       </div>
 
       @for (group of groupedSpaces(); track group.category) {
-      <div class="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-[#c5a86b]/85 flex items-center justify-between">
+      <div
+        class="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-[#c5a86b]/85 flex items-center justify-between">
         <span class="truncate">{{ group.category }}</span>
         <span class="opacity-70">{{ group.items.length }}</span>
       </div>
@@ -130,9 +131,7 @@
         [class.ec-conv-item--active]="chatService.activeConversationId() === dm.id" (click)="onSelectConversation(dm)">
         <span class="ec-conv-avatar">
           {{ dm.name.substring(0, 2).toUpperCase() }}
-          <span
-            class="ec-presence-dot"
-            [class.ec-presence-dot--online]="isConversationOnline(dm)"
+          <span class="ec-presence-dot" [class.ec-presence-dot--online]="isConversationOnline(dm)"
             [class.ec-presence-dot--offline]="!isConversationOnline(dm)"
             [title]="isConversationOnline(dm) ? 'En línea' : 'Desconectado'"></span>
         </span>
@@ -161,11 +160,8 @@
       <button type="button" class="ec-conv-item ec-conv-item--user" (click)="onStartDm(u.id)">
         <span class="ec-conv-avatar ec-conv-avatar--sm">
           {{ u.fullName.substring(0, 2).toUpperCase() }}
-          <span
-            class="ec-presence-dot"
-            [class.ec-presence-dot--online]="u.online"
-            [class.ec-presence-dot--offline]="!u.online"
-            [title]="u.online ? 'En línea' : 'Desconectado'"></span>
+          <span class="ec-presence-dot" [class.ec-presence-dot--online]="u.online"
+            [class.ec-presence-dot--offline]="!u.online" [title]="u.online ? 'En línea' : 'Desconectado'"></span>
         </span>
         <div class="ec-conv-info">
           <span class="ec-conv-name">{{ u.fullName }}</span>
@@ -204,15 +200,18 @@
           <h3 class="ec-thread-title">{{ conv.name }}</h3>
           <span class="ec-thread-sub">
             @if (conv.type === 'SPACE') {
-              @if (conv.category) {
-              <span class="inline-block mr-1.5 px-1.5 py-0.5 rounded bg-[#c5a86b]/15 text-[#c5a86b] text-[10px] font-semibold">{{ conv.category }}</span>
-              }
-              {{ conv.participants.length }} miembros
+            @if (conv.category) {
+            <span
+              class="inline-block mr-1.5 px-1.5 py-0.5 rounded bg-[#c5a86b]/15 text-[#c5a86b] text-[10px] font-semibold">{{
+              conv.category }}</span>
+            }
+            {{ conv.participants.length }} miembros
             } @else {
-              <span class="inline-flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="isConversationOnline(conv)" [class.bg-slate-400]="!isConversationOnline(conv)"></span>
-                {{ isConversationOnline(conv) ? 'En línea' : 'Desconectado' }}
-              </span>
+            <span class="inline-flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="isConversationOnline(conv)"
+                [class.bg-slate-400]="!isConversationOnline(conv)"></span>
+              {{ isConversationOnline(conv) ? 'En línea' : 'Desconectado' }}
+            </span>
             }
           </span>
         </div>
@@ -470,8 +469,8 @@
         [ngModel]="newSpaceName()" (ngModelChange)="newSpaceName.set($event)" />
 
       <input type="text" class="ec-search-input mb-2" list="ec-space-categories"
-        placeholder="Clasificación / Carpeta libre (ej. Caseta, Turno B, Dirección)"
-        [ngModel]="newSpaceCategory()" (ngModelChange)="newSpaceCategory.set($event)" />
+        placeholder="Clasificación / Carpeta libre (ej. Caseta, Turno B, Dirección)" [ngModel]="newSpaceCategory()"
+        (ngModelChange)="newSpaceCategory.set($event)" />
       <datalist id="ec-space-categories">
         @for (cat of existingSpaceCategories(); track cat) {
         <option [value]="cat"></option>
@@ -483,8 +482,7 @@
         @for (cat of existingSpaceCategories(); track cat) {
         <button type="button"
           class="px-2 py-0.5 rounded-full text-[11px] border border-[#c5a86b]/35 hover:bg-[#c5a86b]/20 transition-colors"
-          [ngClass]="{ 'bg-[#c5a86b]/25': newSpaceCategory().trim() === cat }"
-          (click)="newSpaceCategory.set(cat)">
+          [ngClass]="{ 'bg-[#c5a86b]/25': newSpaceCategory().trim() === cat }" (click)="newSpaceCategory.set(cat)">
           {{ cat }}
         </button>
         }
@@ -532,8 +530,7 @@
       <div class="max-h-56 overflow-y-auto rounded-lg border border-white/10 divide-y divide-white/5 mb-3">
         @for (u of manageMemberCandidates(); track u.id) {
         <label class="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-white/5">
-          <input type="checkbox" [checked]="manageMemberIds().includes(u.id)"
-            (change)="toggleManageMember(u.id)" />
+          <input type="checkbox" [checked]="manageMemberIds().includes(u.id)" (change)="toggleManageMember(u.id)" />
           <span class="font-medium truncate flex-1">{{ u.fullName }}</span>
           <span class="opacity-60 text-[10px] truncate">{{ u.roleName }}</span>
         </label>
@@ -594,7 +591,8 @@
   <!-- MODAL DE CÁMARA EN VIVO (WebRTC + Fallback Móvil) -->
   @if (isCameraModalOpen()) {
   <div class="ec-modal-backdrop" (click)="closeCameraModal()">
-    <div class="ec-preview-modal" style="max-width: 640px; height: auto; max-height: 88vh;" (click)="$event.stopPropagation()">
+    <div class="ec-preview-modal" style="max-width: 640px; height: auto; max-height: 88vh;"
+      (click)="$event.stopPropagation()">
       <header class="ec-preview-modal__header">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-[#c5a86b]">photo_camera</span>
