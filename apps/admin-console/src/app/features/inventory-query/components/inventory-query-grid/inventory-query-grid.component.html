@@ -325,9 +325,16 @@
                 />
               </td>
 
-              <!-- NO. (#) -->
+              <!-- NO. (#) & CÓDIGO UA / SSCC -->
               <td class="iq-cell-id">
-                #{{ rec.id }}
+                <div class="flex flex-col">
+                  <span class="font-bold text-amber-400">#{{ rec.id }}</span>
+                  @if (rec.ssccBarcode && !rec.ssccBarcode.startsWith('PAL-')) {
+                    <span class="font-mono text-[10px] text-slate-400 tracking-tight" [title]="'Código UA (SSCC): ' + rec.ssccBarcode">
+                      {{ rec.ssccBarcode }}
+                    </span>
+                  }
+                </div>
               </td>
 
               <!-- FECHA INGRESO -->

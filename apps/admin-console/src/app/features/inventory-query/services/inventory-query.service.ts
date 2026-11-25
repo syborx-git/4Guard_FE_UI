@@ -35,10 +35,11 @@ export class InventoryQueryService {
   constructor() {
     this.refreshInventory();
 
-    // Sincronización reactiva con las recepciones de almacén y los lotes consolidados de inventario
+    // Sincronización reactiva con las recepciones de almacén, lotes y transferencias
     effect(() => {
       const _recs = this.movementsService.receptions();
       const _batches = this.movementsService.inventoryBatches();
+      const _transfers = this.movementsService.transfers();
       this.refreshInventory();
     }, { allowSignalWrites: true });
 
@@ -49,13 +50,17 @@ export class InventoryQueryService {
     if (this.movementsService.inventoryBatches().length === 0) {
       this.movementsService.reloadInventoryBatches();
     }
+    if (this.movementsService.transfers().length === 0) {
+      this.movementsService.reloadTransfers();
+    }
 
     if (typeof window !== 'undefined') {
       window.addEventListener('storage', (e) => {
         if (
           e.key === '4guard_receptions_cache' ||
           e.key === '4guard_simulated_positions' ||
-          e.key === '4guard_inventory_batches_cache'
+          e.key === '4guard_inventory_batches_cache' ||
+          e.key === '4g_active_transfer_folio'
         ) {
           this.refreshInventory();
         }
@@ -73,6 +78,7 @@ export class InventoryQueryService {
   public forceBackendReload(): void {
     this.movementsService.reloadReceptions();
     this.movementsService.reloadInventoryBatches();
+    this.movementsService.reloadTransfers();
   }
 
   /**
@@ -316,10 +322,27 @@ export class InventoryQueryService {
   private buildRealInventory(): InventoryRecord[] {
     const receptions = this.movementsService.receptions() || [];
     const batches = this.movementsService.inventoryBatches() || [];
+    const transfers = this.movementsService.transfers() || [];
     const today = new Date();
     const records: InventoryRecord[] = [];
     const seenBarcodes = new Set<string>();
-    let counter = 500000;
+    let counter = 0;
+
+    // Mapa de reubicaciones confirmadas (Cambios de Almacén)
+    const transferMap = new Map<string, { destination: string; folio: string; timestamp: string }>();
+    for (const tr of transfers) {
+      if (tr.status === 'CANCELLED') continue;
+      const dest = tr.destinationLocation;
+      if (!dest) continue;
+      for (const p of tr.pallets || []) {
+        const k1 = (p.palletCode || '').toUpperCase().trim();
+        const k2 = (p.palletNumber ? `PAL-${p.palletNumber}` : '').toUpperCase().trim();
+        const k3 = ((p as any).sscc || '').toUpperCase().trim();
+        if (k1) transferMap.set(k1, { destination: dest, folio: tr.folio, timestamp: tr.completedAt || tr.timestamp || '' });
+        if (k2) transferMap.set(k2, { destination: dest, folio: tr.folio, timestamp: tr.completedAt || tr.timestamp || '' });
+        if (k3) transferMap.set(k3, { destination: dest, folio: tr.folio, timestamp: tr.completedAt || tr.timestamp || '' });
+      }
+    }
 
     // 1. Procesar Lotes Consolidados de Stock Backend (PostgreSQL / Spring Boot)
     for (const b of batches) {
@@ -335,8 +358,9 @@ export class InventoryQueryService {
           if (barcode) seenBarcodes.add(barcode.toUpperCase());
 
           counter++;
+          const palletId = p.palletNumber || counter;
           const expDate = p.expirationDate || b.expirationDate || '';
-          let remainingDays = 180;
+          let remainingDays = 0;
           let expStatus: 'EN_TIEMPO' | 'PROXIMO_30_DIAS' | 'CADUCO' = 'EN_TIEMPO';
 
           if (expDate) {
@@ -351,27 +375,37 @@ export class InventoryQueryService {
             }
           }
 
-          const loc = p.locationCode || b.locationCode || 'STAGING-01';
+          let loc = p.locationCode || b.locationCode || 'STAGING-01';
+          const barcodeUpper = (barcode || '').toUpperCase().trim();
+          const pNumKey = p.palletNumber ? `PAL-${p.palletNumber}` : '';
+          if (barcodeUpper && transferMap.has(barcodeUpper)) {
+            loc = transferMap.get(barcodeUpper)!.destination;
+          } else if (pNumKey && transferMap.has(pNumKey)) {
+            loc = transferMap.get(pNumKey)!.destination;
+          }
+
           const warehouse = this.resolveWarehouseFromLocation(loc);
+          const elabDate = (p as any).elaborationDate || b.elaborationDate || bEntryDate;
+          const usefulLifeDays = expDate && elabDate ? Math.max(0, Math.round((new Date(expDate).getTime() - new Date(elabDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
 
           records.push({
-            id: counter,
+            id: palletId,
             entryDate: bEntryDate,
-            elaborationDate: (p as any).elaborationDate || b.elaborationDate || bEntryDate,
-            expirationDate: expDate,
-            usefulLifeDays: 365,
+            elaborationDate: elabDate,
+            expirationDate: expDate || 'N/A',
+            usefulLifeDays,
             remision: p.docNumber || b.remisionNo || 'REM-S/N',
             manufacturerBatch: p.lotNumber || b.lotNumber || 'S/L',
-            ssccBarcode: barcode || `UA-${counter}`,
+            ssccBarcode: barcode || `UA-${palletId}`,
             sku: p.productId || b.productId || 'SKU-GEN',
             productDescription: p.description || b.productName || 'Mercancía en Almacén',
-            receptionFolio: b.remisionNo || `REC-${counter}`,
+            receptionFolio: b.remisionNo || `REC-${palletId}`,
             measuredQuantity: p.pieces || 0,
             palletsCount: 1.0,
             stayDays: bStayDays,
             warehouse,
             location: loc,
-            entryNumber: `STK-${counter}`,
+            entryNumber: `STK-${palletId}`,
             palletType: ((p.palletTypeLabel || 'MADERA ESTANDAR').toUpperCase()) as PalletType,
             labeledStatus: 'ETIQUETADO',
             supplier: bSupplier,
@@ -381,10 +415,10 @@ export class InventoryQueryService {
           });
         }
       } else if (b.availablePallets && b.availablePallets > 0) {
-        // Lote sin detalle individual de pallets (registro consolidado)
         counter++;
+        const palletId = counter;
         const expDate = b.expirationDate || '';
-        let remainingDays = 180;
+        let remainingDays = 0;
         let expStatus: 'EN_TIEMPO' | 'PROXIMO_30_DIAS' | 'CADUCO' = 'EN_TIEMPO';
 
         if (expDate) {
@@ -401,25 +435,27 @@ export class InventoryQueryService {
 
         const loc = b.locationCode || 'STAGING-01';
         const warehouse = this.resolveWarehouseFromLocation(loc);
+        const elabDate = b.elaborationDate || bEntryDate;
+        const usefulLifeDays = expDate && elabDate ? Math.max(0, Math.round((new Date(expDate).getTime() - new Date(elabDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
 
         records.push({
-          id: counter,
+          id: palletId,
           entryDate: bEntryDate,
-          elaborationDate: b.elaborationDate || bEntryDate,
-          expirationDate: expDate,
-          usefulLifeDays: 365,
+          elaborationDate: elabDate,
+          expirationDate: expDate || 'N/A',
+          usefulLifeDays,
           remision: b.remisionNo || 'REM-S/N',
           manufacturerBatch: b.lotNumber || 'S/L',
-          ssccBarcode: `LOTE-${b.lotNumber || counter}`,
+          ssccBarcode: `LOTE-${b.lotNumber || palletId}`,
           sku: b.productId || 'SKU-GEN',
           productDescription: b.productName || 'Mercancía en Almacén',
-          receptionFolio: b.remisionNo || `REC-${counter}`,
+          receptionFolio: b.remisionNo || `REC-${palletId}`,
           measuredQuantity: b.totalPieces || 0,
           palletsCount: b.availablePallets,
           stayDays: bStayDays,
           warehouse,
           location: loc,
-          entryNumber: `STK-${counter}`,
+          entryNumber: `STK-${palletId}`,
           palletType: 'MADERA ESTANDAR',
           labeledStatus: 'ETIQUETADO',
           supplier: bSupplier,
@@ -442,13 +478,14 @@ export class InventoryQueryService {
 
       for (let i = 0; i < pallets.length; i++) {
         const p = pallets[i];
-        const barcode = p.palletCode || (p.palletNumber ? `PAL-${p.palletNumber}` : '');
+        const barcode = p.palletCode || (p as any).sscc || (p.palletNumber ? `PAL-${p.palletNumber}` : '');
         if (barcode && seenBarcodes.has(barcode.toUpperCase())) continue;
         if (barcode) seenBarcodes.add(barcode.toUpperCase());
 
         counter++;
+        const palletId = p.palletNumber || counter;
         const expDate = p.expirationDate || rec.expirationDate || '';
-        let remainingDays = 180;
+        let remainingDays = 0;
         let expStatus: 'EN_TIEMPO' | 'PROXIMO_30_DIAS' | 'CADUCO' = 'EN_TIEMPO';
 
         if (expDate) {
@@ -463,18 +500,28 @@ export class InventoryQueryService {
           }
         }
 
-        const loc = p.locationCode || rec.storageLocation || rec.storageLocationCode || 'STAGING-01';
+        let loc = p.locationCode || rec.storageLocation || rec.storageLocationCode || 'STAGING-01';
+        const barcodeUpper = (barcode || '').toUpperCase().trim();
+        const pNumKey = p.palletNumber ? `PAL-${p.palletNumber}` : '';
+        if (barcodeUpper && transferMap.has(barcodeUpper)) {
+          loc = transferMap.get(barcodeUpper)!.destination;
+        } else if (pNumKey && transferMap.has(pNumKey)) {
+          loc = transferMap.get(pNumKey)!.destination;
+        }
+
         const warehouse = this.resolveWarehouseFromLocation(loc);
+        const elabDate = (p as any).elaborationDate || rec.elaborationDate || entryDate;
+        const usefulLifeDays = expDate && elabDate ? Math.max(0, Math.round((new Date(expDate).getTime() - new Date(elabDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
 
         records.push({
-          id: counter,
+          id: palletId,
           entryDate,
-          elaborationDate: (p as any).elaborationDate || rec.elaborationDate || entryDate,
-          expirationDate: expDate,
-          usefulLifeDays: 365,
+          elaborationDate: elabDate,
+          expirationDate: expDate || 'N/A',
+          usefulLifeDays,
           remision: rec.checkIn?.docNumber || rec.folio,
           manufacturerBatch: p.lotNumber || rec.lotNumber || 'S/L',
-          ssccBarcode: p.palletCode || `PAL-${counter}`,
+          ssccBarcode: p.palletCode || (p as any).sscc || `UA-${palletId}`,
           sku: p.productId || rec.productId || rec.skuCode || 'SKU-GEN',
           productDescription: p.description || rec.productName || 'Mercancía en Almacén',
           receptionFolio: rec.folio,
@@ -489,6 +536,67 @@ export class InventoryQueryService {
           supplier: p.supplierName || recSupplier,
           remainingLifeDays: remainingDays,
           client: recClient,
+          expirationStatus: expStatus
+        });
+      }
+    }
+
+    // 3. Procesar Tarimas de Traspasos que no hayan sido agregadas previamente
+    for (const tr of transfers) {
+      if (tr.status === 'CANCELLED') continue;
+      const trPallets = tr.pallets || [];
+      const trDate = tr.completedAt?.slice(0, 10) || tr.timestamp?.slice(0, 10) || today.toISOString().slice(0, 10);
+      const trStay = Math.max(0, Math.floor((today.getTime() - new Date(trDate).getTime()) / (1000 * 60 * 60 * 24)));
+      const trDest = tr.destinationLocation || 'Almacén L';
+      const trWh = this.resolveWarehouseFromLocation(trDest);
+
+      for (let i = 0; i < trPallets.length; i++) {
+        const p = trPallets[i];
+        const barcode = p.palletCode || (p as any).sscc || (p.palletNumber ? `PAL-${p.palletNumber}` : '');
+        if (barcode && seenBarcodes.has(barcode.toUpperCase())) continue;
+        if (barcode) seenBarcodes.add(barcode.toUpperCase());
+
+        counter++;
+        const palletId = p.palletNumber || counter;
+        const expDate = p.expirationDate || '';
+        let remainingDays = 0;
+        let expStatus: 'EN_TIEMPO' | 'PROXIMO_30_DIAS' | 'CADUCO' = 'EN_TIEMPO';
+
+        if (expDate) {
+          const expTime = new Date(expDate).getTime();
+          remainingDays = Math.ceil((expTime - today.getTime()) / (1000 * 60 * 60 * 24));
+          if (remainingDays <= 0) {
+            expStatus = 'CADUCO';
+          } else if (remainingDays <= 30) {
+            expStatus = 'PROXIMO_30_DIAS';
+          } else {
+            expStatus = 'EN_TIEMPO';
+          }
+        }
+
+        records.push({
+          id: palletId,
+          entryDate: trDate,
+          elaborationDate: (p as any).elaborationDate || trDate,
+          expirationDate: expDate || 'N/A',
+          usefulLifeDays: 0,
+          remision: p.docNumber || tr.folio || 'CAM-TR',
+          manufacturerBatch: p.lotNumber || (p as any).batchNumber || 'S/L',
+          ssccBarcode: p.palletCode || (p as any).sscc || `UA-${palletId}`,
+          sku: p.productId || (p as any).skuCode || (p as any).sku || '104834816',
+          productDescription: p.description || (p as any).productDescription || (p as any).productName || 'Mercancía Reubicada',
+          receptionFolio: tr.folio,
+          measuredQuantity: p.pieces || 20.41,
+          palletsCount: 1.0,
+          stayDays: trStay,
+          warehouse: trWh,
+          location: trDest,
+          entryNumber: `TR-${tr.folio}`,
+          palletType: ((p.palletTypeLabel || 'MADERA ESTANDAR').toUpperCase()) as PalletType,
+          labeledStatus: 'ETIQUETADO',
+          supplier: p.supplierName || 'Proveedor General',
+          remainingLifeDays: remainingDays,
+          client: (p as any).clientName || 'Cliente General',
           expirationStatus: expStatus
         });
       }
