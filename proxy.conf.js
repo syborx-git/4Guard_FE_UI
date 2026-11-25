@@ -115,8 +115,8 @@ function handleSharedBridge(req, res) {
     return true;
   }
 
-  // 0. AUTH LOGIN INTERCEPTOR (Garantiza login instantáneo en Dev / Tablet)
-  if (req.method === 'POST' && (cleanUrl.endsWith('/auth/login') || cleanUrl.includes('/auth/login'))) {
+  // 0. AUTH LOGIN INTERCEPTOR (Solo si MOCK_AUTH=true; por defecto pasa al backend real :8080)
+  if (process.env.MOCK_AUTH === 'true' && req.method === 'POST' && (cleanUrl.endsWith('/auth/login') || cleanUrl.includes('/auth/login'))) {
     readBody(req, (body) => {
           try {
             const data = JSON.parse(body || '{}');
@@ -201,8 +201,8 @@ function handleSharedBridge(req, res) {
         return true;
       }
 
-      // 0.1 AUTH REFRESH INTERCEPTOR
-      if (req.method === 'POST' && (cleanUrl.endsWith('/auth/refresh') || cleanUrl.includes('/auth/refresh'))) {
+      // 0.1 AUTH REFRESH INTERCEPTOR (Solo si MOCK_AUTH=true)
+      if (process.env.MOCK_AUTH === 'true' && req.method === 'POST' && (cleanUrl.endsWith('/auth/refresh') || cleanUrl.includes('/auth/refresh'))) {
         const nowSec = Math.floor(Date.now() / 1000);
         const expSec = nowSec + (30 * 24 * 3600);
         const headerB64 = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -233,8 +233,8 @@ function handleSharedBridge(req, res) {
         return true;
       }
 
-      // 0.2 AUTH LOGOUT INTERCEPTOR
-      if (req.method === 'POST' && (cleanUrl.endsWith('/auth/logout') || cleanUrl.includes('/auth/logout'))) {
+      // 0.2 AUTH LOGOUT INTERCEPTOR (Solo si MOCK_AUTH=true)
+      if (process.env.MOCK_AUTH === 'true' && req.method === 'POST' && (cleanUrl.endsWith('/auth/logout') || cleanUrl.includes('/auth/logout'))) {
         sendJson(res, 200, { success: true, message: 'Sesión cerrada exitosamente' });
         return true;
       }
