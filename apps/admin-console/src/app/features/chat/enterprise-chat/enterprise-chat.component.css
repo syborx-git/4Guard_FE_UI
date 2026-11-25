@@ -71,21 +71,22 @@
 
 .ec-search-icon {
   position: absolute;
-  left: 1.55rem;
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   color: var(--text-muted, #8b94a3);
+  pointer-events: none;
 }
 
 .ec-search-input {
   width: 100%;
-  padding: 0.5rem 0.75rem 0.5rem 2.1rem;
+  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
   border-radius: 10px;
   border: 1px solid var(--border-card, rgba(76, 86, 105, 0.15));
   background: var(--bg-page, #f8fafc);
   color: var(--text-primary, #1c2940);
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   outline: none;
 }
 
@@ -844,4 +845,52 @@
 
 .ec-tip-pill strong {
   color: var(--text-gold, #9b7626);
+}
+
+/* ── AJUSTES DE ALINEACIÓN HEADER, CHIPS EN 1 FILA Y RESPONSIVE ── */
+.ec-brand {
+  min-width: 0;
+  flex: 1;
+}
+
+.ec-brand__title {
+  white-space: nowrap;
+  font-size: 0.96rem;
+}
+
+.ec-brand__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+  min-width: 0;
+}
+
+.ec-online-pill {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ec-filter-chips {
+  gap: 0.25rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ec-filter-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.ec-filter-chip {
+  white-space: nowrap;
+  padding: 0.22rem 0.52rem;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 640px) {
+  .ec-shell--drawer .ec-sidebar {
+    width: 100%;
+    min-width: 100%;
+  }
 }

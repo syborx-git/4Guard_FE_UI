@@ -103,6 +103,35 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly syncState = inject(SyncState);
   protected readonly forbotEngine = inject(ForbotEngineService);
   protected readonly chatService = inject(ChatService);
+
+  protected readonly chatDrawerWidth = signal<number>(840);
+  protected readonly isChatDrawerExpanded = signal<boolean>(false);
+
+  protected toggleChatDrawerExpand(): void {
+    this.isChatDrawerExpanded.update((v) => !v);
+  }
+
+  protected onStartChatResize(event: MouseEvent): void {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = this.chatDrawerWidth();
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = startX - moveEvent.clientX;
+      const maxW = Math.max(520, window.innerWidth - 32);
+      const next = Math.min(maxW, Math.max(420, startWidth + delta));
+      this.isChatDrawerExpanded.set(false);
+      this.chatDrawerWidth.set(next);
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }
   protected readonly smartNotification = inject(SmartNotificationService);
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly usersService = inject(UsersService);

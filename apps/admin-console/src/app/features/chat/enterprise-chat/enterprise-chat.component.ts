@@ -25,7 +25,9 @@ import { ChatMessage, ConversationSummary } from '../chat.models';
 })
 export class EnterpriseChatComponent implements OnInit {
   @Input() mode: 'fullscreen' | 'drawer' = 'fullscreen';
+  @Input() isExpanded = false;
   @Output() closeRequested = new EventEmitter<void>();
+  @Output() toggleExpandRequested = new EventEmitter<void>();
 
   protected readonly chatService = inject(ChatService);
   protected readonly authState = inject(AuthState);

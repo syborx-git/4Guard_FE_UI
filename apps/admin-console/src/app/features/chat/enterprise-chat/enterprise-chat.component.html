@@ -6,27 +6,38 @@
         <div class="ec-brand__badge">
           <span class="material-symbols-outlined ec-brand__icon">forum</span>
         </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h2 class="ec-brand__title">4GUARD Chat</h2>
+        <div class="min-w-0">
+          <h2 class="ec-brand__title">4GUARD Chat</h2>
+          <div class="ec-brand__meta">
             <span class="ec-online-pill">
               <span class="ec-online-pill__dot"></span>
               En línea
             </span>
+            <span class="ec-brand__sub truncate">{{ currentUserName() }}</span>
           </div>
-          <span class="ec-brand__sub">{{ currentUserName() }}</span>
         </div>
       </div>
 
-      @if (mode === 'drawer') {
-        <button type="button" class="ec-circle-btn" (click)="closeRequested.emit()" title="Cerrar chat">
-          <span class="material-symbols-outlined">close</span>
-        </button>
-      } @else if (mode === 'fullscreen') {
-        <button type="button" class="ec-circle-btn" (click)="onLogout()" title="Cerrar sesión" aria-label="Cerrar sesión">
-          <span class="material-symbols-outlined">logout</span>
-        </button>
-      }
+      <div class="flex items-center gap-1.5 shrink-0">
+        @if (mode === 'drawer') {
+          <button
+            type="button"
+            class="ec-circle-btn"
+            (click)="toggleExpandRequested.emit()"
+            [title]="isExpanded ? 'Reducir tamaño' : 'Expandir ventana'"
+            aria-label="Cambiar tamaño de ventana"
+          >
+            <span class="material-symbols-outlined">{{ isExpanded ? 'close_fullscreen' : 'open_in_full' }}</span>
+          </button>
+          <button type="button" class="ec-circle-btn" (click)="closeRequested.emit()" title="Cerrar chat">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        } @else if (mode === 'fullscreen') {
+          <button type="button" class="ec-circle-btn" (click)="onLogout()" title="Cerrar sesión" aria-label="Cerrar sesión">
+            <span class="material-symbols-outlined">logout</span>
+          </button>
+        }
+      </div>
     </header>
 
     <!-- Buscador + Chips de Filtro Rápido -->
