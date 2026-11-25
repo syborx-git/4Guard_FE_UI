@@ -80,14 +80,19 @@
       <div class="ec-section-header">
         <span>ESPACIOS ({{ spaces().length }})</span>
         @if (canCreateSpace()) {
-        <button type="button" class="ec-circle-btn ec-circle-btn--sm" (click)="showNewSpaceModal.set(true)"
+        <button type="button" class="ec-circle-btn ec-circle-btn--sm" (click)="openCreateSpaceModal()"
           title="Crear espacio operativo">
           <span class="material-symbols-outlined">add</span>
         </button>
         }
       </div>
 
-      @for (space of spaces(); track space.id) {
+      @for (group of groupedSpaces(); track group.category) {
+      <div class="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-[#c5a86b]/85 flex items-center justify-between">
+        <span class="truncate">{{ group.category }}</span>
+        <span class="opacity-70">{{ group.items.length }}</span>
+      </div>
+      @for (space of group.items; track space.id) {
       <button type="button" class="ec-conv-item"
         [class.ec-conv-item--active]="chatService.activeConversationId() === space.id"
         (click)="onSelectConversation(space)">
@@ -105,11 +110,12 @@
             }}</span>
         </div>
       </button>
+      }
       } @empty {
       <div class="ec-section-empty">
         <span>Sin espacios visibles</span>
         @if (canCreateSpace()) {
-        <button type="button" class="ec-link-btn" (click)="showNewSpaceModal.set(true)">+ Crear espacio</button>
+        <button type="button" class="ec-link-btn" (click)="openCreateSpaceModal()">+ Crear espacio</button>
         }
       </div>
       }
@@ -198,6 +204,9 @@
           <h3 class="ec-thread-title">{{ conv.name }}</h3>
           <span class="ec-thread-sub">
             @if (conv.type === 'SPACE') {
+              @if (conv.category) {
+              <span class="inline-block mr-1.5 px-1.5 py-0.5 rounded bg-[#c5a86b]/15 text-[#c5a86b] text-[10px] font-semibold">{{ conv.category }}</span>
+              }
               {{ conv.participants.length }} miembros
             } @else {
               <span class="inline-flex items-center gap-1.5">
@@ -209,6 +218,12 @@
         </div>
       </div>
       <div class="flex items-center gap-1">
+        @if (conv.type === 'SPACE' && canCreateSpace()) {
+        <button type="button" class="ec-icon-btn" (click)="openManageMembersModal(conv)"
+          title="Gestionar miembros del espacio">
+          <span class="material-symbols-outlined">group_add</span>
+        </button>
+        }
         <button type="button" class="ec-icon-btn" (click)="cycleNotificationPref(conv)"
           [title]="'Notificaciones: ' + (conv.myNotificationPref || 'ALL') + ' (clic para cambiar)'">
           <span class="material-symbols-outlined">
@@ -419,7 +434,7 @@
 
         <div class="ec-quick-actions">
           @if (canCreateSpace()) {
-          <button type="button" class="ec-quick-action" (click)="showNewSpaceModal.set(true)">
+          <button type="button" class="ec-quick-action" (click)="openCreateSpaceModal()">
             <span class="material-symbols-outlined">add_circle</span>
             <div>
               <strong>Crear Espacio Operativo</strong>
@@ -449,16 +464,84 @@
   <!-- MODAL CREAR ESPACIO -->
   @if (showNewSpaceModal()) {
   <div class="ec-modal-backdrop" (click)="showNewSpaceModal.set(false)">
-    <div class="ec-modal" (click)="$event.stopPropagation()">
+    <div class="ec-modal" style="max-width: 440px;" (click)="$event.stopPropagation()">
       <h3>Crear Nuevo Espacio</h3>
-      <input type="text" class="ec-search-input mb-2" placeholder="Nombre (ej. #Caseta-Toluca)"
+      <input type="text" class="ec-search-input mb-2" placeholder="Nombre del grupo (ej. #Caseta-Toluca)"
         [ngModel]="newSpaceName()" (ngModelChange)="newSpaceName.set($event)" />
+
+      <input type="text" class="ec-search-input mb-2" list="ec-space-categories"
+        placeholder="Clasificación / Carpeta libre (ej. Caseta, Turno B, Dirección)"
+        [ngModel]="newSpaceCategory()" (ngModelChange)="newSpaceCategory.set($event)" />
+      <datalist id="ec-space-categories">
+        @for (cat of existingSpaceCategories(); track cat) {
+        <option [value]="cat"></option>
+        }
+      </datalist>
+
+      @if (existingSpaceCategories().length > 0) {
+      <div class="flex flex-wrap gap-1 mb-2">
+        @for (cat of existingSpaceCategories(); track cat) {
+        <button type="button"
+          class="px-2 py-0.5 rounded-full text-[11px] border border-[#c5a86b]/35 hover:bg-[#c5a86b]/20 transition-colors"
+          [ngClass]="{ 'bg-[#c5a86b]/25': newSpaceCategory().trim() === cat }"
+          (click)="newSpaceCategory.set(cat)">
+          {{ cat }}
+        </button>
+        }
+      </div>
+      }
+
       <input type="text" class="ec-search-input mb-3" placeholder="Descripción breve (opcional)"
         [ngModel]="newSpaceDesc()" (ngModelChange)="newSpaceDesc.set($event)" />
+
+      <div class="mb-3">
+        <div class="flex items-center justify-between text-xs font-semibold mb-1.5 opacity-85">
+          <span>Miembros del grupo (aislado)</span>
+          <span class="text-[#c5a86b]">{{ newSpaceMemberIds().length }} seleccionados</span>
+        </div>
+        <input type="search" class="ec-search-input mb-2" placeholder="Buscar colaborador..."
+          [ngModel]="newSpaceMemberSearch()" (ngModelChange)="newSpaceMemberSearch.set($event)" />
+        <div class="max-h-36 overflow-y-auto rounded-lg border border-white/10 divide-y divide-white/5">
+          @for (u of createSpaceMemberCandidates(); track u.id) {
+          <label class="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-white/5">
+            <input type="checkbox" [checked]="newSpaceMemberIds().includes(u.id)"
+              (change)="toggleNewSpaceMember(u.id)" />
+            <span class="font-medium truncate flex-1">{{ u.fullName }}</span>
+            <span class="opacity-60 text-[10px] truncate">{{ u.roleName }}</span>
+          </label>
+          }
+        </div>
+      </div>
+
       <div class="ec-modal__actions">
         <button type="button" class="ec-btn-secondary" (click)="showNewSpaceModal.set(false)">Cancelar</button>
         <button type="button" class="ec-btn-primary" [disabled]="!newSpaceName().trim()" (click)="onCreateSpace()">Crear
           Espacio</button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- MODAL GESTIONAR MIEMBROS DEL ESPACIO -->
+  @if (showManageMembersModal()) {
+  <div class="ec-modal-backdrop" (click)="showManageMembersModal.set(false)">
+    <div class="ec-modal" style="max-width: 440px;" (click)="$event.stopPropagation()">
+      <h3>Miembros del Espacio</h3>
+      <input type="search" class="ec-search-input mb-2" placeholder="Buscar colaborador..."
+        [ngModel]="manageMemberSearch()" (ngModelChange)="manageMemberSearch.set($event)" />
+      <div class="max-h-56 overflow-y-auto rounded-lg border border-white/10 divide-y divide-white/5 mb-3">
+        @for (u of manageMemberCandidates(); track u.id) {
+        <label class="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-white/5">
+          <input type="checkbox" [checked]="manageMemberIds().includes(u.id)"
+            (change)="toggleManageMember(u.id)" />
+          <span class="font-medium truncate flex-1">{{ u.fullName }}</span>
+          <span class="opacity-60 text-[10px] truncate">{{ u.roleName }}</span>
+        </label>
+        }
+      </div>
+      <div class="ec-modal__actions">
+        <button type="button" class="ec-btn-secondary" (click)="showManageMembersModal.set(false)">Cancelar</button>
+        <button type="button" class="ec-btn-primary" (click)="onSaveSpaceMembers()">Guardar Miembros</button>
       </div>
     </div>
   </div>

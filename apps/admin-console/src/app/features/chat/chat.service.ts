@@ -211,7 +211,7 @@ export class ChatService {
       );
   }
 
-  createSpace(payload: { name: string; description?: string; icon?: string; memberIds?: string[] }): Observable<ConversationSummary> {
+  createSpace(payload: { name: string; description?: string; icon?: string; category?: string; memberIds?: string[] }): Observable<ConversationSummary> {
     return this.http
       .post<ApiResponse<ConversationSummary>>(`${this.baseUrl}/conversations/space`, payload)
       .pipe(
@@ -219,6 +219,17 @@ export class ChatService {
         tap((conv) => {
           this.conversations.update((list) => [conv, ...list]);
           this.selectConversation(conv.id);
+        })
+      );
+  }
+
+  updateSpaceMembers(conversationId: string, memberIds: string[]): Observable<ConversationSummary> {
+    return this.http
+      .put<ApiResponse<ConversationSummary>>(`${this.baseUrl}/conversations/${conversationId}/members`, { memberIds })
+      .pipe(
+        map((res) => res.data),
+        tap((conv) => {
+          this.conversations.update((list) => list.map((c) => (c.id === conv.id ? conv : c)));
         })
       );
   }

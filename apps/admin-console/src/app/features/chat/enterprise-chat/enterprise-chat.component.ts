@@ -52,6 +52,12 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   protected readonly showNewSpaceModal = signal<boolean>(false);
   protected readonly newSpaceName = signal<string>('');
   protected readonly newSpaceDesc = signal<string>('');
+  protected readonly newSpaceCategory = signal<string>('');
+  protected readonly newSpaceMemberIds = signal<string[]>([]);
+  protected readonly newSpaceMemberSearch = signal<string>('');
+  protected readonly showManageMembersModal = signal<boolean>(false);
+  protected readonly manageMemberIds = signal<string[]>([]);
+  protected readonly manageMemberSearch = signal<string>('');
   protected readonly editingMessageId = signal<string | null>(null);
   protected readonly editingContent = signal<string>('');
   protected readonly mobileShowThread = signal<boolean>(false);
@@ -119,8 +125,50 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
     return this.chatService.conversations()
       .filter((c) => c.type === 'SPACE' || c.type === 'THREAD')
       .filter((c) => filter !== 'UNREAD' || (c.unreadCount || 0) > 0)
-      .filter((c) => !q || c.name.toLowerCase().includes(q));
+      .filter((c) => !q || c.name.toLowerCase().includes(q) || (c.category || '').toLowerCase().includes(q));
   });
+
+  protected readonly existingSpaceCategories = computed<string[]>(() => {
+    const set = new Set<string>();
+    for (const c of this.chatService.conversations()) {
+      const cat = c.category?.trim();
+      if ((c.type === 'SPACE' || c.type === 'THREAD') && cat) set.add(cat);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  });
+
+  protected readonly groupedSpaces = computed<Array<{ category: string; items: ConversationSummary[] }>>(() => {
+    const map = new Map<string, ConversationSummary[]>();
+    for (const s of this.spaces()) {
+      const cat = s.category?.trim() || 'General';
+      const bucket = map.get(cat) ?? [];
+      bucket.push(s);
+      map.set(cat, bucket);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => {
+        if (a === 'General') return 1;
+        if (b === 'General') return -1;
+        return a.localeCompare(b);
+      })
+      .map(([category, items]) => ({ category, items }));
+  });
+
+  protected readonly createSpaceMemberCandidates = computed(() =>
+    this.filterUsersByQuery(this.newSpaceMemberSearch())
+  );
+
+  protected readonly manageMemberCandidates = computed(() =>
+    this.filterUsersByQuery(this.manageMemberSearch())
+  );
+
+  private filterUsersByQuery(query: string) {
+    const q = query.trim().toLowerCase();
+    if (!q) return this.chatService.users();
+    return this.chatService.users().filter(
+      (u) => u.fullName.toLowerCase().includes(q) || u.username.toLowerCase().includes(q) || u.roleName.toLowerCase().includes(q)
+    );
+  }
 
   protected readonly filteredDirectoryUsers = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
@@ -278,20 +326,61 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
     this.chatService.toggleReaction(messageId, emoji).subscribe();
   }
 
+  openCreateSpaceModal(): void {
+    this.newSpaceName.set('');
+    this.newSpaceDesc.set('');
+    this.newSpaceCategory.set('');
+    this.newSpaceMemberIds.set([]);
+    this.newSpaceMemberSearch.set('');
+    this.showNewSpaceModal.set(true);
+  }
+
+  toggleNewSpaceMember(userId: string): void {
+    this.newSpaceMemberIds.update((ids) =>
+      ids.includes(userId) ? ids.filter((id) => id !== userId) : [...ids, userId]
+    );
+  }
+
   onCreateSpace(): void {
     const name = this.newSpaceName().trim();
     if (!name) return;
+    const category = this.newSpaceCategory().trim();
     this.chatService
       .createSpace({
         name,
         description: this.newSpaceDesc().trim() || undefined,
+        category: category || undefined,
+        memberIds: this.newSpaceMemberIds(),
       })
       .subscribe(() => {
         this.newSpaceName.set('');
         this.newSpaceDesc.set('');
+        this.newSpaceCategory.set('');
+        this.newSpaceMemberIds.set([]);
+        this.newSpaceMemberSearch.set('');
         this.showNewSpaceModal.set(false);
         this.mobileShowThread.set(true);
       });
+  }
+
+  openManageMembersModal(conv: ConversationSummary): void {
+    this.manageMemberIds.set(conv.participants.map((p) => p.userId));
+    this.manageMemberSearch.set('');
+    this.showManageMembersModal.set(true);
+  }
+
+  toggleManageMember(userId: string): void {
+    this.manageMemberIds.update((ids) =>
+      ids.includes(userId) ? ids.filter((id) => id !== userId) : [...ids, userId]
+    );
+  }
+
+  onSaveSpaceMembers(): void {
+    const conv = this.chatService.activeConversation();
+    if (!conv || conv.type === 'DM') return;
+    this.chatService.updateSpaceMembers(conv.id, this.manageMemberIds()).subscribe(() => {
+      this.showManageMembersModal.set(false);
+    });
   }
 
   toggleAttachMenu(): void {

@@ -64,6 +64,7 @@ export interface ConversationSummary {
   name: string;
   description?: string | null;
   icon?: string | null;
+  category?: string | null;
   entityType?: string | null;
   entityId?: string | null;
   lastMessageAt?: string | null;
