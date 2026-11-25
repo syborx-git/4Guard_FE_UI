@@ -366,7 +366,7 @@
     <footer class="ec-composer relative">
       @if (isAttachMenuOpen()) {
       <div class="ec-attach-popover animate-fade-in" (click)="$event.stopPropagation()">
-        <label class="ec-attach-option cursor-pointer">
+        <button type="button" class="ec-attach-option w-full text-left cursor-pointer" (click)="openCameraModal()">
           <span class="ec-attach-option__icon ec-attach-option__icon--cam">
             <span class="material-symbols-outlined">photo_camera</span>
           </span>
@@ -374,8 +374,10 @@
             <strong>Tomar Foto / Captura</strong>
             <span>Abrir cámara del dispositivo</span>
           </div>
-          <input type="file" class="hidden" accept="image/*" capture="environment" (change)="onFilesSelected($event)" />
-        </label>
+        </button>
+
+        <input #cameraFallbackInput type="file" class="hidden" accept="image/*" capture="environment"
+          (change)="onFilesSelected($event)" />
 
         <label class="ec-attach-option cursor-pointer">
           <span class="ec-attach-option__icon ec-attach-option__icon--doc">
@@ -500,6 +502,50 @@
         @if (safePreviewUrl(); as safeUrl) {
         <iframe [src]="safeUrl" class="ec-preview-pdf" title="Vista previa PDF"></iframe>
         }
+        }
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- MODAL DE CÁMARA EN VIVO (WebRTC + Fallback Móvil) -->
+  @if (isCameraModalOpen()) {
+  <div class="ec-modal-backdrop" (click)="closeCameraModal()">
+    <div class="ec-preview-modal" style="max-width: 640px; height: auto; max-height: 88vh;" (click)="$event.stopPropagation()">
+      <header class="ec-preview-modal__header">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[#c5a86b]">photo_camera</span>
+          <span class="font-bold text-sm">Tomar Foto / Captura</span>
+        </div>
+        <button type="button" class="ec-circle-btn" (click)="closeCameraModal()" title="Cerrar cámara">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="ec-preview-modal__body flex-col gap-3" style="min-height: 280px;">
+        @if (cameraError()) {
+        <div class="text-center p-4 flex flex-col items-center gap-3">
+          <span class="material-symbols-outlined text-4xl text-amber-400">videocam_off</span>
+          <p class="text-sm text-slate-300 max-w-md">{{ cameraError() }}</p>
+          <button type="button" class="ec-btn-primary text-xs inline-flex items-center gap-1.5"
+            (click)="triggerCameraFallback()">
+            <span class="material-symbols-outlined text-sm">upload_file</span>
+            <span>Seleccionar imagen o cámara nativa</span>
+          </button>
+        </div>
+        } @else {
+        <video #cameraVideo autoplay playsinline muted
+          class="w-full max-h-[55vh] rounded-lg bg-black object-contain"></video>
+        <div class="flex items-center justify-center gap-3 w-full pt-1">
+          <button type="button" class="ec-btn-secondary text-xs" (click)="triggerCameraFallback()">
+            Subir archivo
+          </button>
+          <button type="button" class="ec-btn-primary text-xs inline-flex items-center gap-1.5"
+            [disabled]="!isCameraReady()" (click)="captureCameraPhoto()">
+            <span class="material-symbols-outlined text-sm">camera</span>
+            <span>Capturar Foto</span>
+          </button>
+        </div>
         }
       </div>
     </div>

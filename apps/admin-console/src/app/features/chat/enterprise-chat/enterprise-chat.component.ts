@@ -7,6 +7,9 @@ import {
   signal,
   computed,
   OnInit,
+  OnDestroy,
+  ViewChild,
+  ElementRef,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -24,7 +27,9 @@ import { ChatAttachment, ChatMessage, ConversationSummary } from '../chat.models
   styleUrl: './enterprise-chat.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EnterpriseChatComponent implements OnInit {
+export class EnterpriseChatComponent implements OnInit, OnDestroy {
+  @ViewChild('cameraVideo') cameraVideoRef?: ElementRef<HTMLVideoElement>;
+  @ViewChild('cameraFallbackInput') cameraFallbackInputRef?: ElementRef<HTMLInputElement>;
   @Input() mode: 'fullscreen' | 'drawer' = 'fullscreen';
   @Input() isExpanded = false;
   @Output() closeRequested = new EventEmitter<void>();
@@ -36,6 +41,10 @@ export class EnterpriseChatComponent implements OnInit {
 
   protected readonly isAttachMenuOpen = signal<boolean>(false);
   protected readonly previewAttachment = signal<ChatAttachment | null>(null);
+  protected readonly isCameraModalOpen = signal<boolean>(false);
+  protected readonly cameraError = signal<string | null>(null);
+  protected readonly isCameraReady = signal<boolean>(false);
+  private cameraStream: MediaStream | null = null;
 
   protected readonly searchQuery = signal<string>('');
   protected readonly activeFilter = signal<'ALL' | 'UNREAD' | 'SPACE' | 'DM'>('ALL');
@@ -306,5 +315,91 @@ export class EnterpriseChatComponent implements OnInit {
     const me = this.currentUserId();
     const other = conv.participants.find((p) => p.userId !== me);
     return !!other?.online;
+  }
+
+  async openCameraModal(): Promise<void> {
+    this.isAttachMenuOpen.set(false);
+    this.cameraError.set(null);
+    this.isCameraReady.set(false);
+    this.isCameraModalOpen.set(true);
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      this.cameraError.set('Tu navegador no permite acceso directo a la cámara en este contexto. Usa el selector alternativo.');
+      return;
+    }
+
+    try {
+      this.cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      setTimeout(() => {
+        const video = this.cameraVideoRef?.nativeElement;
+        if (video && this.cameraStream) {
+          video.srcObject = this.cameraStream;
+          video.play().then(() => this.isCameraReady.set(true)).catch(() => this.isCameraReady.set(true));
+        }
+      }, 50);
+    } catch {
+      this.cameraError.set('No se pudo acceder a la cámara (permiso denegado o cámara no disponible).');
+    }
+  }
+
+  captureCameraPhoto(): void {
+    const video = this.cameraVideoRef?.nativeElement;
+    if (!video || !video.videoWidth || !video.videoHeight) return;
+
+    const maxDim = 1280;
+    const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
+    const width = Math.round(video.videoWidth * scale);
+    const height = Math.round(video.videoHeight * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, width, height);
+    let dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    if (dataUrl.length > 2 * 1024 * 1024) {
+      dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+    }
+
+    const approxBytes = Math.round((dataUrl.length * 3) / 4);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    this.pendingAttachments.update((list) => [
+      ...list,
+      {
+        fileName: `captura-${stamp}.jpg`,
+        contentType: 'image/jpeg',
+        fileSize: approxBytes,
+        storageUrl: dataUrl,
+      },
+    ]);
+    this.closeCameraModal();
+  }
+
+  triggerCameraFallback(): void {
+    this.closeCameraModal();
+    this.cameraFallbackInputRef?.nativeElement.click();
+  }
+
+  closeCameraModal(): void {
+    this.stopCameraStream();
+    this.isCameraModalOpen.set(false);
+    this.isCameraReady.set(false);
+    this.cameraError.set(null);
+  }
+
+  private stopCameraStream(): void {
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach((t) => t.stop());
+      this.cameraStream = null;
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.stopCameraStream();
   }
 }
