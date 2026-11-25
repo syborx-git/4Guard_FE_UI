@@ -117,7 +117,9 @@ export class StompClientService {
 
       // Inyección dinámica de tokens y headers antes de conectar/reconectar
       beforeConnect: async (client: RxStomp) => {
-        const token = this.authService.getAccessToken();
+        const token =
+          this.authService.getAccessToken() ||
+          (typeof localStorage !== 'undefined' ? localStorage.getItem('4g_token') : null);
         const branchId = this.authState.branchId() || this.authService.getBranchId() || '';
         const user = this.authState.user() as any;
         const orgId = user?.organizationId || '';
@@ -190,9 +192,11 @@ export class StompClientService {
     effect(() => {
       const isAuth = this.authState.isAuthenticated();
       const user = this.authState.user();
+      const hasAdminToken =
+        typeof localStorage !== 'undefined' && !!localStorage.getItem('4g_token');
 
       this.ngZone.runOutsideAngular(() => {
-        if (isAuth && user) {
+        if ((isAuth && user) || hasAdminToken) {
           if (!this.rxStomp.active) {
             this.rxStomp.activate();
           }
@@ -203,6 +207,19 @@ export class StompClientService {
         }
       });
     });
+  }
+
+  /**
+   * Activa la conexión STOMP si existe un token válido (soporta tanto rf-terminal como admin-console).
+   */
+  ensureConnected(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const token =
+      this.authService.getAccessToken() ||
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('4g_token') : null);
+    if (token && !this.rxStomp.active) {
+      this.ngZone.runOutsideAngular(() => this.rxStomp.activate());
+    }
   }
 
   // ─── Tópicos Jerárquicos Multitenant por Organización y Sucursal ─────────────

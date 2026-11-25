@@ -154,6 +154,16 @@ export class RfChatService {
         next: (evt: any) => {
           if (!evt) return;
           this.loadConversations().subscribe({ error: () => {} });
+          const activeId = this.activeConversationId();
+          if (evt.eventType === 'MESSAGE_CREATED' && activeId && evt.conversationId === activeId && evt.payload) {
+            const payload = evt.payload as RfChatMessage;
+            if (payload?.id) {
+              this.messages.update((list) =>
+                list.some((m) => m.id === payload.id) ? list : [...list, payload]
+              );
+              this.markAsRead(activeId).subscribe({ error: () => {} });
+            }
+          }
         },
         error: () => {},
       });

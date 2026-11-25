@@ -573,7 +573,7 @@
           <span class="font-bold text-sm truncate">{{ att.fileName }}</span>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          @if (canDownloadAttachments()) {
+          @if (canDownloadAttachments() && isSafeAttachmentUrl(att)) {
           <a [href]="att.storageUrl" [download]="att.fileName"
             class="ec-btn-primary text-xs inline-flex items-center gap-1 no-underline">
             <span class="material-symbols-outlined text-sm">download</span>

@@ -66,6 +66,7 @@ export class ChatService {
   }
 
   startPolling(): void {
+    this.stompService.ensureConnected();
     this.initStompUserQueue();
     if (this.pollingId || typeof window === 'undefined') return;
     this.loadConversations().subscribe({ error: () => {} });

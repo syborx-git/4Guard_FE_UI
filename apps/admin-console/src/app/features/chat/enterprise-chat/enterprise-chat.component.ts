@@ -110,11 +110,29 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   protected readonly safePreviewUrl = computed<SafeResourceUrl | null>(() => {
     const att = this.previewAttachment();
     if (!att) return null;
-    const url = att.contentType.includes('pdf') && !this.canDownloadAttachments()
-      ? `${att.storageUrl}#toolbar=0&navpanes=0`
-      : att.storageUrl;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    const url = (att.storageUrl || '').trim();
+    const isPdf = att.contentType.toLowerCase() === 'application/pdf';
+    const isSafePdfUrl =
+      url.startsWith('data:application/pdf;base64,') ||
+      url.startsWith('https://') ||
+      url.startsWith('/api/');
+    if (!isPdf || !isSafePdfUrl) return null;
+    const finalUrl = !this.canDownloadAttachments() ? `${url}#toolbar=0&navpanes=0` : url;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(finalUrl);
   });
+
+  isSafeAttachmentUrl(att: ChatAttachment): boolean {
+    const url = (att.storageUrl || '').trim();
+    return (
+      url.startsWith('data:image/jpeg;base64,') ||
+      url.startsWith('data:image/png;base64,') ||
+      url.startsWith('data:image/webp;base64,') ||
+      url.startsWith('data:image/gif;base64,') ||
+      url.startsWith('data:application/pdf;base64,') ||
+      url.startsWith('https://') ||
+      url.startsWith('/api/')
+    );
+  }
 
   protected readonly directMessages = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
