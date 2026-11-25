@@ -37,6 +37,14 @@ export class ForbotTriggerButtonComponent implements OnInit {
 
   protected onOpenChat(): void {
     this.isSpeedDialOpen.set(false);
+    this.chatService.latestIncomingAlert.set(null);
     this.chatService.openDrawer();
+  }
+
+  protected onOpenIncomingAlert(conversationId: string): void {
+    this.isSpeedDialOpen.set(false);
+    this.chatService.latestIncomingAlert.set(null);
+    this.chatService.openDrawer();
+    this.chatService.selectConversation(conversationId);
   }
 }

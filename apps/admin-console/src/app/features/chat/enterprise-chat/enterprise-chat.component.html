@@ -133,15 +133,38 @@
             </span>
           </div>
         </div>
-        @if (mode === 'drawer') {
-          <button type="button" class="ec-icon-btn" (click)="closeRequested.emit()" title="Cerrar">
-            <span class="material-symbols-outlined">close</span>
+        <div class="flex items-center gap-1">
+          <button
+            type="button"
+            class="ec-icon-btn"
+            (click)="cycleNotificationPref(conv)"
+            [title]="'Notificaciones: ' + (conv.myNotificationPref || 'ALL') + ' (clic para cambiar)'"
+          >
+            <span class="material-symbols-outlined">
+              {{ conv.myNotificationPref === 'MUTED' ? 'notifications_off' : (conv.myNotificationPref === 'MENTIONS' ? 'notifications_paused' : 'notifications_active') }}
+            </span>
           </button>
-        }
+          @if (mode === 'drawer') {
+            <button type="button" class="ec-icon-btn" (click)="closeRequested.emit()" title="Cerrar">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          }
+        </div>
       </header>
 
       <!-- FEED DE MENSAJES -->
       <div class="ec-messages">
+        @if (chatService.hasMoreMessages()) {
+          <div class="flex justify-center mb-2">
+            <button
+              type="button"
+              class="ec-load-more-btn"
+              [disabled]="chatService.isLoadingMessages()"
+              (click)="chatService.loadOlderMessages(conv.id)">
+              Cargar mensajes anteriores
+            </button>
+          </div>
+        }
         @for (msg of chatService.messages(); track msg.id) {
           <div class="ec-msg" [class.ec-msg--mine]="msg.senderId === currentUserId()">
             <div class="ec-msg__bubble" [class.ec-msg__bubble--mine]="msg.senderId === currentUserId()" [class.ec-msg__bubble--deleted]="msg.isDeleted">
@@ -160,11 +183,36 @@
                 </div>
               } @else {
                 <p class="ec-msg__text">
-                  {{ msg.content }}
+                  @for (part of parseMessageParts(msg.content); track $index) {
+                    @if (part.kind === 'mention') {
+                      <span class="ec-token-mention">{{ part.text }}</span>
+                    } @else if (part.kind === 'folio') {
+                      <span class="ec-token-folio" title="Referencia Operativa">{{ part.text }}</span>
+                    } @else {
+                      <span>{{ part.text }}</span>
+                    }
+                  }
                   @if (msg.isEdited && !msg.isDeleted) {
                     <span class="ec-edited-tag">(editado)</span>
                   }
                 </p>
+
+                @if (msg.attachments && msg.attachments.length > 0 && !msg.isDeleted) {
+                  <div class="ec-attachments">
+                    @for (att of msg.attachments; track att.id) {
+                      @if (att.contentType.startsWith('image/')) {
+                        <a [href]="att.storageUrl" [download]="att.fileName" class="ec-att-image-link" title="Descargar imagen">
+                          <img [src]="att.storageUrl" [alt]="att.fileName" class="ec-att-image" />
+                        </a>
+                      } @else {
+                        <a [href]="att.storageUrl" [download]="att.fileName" class="ec-att-file">
+                          <span class="material-symbols-outlined">picture_as_pdf</span>
+                          <span>{{ att.fileName }}</span>
+                        </a>
+                      }
+                    }
+                  </div>
+                }
               }
 
               @if (!msg.isDeleted) {
@@ -207,16 +255,53 @@
         }
       </div>
 
+      <!-- INDICADOR ESCRIBIENDO -->
+      @if (chatService.typingUser(); as typer) {
+        <div class="ec-typing-bar">
+          <span class="ec-typing-dot"></span>
+          <span>{{ typer }} está escribiendo...</span>
+        </div>
+      }
+
+      <!-- POPOVER AUTOCOMPLETADO @MENCIONES -->
+      @if (mentionCandidates().length > 0) {
+        <div class="ec-mentions-popover">
+          @for (cand of mentionCandidates(); track cand.id) {
+            <button type="button" class="ec-mention-item" (click)="insertMention(cand.username)">
+              <span class="font-bold">{{ cand.fullName }}</span>
+              <span class="opacity-70">&#64;{{ cand.username }}</span>
+            </button>
+          }
+        </div>
+      }
+
+      <!-- PREVISUALIZACIÓN DE ADJUNTOS PENDIENTES -->
+      @if (pendingAttachments().length > 0) {
+        <div class="ec-pending-atts">
+          @for (att of pendingAttachments(); track $index) {
+            <span class="ec-pending-chip">
+              <span class="material-symbols-outlined text-sm">{{ att.contentType.startsWith('image/') ? 'image' : 'description' }}</span>
+              <span class="truncate max-w-[140px]">{{ att.fileName }}</span>
+              <button type="button" (click)="removePendingAttachment($index)" title="Quitar">✕</button>
+            </span>
+          }
+        </div>
+      }
+
       <!-- COMPOSER -->
       <footer class="ec-composer">
+        <label class="ec-icon-btn cursor-pointer" title="Adjuntar imagen o PDF (máx. 2MB)">
+          <span class="material-symbols-outlined">attach_file</span>
+          <input type="file" class="hidden" accept="image/*,.pdf" multiple (change)="onFilesSelected($event)" />
+        </label>
         <textarea
           class="ec-composer__input"
           rows="1"
           placeholder="Escribe un mensaje... (Enter para enviar, @mencionar, #folio)"
           [ngModel]="messageText()"
-          (ngModelChange)="messageText.set($event)"
+          (ngModelChange)="onComposerInput($event)"
           (keydown)="onComposerKeydown($event)"></textarea>
-        <button type="button" class="ec-send-btn" [disabled]="!messageText().trim()" (click)="onSendMessage()" title="Enviar mensaje">
+        <button type="button" class="ec-send-btn" [disabled]="!messageText().trim() && pendingAttachments().length === 0" (click)="onSendMessage()" title="Enviar mensaje">
           <span class="material-symbols-outlined">send</span>
         </button>
       </footer>

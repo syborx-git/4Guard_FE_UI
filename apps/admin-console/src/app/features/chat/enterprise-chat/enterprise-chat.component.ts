@@ -38,8 +38,24 @@ export class EnterpriseChatComponent implements OnInit {
   protected readonly editingMessageId = signal<string | null>(null);
   protected readonly editingContent = signal<string>('');
   protected readonly mobileShowThread = signal<boolean>(false);
+  protected readonly pendingAttachments = signal<
+    Array<{ fileName: string; contentType: string; fileSize: number; storageUrl: string }>
+  >([]);
+  protected readonly mentionQuery = signal<string | null>(null);
+
+  private lastTypingSentAt = 0;
 
   protected readonly quickEmojis = ['👍', '✅', '👀', '🚚', '⚠️'];
+
+  protected readonly mentionCandidates = computed(() => {
+    const q = this.mentionQuery();
+    if (q === null) return [];
+    const term = q.toLowerCase();
+    return this.chatService
+      .users()
+      .filter((u) => !term || u.username.toLowerCase().includes(term) || u.fullName.toLowerCase().includes(term))
+      .slice(0, 5);
+  });
 
   protected readonly currentUserId = computed(() => this.authState.currentUser()?.id ?? '');
   protected readonly canCreateSpace = computed(() => {
@@ -98,10 +114,88 @@ export class EnterpriseChatComponent implements OnInit {
   onSendMessage(): void {
     const convId = this.chatService.activeConversationId();
     const text = this.messageText().trim();
-    if (!convId || !text) return;
+    const attachments = this.pendingAttachments();
+    if (!convId || (!text && attachments.length === 0)) return;
 
+    const finalContent = text || `📎 ${attachments.map((a) => a.fileName).join(', ')}`;
     this.messageText.set('');
-    this.chatService.sendMessage(convId, text).subscribe();
+    this.mentionQuery.set(null);
+    this.pendingAttachments.set([]);
+    this.chatService.sendMessage(convId, finalContent, attachments).subscribe();
+  }
+
+  onComposerInput(value: string): void {
+    this.messageText.set(value);
+
+    // Detectar @mención activa al final del texto
+    const match = value.match(/(?:^|\s)@([a-zA-Z0-9._-]*)$/);
+    this.mentionQuery.set(match ? match[1] : null);
+
+    // Enviar evento TYPING con throttle de 2.5s
+    const convId = this.chatService.activeConversationId();
+    const now = Date.now();
+    if (convId && value.trim() && now - this.lastTypingSentAt > 2500) {
+      this.lastTypingSentAt = now;
+      this.chatService.sendTyping(convId);
+    }
+  }
+
+  insertMention(username: string): void {
+    const current = this.messageText();
+    const updated = current.replace(/(?:^|\s)@([a-zA-Z0-9._-]*)$/, (full) => {
+      const prefix = full.startsWith(' ') ? ' ' : '';
+      return `${prefix}@${username} `;
+    });
+    this.messageText.set(updated);
+    this.mentionQuery.set(null);
+  }
+
+  onFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    Array.from(input.files).forEach((file) => {
+      if (file.size > 2 * 1024 * 1024) return; // Máximo 2MB por archivo
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = typeof reader.result === 'string' ? reader.result : '';
+        if (!result) return;
+        this.pendingAttachments.update((list) => [
+          ...list,
+          {
+            fileName: file.name,
+            contentType: file.type || 'application/octet-stream',
+            fileSize: file.size,
+            storageUrl: result,
+          },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+    input.value = '';
+  }
+
+  removePendingAttachment(index: number): void {
+    this.pendingAttachments.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  cycleNotificationPref(conv: ConversationSummary): void {
+    const order: Array<'ALL' | 'MENTIONS' | 'MUTED'> = ['ALL', 'MENTIONS', 'MUTED'];
+    const idx = order.indexOf(conv.myNotificationPref || 'ALL');
+    const next = order[(idx + 1) % order.length];
+    this.chatService.updateNotificationPref(conv.id, next).subscribe();
+  }
+
+  parseMessageParts(content: string): Array<{ text: string; kind: 'text' | 'mention' | 'folio' }> {
+    if (!content) return [];
+    const parts = content.split(/(@[a-zA-Z0-9._-]+|#\d{3,10})/g);
+    return parts
+      .filter((p) => p.length > 0)
+      .map((p) => {
+        if (p.startsWith('@')) return { text: p, kind: 'mention' as const };
+        if (/^#\d{3,10}$/.test(p)) return { text: p, kind: 'folio' as const };
+        return { text: p, kind: 'text' as const };
+      });
   }
 
   onComposerKeydown(event: KeyboardEvent): void {

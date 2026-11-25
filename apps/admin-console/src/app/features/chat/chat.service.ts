@@ -26,10 +26,15 @@ export class ChatService {
   readonly isLoadingConversations = signal<boolean>(false);
   readonly isLoadingMessages = signal<boolean>(false);
   readonly isDrawerOpen = signal<boolean>(false);
+  readonly hasMoreMessages = signal<boolean>(false);
+  readonly typingUser = signal<string | null>(null);
+  readonly latestIncomingAlert = signal<{ conversationId: string; senderName: string; preview: string } | null>(null);
 
   private pollingId: any = null;
   private userQueueSub: Subscription | null = null;
   private activeTopicSub: Subscription | null = null;
+  private typingTimeout: any = null;
+  private alertTimeout: any = null;
 
   readonly activeConversation = computed<ConversationSummary | null>(() => {
     const id = this.activeConversationId();
@@ -90,6 +95,16 @@ export class ChatService {
         next: (evt: any) => {
           if (!evt) return;
           this.loadConversations().subscribe({ error: () => {} });
+          if (evt.eventType === 'MESSAGE_CREATED' && !this.isDrawerOpen() && evt.payload) {
+            const msg = evt.payload as ChatMessage;
+            this.latestIncomingAlert.set({
+              conversationId: evt.conversationId || msg.conversationId,
+              senderName: msg.senderFullName || evt.senderUsername || 'Nuevo mensaje',
+              preview: msg.content || 'Archivo adjunto',
+            });
+            clearTimeout(this.alertTimeout);
+            this.alertTimeout = setTimeout(() => this.latestIncomingAlert.set(null), 5000);
+          }
         },
         error: () => {},
       });
@@ -106,10 +121,19 @@ export class ChatService {
       this.activeTopicSub = this.stompService.watchTopic<any>(`/topic/chat.${conversationId}`).subscribe({
         next: (evt: any) => {
           if (!evt || !evt.eventType) return;
+          if (evt.eventType === 'TYPING') {
+            const name = evt.payload?.fullName || evt.senderUsername || 'Alguien';
+            this.typingUser.set(name);
+            clearTimeout(this.typingTimeout);
+            this.typingTimeout = setTimeout(() => this.typingUser.set(null), 3500);
+            return;
+          }
+
           const payload = evt.payload as ChatMessage;
           if (!payload?.id) return;
 
           if (evt.eventType === 'MESSAGE_CREATED') {
+            this.typingUser.set(null);
             this.messages.update((list) =>
               list.some((m) => m.id === payload.id) ? list : [...list, payload]
             );
@@ -197,7 +221,16 @@ export class ChatService {
         map((res) => res.data || []),
         tap({
           next: (msgs) => {
-            this.messages.set(msgs);
+            if (before) {
+              this.messages.update((curr) => {
+                const existing = new Set(curr.map((m) => m.id));
+                const older = msgs.filter((m) => !existing.has(m.id));
+                return [...older, ...curr];
+              });
+            } else {
+              this.messages.set(msgs);
+            }
+            this.hasMoreMessages.set(msgs.length >= limit);
             this.isLoadingMessages.set(false);
           },
           error: () => this.isLoadingMessages.set(false),
@@ -205,9 +238,26 @@ export class ChatService {
       );
   }
 
-  sendMessage(conversationId: string, content: string): Observable<ChatMessage> {
+  loadOlderMessages(conversationId: string): void {
+    const first = this.messages()[0];
+    if (!first || this.isLoadingMessages()) return;
+    this.loadMessages(conversationId, first.createdAt, 40).subscribe({ error: () => {} });
+  }
+
+  sendTyping(conversationId: string): void {
+    this.http.post<ApiResponse<void>>(`${this.baseUrl}/conversations/${conversationId}/typing`, {}).subscribe({ error: () => {} });
+  }
+
+  sendMessage(
+    conversationId: string,
+    content: string,
+    attachments?: Array<{ fileName: string; contentType: string; fileSize: number; storageUrl: string }>
+  ): Observable<ChatMessage> {
     return this.http
-      .post<ApiResponse<ChatMessage>>(`${this.baseUrl}/conversations/${conversationId}/messages`, { content })
+      .post<ApiResponse<ChatMessage>>(`${this.baseUrl}/conversations/${conversationId}/messages`, {
+        content,
+        attachments: attachments && attachments.length > 0 ? attachments : undefined,
+      })
       .pipe(
         map((res) => res.data),
         tap((msg) => {
