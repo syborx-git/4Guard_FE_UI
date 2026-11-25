@@ -907,10 +907,10 @@
 
 <!-- Drawer de Mensajería Interna 4GUARD (Redimensionable + Expandible + Responsive) -->
 @if (chatService.isDrawerOpen()) {
-  <div class="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-[2px]" (click)="chatService.closeDrawer()">
+  <div class="fixed inset-0 z-[250] flex justify-end bg-black/40 backdrop-blur-[2px]" (click)="chatService.closeDrawer()">
     <div
       class="relative h-full shadow-2xl transition-[width] duration-150 max-w-full"
-      [style.width]="isChatDrawerExpanded() ? '96vw' : ('min(' + chatDrawerWidth() + 'px, 100vw)')"
+      [style.width]="isChatDrawerExpanded() ? '100vw' : ('min(' + chatDrawerWidth() + 'px, 100vw)')"
       (click)="$event.stopPropagation()"
     >
       <!-- Manija de arrastre para redimensionar en escritorio -->
