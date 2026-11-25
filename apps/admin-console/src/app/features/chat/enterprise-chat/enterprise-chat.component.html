@@ -515,9 +515,9 @@
         </div>
         <input type="search" class="ec-search-input mb-2" placeholder="Buscar colaborador..."
           [ngModel]="newSpaceMemberSearch()" (ngModelChange)="newSpaceMemberSearch.set($event)" />
-        <div class="max-h-36 overflow-y-auto rounded-lg border border-slate-200 dark:border-white/10 divide-y divide-slate-200/70 dark:divide-white/5">
+        <div class="max-h-36 overflow-y-auto rounded-lg ec-member-list">
           @for (u of createSpaceMemberCandidates(); track u.id) {
-          <label class="flex items-center gap-2 px-2.5 min-h-[40px] py-1.5 text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5">
+          <label class="flex items-center gap-2 px-2.5 min-h-[40px] py-1.5 text-xs cursor-pointer ec-member-row">
             <input type="checkbox" [checked]="newSpaceMemberIds().includes(u.id)"
               (change)="toggleNewSpaceMember(u.id)" />
             <span class="font-medium truncate flex-1">{{ u.fullName }}</span>
@@ -543,9 +543,9 @@
       <h3>Miembros del Espacio</h3>
       <input type="search" class="ec-search-input mb-2" placeholder="Buscar colaborador..."
         [ngModel]="manageMemberSearch()" (ngModelChange)="manageMemberSearch.set($event)" />
-      <div class="max-h-56 overflow-y-auto rounded-lg border border-slate-200 dark:border-white/10 divide-y divide-slate-200/70 dark:divide-white/5 mb-3">
+      <div class="max-h-56 overflow-y-auto rounded-lg ec-member-list mb-3">
         @for (u of manageMemberCandidates(); track u.id) {
-        <label class="flex items-center gap-2 px-2.5 min-h-[40px] py-1.5 text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5">
+        <label class="flex items-center gap-2 px-2.5 min-h-[40px] py-1.5 text-xs cursor-pointer ec-member-row">
           <input type="checkbox" [checked]="manageMemberIds().includes(u.id)" (change)="toggleManageMember(u.id)" />
           <span class="font-medium truncate flex-1">{{ u.fullName }}</span>
           <span class="opacity-60 text-[10px] truncate">{{ formatRoleName(u.roleName) }}</span>
@@ -622,8 +622,8 @@
       <div class="ec-preview-modal__body flex-col gap-3" style="min-height: 280px;">
         @if (cameraError()) {
         <div class="text-center p-4 flex flex-col items-center gap-3">
-          <span class="material-symbols-outlined text-4xl text-amber-400">videocam_off</span>
-          <p class="text-sm text-slate-300 max-w-md">{{ cameraError() }}</p>
+          <span class="material-symbols-outlined text-4xl text-amber-500">videocam_off</span>
+          <p class="text-sm max-w-md" style="color: var(--text-primary, #1c2940);">{{ cameraError() }}</p>
           <button type="button" class="ec-btn-primary text-xs inline-flex items-center gap-1.5"
             (click)="triggerCameraFallback()">
             <span class="material-symbols-outlined text-sm">upload_file</span>

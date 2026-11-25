@@ -31,7 +31,13 @@ import { ChatAttachment, ChatMessage, ConversationSummary } from '../chat.models
 export class EnterpriseChatComponent implements OnInit, OnDestroy {
   @ViewChild('cameraVideo') cameraVideoRef?: ElementRef<HTMLVideoElement>;
   @ViewChild('cameraFallbackInput') cameraFallbackInputRef?: ElementRef<HTMLInputElement>;
-  @Input() mode: 'fullscreen' | 'drawer' = 'fullscreen';
+  private _mode: 'fullscreen' | 'drawer' = 'fullscreen';
+  @Input() set mode(val: 'fullscreen' | 'drawer' | undefined) {
+    this._mode = val === 'drawer' ? 'drawer' : 'fullscreen';
+  }
+  get mode(): 'fullscreen' | 'drawer' {
+    return this._mode;
+  }
   @Input() isExpanded = false;
   @Output() closeRequested = new EventEmitter<void>();
   @Output() toggleExpandRequested = new EventEmitter<void>();
