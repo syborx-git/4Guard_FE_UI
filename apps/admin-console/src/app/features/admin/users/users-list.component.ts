@@ -250,6 +250,7 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
       { id: 'QUALITY_ASSISTANT', name: 'QUALITY_ASSISTANT', label: 'Ayudante de Calidad' },
       { id: 'SECURITY_GUARD', name: 'SECURITY_GUARD', label: 'Guardia de Seguridad' },
       { id: 'SECURITY_ASSISTANT', name: 'SECURITY_ASSISTANT', label: 'Ayudante de Seguridad' },
+      { id: 'CHAT_ONLY', name: 'CHAT_ONLY', label: 'Comunicación Interna (Solo Chat)' },
     ];
   });
 
@@ -785,6 +786,7 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
       'OPERATIONS_COORDINATOR': 'Coordinador de Operaciones',
       'OPERATIONS_SUPERVISOR': 'Supervisor de Operaciones',
       'CONTROL_DESK': 'Mesa de Control',
+      'CHAT_ONLY': 'Comunicación Interna (Solo Chat)',
       'QM_INSPECTOR': 'Inspector de Calidad',
       'QUALITY_ASSISTANT': 'Ayudante de Calidad',
       'SHIFT_LEADER': 'Líder de Turno',

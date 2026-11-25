@@ -109,8 +109,8 @@ export class AuthState {
       'ROLE_AUDITOR': 'Auditor',
       'CLIENT': 'Cliente 3PL',
       'ROLE_CLIENT': 'Cliente 3PL',
-      'CHAT_ONLY': 'Usuario de Chat',
-      'ROLE_CHAT_ONLY': 'Usuario de Chat',
+      'CHAT_ONLY': 'Comunicación Interna (Solo Chat)',
+      'ROLE_CHAT_ONLY': 'Comunicación Interna (Solo Chat)',
     };
 
     return labels[role] ?? role.replace('ROLE_', '').replace(/_/g, ' ');
