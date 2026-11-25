@@ -99,6 +99,7 @@ export class WarehouseMovementsService {
   private readonly transfersSignal = signal<WarehouseTransfer[]>([]);
   private readonly dispatchesSignal = signal<OutboundDispatch[]>([]);
   readonly outboundsSignal = signal<WarehouseOutbound[]>([]);
+  private readonly inYardPassesSignal = signal<any[]>([]);
 
   // Configuración global y dinámica de capacidad (ADR: Dynamic Bay Capacity Management)
   public readonly defaultBayCapacitySignal = signal<number>(22);
@@ -298,6 +299,51 @@ export class WarehouseMovementsService {
       return true;
     });
 
+    const extractPassRampNumber = (item: any): number | null => {
+      if (!item) return null;
+      const directNum = Number(item.rampNumber);
+      if (Number.isFinite(directNum) && directNum >= 1 && directNum <= 50) return directNum;
+
+      const raw = String(item.rampCode || item.ramp || item.rampName || item.rampId || '').trim();
+      if (!raw || raw === '0' || raw === 'null' || raw === 'undefined' || raw.toUpperCase().includes('PATIO') || raw.toLowerCase().includes('pendiente')) {
+        return null;
+      }
+      const match = raw.match(/(?:LOC-)?R(?:AMP)?[-_\s]?0*(\d{1,2})\b/i) || raw.match(/^0*(\d{1,2})$/);
+      if (match) {
+        const parsed = Number(match[1]);
+        if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 50) return parsed;
+      }
+      return null;
+    };
+
+    const activeInYardPasses = this.inYardPassesSignal().filter((p) => {
+      const st = String(p?.status || '').toUpperCase();
+      const ws = String(p?.warehouseStatus || '').toUpperCase();
+      if (st === 'CANCELLED' || st === 'COMPLETED_EXIT') return false;
+      if (ws === 'CANCELLED' || ws === 'COMPLETED' || ws === 'DISPATCHED') return false;
+
+      const rampNum = extractPassRampNumber(p);
+      if (!rampNum) return false;
+
+      const folioKey = String(p?.generatedFolio || p?.folio || '').trim().toUpperCase();
+      const docKey = String(p?.docNumber || p?.remisionNo || p?.reference || '').trim().toUpperCase();
+      const idKey = String(p?.id || '').trim().toUpperCase();
+      const tokenKey = String(p?.token || '').trim().toUpperCase();
+
+      if (
+        (folioKey && exitTokensOrFolios.has(folioKey)) ||
+        (docKey && exitTokensOrFolios.has(docKey)) ||
+        (idKey && exitTokensOrFolios.has(idKey)) ||
+        (tokenKey && exitTokensOrFolios.has(tokenKey))
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const pendingRampAlerts = this.smartNotification.pendingRampAssignments();
+
     return allRamps.map((ramp) => {
       // 1. Verificar si está ocupada por Recepción Inbound en andén
       const recMatch = activeReceptions.find(
@@ -383,7 +429,58 @@ export class WarehouseMovementsService {
         };
       }
 
-      // 3. Rampa Disponible
+      // 3. Verificar si está ocupada por Pase Activo en Planta (Caseta de Seguridad) sin recepción/salida creada aún
+      const inYardMatch = activeInYardPasses.find(
+        (p) => extractPassRampNumber(p) === Number(ramp.rampNumber)
+      );
+
+      if (inYardMatch) {
+        const opRaw = String(inYardMatch.operationType || inYardMatch.operacion || inYardMatch.type || '').toUpperCase();
+        const isOutbound = opRaw === 'CARGA' || opRaw === 'OUTBOUND';
+        const ws = String(inYardMatch.warehouseStatus || inYardMatch.status || '').toUpperCase();
+        let statusLabel = isOutbound ? 'Andén Asignado (Espera Carga)' : 'Andén Asignado (Caseta)';
+        if (ws === 'IN_PROGRESS') statusLabel = isOutbound ? 'En Carga Outbound' : 'En Descarga Inbound';
+        else if (ws === 'DISCHARGED') statusLabel = 'Descarga Concluida (Por Auditar)';
+        else if (ws === 'LOADED') statusLabel = 'Carga Concluida (Por Auditar)';
+
+        return {
+          rampNumber: ramp.rampNumber,
+          code: ramp.code,
+          name: ramp.name,
+          status: isOutbound ? 'OCCUPIED_OUTBOUND' : 'OCCUPIED_INBOUND',
+          statusLabel,
+          operationType: isOutbound ? 'OUTBOUND' : 'INBOUND',
+          operationFolio: inYardMatch.generatedFolio || inYardMatch.folio || inYardMatch.token,
+          docNumber: inYardMatch.docNumber || inYardMatch.remisionNo || inYardMatch.reference || inYardMatch.token,
+          driverName: inYardMatch.driverName,
+          carrierName: inYardMatch.carrierName || inYardMatch.carrierLine,
+          forkliftOperator: inYardMatch.forkliftOperator,
+          startedAt: inYardMatch.checkInTime || inYardMatch.createdAt,
+        };
+      }
+
+      // 4. Verificar asignaciones de rampa en tiempo real pendientes de sincronizar
+      const pendingMatch = pendingRampAlerts.find(
+        (a) => Number(a?.rampNumber) === Number(ramp.rampNumber)
+      );
+
+      if (pendingMatch) {
+        return {
+          rampNumber: ramp.rampNumber,
+          code: ramp.code,
+          name: ramp.name,
+          status: 'OCCUPIED_INBOUND' as const,
+          statusLabel: 'Andén Asignado (Pendiente Acceso)',
+          operationType: 'INBOUND' as const,
+          operationFolio: pendingMatch.folio,
+          docNumber: pendingMatch.docNumber || pendingMatch.folio,
+          driverName: pendingMatch.driverName,
+          carrierName: pendingMatch.carrierLine,
+          startedAt: pendingMatch.timestamp ? new Date(pendingMatch.timestamp).toISOString() : pendingMatch.time,
+        };
+      }
+
+      // 5. Rampa Disponible
       return {
         rampNumber: ramp.rampNumber,
         code: ramp.code,
@@ -849,6 +946,9 @@ export class WarehouseMovementsService {
     // 6. Recepciones
     this.reloadReceptions();
 
+    // 6b. Pases en planta de Caseta de Seguridad (sincroniza rampas asignadas antes de crear recepción)
+    this.reloadInYardPasses();
+
     // 7. Traspasos
     this.movementsApi.getTransfers().subscribe({
       next: (transfers: any) => {
@@ -882,6 +982,7 @@ export class WarehouseMovementsService {
       if (typeof document !== 'undefined' && document.hidden) return;
       this.reloadReceptions();
       this.reloadOutbounds();
+      this.reloadInYardPasses();
     }, 5000);
   }
 
@@ -1010,6 +1111,22 @@ export class WarehouseMovementsService {
         };
       })
     );
+  }
+
+  private isReloadingInYardPasses = false;
+
+  public reloadInYardPasses(): void {
+    if (this.isReloadingInYardPasses) return;
+    this.isReloadingInYardPasses = true;
+    this.movementsApi.getInYardPasses().subscribe({
+      next: (passes: any[]) => {
+        this.inYardPassesSignal.set(Array.isArray(passes) ? passes : []);
+        this.isReloadingInYardPasses = false;
+      },
+      error: () => {
+        this.isReloadingInYardPasses = false;
+      },
+    });
   }
 
   public reloadReceptions(): void {
