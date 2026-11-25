@@ -227,6 +227,12 @@
         </div>
       </div>
       <div class="flex items-center gap-1 shrink-0">
+        @if (mode === 'fullscreen') {
+        <button type="button" class="ec-icon-btn" (click)="themeService.toggleTheme()"
+          [title]="themeService.themeLabel()" [attr.aria-label]="themeService.themeLabel()">
+          <span class="material-symbols-outlined">{{ themeService.themeIcon() }}</span>
+        </button>
+        }
         @if (conv.type === 'SPACE' && canCreateSpace()) {
         <button type="button" class="ec-icon-btn" (click)="openManageMembersModal(conv)"
           title="Gestionar miembros del espacio">
@@ -422,7 +428,7 @@
       </button>
 
       <textarea class="ec-composer__input" rows="1" enterkeyhint="send"
-        placeholder="Escribe un mensaje... (@, #folio)" [ngModel]="messageText()"
+        placeholder="Escribe un mensaje..." [ngModel]="messageText()"
         (ngModelChange)="onComposerInput($event)" (keydown)="onComposerKeydown($event)"></textarea>
       <button type="button" class="ec-send-btn" [disabled]="!messageText().trim() && pendingAttachments().length === 0"
         (click)="onSendMessage()" title="Enviar mensaje">
