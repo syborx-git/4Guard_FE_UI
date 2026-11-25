@@ -6,7 +6,8 @@
 
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, tap, map } from 'rxjs';
+import { Observable, Subscription, tap, map } from 'rxjs';
+import { StompClientService } from '@4guard/shared-core';
 
 export type RfChatConversationType = 'DM' | 'SPACE' | 'THREAD';
 export type RfChatNotificationPref = 'ALL' | 'MENTIONS' | 'MUTED';
@@ -75,6 +76,7 @@ interface ApiResponse<T> {
 })
 export class RfChatService {
   private readonly http = inject(HttpClient);
+  private readonly stompService = inject(StompClientService);
   private readonly baseUrl = '/api/v1/chat';
 
   readonly conversations = signal<RfChatConversation[]>([]);
@@ -87,6 +89,8 @@ export class RfChatService {
   readonly isModalOpen = signal<boolean>(false);
 
   private pollingId: ReturnType<typeof setInterval> | null = null;
+  private userQueueSub: Subscription | null = null;
+  private activeTopicSub: Subscription | null = null;
 
   readonly activeConversation = computed<RfChatConversation | null>(() => {
     const id = this.activeConversationId();
@@ -119,6 +123,7 @@ export class RfChatService {
   }
 
   startPolling(): void {
+    this.initStompUserQueue();
     if (this.pollingId || typeof window === 'undefined') return;
     this.loadConversations().subscribe({ error: () => {} });
     this.pollingId = setInterval(() => {
@@ -135,6 +140,52 @@ export class RfChatService {
     if (this.pollingId) {
       clearInterval(this.pollingId);
       this.pollingId = null;
+    }
+    this.userQueueSub?.unsubscribe();
+    this.userQueueSub = null;
+    this.activeTopicSub?.unsubscribe();
+    this.activeTopicSub = null;
+  }
+
+  private initStompUserQueue(): void {
+    if (this.userQueueSub || typeof window === 'undefined') return;
+    try {
+      this.userQueueSub = this.stompService.watchUserQueue<any>('chat').subscribe({
+        next: (evt: any) => {
+          if (!evt) return;
+          this.loadConversations().subscribe({ error: () => {} });
+        },
+        error: () => {},
+      });
+    } catch {
+      // Fallback silencioso a polling
+    }
+  }
+
+  private subscribeToConversationTopic(conversationId: string): void {
+    this.activeTopicSub?.unsubscribe();
+    this.activeTopicSub = null;
+    if (typeof window === 'undefined') return;
+    try {
+      this.activeTopicSub = this.stompService.watchTopic<any>(`/topic/chat.${conversationId}`).subscribe({
+        next: (evt: any) => {
+          if (!evt || !evt.eventType) return;
+          const payload = evt.payload as RfChatMessage;
+          if (!payload?.id) return;
+
+          if (evt.eventType === 'MESSAGE_CREATED') {
+            this.messages.update((list) =>
+              list.some((m) => m.id === payload.id) ? list : [...list, payload]
+            );
+            this.markAsRead(conversationId).subscribe({ error: () => {} });
+          } else if (evt.eventType === 'MESSAGE_UPDATED' || evt.eventType === 'MESSAGE_DELETED') {
+            this.messages.update((list) => list.map((m) => (m.id === payload.id ? payload : m)));
+          }
+        },
+        error: () => {},
+      });
+    } catch {
+      // Fallback silencioso
     }
   }
 
@@ -163,11 +214,14 @@ export class RfChatService {
 
   selectConversation(conversationId: string): void {
     this.activeConversationId.set(conversationId);
+    this.subscribeToConversationTopic(conversationId);
     this.loadMessages(conversationId).subscribe({ error: () => {} });
     this.markAsRead(conversationId).subscribe({ error: () => {} });
   }
 
   clearActiveConversation(): void {
+    this.activeTopicSub?.unsubscribe();
+    this.activeTopicSub = null;
     this.activeConversationId.set(null);
     this.messages.set([]);
   }
