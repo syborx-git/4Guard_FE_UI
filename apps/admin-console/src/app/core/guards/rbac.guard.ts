@@ -14,6 +14,10 @@ export const rbacGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const authState = inject(AuthState);
   const router    = inject(Router);
 
+  if (authState.isChatOnlyUser()) {
+    return router.createUrlTree(['/chat']);
+  }
+
   // Extraer configuración RBAC desde los datos de la ruta
   const module        = route.data?.['module'] as string | undefined;
   const requiredRoles = route.data?.['roles']  as UserRole[] | undefined;

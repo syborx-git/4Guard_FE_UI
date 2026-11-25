@@ -14,6 +14,10 @@
         <button type="button" class="ec-icon-btn" (click)="closeRequested.emit()" title="Cerrar chat">
           <span class="material-symbols-outlined">close</span>
         </button>
+      } @else if (mode === 'fullscreen') {
+        <button type="button" class="ec-icon-btn" (click)="onLogout()" title="Cerrar sesión" aria-label="Cerrar sesión">
+          <span class="material-symbols-outlined">logout</span>
+        </button>
       }
     </header>
 

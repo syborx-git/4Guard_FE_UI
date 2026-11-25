@@ -1,0 +1,301 @@
+<!-- Modal Táctil de Mensajería Empresarial 4GUARD para Terminal RF -->
+@if (isOpen) {
+  <!-- Backdrop -->
+  <div class="rf-chat-backdrop" (click)="onClose()"></div>
+
+  <!-- Contenedor Modal Central Ergonómico -->
+  <div class="rf-chat-dialog" role="dialog" aria-modal="true" aria-label="Mensajería 4GUARD">
+
+    <!-- ── Header ─────────────────────────────────────────────── -->
+    <header class="rf-chat-header">
+      @if (rfChat.activeConversation(); as activeConv) {
+        <div class="header-left">
+          <button
+            type="button"
+            class="back-btn"
+            (click)="goBackToList()"
+            aria-label="Volver a la lista">
+            <span class="material-symbols-outlined">arrow_back</span>
+            <span>Volver</span>
+          </button>
+
+          <div class="conv-header-info">
+            <div class="conv-avatar conv-avatar--sm">
+              @if (activeConv.type === 'SPACE') {
+                <span class="material-symbols-outlined">tag</span>
+              } @else {
+                <span>{{ getInitials(getConversationDisplayName(activeConv)) }}</span>
+              }
+            </div>
+            <div class="conv-title-wrap">
+              <h2 class="header-title truncate">{{ getConversationDisplayName(activeConv) }}</h2>
+              <span class="header-subtitle">
+                {{ activeConv.type === 'SPACE' ? 'Espacio Operativo' : 'Mensaje Directo' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="header-left">
+          <div class="brand-icon-wrap">
+            <span class="material-symbols-outlined">forum</span>
+          </div>
+          <div class="conv-title-wrap">
+            <div class="title-row">
+              <h2 class="header-title">Mensajería 4GUARD</h2>
+              @if (rfChat.totalUnreadCount() > 0) {
+                <span class="unread-pill font-mono">{{ rfChat.totalUnreadCount() }} sin leer</span>
+              }
+            </div>
+            <p class="header-subtitle">Comunicación operativa en tiempo real</p>
+          </div>
+        </div>
+      }
+
+      <button type="button" class="close-btn" (click)="onClose()" aria-label="Cerrar mensajería">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </header>
+
+    <!-- ── Vista 1: Lista de Espacios, DMs y Colaboradores ────── -->
+    @if (!rfChat.activeConversation()) {
+      <!-- Barra de Búsqueda + Pestañas Táctiles -->
+      <div class="rf-chat-toolbar">
+        <div class="search-box">
+          <span class="material-symbols-outlined search-icon">search</span>
+          <input
+            type="text"
+            class="search-input"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            placeholder="Buscar espacio, conversación o colaborador..."
+            aria-label="Buscar conversaciones o colaboradores" />
+          @if (searchQuery()) {
+            <button type="button" class="clear-search-btn" (click)="searchQuery.set('')" aria-label="Limpiar búsqueda">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          }
+        </div>
+
+        <div class="tabs-bar" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            class="tab-pill"
+            [class.tab-pill--active]="activeTab() === 'all'"
+            (click)="setTab('all')">
+            <span>Todos</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="tab-pill"
+            [class.tab-pill--active]="activeTab() === 'spaces'"
+            (click)="setTab('spaces')">
+            <span class="material-symbols-outlined tab-icon">tag</span>
+            <span>Espacios ({{ filteredSpaces().length }})</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="tab-pill"
+            [class.tab-pill--active]="activeTab() === 'dms'"
+            (click)="setTab('dms')">
+            <span class="material-symbols-outlined tab-icon">chat</span>
+            <span>Directos ({{ filteredDms().length }})</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="tab-pill"
+            [class.tab-pill--active]="activeTab() === 'users'"
+            (click)="setTab('users')">
+            <span class="material-symbols-outlined tab-icon">group</span>
+            <span>Colaboradores ({{ filteredUsers().length }})</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cuerpo Scrolleable de Listas -->
+      <main class="rf-chat-list-body">
+        @if (rfChat.isLoadingConversations() && rfChat.conversations().length === 0) {
+          <div class="empty-state">
+            <span class="material-symbols-outlined spin-icon">sync</span>
+            <p>Cargando conversaciones...</p>
+          </div>
+        } @else {
+          <!-- Sección: Espacios -->
+          @if (activeTab() === 'all' || activeTab() === 'spaces') {
+            <section class="list-section">
+              <div class="section-header">
+                <span class="material-symbols-outlined section-icon">tag</span>
+                <h3 class="section-title">Espacios</h3>
+              </div>
+
+              @if (filteredSpaces().length === 0) {
+                <p class="section-empty">No hay espacios disponibles.</p>
+              } @else {
+                <div class="items-stack">
+                  @for (conv of filteredSpaces(); track conv.id) {
+                    <button type="button" class="conv-card" (click)="openConversation(conv)">
+                      <div class="conv-avatar conv-avatar--space">
+                        <span class="material-symbols-outlined">tag</span>
+                      </div>
+                      <div class="conv-main">
+                        <div class="conv-top-row">
+                          <span class="conv-name truncate">{{ conv.name }}</span>
+                          @if (conv.lastMessageAt) {
+                            <span class="conv-time font-mono">{{ formatTime(conv.lastMessageAt) }}</span>
+                          }
+                        </div>
+                        <p class="conv-preview truncate">
+                          @if (conv.lastMessage) {
+                            <strong>{{ conv.lastMessage.senderFullName }}:</strong> {{ conv.lastMessage.content }}
+                          } @else {
+                            {{ conv.description || 'Canal operativo de equipo' }}
+                          }
+                        </p>
+                      </div>
+                      @if (conv.unreadCount > 0) {
+                        <span class="conv-unread-badge font-mono">{{ conv.unreadCount }}</span>
+                      }
+                    </button>
+                  }
+                </div>
+              }
+            </section>
+          }
+
+          <!-- Sección: Mensajes Directos -->
+          @if (activeTab() === 'all' || activeTab() === 'dms') {
+            <section class="list-section">
+              <div class="section-header">
+                <span class="material-symbols-outlined section-icon">chat</span>
+                <h3 class="section-title">Mensajes Directos</h3>
+              </div>
+
+              @if (filteredDms().length === 0) {
+                <p class="section-empty">Sin mensajes directos activos.</p>
+              } @else {
+                <div class="items-stack">
+                  @for (conv of filteredDms(); track conv.id) {
+                    <button type="button" class="conv-card" (click)="openConversation(conv)">
+                      <div class="conv-avatar">
+                        <span>{{ getInitials(getConversationDisplayName(conv)) }}</span>
+                      </div>
+                      <div class="conv-main">
+                        <div class="conv-top-row">
+                          <span class="conv-name truncate">{{ getConversationDisplayName(conv) }}</span>
+                          @if (conv.lastMessageAt) {
+                            <span class="conv-time font-mono">{{ formatTime(conv.lastMessageAt) }}</span>
+                          }
+                        </div>
+                        <p class="conv-preview truncate">
+                          {{ conv.lastMessage?.content || 'Toca para iniciar conversación' }}
+                        </p>
+                      </div>
+                      @if (conv.unreadCount > 0) {
+                        <span class="conv-unread-badge font-mono">{{ conv.unreadCount }}</span>
+                      }
+                    </button>
+                  }
+                </div>
+              }
+            </section>
+          }
+
+          <!-- Sección: Colaboradores -->
+          @if (activeTab() === 'all' || activeTab() === 'users') {
+            <section class="list-section">
+              <div class="section-header">
+                <span class="material-symbols-outlined section-icon">group</span>
+                <h3 class="section-title">Colaboradores</h3>
+              </div>
+
+              @if (filteredUsers().length === 0) {
+                <p class="section-empty">No se encontraron colaboradores.</p>
+              } @else {
+                <div class="items-stack">
+                  @for (user of filteredUsers(); track user.id) {
+                    <button type="button" class="conv-card" (click)="startDmWithUser(user)">
+                      <div class="conv-avatar conv-avatar--user">
+                        <span>{{ getInitials(user.fullName) }}</span>
+                      </div>
+                      <div class="conv-main">
+                        <div class="conv-top-row">
+                          <span class="conv-name truncate">{{ user.fullName }}</span>
+                          <span class="user-role-chip">{{ user.roleName }}</span>
+                        </div>
+                        <p class="conv-preview truncate">&#64;{{ user.username }}</p>
+                      </div>
+                      <span class="material-symbols-outlined start-dm-icon">send</span>
+                    </button>
+                  }
+                </div>
+              }
+            </section>
+          }
+        }
+      </main>
+    } @else {
+      <!-- ── Vista 2: Conversación Activa ───────────────────────── -->
+      <main class="rf-chat-feed" #chatScrollContainer>
+        @if (rfChat.isLoadingMessages() && rfChat.messages().length === 0) {
+          <div class="empty-state">
+            <span class="material-symbols-outlined spin-icon">sync</span>
+            <p>Cargando mensajes...</p>
+          </div>
+        } @else if (rfChat.messages().length === 0) {
+          <div class="empty-state">
+            <span class="material-symbols-outlined">chat_bubble_outline</span>
+            <p>Aún no hay mensajes. Envía el primero para iniciar la coordinación.</p>
+          </div>
+        } @else {
+          @for (msg of rfChat.messages(); track msg.id) {
+            <div class="msg-row" [class.msg-row--own]="isOwnMessage(msg)">
+              @if (!isOwnMessage(msg)) {
+                <div class="msg-avatar">
+                  <span>{{ getInitials(msg.senderFullName || msg.senderUsername) }}</span>
+                </div>
+              }
+
+              <div class="msg-bubble" [class.msg-bubble--own]="isOwnMessage(msg)">
+                @if (!isOwnMessage(msg)) {
+                  <span class="msg-sender">{{ msg.senderFullName || msg.senderUsername }}</span>
+                }
+                <p class="msg-content">
+                  {{ msg.isDeleted ? 'Mensaje eliminado' : msg.content }}
+                </p>
+                <span class="msg-time font-mono">{{ formatTime(msg.createdAt) }}</span>
+              </div>
+            </div>
+          }
+        }
+      </main>
+
+      <!-- Barra de Entrada Táctil -->
+      <footer class="rf-chat-footer">
+        <form class="composer-form" (submit)="onSendMessage(); $event.preventDefault()">
+          <input
+            type="text"
+            class="composer-input"
+            [ngModel]="messageDraft()"
+            (ngModelChange)="messageDraft.set($event)"
+            name="messageDraft"
+            placeholder="Escribe un mensaje..."
+            autocomplete="off"
+            aria-label="Escribir mensaje" />
+
+          <button
+            type="submit"
+            class="send-btn"
+            [disabled]="!messageDraft().trim() || rfChat.isSending()"
+            aria-label="Enviar mensaje">
+            <span class="material-symbols-outlined">send</span>
+            <span>Enviar</span>
+          </button>
+        </form>
+      </footer>
+    }
+  </div>
+}

@@ -96,6 +96,16 @@ RF Shell — Layout Maestro PWA con Header Industrial y Nav Táctil
         <span class="forbot-rf-text">ForBot</span>
       </button>
 
+      <!-- Botón Mensajería 4GUARD -->
+      <button type="button" class="chat-rf-header-btn" (click)="openChatModal()"
+        title="Abrir Mensajería 4GUARD" aria-label="Mensajería 4GUARD">
+        <span class="material-symbols-outlined chat-rf-icon">forum</span>
+        <span class="chat-rf-text">Mensajes</span>
+        @if (rfChat.totalUnreadCount() > 0) {
+        <span class="chat-unread-badge font-mono">{{ rfChat.totalUnreadCount() }}</span>
+        }
+      </button>
+
       <!-- Theme Switcher (Dark/Light) -->
       <button type="button" class="action-btn action-btn--theme" (click)="toggleTheme()"
         [title]="themeService.currentTheme() === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'"
@@ -370,5 +380,9 @@ RF Shell — Layout Maestro PWA con Header Industrial y Nav Táctil
   <!-- Modal Táctil de Asistencia Operativa ForBot AI -->
   <fg-rf-forbot-modal [isOpen]="showForbotModal()" (closeModal)="closeForbotModal()">
   </fg-rf-forbot-modal>
+
+  <!-- Modal Táctil de Mensajería 4GUARD -->
+  <fg-rf-chat-modal [isOpen]="showChatModal()" (closeModal)="closeChatModal()">
+  </fg-rf-chat-modal>
 
 </div>

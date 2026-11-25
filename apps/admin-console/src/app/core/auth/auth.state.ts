@@ -41,6 +41,25 @@ export class AuthState {
   readonly roleLevel = computed(() => this._currentUser()?.roleLevel ?? 0);
   readonly permissions = computed(() => this._currentUser()?.permissions ?? []);
 
+  /** Indica si el usuario actual es exclusivo de chat (CHAT_ONLY) conforme a ADR-022 */
+  readonly isChatOnlyUser = computed(() => {
+    const user = this._currentUser();
+    if (!user) return false;
+
+    const normRole = (user.role || '').trim().toUpperCase();
+    if (normRole === 'CHAT_ONLY' || normRole === 'ROLE_CHAT_ONLY') {
+      return true;
+    }
+
+    const perms = (user.permissions ?? []).map((p) => String(p).trim().toUpperCase());
+    if (perms.length === 0) {
+      return false;
+    }
+
+    const chatPerms = new Set(['CHAT_ONLY', 'CHAT_ACCESS']);
+    return perms.some((p) => chatPerms.has(p)) && perms.every((p) => chatPerms.has(p));
+  });
+
   /** Nombre completo del usuario para visualización en UI */
   readonly userFullName = computed(() => this._currentUser()?.fullName ?? '');
 
@@ -90,6 +109,8 @@ export class AuthState {
       'ROLE_AUDITOR': 'Auditor',
       'CLIENT': 'Cliente 3PL',
       'ROLE_CLIENT': 'Cliente 3PL',
+      'CHAT_ONLY': 'Usuario de Chat',
+      'ROLE_CHAT_ONLY': 'Usuario de Chat',
     };
 
     return labels[role] ?? role.replace('ROLE_', '').replace(/_/g, ' ');
@@ -139,6 +160,13 @@ export class AuthState {
     this.setSession(session);
     if (session.user.changePasswordRequired) {
       this.router.navigate(['/change-password']);
+      return;
+    }
+
+    if (this.isChatOnlyUser()) {
+      localStorage.removeItem('4g_return_url');
+      localStorage.removeItem('4g_pending_process_name');
+      this.router.navigate(['/chat']);
       return;
     }
 
@@ -251,6 +279,10 @@ export class AuthState {
    * Verifica si el usuario actual tiene acceso a un módulo específico (Compatibilidad y SoD).
    */
   canAccessModule(module: string): boolean {
+    if (this.isChatOnlyUser()) {
+      return module === 'chat';
+    }
+
     const rawRole = this.role();
     if (!rawRole) return false;
 

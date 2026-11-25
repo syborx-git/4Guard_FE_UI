@@ -18,9 +18,11 @@ import { OfflineBannerComponent } from '../offline-banner/offline-banner.compone
 import { ToastContainerComponent } from '../toast-container/toast-container.component';
 import { RfNotificationsComponent } from '../rf-notifications/rf-notifications.component';
 import { RfForbotModalComponent } from '../forbot/rf-forbot-modal.component';
+import { RfChatModalComponent } from '../chat/rf-chat-modal.component';
 import { ToastService } from '@4guard/shared-core';
 import { PwaService } from '../../../core/services/pwa.service';
 import { HardwareMonitorService } from '../../../core/services/hardware-monitor.service';
+import { RfChatService } from '../../../core/services/rf-chat.service';
 
 interface NavItem {
   path: string;
@@ -41,7 +43,8 @@ interface NavItem {
     OfflineBannerComponent,
     ToastContainerComponent,
     RfNotificationsComponent,
-    RfForbotModalComponent
+    RfForbotModalComponent,
+    RfChatModalComponent
   ],
   templateUrl: './rf-shell.component.html',
   styleUrl: './rf-shell.component.css',
@@ -56,6 +59,7 @@ export class RfShellComponent implements OnInit, OnDestroy {
   protected readonly toast = inject(ToastService);
   protected readonly pwaService = inject(PwaService);
   protected readonly hardwareMonitor = inject(HardwareMonitorService);
+  protected readonly rfChat = inject(RfChatService);
 
   protected readonly userRoles = UserRole;
   protected readonly showIosModal = signal(false);
@@ -259,6 +263,11 @@ export class RfShellComponent implements OnInit, OnDestroy {
     window.addEventListener('online', this.handleOnline);
     window.addEventListener('offline', this.handleOffline);
 
+    // Iniciar polling de Mensajería 4GUARD cada 5s
+    if (this.authState.isAuthenticated()) {
+      this.rfChat.startPolling();
+    }
+
     // Bienvenida contextual al operador activo
     setTimeout(() => {
       const userName = this.displayUserName();
@@ -285,6 +294,7 @@ export class RfShellComponent implements OnInit, OnDestroy {
     if (this.clockIntervalId) {
       clearInterval(this.clockIntervalId);
     }
+    this.rfChat.stopPolling();
     window.removeEventListener('online', this.handleOnline);
     window.removeEventListener('offline', this.handleOffline);
   }
@@ -316,6 +326,9 @@ export class RfShellComponent implements OnInit, OnDestroy {
     }
     if (this.showScanModal()) {
       this.closeScanSimulator();
+    }
+    if (this.showChatModal()) {
+      this.closeChatModal();
     }
   }
 
@@ -445,6 +458,19 @@ export class RfShellComponent implements OnInit, OnDestroy {
 
   closeForbotModal(): void {
     this.showForbotModal.set(false);
+  }
+
+  // ─── Modal Mensajería 4GUARD ────────────────────────────────────────────────
+  protected readonly showChatModal = signal(false);
+
+  openChatModal(): void {
+    this.showChatModal.set(true);
+    this.rfChat.setModalOpen(true);
+  }
+
+  closeChatModal(): void {
+    this.showChatModal.set(false);
+    this.rfChat.setModalOpen(false);
   }
 }
 

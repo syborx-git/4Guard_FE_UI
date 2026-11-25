@@ -7,6 +7,7 @@
 import { Routes } from '@angular/router';
 import { authGuard }         from './core/guards/auth.guard';
 import { rbacGuard }         from './core/guards/rbac.guard';
+import { nonChatOnlyGuard }  from './core/guards/non-chat-only.guard';
 import { changePasswordGuard } from './core/guards/change-password.guard';
 import { lockoutGuard }      from './core/guards/lockout.guard';
 import { UserRole }           from '@4guard/shared-core';
@@ -94,7 +95,7 @@ export const adminRoutes: Routes = [
     path: '',
     loadComponent: () =>
       import('./shared/components/shell/shell.component').then((m) => m.ShellComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard, nonChatOnlyGuard],
     children: [
       // Perfil de Usuario (Vista Bento Box)
       {

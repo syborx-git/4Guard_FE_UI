@@ -84,6 +84,10 @@ export class EnterpriseChatComponent implements OnInit {
     this.mobileShowThread.set(false);
   }
 
+  onLogout(): void {
+    this.authState.logout();
+  }
+
   onStartDm(userId: string): void {
     this.chatService.startDirectMessage(userId).subscribe(() => {
       this.searchQuery.set('');
