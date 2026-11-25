@@ -11,9 +11,10 @@ import {
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ChatService } from '../chat.service';
 import { AuthState } from '../../../core/auth/auth.state';
-import { ChatMessage, ConversationSummary } from '../chat.models';
+import { ChatAttachment, ChatMessage, ConversationSummary } from '../chat.models';
 
 @Component({
   selector: 'fg-enterprise-chat',
@@ -31,6 +32,10 @@ export class EnterpriseChatComponent implements OnInit {
 
   protected readonly chatService = inject(ChatService);
   protected readonly authState = inject(AuthState);
+  private readonly sanitizer = inject(DomSanitizer);
+
+  protected readonly isAttachMenuOpen = signal<boolean>(false);
+  protected readonly previewAttachment = signal<ChatAttachment | null>(null);
 
   protected readonly searchQuery = signal<string>('');
   protected readonly activeFilter = signal<'ALL' | 'UNREAD' | 'SPACE' | 'DM'>('ALL');
@@ -65,9 +70,27 @@ export class EnterpriseChatComponent implements OnInit {
     const u = this.authState.currentUser();
     return u?.fullName || u?.username || 'Colaborador';
   });
-  protected readonly canCreateSpace = computed(() => {
+  protected readonly isManagerOrDirector = computed(() => {
     const role = (this.authState.currentUser()?.role || '').toUpperCase();
-    return role.includes('ADMIN') || role.includes('SUPERVISOR') || role.includes('GERENTE') || role.includes('DIRECTOR');
+    return (
+      role.includes('CEO') ||
+      role.includes('DIRECTOR') ||
+      role.includes('GERENTE') ||
+      role.includes('OPERATIONS_MANAGER') ||
+      role.includes('ADMIN')
+    );
+  });
+
+  protected readonly canCreateSpace = this.isManagerOrDirector;
+  protected readonly canDownloadAttachments = this.isManagerOrDirector;
+
+  protected readonly safePreviewUrl = computed<SafeResourceUrl | null>(() => {
+    const att = this.previewAttachment();
+    if (!att) return null;
+    const url = att.contentType.includes('pdf') && !this.canDownloadAttachments()
+      ? `${att.storageUrl}#toolbar=0&navpanes=0`
+      : att.storageUrl;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 
   protected readonly directMessages = computed(() => {
@@ -92,7 +115,7 @@ export class EnterpriseChatComponent implements OnInit {
 
   protected readonly filteredDirectoryUsers = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
-    if (!q) return this.chatService.users().slice(0, 8);
+    if (!q) return this.chatService.users();
     return this.chatService.users().filter(
       (u) => u.fullName.toLowerCase().includes(q) || u.username.toLowerCase().includes(q)
     );
@@ -164,6 +187,7 @@ export class EnterpriseChatComponent implements OnInit {
   }
 
   onFilesSelected(event: Event): void {
+    this.isAttachMenuOpen.set(false);
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
 
@@ -259,5 +283,21 @@ export class EnterpriseChatComponent implements OnInit {
         this.showNewSpaceModal.set(false);
         this.mobileShowThread.set(true);
       });
+  }
+
+  toggleAttachMenu(): void {
+    this.isAttachMenuOpen.update((v) => !v);
+  }
+
+  closeAttachMenu(): void {
+    this.isAttachMenuOpen.set(false);
+  }
+
+  openPreview(att: ChatAttachment): void {
+    this.previewAttachment.set(att);
+  }
+
+  closePreview(): void {
+    this.previewAttachment.set(null);
   }
 }

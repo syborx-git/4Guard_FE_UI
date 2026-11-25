@@ -269,14 +269,27 @@
                   <div class="ec-attachments">
                     @for (att of msg.attachments; track att.id) {
                       @if (att.contentType.startsWith('image/')) {
-                        <a [href]="att.storageUrl" [download]="att.fileName" class="ec-att-image-link" title="Descargar imagen">
-                          <img [src]="att.storageUrl" [alt]="att.fileName" class="ec-att-image" />
-                        </a>
+                        <button
+                          type="button"
+                          (click)="openPreview(att)"
+                          class="ec-att-image-link text-left cursor-pointer border-0 bg-transparent p-0"
+                          title="Previsualizar imagen">
+                          <img
+                            [src]="att.storageUrl"
+                            [alt]="att.fileName"
+                            class="ec-att-image"
+                            (contextmenu)="!canDownloadAttachments() && $event.preventDefault()" />
+                        </button>
                       } @else {
-                        <a [href]="att.storageUrl" [download]="att.fileName" class="ec-att-file">
+                        <button
+                          type="button"
+                          (click)="openPreview(att)"
+                          class="ec-att-file cursor-pointer text-left"
+                          title="Previsualizar documento PDF">
                           <span class="material-symbols-outlined">picture_as_pdf</span>
-                          <span>{{ att.fileName }}</span>
-                        </a>
+                          <span class="truncate max-w-[200px]">{{ att.fileName }}</span>
+                          <span class="text-[10px] opacity-75 ml-1">Ver</span>
+                        </button>
                       }
                     }
                   </div>
@@ -357,11 +370,42 @@
       }
 
       <!-- COMPOSER -->
-      <footer class="ec-composer">
-        <label class="ec-icon-btn cursor-pointer" title="Adjuntar imagen o PDF (máx. 2MB)">
-          <span class="material-symbols-outlined">attach_file</span>
-          <input type="file" class="hidden" accept="image/*,.pdf" multiple (change)="onFilesSelected($event)" />
-        </label>
+      <footer class="ec-composer relative">
+        @if (isAttachMenuOpen()) {
+          <div class="ec-attach-popover animate-fade-in" (click)="$event.stopPropagation()">
+            <label class="ec-attach-option cursor-pointer">
+              <span class="ec-attach-option__icon ec-attach-option__icon--cam">
+                <span class="material-symbols-outlined">photo_camera</span>
+              </span>
+              <div>
+                <strong>Tomar Foto / Captura</strong>
+                <span>Abrir cámara del dispositivo</span>
+              </div>
+              <input type="file" class="hidden" accept="image/*" capture="environment" (change)="onFilesSelected($event)" />
+            </label>
+
+            <label class="ec-attach-option cursor-pointer">
+              <span class="ec-attach-option__icon ec-attach-option__icon--doc">
+                <span class="material-symbols-outlined">upload_file</span>
+              </span>
+              <div>
+                <strong>Adjuntar Imagen o PDF</strong>
+                <span>Documentos y evidencias (máx. 2 MB)</span>
+              </div>
+              <input type="file" class="hidden" accept="image/*,.pdf" multiple (change)="onFilesSelected($event)" />
+            </label>
+          </div>
+        }
+
+        <button
+          type="button"
+          class="ec-attach-trigger"
+          [class.ec-attach-trigger--open]="isAttachMenuOpen()"
+          (click)="toggleAttachMenu()"
+          title="Tomar foto o adjuntar archivo">
+          <span class="material-symbols-outlined">{{ isAttachMenuOpen() ? 'close' : 'add' }}</span>
+        </button>
+
         <textarea
           class="ec-composer__input"
           rows="1"
@@ -424,6 +468,51 @@
         <div class="ec-modal__actions">
           <button type="button" class="ec-btn-secondary" (click)="showNewSpaceModal.set(false)">Cancelar</button>
           <button type="button" class="ec-btn-primary" [disabled]="!newSpaceName().trim()" (click)="onCreateSpace()">Crear Espacio</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- VISOR MODAL INTEGRADO (PDF E IMÁGENES) CON CONTROL DE DESCARGA POR ROL -->
+  @if (previewAttachment(); as att) {
+    <div class="ec-modal-backdrop" (click)="closePreview()">
+      <div class="ec-preview-modal" (click)="$event.stopPropagation()" (contextmenu)="!canDownloadAttachments() && $event.preventDefault()">
+        <header class="ec-preview-modal__header">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="material-symbols-outlined text-[#c5a86b]">
+              {{ att.contentType.startsWith('image/') ? 'image' : 'picture_as_pdf' }}
+            </span>
+            <span class="font-bold text-sm truncate">{{ att.fileName }}</span>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            @if (canDownloadAttachments()) {
+              <a [href]="att.storageUrl" [download]="att.fileName" class="ec-btn-primary text-xs inline-flex items-center gap-1 no-underline">
+                <span class="material-symbols-outlined text-sm">download</span>
+                <span>Descargar</span>
+              </a>
+            } @else {
+              <span class="ec-readonly-badge" title="Solo Gerentes y Directivos pueden descargar archivos">
+                Solo lectura
+              </span>
+            }
+            <button type="button" class="ec-circle-btn" (click)="closePreview()" title="Cerrar visor">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="ec-preview-modal__body">
+          @if (att.contentType.startsWith('image/')) {
+            <img
+              [src]="att.storageUrl"
+              [alt]="att.fileName"
+              class="ec-preview-img"
+              (contextmenu)="!canDownloadAttachments() && $event.preventDefault()" />
+          } @else {
+            @if (safePreviewUrl(); as safeUrl) {
+              <iframe [src]="safeUrl" class="ec-preview-pdf" title="Vista previa PDF"></iframe>
+            }
+          }
         </div>
       </div>
     </div>
