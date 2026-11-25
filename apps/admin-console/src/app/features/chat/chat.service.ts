@@ -2,6 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, Subscription, tap, map } from 'rxjs';
 import { StompClientService } from '@4guard/shared-core';
+import { environment } from '../../../environments/environment';
 import {
   ApiResponse,
   ChatMessage,
@@ -16,13 +17,14 @@ import {
 export class ChatService {
   private readonly http = inject(HttpClient);
   private readonly stompService = inject(StompClientService);
-  private readonly baseUrl = '/api/v1/chat';
+  private readonly baseUrl = `${environment.apiBaseUrl || ''}/api/v1/chat`;
 
   // Estado reactivo con Signals (ADR-006)
   readonly conversations = signal<ConversationSummary[]>([]);
   readonly activeConversationId = signal<string | null>(null);
   readonly messages = signal<ChatMessage[]>([]);
   readonly users = signal<ChatUser[]>([]);
+  readonly loadError = signal<string | null>(null);
   readonly isLoadingConversations = signal<boolean>(false);
   readonly isLoadingMessages = signal<boolean>(false);
   readonly isDrawerOpen = signal<boolean>(false);
@@ -158,7 +160,15 @@ export class ChatService {
     if (branchId) params = params.set('branchId', branchId);
     return this.http.get<ApiResponse<ChatUser[]>>(`${this.baseUrl}/users`, { params }).pipe(
       map((res) => res.data || []),
-      tap((list) => this.users.set(list))
+      tap({
+        next: (list) => {
+          this.users.set(list);
+          this.loadError.set(null);
+        },
+        error: () => {
+          this.loadError.set('No se pudo cargar el directorio (verifica que el backend esté en línea).');
+        },
+      })
     );
   }
 

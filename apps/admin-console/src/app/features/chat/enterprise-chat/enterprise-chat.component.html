@@ -168,7 +168,12 @@
         </button>
       } @empty {
         <div class="ec-section-empty">
-          <span>No hay colaboradores disponibles en este momento</span>
+          @if (chatService.loadError()) {
+            <span class="text-red-400">{{ chatService.loadError() }}</span>
+            <button type="button" class="ec-link-btn" (click)="chatService.loadUsers().subscribe()">Reintentar</button>
+          } @else {
+            <span>No hay colaboradores disponibles en este momento</span>
+          }
         </div>
       }
     </div>
