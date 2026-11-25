@@ -17,6 +17,7 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ChatService } from '../chat.service';
 import { AuthState } from '../../../core/auth/auth.state';
+import { ThemeService } from '../../../core/services/theme.service';
 import { ChatAttachment, ChatMessage, ConversationSummary } from '../chat.models';
 
 @Component({
@@ -37,6 +38,7 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
 
   protected readonly chatService = inject(ChatService);
   protected readonly authState = inject(AuthState);
+  protected readonly themeService = inject(ThemeService);
   private readonly sanitizer = inject(DomSanitizer);
 
   protected readonly isAttachMenuOpen = signal<boolean>(false);
@@ -404,6 +406,30 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
     const me = this.currentUserId();
     const other = conv.participants.find((p) => p.userId !== me);
     return !!other?.online;
+  }
+
+  formatRoleName(role?: string | null): string {
+    if (!role) return 'Colaborador';
+    const key = role.toUpperCase().replace(/^ROLE_/, '');
+    const map: Record<string, string> = {
+      CEO: 'Dirección General',
+      DIRECTOR: 'Director Operativo',
+      OPERATIONS_MANAGER: 'Gerente de Operaciones',
+      GERENTE_OPERACIONES: 'Gerente de Operaciones',
+      ADMIN: 'Administrador',
+      SECURITY_CHIEF: 'Jefe de Seguridad',
+      GATE_SECURITY: 'Vigilancia / Caseta',
+      CASETA: 'Vigilancia / Caseta',
+      RECEIVING_OPERATOR: 'Operador de Recepción',
+      WAREHOUSE_OPERATOR: 'Operador de Almacén',
+      FORKLIFT_OPERATOR: 'Montacarguista',
+      QM_INSPECTOR: 'Inspector de Calidad',
+      QUALITY_INSPECTOR: 'Inspector de Calidad',
+      QUALITY_MANAGER: 'Jefe de Calidad',
+      SHIPPING_OPERATOR: 'Operador de Embarques',
+      CHAT_ONLY: 'Comunicación Interna',
+    };
+    return map[key] || key.replace(/_/g, ' ');
   }
 
   async openCameraModal(): Promise<void> {

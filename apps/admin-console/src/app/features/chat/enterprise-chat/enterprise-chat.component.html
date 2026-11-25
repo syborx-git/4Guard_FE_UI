@@ -28,6 +28,10 @@
           <span class="material-symbols-outlined">close</span>
         </button>
         } @else if (mode === 'fullscreen') {
+        <button type="button" class="ec-circle-btn" (click)="themeService.toggleTheme()"
+          [title]="themeService.themeLabel()" [attr.aria-label]="themeService.themeLabel()">
+          <span class="material-symbols-outlined">{{ themeService.themeIcon() }}</span>
+        </button>
         <button type="button" class="ec-circle-btn" (click)="onLogout()" title="Cerrar sesión"
           aria-label="Cerrar sesión">
           <span class="material-symbols-outlined">logout</span>
@@ -77,6 +81,7 @@
       }
 
       <!-- ESPACIOS -->
+      @if (activeFilter() !== 'DM' && (activeFilter() !== 'UNREAD' || spaces().length > 0) && (spaces().length > 0 || canCreateSpace() || activeFilter() === 'SPACE')) {
       <div class="ec-section-header">
         <span>ESPACIOS ({{ spaces().length }})</span>
         @if (canCreateSpace()) {
@@ -120,8 +125,10 @@
         }
       </div>
       }
+      }
 
       <!-- MENSAJES DIRECTOS -->
+      @if (activeFilter() !== 'SPACE' && (activeFilter() !== 'UNREAD' || directMessages().length > 0) && (directMessages().length > 0 || activeFilter() === 'DM')) {
       <div class="ec-section-header mt-3">
         <span>MENSAJES DIRECTOS ({{ directMessages().length }})</span>
       </div>
@@ -150,8 +157,10 @@
         <span>Selecciona un colaborador abajo para iniciar un DM</span>
       </div>
       }
+      }
 
       <!-- DIRECTORIO RÁPIDO DE COLABORADORES -->
+      @if (activeFilter() === 'ALL' || activeFilter() === 'DM' || searchQuery().trim().length > 0) {
       <div class="ec-section-header mt-3">
         <span>COLABORADORES ({{ filteredDirectoryUsers().length }})</span>
       </div>
@@ -165,7 +174,7 @@
         </span>
         <div class="ec-conv-info">
           <span class="ec-conv-name">{{ u.fullName }}</span>
-          <span class="ec-conv-preview">&#64;{{ u.username }} · {{ u.roleName }}</span>
+          <span class="ec-conv-preview">&#64;{{ u.username }} · {{ formatRoleName(u.roleName) }}</span>
         </div>
       </button>
       } @empty {
@@ -178,25 +187,26 @@
         }
       </div>
       }
+      }
     </div>
   </aside>
 
   <!-- ÁREA DE CONVERSACIÓN -->
-  <main class="ec-main" [class.ec-hidden-mobile]="!mobileShowThread() && !chatService.activeConversation()">
+  <main class="ec-main" [class.ec-hidden-mobile]="!mobileShowThread() || !chatService.activeConversation()">
     @if (chatService.activeConversation(); as conv) {
     <header class="ec-thread-header">
       <div class="ec-thread-header__left">
-        <button type="button" class="ec-icon-btn ec-mobile-only" (click)="onBackToListMobile()" title="Volver">
+        <button type="button" class="ec-icon-btn ec-mobile-only shrink-0" (click)="onBackToListMobile()" title="Volver">
           <span class="material-symbols-outlined">arrow_back</span>
         </button>
-        <span class="ec-conv-avatar">
+        <span class="ec-conv-avatar shrink-0">
           @if (conv.type === 'SPACE') {
           <span class="material-symbols-outlined">{{ conv.icon || 'tag' }}</span>
           } @else {
           {{ conv.name.substring(0, 2).toUpperCase() }}
           }
         </span>
-        <div>
+        <div class="min-w-0 flex-1">
           <h3 class="ec-thread-title">{{ conv.name }}</h3>
           <span class="ec-thread-sub">
             @if (conv.type === 'SPACE') {
@@ -216,7 +226,7 @@
           </span>
         </div>
       </div>
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-1 shrink-0">
         @if (conv.type === 'SPACE' && canCreateSpace()) {
         <button type="button" class="ec-icon-btn" (click)="openManageMembersModal(conv)"
           title="Gestionar miembros del espacio">
@@ -411,8 +421,8 @@
         <span class="material-symbols-outlined">{{ isAttachMenuOpen() ? 'close' : 'add' }}</span>
       </button>
 
-      <textarea class="ec-composer__input" rows="1"
-        placeholder="Escribe un mensaje... (Enter para enviar, @mencionar, #folio)" [ngModel]="messageText()"
+      <textarea class="ec-composer__input" rows="1" enterkeyhint="send"
+        placeholder="Escribe un mensaje... (@, #folio)" [ngModel]="messageText()"
         (ngModelChange)="onComposerInput($event)" (keydown)="onComposerKeydown($event)"></textarea>
       <button type="button" class="ec-send-btn" [disabled]="!messageText().trim() && pendingAttachments().length === 0"
         (click)="onSendMessage()" title="Enviar mensaje">
@@ -499,13 +509,13 @@
         </div>
         <input type="search" class="ec-search-input mb-2" placeholder="Buscar colaborador..."
           [ngModel]="newSpaceMemberSearch()" (ngModelChange)="newSpaceMemberSearch.set($event)" />
-        <div class="max-h-36 overflow-y-auto rounded-lg border border-white/10 divide-y divide-white/5">
+        <div class="max-h-36 overflow-y-auto rounded-lg border border-slate-200 dark:border-white/10 divide-y divide-slate-200/70 dark:divide-white/5">
           @for (u of createSpaceMemberCandidates(); track u.id) {
-          <label class="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-white/5">
+          <label class="flex items-center gap-2 px-2.5 min-h-[40px] py-1.5 text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5">
             <input type="checkbox" [checked]="newSpaceMemberIds().includes(u.id)"
               (change)="toggleNewSpaceMember(u.id)" />
             <span class="font-medium truncate flex-1">{{ u.fullName }}</span>
-            <span class="opacity-60 text-[10px] truncate">{{ u.roleName }}</span>
+            <span class="opacity-60 text-[10px] truncate">{{ formatRoleName(u.roleName) }}</span>
           </label>
           }
         </div>
@@ -527,12 +537,12 @@
       <h3>Miembros del Espacio</h3>
       <input type="search" class="ec-search-input mb-2" placeholder="Buscar colaborador..."
         [ngModel]="manageMemberSearch()" (ngModelChange)="manageMemberSearch.set($event)" />
-      <div class="max-h-56 overflow-y-auto rounded-lg border border-white/10 divide-y divide-white/5 mb-3">
+      <div class="max-h-56 overflow-y-auto rounded-lg border border-slate-200 dark:border-white/10 divide-y divide-slate-200/70 dark:divide-white/5 mb-3">
         @for (u of manageMemberCandidates(); track u.id) {
-        <label class="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-white/5">
+        <label class="flex items-center gap-2 px-2.5 min-h-[40px] py-1.5 text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5">
           <input type="checkbox" [checked]="manageMemberIds().includes(u.id)" (change)="toggleManageMember(u.id)" />
           <span class="font-medium truncate flex-1">{{ u.fullName }}</span>
-          <span class="opacity-60 text-[10px] truncate">{{ u.roleName }}</span>
+          <span class="opacity-60 text-[10px] truncate">{{ formatRoleName(u.roleName) }}</span>
         </label>
         }
       </div>

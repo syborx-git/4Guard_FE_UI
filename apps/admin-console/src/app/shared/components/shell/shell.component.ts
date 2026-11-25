@@ -25,6 +25,7 @@ import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SyncState, UserRole } from '@4guard/shared-core';
 import { AuthState } from '../../../core/auth/auth.state';
+import { ThemeService } from '../../../core/services/theme.service';
 import { UsersService } from '../../../core/services/users.service';
 import { UserProfileDto } from '../../../core/models/user.models';
 import { ToastService } from '../../../core/services/toast.service';
@@ -293,21 +294,17 @@ export class ShellComponent implements OnInit, OnDestroy {
   private refreshIntervalId: ReturnType<typeof setInterval> | null = null;
   private refreshTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
+  protected readonly themeService = inject(ThemeService);
   protected isSidebarCollapsed = signal(false);
 
   // ── Premium Live UI ─────────────────────────────────────────
   protected readonly currentTime = signal('');
   protected readonly currentDate = signal('');
-  protected readonly isDarkMode = signal(false);
+  protected readonly isDarkMode = this.themeService.isDarkMode;
   protected readonly isHeaderRefreshing = signal(false);
 
-  protected readonly themeIcon = computed(() =>
-    this.isDarkMode() ? 'light_mode' : 'dark_mode'
-  );
-
-  protected readonly themeLabel = computed(() =>
-    this.isDarkMode() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'
-  );
+  protected readonly themeIcon = this.themeService.themeIcon;
+  protected readonly themeLabel = this.themeService.themeLabel;
 
   // ── Profile dropdown & Change Password modal ──────────────
   protected readonly showProfileMenu = signal(false);
@@ -721,7 +718,7 @@ export class ShellComponent implements OnInit, OnDestroy {
       setTimeout(() => this.resumedProcessNotice.set(null), 7000);
     }
 
-    this.restoreTheme();
+    this.themeService.restoreTheme();
     this.updateClock();
 
     this.clockIntervalId = setInterval(() => {
@@ -795,35 +792,8 @@ export class ShellComponent implements OnInit, OnDestroy {
     }, 1400);
   }
 
-  private restoreTheme(): void {
-    const savedTheme = localStorage.getItem('synexia-theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldUseDark = savedTheme ? savedTheme === 'dark' : prefersDark;
-
-    this.isDarkMode.set(shouldUseDark);
-    this.applyTheme(shouldUseDark);
-  }
-
   protected toggleTheme(): void {
-    const nextTheme = !this.isDarkMode();
-
-    this.isDarkMode.set(nextTheme);
-    this.applyTheme(nextTheme);
-
-    localStorage.setItem(
-      'synexia-theme',
-      nextTheme ? 'dark' : 'light'
-    );
-  }
-
-  private applyTheme(isDark: boolean): void {
-    const root = this.document.documentElement;
-
-    root.classList.toggle('theme-dark', isDark);
-    root.classList.toggle('dark', isDark);
-    root.classList.toggle('theme-light', !isDark);
-
-    this.forbotEngine.checkTheme();
+    this.themeService.toggleTheme();
   }
 
   protected toggleSidebar(): void {
