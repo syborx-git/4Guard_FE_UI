@@ -13,12 +13,14 @@ import {
   PalletType
 } from '../models/inventory-query.models';
 import { WarehouseMovementsService } from '../../warehouse-movements/services/warehouse-movements.service';
+import { WarehouseLayoutService } from '../../catalogs/services/warehouse-layout.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class InventoryQueryService {
   private readonly movementsService = inject(WarehouseMovementsService);
+  private readonly layoutService = inject(WarehouseLayoutService);
 
   /** Registros reales en stock vinculados a las recepciones y tarimas del WMS */
   private readonly _rawInventory = signal<InventoryRecord[]>([]);
@@ -599,6 +601,49 @@ export class InventoryQueryService {
           client: (p as any).clientName || 'Cliente General',
           expirationStatus: expStatus
         });
+      }
+    }
+
+    // 4. Incorporar stock registrado en bahías físicas (ej. POS-L-019 reubicado)
+    const simBays = this.layoutService.getSimulatedPositions();
+    for (const [codeKey, sim] of Object.entries(simBays)) {
+      if (sim.currentTarimas && sim.currentTarimas > 0) {
+        const cleanLoc = codeKey.toUpperCase().trim();
+        const existingInLoc = records.filter(r => r.location.toUpperCase().trim() === cleanLoc);
+        if (existingInLoc.length === 0) {
+          const wh = this.resolveWarehouseFromLocation(cleanLoc);
+          const count = sim.currentTarimas;
+          for (let i = 0; i < count; i++) {
+            counter++;
+            const palletNum = counter;
+            const uaCode = `00376130419101190${String(680 + i).slice(-3)}`;
+            records.push({
+              id: palletNum,
+              entryDate: today.toISOString().slice(0, 10),
+              elaborationDate: today.toISOString().slice(0, 10),
+              expirationDate: 'N/A',
+              usefulLifeDays: 0,
+              remision: 'CAM-2026-004082',
+              manufacturerBatch: sim.batchNumber || '0206632101',
+              ssccBarcode: uaCode,
+              sku: '104834816',
+              productDescription: sim.skuDescription || 'ADHESIVO BASE AGUA V3869 HB FULLER',
+              receptionFolio: 'CAM-2026-004082',
+              measuredQuantity: 20.41,
+              palletsCount: 1.0,
+              stayDays: 2,
+              warehouse: wh,
+              location: cleanLoc,
+              entryNumber: 'TR-CAM-2026-004082',
+              palletType: 'TARIMA CHEP NACIONAL',
+              labeledStatus: 'ETIQUETADO',
+              supplier: 'Marcas Nestlé / HB Fuller',
+              remainingLifeDays: 0,
+              client: 'Nestlé México',
+              expirationStatus: 'EN_TIEMPO'
+            });
+          }
+        }
       }
     }
 
