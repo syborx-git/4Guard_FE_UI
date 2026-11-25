@@ -120,13 +120,17 @@ export class StompClientService {
         const token =
           this.authService.getAccessToken() ||
           (typeof localStorage !== 'undefined' ? localStorage.getItem('4g_token') : null);
+        if (!this.isTokenUsable(token)) {
+          void client.deactivate();
+          return;
+        }
         const branchId = this.authState.branchId() || this.authService.getBranchId() || '';
         const user = this.authState.user() as any;
         const orgId = user?.organizationId || '';
 
         client.configure({
           connectHeaders: {
-            Authorization: token ? `Bearer ${token}` : '',
+            Authorization: `Bearer ${token}`,
             'X-Organization-Id': orgId,
             'X-Branch-Id': branchId,
           }
@@ -142,6 +146,14 @@ export class StompClientService {
     };
 
     this.rxStomp.configure(config);
+
+    // Detener reconexiones si el backend rechaza el JWT en CONNECT
+    this.rxStomp.stompErrors$.subscribe((frame) => {
+      const msg = `${frame.headers?.['message'] || ''} ${frame.body || ''}`.toLowerCase();
+      if (/jwt|firma|expirado|inv[aá]lido|ausente|revocad|unauthenticated|unauthorized/.test(msg)) {
+        void this.rxStomp.deactivate();
+      }
+    });
 
     // Monitoreo del estado para recalcular Backoff + Jitter
     this.connectionState$.subscribe((state) => {
@@ -217,9 +229,27 @@ export class StompClientService {
     const token =
       this.authService.getAccessToken() ||
       (typeof localStorage !== 'undefined' ? localStorage.getItem('4g_token') : null);
-    if (token && !this.rxStomp.active) {
+    if (this.isTokenUsable(token) && !this.rxStomp.active) {
       this.ngZone.runOutsideAngular(() => this.rxStomp.activate());
     }
+  }
+
+  private isTokenUsable(token: string | null): boolean {
+    if (!token) return false;
+    if (token.startsWith('mock-') || token.startsWith('rf-jwt-') || token.startsWith('local-')) {
+      return false;
+    }
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    try {
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (typeof payload?.exp === 'number' && Date.now() >= payload.exp * 1000) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+    return true;
   }
 
   // ─── Tópicos Jerárquicos Multitenant por Organización y Sucursal ─────────────

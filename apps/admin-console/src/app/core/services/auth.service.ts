@@ -13,6 +13,7 @@ import { Observable, tap, timer, Subscription, of, throwError } from 'rxjs';
 import { catchError, switchMap, finalize, timeout } from 'rxjs/operators';
 import { LoginRequest, LoginResponse, AuthenticatedUser, JwtSession } from '../models/auth.models';
 import { SessionStorageService } from './session-storage.service';
+import { StompClientService } from '@4guard/shared-core';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -21,6 +22,7 @@ import { environment } from '../../../environments/environment';
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly sessionStorageService = inject(SessionStorageService);
+  private readonly stompClient = inject(StompClientService);
   private readonly router = inject(Router);
 
   private readonly API_URL = `${environment.apiBaseUrl}/api/v1/auth`;
@@ -309,12 +311,14 @@ export class AuthService {
       return;
     }
 
-    if (!environment.production && reason === 'session_expired') {
-      // Proteger la sesión de desarrollo local para evitar expulsiones inesperadas por APIs externas
+    const currentRefresh = localStorage.getItem('4g_refresh') || '';
+    if (!environment.production && reason === 'session_expired' && currentRefresh.startsWith('mock-')) {
+      // Solo proteger sesiones sintéticas locales (mock), nunca JWTs reales rechazados con 401
       return;
     }
 
     this.refreshSubscription?.unsubscribe();
+    void this.stompClient.disconnect();
     
     // Limpieza de claves específicas solicitadas en localStorage
     localStorage.removeItem('4g_token');
