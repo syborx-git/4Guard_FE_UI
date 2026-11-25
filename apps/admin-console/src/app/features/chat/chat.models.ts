@@ -9,6 +9,7 @@ export interface ChatUser {
   roleName: string;
   branchId?: string | null;
   active: boolean;
+  online?: boolean;
 }
 
 export interface ChatParticipant {
@@ -18,6 +19,7 @@ export interface ChatParticipant {
   role: string;
   notificationPref: NotificationPref;
   lastReadAt: string;
+  online?: boolean;
 }
 
 export interface ReactionSummary {

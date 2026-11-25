@@ -20,22 +20,18 @@
 
       <div class="flex items-center gap-1.5 shrink-0">
         @if (mode === 'drawer') {
-          <button
-            type="button"
-            class="ec-circle-btn"
-            (click)="toggleExpandRequested.emit()"
-            [title]="isExpanded ? 'Reducir tamaño' : 'Expandir ventana'"
-            aria-label="Cambiar tamaño de ventana"
-          >
-            <span class="material-symbols-outlined">{{ isExpanded ? 'close_fullscreen' : 'open_in_full' }}</span>
-          </button>
-          <button type="button" class="ec-circle-btn" (click)="closeRequested.emit()" title="Cerrar chat">
-            <span class="material-symbols-outlined">close</span>
-          </button>
+        <button type="button" class="ec-circle-btn" (click)="toggleExpandRequested.emit()"
+          [title]="isExpanded ? 'Reducir tamaño' : 'Expandir ventana'" aria-label="Cambiar tamaño de ventana">
+          <span class="material-symbols-outlined">{{ isExpanded ? 'close_fullscreen' : 'open_in_full' }}</span>
+        </button>
+        <button type="button" class="ec-circle-btn" (click)="closeRequested.emit()" title="Cerrar chat">
+          <span class="material-symbols-outlined">close</span>
+        </button>
         } @else if (mode === 'fullscreen') {
-          <button type="button" class="ec-circle-btn" (click)="onLogout()" title="Cerrar sesión" aria-label="Cerrar sesión">
-            <span class="material-symbols-outlined">logout</span>
-          </button>
+        <button type="button" class="ec-circle-btn" (click)="onLogout()" title="Cerrar sesión"
+          aria-label="Cerrar sesión">
+          <span class="material-symbols-outlined">logout</span>
+        </button>
         }
       </div>
     </header>
@@ -44,30 +40,28 @@
     <div class="ec-search-wrap">
       <div class="relative">
         <span class="material-symbols-outlined ec-search-icon">search</span>
-        <input
-          #chatSearchInput
-          type="search"
-          class="ec-search-input"
-          placeholder="Buscar persona o espacio..."
-          [ngModel]="searchQuery()"
-          (ngModelChange)="searchQuery.set($event)"
-        />
+        <input #chatSearchInput type="search" class="ec-search-input" placeholder="Buscar persona o espacio..."
+          [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
       </div>
 
       <div class="ec-filter-chips">
-        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'ALL'" (click)="activeFilter.set('ALL')">
+        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'ALL'"
+          (click)="activeFilter.set('ALL')">
           Todos
         </button>
-        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'UNREAD'" (click)="activeFilter.set('UNREAD')">
+        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'UNREAD'"
+          (click)="activeFilter.set('UNREAD')">
           No leídos
           @if (chatService.totalUnreadCount() > 0) {
-            <span class="ec-chip-count">{{ chatService.totalUnreadCount() }}</span>
+          <span class="ec-chip-count">{{ chatService.totalUnreadCount() }}</span>
           }
         </button>
-        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'SPACE'" (click)="activeFilter.set('SPACE')">
+        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'SPACE'"
+          (click)="activeFilter.set('SPACE')">
           Espacios
         </button>
-        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'DM'" (click)="activeFilter.set('DM')">
+        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'DM'"
+          (click)="activeFilter.set('DM')">
           DMs
         </button>
       </div>
@@ -75,49 +69,49 @@
 
     <div class="ec-sidebar__scroll">
       @if (chatService.isLoadingConversations() && chatService.conversations().length === 0) {
-        <div class="ec-skeleton-list">
-          <div class="ec-skeleton-row"></div>
-          <div class="ec-skeleton-row"></div>
-          <div class="ec-skeleton-row"></div>
-        </div>
+      <div class="ec-skeleton-list">
+        <div class="ec-skeleton-row"></div>
+        <div class="ec-skeleton-row"></div>
+        <div class="ec-skeleton-row"></div>
+      </div>
       }
 
       <!-- ESPACIOS -->
       <div class="ec-section-header">
         <span>ESPACIOS ({{ spaces().length }})</span>
         @if (canCreateSpace()) {
-          <button type="button" class="ec-circle-btn ec-circle-btn--sm" (click)="showNewSpaceModal.set(true)" title="Crear espacio operativo">
-            <span class="material-symbols-outlined">add</span>
-          </button>
+        <button type="button" class="ec-circle-btn ec-circle-btn--sm" (click)="showNewSpaceModal.set(true)"
+          title="Crear espacio operativo">
+          <span class="material-symbols-outlined">add</span>
+        </button>
         }
       </div>
 
       @for (space of spaces(); track space.id) {
-        <button
-          type="button"
-          class="ec-conv-item"
-          [class.ec-conv-item--active]="chatService.activeConversationId() === space.id"
-          (click)="onSelectConversation(space)">
-          <span class="ec-conv-avatar ec-conv-avatar--space">
-            <span class="material-symbols-outlined">{{ space.icon || 'tag' }}</span>
-          </span>
-          <div class="ec-conv-info">
-            <div class="ec-conv-top">
-              <span class="ec-conv-name" [class.font-bold]="space.unreadCount > 0">{{ space.name }}</span>
-              @if (space.unreadCount > 0) {
-                <span class="ec-unread-badge">{{ space.unreadCount }}</span>
-              }
-            </div>
-            <span class="ec-conv-preview">{{ space.lastMessage?.content || space.description || 'Sin mensajes aún' }}</span>
+      <button type="button" class="ec-conv-item"
+        [class.ec-conv-item--active]="chatService.activeConversationId() === space.id"
+        (click)="onSelectConversation(space)">
+        <span class="ec-conv-avatar ec-conv-avatar--space">
+          <span class="material-symbols-outlined">{{ space.icon || 'tag' }}</span>
+        </span>
+        <div class="ec-conv-info">
+          <div class="ec-conv-top">
+            <span class="ec-conv-name" [class.font-bold]="space.unreadCount > 0">{{ space.name }}</span>
+            @if (space.unreadCount > 0) {
+            <span class="ec-unread-badge">{{ space.unreadCount }}</span>
+            }
           </div>
-        </button>
-      } @empty {
-        <div class="ec-section-empty">
-          <span>Sin espacios visibles</span>
-          @if (canCreateSpace()) {
-            <button type="button" class="ec-link-btn" (click)="showNewSpaceModal.set(true)">+ Crear espacio</button>
-          }
+          <span class="ec-conv-preview">{{ space.lastMessage?.content || space.description || 'Sin mensajes aún'
+            }}</span>
         </div>
+      </button>
+      } @empty {
+      <div class="ec-section-empty">
+        <span>Sin espacios visibles</span>
+        @if (canCreateSpace()) {
+        <button type="button" class="ec-link-btn" (click)="showNewSpaceModal.set(true)">+ Crear espacio</button>
+        }
+      </div>
       }
 
       <!-- MENSAJES DIRECTOS -->
@@ -126,29 +120,30 @@
       </div>
 
       @for (dm of directMessages(); track dm.id) {
-        <button
-          type="button"
-          class="ec-conv-item"
-          [class.ec-conv-item--active]="chatService.activeConversationId() === dm.id"
-          (click)="onSelectConversation(dm)">
-          <span class="ec-conv-avatar">
-            {{ dm.name.substring(0, 2).toUpperCase() }}
-            <span class="ec-presence-dot"></span>
-          </span>
-          <div class="ec-conv-info">
-            <div class="ec-conv-top">
-              <span class="ec-conv-name" [class.font-bold]="dm.unreadCount > 0">{{ dm.name }}</span>
-              @if (dm.unreadCount > 0) {
-                <span class="ec-unread-badge">{{ dm.unreadCount }}</span>
-              }
-            </div>
-            <span class="ec-conv-preview">{{ dm.lastMessage?.content || 'Iniciar conversación...' }}</span>
+      <button type="button" class="ec-conv-item"
+        [class.ec-conv-item--active]="chatService.activeConversationId() === dm.id" (click)="onSelectConversation(dm)">
+        <span class="ec-conv-avatar">
+          {{ dm.name.substring(0, 2).toUpperCase() }}
+          <span
+            class="ec-presence-dot"
+            [class.ec-presence-dot--online]="isConversationOnline(dm)"
+            [class.ec-presence-dot--offline]="!isConversationOnline(dm)"
+            [title]="isConversationOnline(dm) ? 'En línea' : 'Desconectado'"></span>
+        </span>
+        <div class="ec-conv-info">
+          <div class="ec-conv-top">
+            <span class="ec-conv-name" [class.font-bold]="dm.unreadCount > 0">{{ dm.name }}</span>
+            @if (dm.unreadCount > 0) {
+            <span class="ec-unread-badge">{{ dm.unreadCount }}</span>
+            }
           </div>
-        </button>
-      } @empty {
-        <div class="ec-section-empty">
-          <span>Selecciona un colaborador abajo para iniciar un DM</span>
+          <span class="ec-conv-preview">{{ dm.lastMessage?.content || 'Iniciar conversación...' }}</span>
         </div>
+      </button>
+      } @empty {
+      <div class="ec-section-empty">
+        <span>Selecciona un colaborador abajo para iniciar un DM</span>
+      </div>
       }
 
       <!-- DIRECTORIO RÁPIDO DE COLABORADORES -->
@@ -157,24 +152,29 @@
       </div>
 
       @for (u of filteredDirectoryUsers(); track u.id) {
-        <button type="button" class="ec-conv-item ec-conv-item--user" (click)="onStartDm(u.id)">
-          <span class="ec-conv-avatar ec-conv-avatar--sm">
-            {{ u.fullName.substring(0, 2).toUpperCase() }}
-          </span>
-          <div class="ec-conv-info">
-            <span class="ec-conv-name">{{ u.fullName }}</span>
-            <span class="ec-conv-preview">&#64;{{ u.username }} · {{ u.roleName }}</span>
-          </div>
-        </button>
-      } @empty {
-        <div class="ec-section-empty">
-          @if (chatService.loadError()) {
-            <span class="text-red-400">{{ chatService.loadError() }}</span>
-            <button type="button" class="ec-link-btn" (click)="chatService.loadUsers().subscribe()">Reintentar</button>
-          } @else {
-            <span>No hay colaboradores disponibles en este momento</span>
-          }
+      <button type="button" class="ec-conv-item ec-conv-item--user" (click)="onStartDm(u.id)">
+        <span class="ec-conv-avatar ec-conv-avatar--sm">
+          {{ u.fullName.substring(0, 2).toUpperCase() }}
+          <span
+            class="ec-presence-dot"
+            [class.ec-presence-dot--online]="u.online"
+            [class.ec-presence-dot--offline]="!u.online"
+            [title]="u.online ? 'En línea' : 'Desconectado'"></span>
+        </span>
+        <div class="ec-conv-info">
+          <span class="ec-conv-name">{{ u.fullName }}</span>
+          <span class="ec-conv-preview">&#64;{{ u.username }} · {{ u.roleName }}</span>
         </div>
+      </button>
+      } @empty {
+      <div class="ec-section-empty">
+        @if (chatService.loadError()) {
+        <span class="text-red-400">{{ chatService.loadError() }}</span>
+        <button type="button" class="ec-link-btn" (click)="chatService.loadUsers().subscribe()">Reintentar</button>
+        } @else {
+        <span>No hay colaboradores disponibles en este momento</span>
+        }
+      </div>
       }
     </div>
   </aside>
@@ -182,339 +182,327 @@
   <!-- ÁREA DE CONVERSACIÓN -->
   <main class="ec-main" [class.ec-hidden-mobile]="!mobileShowThread() && !chatService.activeConversation()">
     @if (chatService.activeConversation(); as conv) {
-      <header class="ec-thread-header">
-        <div class="ec-thread-header__left">
-          <button type="button" class="ec-icon-btn ec-mobile-only" (click)="onBackToListMobile()" title="Volver">
-            <span class="material-symbols-outlined">arrow_back</span>
-          </button>
-          <span class="ec-conv-avatar">
+    <header class="ec-thread-header">
+      <div class="ec-thread-header__left">
+        <button type="button" class="ec-icon-btn ec-mobile-only" (click)="onBackToListMobile()" title="Volver">
+          <span class="material-symbols-outlined">arrow_back</span>
+        </button>
+        <span class="ec-conv-avatar">
+          @if (conv.type === 'SPACE') {
+          <span class="material-symbols-outlined">{{ conv.icon || 'tag' }}</span>
+          } @else {
+          {{ conv.name.substring(0, 2).toUpperCase() }}
+          }
+        </span>
+        <div>
+          <h3 class="ec-thread-title">{{ conv.name }}</h3>
+          <span class="ec-thread-sub">
             @if (conv.type === 'SPACE') {
-              <span class="material-symbols-outlined">{{ conv.icon || 'tag' }}</span>
+              {{ conv.participants.length }} miembros
             } @else {
-              {{ conv.name.substring(0, 2).toUpperCase() }}
+              <span class="inline-flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="isConversationOnline(conv)" [class.bg-slate-400]="!isConversationOnline(conv)"></span>
+                {{ isConversationOnline(conv) ? 'En línea' : 'Desconectado' }}
+              </span>
             }
           </span>
-          <div>
-            <h3 class="ec-thread-title">{{ conv.name }}</h3>
-            <span class="ec-thread-sub">
-              {{ conv.type === 'SPACE' ? (conv.participants.length + ' miembros') : 'Mensaje Directo' }}
-            </span>
-          </div>
         </div>
-        <div class="flex items-center gap-1">
-          <button
-            type="button"
-            class="ec-icon-btn"
-            (click)="cycleNotificationPref(conv)"
-            [title]="'Notificaciones: ' + (conv.myNotificationPref || 'ALL') + ' (clic para cambiar)'"
-          >
-            <span class="material-symbols-outlined">
-              {{ conv.myNotificationPref === 'MUTED' ? 'notifications_off' : (conv.myNotificationPref === 'MENTIONS' ? 'notifications_paused' : 'notifications_active') }}
-            </span>
-          </button>
-          @if (mode === 'drawer') {
-            <button type="button" class="ec-icon-btn" (click)="closeRequested.emit()" title="Cerrar">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          }
-        </div>
-      </header>
-
-      <!-- FEED DE MENSAJES -->
-      <div class="ec-messages">
-        @if (chatService.hasMoreMessages()) {
-          <div class="flex justify-center mb-2">
-            <button
-              type="button"
-              class="ec-load-more-btn"
-              [disabled]="chatService.isLoadingMessages()"
-              (click)="chatService.loadOlderMessages(conv.id)">
-              Cargar mensajes anteriores
-            </button>
-          </div>
+      </div>
+      <div class="flex items-center gap-1">
+        <button type="button" class="ec-icon-btn" (click)="cycleNotificationPref(conv)"
+          [title]="'Notificaciones: ' + (conv.myNotificationPref || 'ALL') + ' (clic para cambiar)'">
+          <span class="material-symbols-outlined">
+            {{ conv.myNotificationPref === 'MUTED' ? 'notifications_off' : (conv.myNotificationPref === 'MENTIONS' ?
+            'notifications_paused' : 'notifications_active') }}
+          </span>
+        </button>
+        @if (mode === 'drawer') {
+        <button type="button" class="ec-icon-btn" (click)="closeRequested.emit()" title="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
         }
-        @for (msg of chatService.messages(); track msg.id) {
-          <div class="ec-msg" [class.ec-msg--mine]="msg.senderId === currentUserId()">
-            <div class="ec-msg__bubble" [class.ec-msg__bubble--mine]="msg.senderId === currentUserId()" [class.ec-msg__bubble--deleted]="msg.isDeleted">
-              <div class="ec-msg__meta">
-                <span class="ec-msg__author">{{ msg.senderFullName }}</span>
-                <span class="ec-msg__time">{{ msg.createdAt | date:'HH:mm' }}</span>
-              </div>
+      </div>
+    </header>
 
-              @if (editingMessageId() === msg.id) {
-                <div class="ec-edit-box">
-                  <input type="text" class="ec-edit-input" [ngModel]="editingContent()" (ngModelChange)="editingContent.set($event)" (keydown.enter)="onSaveEdit(msg.id)" />
-                  <div class="ec-edit-actions">
-                    <button type="button" class="ec-mini-btn" (click)="onSaveEdit(msg.id)">Guardar</button>
-                    <button type="button" class="ec-mini-btn" (click)="onCancelEdit()">Cancelar</button>
-                  </div>
-                </div>
-              } @else {
-                <p class="ec-msg__text">
-                  @for (part of parseMessageParts(msg.content); track $index) {
-                    @if (part.kind === 'mention') {
-                      <span class="ec-token-mention">{{ part.text }}</span>
-                    } @else if (part.kind === 'folio') {
-                      <span class="ec-token-folio" title="Referencia Operativa">{{ part.text }}</span>
-                    } @else {
-                      <span>{{ part.text }}</span>
-                    }
-                  }
-                  @if (msg.isEdited && !msg.isDeleted) {
-                    <span class="ec-edited-tag">(editado)</span>
-                  }
-                </p>
+    <!-- FEED DE MENSAJES -->
+    <div class="ec-messages">
+      @if (chatService.hasMoreMessages()) {
+      <div class="flex justify-center mb-2">
+        <button type="button" class="ec-load-more-btn" [disabled]="chatService.isLoadingMessages()"
+          (click)="chatService.loadOlderMessages(conv.id)">
+          Cargar mensajes anteriores
+        </button>
+      </div>
+      }
+      @for (msg of chatService.messages(); track msg.id) {
+      <div class="ec-msg" [class.ec-msg--mine]="msg.senderId === currentUserId()">
+        <div class="ec-msg__bubble" [class.ec-msg__bubble--mine]="msg.senderId === currentUserId()"
+          [class.ec-msg__bubble--deleted]="msg.isDeleted">
+          <div class="ec-msg__meta">
+            <span class="ec-msg__author">{{ msg.senderFullName }}</span>
+            <span class="ec-msg__time">{{ msg.createdAt | date:'HH:mm' }}</span>
+          </div>
 
-                @if (msg.attachments && msg.attachments.length > 0 && !msg.isDeleted) {
-                  <div class="ec-attachments">
-                    @for (att of msg.attachments; track att.id) {
-                      @if (att.contentType.startsWith('image/')) {
-                        <button
-                          type="button"
-                          (click)="openPreview(att)"
-                          class="ec-att-image-link text-left cursor-pointer border-0 bg-transparent p-0"
-                          title="Previsualizar imagen">
-                          <img
-                            [src]="att.storageUrl"
-                            [alt]="att.fileName"
-                            class="ec-att-image"
-                            (contextmenu)="!canDownloadAttachments() && $event.preventDefault()" />
-                        </button>
-                      } @else {
-                        <button
-                          type="button"
-                          (click)="openPreview(att)"
-                          class="ec-att-file cursor-pointer text-left"
-                          title="Previsualizar documento PDF">
-                          <span class="material-symbols-outlined">picture_as_pdf</span>
-                          <span class="truncate max-w-[200px]">{{ att.fileName }}</span>
-                          <span class="text-[10px] opacity-75 ml-1">Ver</span>
-                        </button>
-                      }
-                    }
-                  </div>
-                }
-              }
-
-              @if (!msg.isDeleted) {
-                <div class="ec-msg__actions">
-                  @for (emoji of quickEmojis; track emoji) {
-                    <button type="button" class="ec-emoji-btn" (click)="onToggleReaction(msg.id, emoji)">{{ emoji }}</button>
-                  }
-                  @if (msg.senderId === currentUserId()) {
-                    <button type="button" class="ec-mini-btn" (click)="onStartEdit(msg)" title="Editar">
-                      <span class="material-symbols-outlined">edit</span>
-                    </button>
-                    <button type="button" class="ec-mini-btn" (click)="onDeleteMessage(msg.id)" title="Eliminar">
-                      <span class="material-symbols-outlined">delete</span>
-                    </button>
-                  }
-                </div>
-              }
-
-              @if (msg.reactions.length > 0) {
-                <div class="ec-reactions">
-                  @for (r of msg.reactions; track r.emoji) {
-                    <button
-                      type="button"
-                      class="ec-reaction-pill"
-                      [class.ec-reaction-pill--active]="r.reactedByMe"
-                      (click)="onToggleReaction(msg.id, r.emoji)">
-                      <span>{{ r.emoji }}</span>
-                      <span>{{ r.count }}</span>
-                    </button>
-                  }
-                </div>
-              }
+          @if (editingMessageId() === msg.id) {
+          <div class="ec-edit-box">
+            <input type="text" class="ec-edit-input" [ngModel]="editingContent()"
+              (ngModelChange)="editingContent.set($event)" (keydown.enter)="onSaveEdit(msg.id)" />
+            <div class="ec-edit-actions">
+              <button type="button" class="ec-mini-btn" (click)="onSaveEdit(msg.id)">Guardar</button>
+              <button type="button" class="ec-mini-btn" (click)="onCancelEdit()">Cancelar</button>
             </div>
           </div>
-        } @empty {
-          <div class="ec-empty-thread">
-            <span class="material-symbols-outlined ec-empty-icon">chat_bubble_outline</span>
-            <p>Aún no hay mensajes en esta conversación. ¡Envía el primero!</p>
-          </div>
-        }
-      </div>
-
-      <!-- INDICADOR ESCRIBIENDO -->
-      @if (chatService.typingUser(); as typer) {
-        <div class="ec-typing-bar">
-          <span class="ec-typing-dot"></span>
-          <span>{{ typer }} está escribiendo...</span>
-        </div>
-      }
-
-      <!-- POPOVER AUTOCOMPLETADO @MENCIONES -->
-      @if (mentionCandidates().length > 0) {
-        <div class="ec-mentions-popover">
-          @for (cand of mentionCandidates(); track cand.id) {
-            <button type="button" class="ec-mention-item" (click)="insertMention(cand.username)">
-              <span class="font-bold">{{ cand.fullName }}</span>
-              <span class="opacity-70">&#64;{{ cand.username }}</span>
-            </button>
-          }
-        </div>
-      }
-
-      <!-- PREVISUALIZACIÓN DE ADJUNTOS PENDIENTES -->
-      @if (pendingAttachments().length > 0) {
-        <div class="ec-pending-atts">
-          @for (att of pendingAttachments(); track $index) {
-            <span class="ec-pending-chip">
-              <span class="material-symbols-outlined text-sm">{{ att.contentType.startsWith('image/') ? 'image' : 'description' }}</span>
-              <span class="truncate max-w-[140px]">{{ att.fileName }}</span>
-              <button type="button" (click)="removePendingAttachment($index)" title="Quitar">✕</button>
-            </span>
-          }
-        </div>
-      }
-
-      <!-- COMPOSER -->
-      <footer class="ec-composer relative">
-        @if (isAttachMenuOpen()) {
-          <div class="ec-attach-popover animate-fade-in" (click)="$event.stopPropagation()">
-            <label class="ec-attach-option cursor-pointer">
-              <span class="ec-attach-option__icon ec-attach-option__icon--cam">
-                <span class="material-symbols-outlined">photo_camera</span>
-              </span>
-              <div>
-                <strong>Tomar Foto / Captura</strong>
-                <span>Abrir cámara del dispositivo</span>
-              </div>
-              <input type="file" class="hidden" accept="image/*" capture="environment" (change)="onFilesSelected($event)" />
-            </label>
-
-            <label class="ec-attach-option cursor-pointer">
-              <span class="ec-attach-option__icon ec-attach-option__icon--doc">
-                <span class="material-symbols-outlined">upload_file</span>
-              </span>
-              <div>
-                <strong>Adjuntar Imagen o PDF</strong>
-                <span>Documentos y evidencias (máx. 2 MB)</span>
-              </div>
-              <input type="file" class="hidden" accept="image/*,.pdf" multiple (change)="onFilesSelected($event)" />
-            </label>
-          </div>
-        }
-
-        <button
-          type="button"
-          class="ec-attach-trigger"
-          [class.ec-attach-trigger--open]="isAttachMenuOpen()"
-          (click)="toggleAttachMenu()"
-          title="Tomar foto o adjuntar archivo">
-          <span class="material-symbols-outlined">{{ isAttachMenuOpen() ? 'close' : 'add' }}</span>
-        </button>
-
-        <textarea
-          class="ec-composer__input"
-          rows="1"
-          placeholder="Escribe un mensaje... (Enter para enviar, @mencionar, #folio)"
-          [ngModel]="messageText()"
-          (ngModelChange)="onComposerInput($event)"
-          (keydown)="onComposerKeydown($event)"></textarea>
-        <button type="button" class="ec-send-btn" [disabled]="!messageText().trim() && pendingAttachments().length === 0" (click)="onSendMessage()" title="Enviar mensaje">
-          <span class="material-symbols-outlined">send</span>
-        </button>
-      </footer>
-    } @else {
-      <div class="ec-empty-state">
-        <div class="ec-welcome-card">
-          <div class="ec-welcome-card__icon-wrap">
-            <span class="material-symbols-outlined">forum</span>
-          </div>
-          <span class="ec-welcome-eyebrow">COMUNICACIÓN OPERATIVA WMS</span>
-          <h3 class="ec-welcome-title">Bienvenido a 4GUARD Chat</h3>
-          <p class="ec-welcome-desc">
-            Coordina en tiempo real con Caseta, Recepción, Calidad y Embarques sin salir de tu operación.
+          } @else {
+          <p class="ec-msg__text">
+            @for (part of parseMessageParts(msg.content); track $index) {
+            @if (part.kind === 'mention') {
+            <span class="ec-token-mention">{{ part.text }}</span>
+            } @else if (part.kind === 'folio') {
+            <span class="ec-token-folio" title="Referencia Operativa">{{ part.text }}</span>
+            } @else {
+            <span>{{ part.text }}</span>
+            }
+            }
+            @if (msg.isEdited && !msg.isDeleted) {
+            <span class="ec-edited-tag">(editado)</span>
+            }
           </p>
 
-          <div class="ec-quick-actions">
-            @if (canCreateSpace()) {
-              <button type="button" class="ec-quick-action" (click)="showNewSpaceModal.set(true)">
-                <span class="material-symbols-outlined">add_circle</span>
-                <div>
-                  <strong>Crear Espacio Operativo</strong>
-                  <span>Canal por área o turno</span>
-                </div>
-              </button>
-            }
-            <button type="button" class="ec-quick-action" (click)="chatSearchInput.focus()">
-              <span class="material-symbols-outlined">person_search</span>
-              <div>
-                <strong>Buscar Colaborador</strong>
-                <span>Iniciar mensaje directo 1:1</span>
-              </div>
+          @if (msg.attachments && msg.attachments.length > 0 && !msg.isDeleted) {
+          <div class="ec-attachments">
+            @for (att of msg.attachments; track att.id) {
+            @if (att.contentType.startsWith('image/')) {
+            <button type="button" (click)="openPreview(att)"
+              class="ec-att-image-link text-left cursor-pointer border-0 bg-transparent p-0"
+              title="Previsualizar imagen">
+              <img [src]="att.storageUrl" [alt]="att.fileName" class="ec-att-image"
+                (contextmenu)="!canDownloadAttachments() && $event.preventDefault()" />
             </button>
+            } @else {
+            <button type="button" (click)="openPreview(att)" class="ec-att-file cursor-pointer text-left"
+              title="Previsualizar documento PDF">
+              <span class="material-symbols-outlined">picture_as_pdf</span>
+              <span class="truncate max-w-[200px]">{{ att.fileName }}</span>
+              <span class="text-[10px] opacity-75 ml-1">Ver</span>
+            </button>
+            }
+            }
           </div>
+          }
+          }
 
-          <div class="ec-tips-row">
-            <span class="ec-tip-pill"><strong>&#64;usuario</strong> Mencionar</span>
-            <span class="ec-tip-pill"><strong>#26516</strong> Folio</span>
-            <span class="ec-tip-pill"><strong>📎</strong> Imagen / PDF</span>
+          @if (!msg.isDeleted) {
+          <div class="ec-msg__actions">
+            @for (emoji of quickEmojis; track emoji) {
+            <button type="button" class="ec-emoji-btn" (click)="onToggleReaction(msg.id, emoji)">{{ emoji }}</button>
+            }
+            @if (msg.senderId === currentUserId()) {
+            <button type="button" class="ec-mini-btn" (click)="onStartEdit(msg)" title="Editar">
+              <span class="material-symbols-outlined">edit</span>
+            </button>
+            <button type="button" class="ec-mini-btn" (click)="onDeleteMessage(msg.id)" title="Eliminar">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+            }
           </div>
+          }
+
+          @if (msg.reactions.length > 0) {
+          <div class="ec-reactions">
+            @for (r of msg.reactions; track r.emoji) {
+            <button type="button" class="ec-reaction-pill" [class.ec-reaction-pill--active]="r.reactedByMe"
+              (click)="onToggleReaction(msg.id, r.emoji)">
+              <span>{{ r.emoji }}</span>
+              <span>{{ r.count }}</span>
+            </button>
+            }
+          </div>
+          }
         </div>
       </div>
+      } @empty {
+      <div class="ec-empty-thread">
+        <span class="material-symbols-outlined ec-empty-icon">chat_bubble_outline</span>
+        <p>Aún no hay mensajes en esta conversación. ¡Envía el primero!</p>
+      </div>
+      }
+    </div>
+
+    <!-- INDICADOR ESCRIBIENDO -->
+    @if (chatService.typingUser(); as typer) {
+    <div class="ec-typing-bar">
+      <span class="ec-typing-dot"></span>
+      <span>{{ typer }} está escribiendo...</span>
+    </div>
+    }
+
+    <!-- POPOVER AUTOCOMPLETADO @MENCIONES -->
+    @if (mentionCandidates().length > 0) {
+    <div class="ec-mentions-popover">
+      @for (cand of mentionCandidates(); track cand.id) {
+      <button type="button" class="ec-mention-item" (click)="insertMention(cand.username)">
+        <span class="font-bold">{{ cand.fullName }}</span>
+        <span class="opacity-70">&#64;{{ cand.username }}</span>
+      </button>
+      }
+    </div>
+    }
+
+    <!-- PREVISUALIZACIÓN DE ADJUNTOS PENDIENTES -->
+    @if (pendingAttachments().length > 0) {
+    <div class="ec-pending-atts">
+      @for (att of pendingAttachments(); track $index) {
+      <span class="ec-pending-chip">
+        <span class="material-symbols-outlined text-sm">{{ att.contentType.startsWith('image/') ? 'image' :
+          'description' }}</span>
+        <span class="truncate max-w-[140px]">{{ att.fileName }}</span>
+        <button type="button" (click)="removePendingAttachment($index)" title="Quitar">✕</button>
+      </span>
+      }
+    </div>
+    }
+
+    <!-- COMPOSER -->
+    <footer class="ec-composer relative">
+      @if (isAttachMenuOpen()) {
+      <div class="ec-attach-popover animate-fade-in" (click)="$event.stopPropagation()">
+        <label class="ec-attach-option cursor-pointer">
+          <span class="ec-attach-option__icon ec-attach-option__icon--cam">
+            <span class="material-symbols-outlined">photo_camera</span>
+          </span>
+          <div>
+            <strong>Tomar Foto / Captura</strong>
+            <span>Abrir cámara del dispositivo</span>
+          </div>
+          <input type="file" class="hidden" accept="image/*" capture="environment" (change)="onFilesSelected($event)" />
+        </label>
+
+        <label class="ec-attach-option cursor-pointer">
+          <span class="ec-attach-option__icon ec-attach-option__icon--doc">
+            <span class="material-symbols-outlined">upload_file</span>
+          </span>
+          <div>
+            <strong>Adjuntar Imagen o PDF</strong>
+            <span>Documentos y evidencias (máx. 2 MB)</span>
+          </div>
+          <input type="file" class="hidden" accept="image/*,.pdf" multiple (change)="onFilesSelected($event)" />
+        </label>
+      </div>
+      }
+
+      <button type="button" class="ec-attach-trigger" [class.ec-attach-trigger--open]="isAttachMenuOpen()"
+        (click)="toggleAttachMenu()" title="Tomar foto o adjuntar archivo">
+        <span class="material-symbols-outlined">{{ isAttachMenuOpen() ? 'close' : 'add' }}</span>
+      </button>
+
+      <textarea class="ec-composer__input" rows="1"
+        placeholder="Escribe un mensaje... (Enter para enviar, @mencionar, #folio)" [ngModel]="messageText()"
+        (ngModelChange)="onComposerInput($event)" (keydown)="onComposerKeydown($event)"></textarea>
+      <button type="button" class="ec-send-btn" [disabled]="!messageText().trim() && pendingAttachments().length === 0"
+        (click)="onSendMessage()" title="Enviar mensaje">
+        <span class="material-symbols-outlined">send</span>
+      </button>
+    </footer>
+    } @else {
+    <div class="ec-empty-state">
+      <div class="ec-welcome-card">
+        <div class="ec-welcome-card__icon-wrap">
+          <span class="material-symbols-outlined">forum</span>
+        </div>
+        <span class="ec-welcome-eyebrow">COMUNICACIÓN OPERATIVA WMS</span>
+        <h3 class="ec-welcome-title">Bienvenido a 4GUARD Chat</h3>
+        <p class="ec-welcome-desc">
+          Coordina en tiempo real con Caseta, Recepción, Calidad y Embarques sin salir de tu operación.
+        </p>
+
+        <div class="ec-quick-actions">
+          @if (canCreateSpace()) {
+          <button type="button" class="ec-quick-action" (click)="showNewSpaceModal.set(true)">
+            <span class="material-symbols-outlined">add_circle</span>
+            <div>
+              <strong>Crear Espacio Operativo</strong>
+              <span>Canal por área o turno</span>
+            </div>
+          </button>
+          }
+          <button type="button" class="ec-quick-action" (click)="chatSearchInput.focus()">
+            <span class="material-symbols-outlined">person_search</span>
+            <div>
+              <strong>Buscar Colaborador</strong>
+              <span>Iniciar mensaje directo 1:1</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="ec-tips-row">
+          <span class="ec-tip-pill"><strong>&#64;usuario</strong> Mencionar</span>
+          <span class="ec-tip-pill"><strong>#26516</strong> Folio</span>
+          <span class="ec-tip-pill"><strong>📎</strong> Imagen / PDF</span>
+        </div>
+      </div>
+    </div>
     }
   </main>
 
   <!-- MODAL CREAR ESPACIO -->
   @if (showNewSpaceModal()) {
-    <div class="ec-modal-backdrop" (click)="showNewSpaceModal.set(false)">
-      <div class="ec-modal" (click)="$event.stopPropagation()">
-        <h3>Crear Nuevo Espacio</h3>
-        <input type="text" class="ec-search-input mb-2" placeholder="Nombre (ej. #Caseta-Toluca)" [ngModel]="newSpaceName()" (ngModelChange)="newSpaceName.set($event)" />
-        <input type="text" class="ec-search-input mb-3" placeholder="Descripción breve (opcional)" [ngModel]="newSpaceDesc()" (ngModelChange)="newSpaceDesc.set($event)" />
-        <div class="ec-modal__actions">
-          <button type="button" class="ec-btn-secondary" (click)="showNewSpaceModal.set(false)">Cancelar</button>
-          <button type="button" class="ec-btn-primary" [disabled]="!newSpaceName().trim()" (click)="onCreateSpace()">Crear Espacio</button>
-        </div>
+  <div class="ec-modal-backdrop" (click)="showNewSpaceModal.set(false)">
+    <div class="ec-modal" (click)="$event.stopPropagation()">
+      <h3>Crear Nuevo Espacio</h3>
+      <input type="text" class="ec-search-input mb-2" placeholder="Nombre (ej. #Caseta-Toluca)"
+        [ngModel]="newSpaceName()" (ngModelChange)="newSpaceName.set($event)" />
+      <input type="text" class="ec-search-input mb-3" placeholder="Descripción breve (opcional)"
+        [ngModel]="newSpaceDesc()" (ngModelChange)="newSpaceDesc.set($event)" />
+      <div class="ec-modal__actions">
+        <button type="button" class="ec-btn-secondary" (click)="showNewSpaceModal.set(false)">Cancelar</button>
+        <button type="button" class="ec-btn-primary" [disabled]="!newSpaceName().trim()" (click)="onCreateSpace()">Crear
+          Espacio</button>
       </div>
     </div>
+  </div>
   }
 
   <!-- VISOR MODAL INTEGRADO (PDF E IMÁGENES) CON CONTROL DE DESCARGA POR ROL -->
   @if (previewAttachment(); as att) {
-    <div class="ec-modal-backdrop" (click)="closePreview()">
-      <div class="ec-preview-modal" (click)="$event.stopPropagation()" (contextmenu)="!canDownloadAttachments() && $event.preventDefault()">
-        <header class="ec-preview-modal__header">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="material-symbols-outlined text-[#c5a86b]">
-              {{ att.contentType.startsWith('image/') ? 'image' : 'picture_as_pdf' }}
-            </span>
-            <span class="font-bold text-sm truncate">{{ att.fileName }}</span>
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            @if (canDownloadAttachments()) {
-              <a [href]="att.storageUrl" [download]="att.fileName" class="ec-btn-primary text-xs inline-flex items-center gap-1 no-underline">
-                <span class="material-symbols-outlined text-sm">download</span>
-                <span>Descargar</span>
-              </a>
-            } @else {
-              <span class="ec-readonly-badge" title="Solo Gerentes y Directivos pueden descargar archivos">
-                Solo lectura
-              </span>
-            }
-            <button type="button" class="ec-circle-btn" (click)="closePreview()" title="Cerrar visor">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-        </header>
-
-        <div class="ec-preview-modal__body">
-          @if (att.contentType.startsWith('image/')) {
-            <img
-              [src]="att.storageUrl"
-              [alt]="att.fileName"
-              class="ec-preview-img"
-              (contextmenu)="!canDownloadAttachments() && $event.preventDefault()" />
-          } @else {
-            @if (safePreviewUrl(); as safeUrl) {
-              <iframe [src]="safeUrl" class="ec-preview-pdf" title="Vista previa PDF"></iframe>
-            }
-          }
+  <div class="ec-modal-backdrop" (click)="closePreview()">
+    <div class="ec-preview-modal" (click)="$event.stopPropagation()"
+      (contextmenu)="!canDownloadAttachments() && $event.preventDefault()">
+      <header class="ec-preview-modal__header">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="material-symbols-outlined text-[#c5a86b]">
+            {{ att.contentType.startsWith('image/') ? 'image' : 'picture_as_pdf' }}
+          </span>
+          <span class="font-bold text-sm truncate">{{ att.fileName }}</span>
         </div>
+        <div class="flex items-center gap-2 shrink-0">
+          @if (canDownloadAttachments()) {
+          <a [href]="att.storageUrl" [download]="att.fileName"
+            class="ec-btn-primary text-xs inline-flex items-center gap-1 no-underline">
+            <span class="material-symbols-outlined text-sm">download</span>
+            <span>Descargar</span>
+          </a>
+          } @else {
+          <span class="ec-readonly-badge" title="Solo Gerentes y Directivos pueden descargar archivos">
+            Solo lectura
+          </span>
+          }
+          <button type="button" class="ec-circle-btn" (click)="closePreview()" title="Cerrar visor">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="ec-preview-modal__body">
+        @if (att.contentType.startsWith('image/')) {
+        <img [src]="att.storageUrl" [alt]="att.fileName" class="ec-preview-img"
+          (contextmenu)="!canDownloadAttachments() && $event.preventDefault()" />
+        } @else {
+        @if (safePreviewUrl(); as safeUrl) {
+        <iframe [src]="safeUrl" class="ec-preview-pdf" title="Vista previa PDF"></iframe>
+        }
+        }
       </div>
     </div>
+  </div>
   }
 </div>

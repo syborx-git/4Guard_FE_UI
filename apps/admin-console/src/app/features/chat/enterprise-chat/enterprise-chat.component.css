@@ -1036,3 +1036,11 @@
   font-size: 0.72rem;
   font-weight: 700;
 }
+
+.ec-presence-dot--online {
+  background: var(--color-success, #00897b) !important;
+}
+
+.ec-presence-dot--offline {
+  background: #64748b !important;
+}

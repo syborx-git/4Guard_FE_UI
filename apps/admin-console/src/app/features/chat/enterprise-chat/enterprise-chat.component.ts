@@ -300,4 +300,11 @@ export class EnterpriseChatComponent implements OnInit {
   closePreview(): void {
     this.previewAttachment.set(null);
   }
+
+  isConversationOnline(conv: ConversationSummary): boolean {
+    if (conv.type !== 'DM') return false;
+    const me = this.currentUserId();
+    const other = conv.participants.find((p) => p.userId !== me);
+    return !!other?.online;
+  }
 }
