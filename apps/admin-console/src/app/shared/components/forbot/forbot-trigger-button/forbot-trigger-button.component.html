@@ -1,27 +1,61 @@
 <div
-  class="relative flex items-center justify-center transition-all duration-300"
-  [class.opacity-0]="forbotEngine.isDrawerOpen()"
-  [class.pointer-events-none]="forbotEngine.isDrawerOpen()"
-  [class.scale-75]="forbotEngine.isDrawerOpen()"
+  class="relative flex flex-col items-end gap-3 transition-all duration-300"
+  [class.opacity-0]="forbotEngine.isDrawerOpen() || chatService.isDrawerOpen()"
+  [class.pointer-events-none]="forbotEngine.isDrawerOpen() || chatService.isDrawerOpen()"
+  [class.scale-75]="forbotEngine.isDrawerOpen() || chatService.isDrawerOpen()"
 >
+  <!-- MENÚ SPEED-DIAL DESPLEGABLE (2 ÍCONOS ANIMADOS) -->
+  @if (isSpeedDialOpen()) {
+    <div class="flex flex-col items-end gap-2.5 animate-fade-in mb-1">
+      <!-- Acción 1: Mensajería 4GUARD -->
+      <button
+        id="fab-action-chat"
+        type="button"
+        (click)="onOpenChat()"
+        class="group relative flex items-center gap-2.5 pl-3.5 pr-2.5 py-2 rounded-full border border-[#c5a86b]/50 bg-[#172033]/95 text-slate-100 shadow-xl hover:border-[#e5c158] hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md"
+        title="Abrir Mensajería 4GUARD"
+      >
+        <span class="text-xs font-semibold tracking-wide whitespace-nowrap">Mensajería</span>
+        <span class="relative w-9 h-9 rounded-full bg-[#c5a86b]/20 border border-[#c5a86b]/40 flex items-center justify-center text-[#e5c158]">
+          <span class="material-symbols-outlined text-[20px]">forum</span>
+          @if (chatService.totalUnreadCount() > 0) {
+            <span class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow">
+              {{ chatService.totalUnreadCount() > 99 ? '99+' : chatService.totalUnreadCount() }}
+            </span>
+          }
+        </span>
+      </button>
 
-  <!-- Tooltip Inteligente al Hover (Desplegado a la izquierda) -->
-  <div class="absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 transform translate-x-2 group-hover:translate-x-0 whitespace-nowrap z-50">
-    <div class="px-3.5 py-2 rounded-xl bg-slate-900/95 text-slate-100 border border-amber-400/40 shadow-[0_4px_20px_rgba(0,0,0,0.3)] text-xs font-bold flex items-center gap-2 font-sans backdrop-blur-md">
-      <span class="text-amber-400">🤖 ForBot AI</span>
-      <span class="text-slate-400 font-mono text-[10px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-700">Ctrl + K</span>
+      <!-- Acción 2: ForBot AI -->
+      <button
+        id="fab-action-forbot"
+        type="button"
+        (click)="onOpenForbot()"
+        class="group relative flex items-center gap-2.5 pl-3.5 pr-2.5 py-2 rounded-full border border-[#c5a86b]/50 bg-[#172033]/95 text-slate-100 shadow-xl hover:border-[#e5c158] hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md"
+        title="Abrir ForBot AI (Ctrl + K)"
+      >
+        <span class="text-xs font-semibold tracking-wide whitespace-nowrap">ForBot AI</span>
+        <span class="w-9 h-9 rounded-full bg-[#c5a86b]/20 border border-[#c5a86b]/40 flex items-center justify-center text-[#e5c158]">
+          <span class="material-symbols-outlined text-[20px]">smart_toy</span>
+        </span>
+      </button>
     </div>
-  </div>
+  }
 
-  <!-- Botón Flotante Circular Luminoso (FAB) 4GUARD con Avatar Oficial -->
+  <!-- BOTÓN PRINCIPAL FLOTANTE (FAB) -->
   <button
     id="forbot-fab-btn"
     type="button"
-    (click)="onToggleForbot()"
-    title="Abrir ForBot AI (Ctrl + K)"
+    (click)="onToggleSpeedDial()"
+    title="Asistente ForBot y Mensajería 4GUARD"
     class="relative rounded-full p-1 bg-gradient-to-br from-[#172033]/90 via-[#25324a]/90 to-[#172033]/90 border border-[#c5a86b]/70 hover:border-[#e5c158] shadow-[0_8px_25px_rgba(23,32,51,0.35),0_0_15px_rgba(197,168,107,0.25)] hover:shadow-[0_10px_30px_rgba(23,32,51,0.45),0_0_22px_rgba(229,193,88,0.45)] transition-all duration-300 transform hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer"
   >
-    <!-- Avatar Oficial ForBot AI con Halo Dorado, Logo 4GUARD e Indicador En Vivo -->
     <fg-forbot-avatar [size]="46"></fg-forbot-avatar>
+
+    @if (!isSpeedDialOpen() && chatService.totalUnreadCount() > 0) {
+      <span class="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center border-2 border-[#172033] shadow">
+        {{ chatService.totalUnreadCount() > 99 ? '99+' : chatService.totalUnreadCount() }}
+      </span>
+    }
   </button>
 </div>

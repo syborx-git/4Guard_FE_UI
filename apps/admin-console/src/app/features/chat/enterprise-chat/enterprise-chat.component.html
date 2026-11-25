@@ -1,0 +1,242 @@
+<div class="ec-shell" [class.ec-shell--drawer]="mode === 'drawer'" [class.ec-shell--fullscreen]="mode === 'fullscreen'">
+  <!-- SIDEBAR DE CONVERSACIONES -->
+  <aside class="ec-sidebar" [class.ec-hidden-mobile]="mobileShowThread() && chatService.activeConversation()">
+    <header class="ec-sidebar__header">
+      <div class="ec-brand">
+        <span class="material-symbols-outlined ec-brand__icon">forum</span>
+        <div>
+          <h2 class="ec-brand__title">4GUARD Chat</h2>
+          <span class="ec-brand__sub">Mensajería Interna</span>
+        </div>
+      </div>
+
+      @if (mode === 'drawer') {
+        <button type="button" class="ec-icon-btn" (click)="closeRequested.emit()" title="Cerrar chat">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      }
+    </header>
+
+    <!-- Buscador -->
+    <div class="ec-search-wrap">
+      <span class="material-symbols-outlined ec-search-icon">search</span>
+      <input
+        type="search"
+        class="ec-search-input"
+        placeholder="Buscar persona o espacio..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+      />
+    </div>
+
+    <div class="ec-sidebar__scroll">
+      <!-- ESPACIOS -->
+      <div class="ec-section-header">
+        <span>ESPACIOS</span>
+        @if (canCreateSpace()) {
+          <button type="button" class="ec-mini-btn" (click)="showNewSpaceModal.set(true)" title="Crear espacio">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+        }
+      </div>
+
+      @for (space of spaces(); track space.id) {
+        <button
+          type="button"
+          class="ec-conv-item"
+          [class.ec-conv-item--active]="chatService.activeConversationId() === space.id"
+          (click)="onSelectConversation(space)">
+          <span class="ec-conv-avatar ec-conv-avatar--space">
+            <span class="material-symbols-outlined">{{ space.icon || 'tag' }}</span>
+          </span>
+          <div class="ec-conv-info">
+            <div class="ec-conv-top">
+              <span class="ec-conv-name" [class.font-bold]="space.unreadCount > 0">{{ space.name }}</span>
+              @if (space.unreadCount > 0) {
+                <span class="ec-unread-badge">{{ space.unreadCount }}</span>
+              }
+            </div>
+            <span class="ec-conv-preview">{{ space.lastMessage?.content || space.description || 'Sin mensajes aún' }}</span>
+          </div>
+        </button>
+      }
+
+      <!-- MENSAJES DIRECTOS -->
+      <div class="ec-section-header mt-3">
+        <span>MENSAJES DIRECTOS</span>
+      </div>
+
+      @for (dm of directMessages(); track dm.id) {
+        <button
+          type="button"
+          class="ec-conv-item"
+          [class.ec-conv-item--active]="chatService.activeConversationId() === dm.id"
+          (click)="onSelectConversation(dm)">
+          <span class="ec-conv-avatar">
+            {{ dm.name.substring(0, 2).toUpperCase() }}
+            <span class="ec-presence-dot"></span>
+          </span>
+          <div class="ec-conv-info">
+            <div class="ec-conv-top">
+              <span class="ec-conv-name" [class.font-bold]="dm.unreadCount > 0">{{ dm.name }}</span>
+              @if (dm.unreadCount > 0) {
+                <span class="ec-unread-badge">{{ dm.unreadCount }}</span>
+              }
+            </div>
+            <span class="ec-conv-preview">{{ dm.lastMessage?.content || 'Iniciar conversación...' }}</span>
+          </div>
+        </button>
+      }
+
+      <!-- DIRECTORIO RÁPIDO DE COLABORADORES -->
+      <div class="ec-section-header mt-3">
+        <span>COLABORADORES ({{ filteredDirectoryUsers().length }})</span>
+      </div>
+
+      @for (u of filteredDirectoryUsers(); track u.id) {
+        <button type="button" class="ec-conv-item ec-conv-item--user" (click)="onStartDm(u.id)">
+          <span class="ec-conv-avatar ec-conv-avatar--sm">
+            {{ u.fullName.substring(0, 2).toUpperCase() }}
+          </span>
+          <div class="ec-conv-info">
+            <span class="ec-conv-name">{{ u.fullName }}</span>
+            <span class="ec-conv-preview">&#64;{{ u.username }} · {{ u.roleName }}</span>
+          </div>
+        </button>
+      }
+    </div>
+  </aside>
+
+  <!-- ÁREA DE CONVERSACIÓN -->
+  <main class="ec-main" [class.ec-hidden-mobile]="!mobileShowThread() && !chatService.activeConversation()">
+    @if (chatService.activeConversation(); as conv) {
+      <header class="ec-thread-header">
+        <div class="ec-thread-header__left">
+          <button type="button" class="ec-icon-btn ec-mobile-only" (click)="onBackToListMobile()" title="Volver">
+            <span class="material-symbols-outlined">arrow_back</span>
+          </button>
+          <span class="ec-conv-avatar">
+            @if (conv.type === 'SPACE') {
+              <span class="material-symbols-outlined">{{ conv.icon || 'tag' }}</span>
+            } @else {
+              {{ conv.name.substring(0, 2).toUpperCase() }}
+            }
+          </span>
+          <div>
+            <h3 class="ec-thread-title">{{ conv.name }}</h3>
+            <span class="ec-thread-sub">
+              {{ conv.type === 'SPACE' ? (conv.participants.length + ' miembros') : 'Mensaje Directo' }}
+            </span>
+          </div>
+        </div>
+        @if (mode === 'drawer') {
+          <button type="button" class="ec-icon-btn" (click)="closeRequested.emit()" title="Cerrar">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        }
+      </header>
+
+      <!-- FEED DE MENSAJES -->
+      <div class="ec-messages">
+        @for (msg of chatService.messages(); track msg.id) {
+          <div class="ec-msg" [class.ec-msg--mine]="msg.senderId === currentUserId()">
+            <div class="ec-msg__bubble" [class.ec-msg__bubble--mine]="msg.senderId === currentUserId()" [class.ec-msg__bubble--deleted]="msg.isDeleted">
+              <div class="ec-msg__meta">
+                <span class="ec-msg__author">{{ msg.senderFullName }}</span>
+                <span class="ec-msg__time">{{ msg.createdAt | date:'HH:mm' }}</span>
+              </div>
+
+              @if (editingMessageId() === msg.id) {
+                <div class="ec-edit-box">
+                  <input type="text" class="ec-edit-input" [ngModel]="editingContent()" (ngModelChange)="editingContent.set($event)" (keydown.enter)="onSaveEdit(msg.id)" />
+                  <div class="ec-edit-actions">
+                    <button type="button" class="ec-mini-btn" (click)="onSaveEdit(msg.id)">Guardar</button>
+                    <button type="button" class="ec-mini-btn" (click)="onCancelEdit()">Cancelar</button>
+                  </div>
+                </div>
+              } @else {
+                <p class="ec-msg__text">
+                  {{ msg.content }}
+                  @if (msg.isEdited && !msg.isDeleted) {
+                    <span class="ec-edited-tag">(editado)</span>
+                  }
+                </p>
+              }
+
+              @if (!msg.isDeleted) {
+                <div class="ec-msg__actions">
+                  @for (emoji of quickEmojis; track emoji) {
+                    <button type="button" class="ec-emoji-btn" (click)="onToggleReaction(msg.id, emoji)">{{ emoji }}</button>
+                  }
+                  @if (msg.senderId === currentUserId()) {
+                    <button type="button" class="ec-mini-btn" (click)="onStartEdit(msg)" title="Editar">
+                      <span class="material-symbols-outlined">edit</span>
+                    </button>
+                    <button type="button" class="ec-mini-btn" (click)="onDeleteMessage(msg.id)" title="Eliminar">
+                      <span class="material-symbols-outlined">delete</span>
+                    </button>
+                  }
+                </div>
+              }
+
+              @if (msg.reactions.length > 0) {
+                <div class="ec-reactions">
+                  @for (r of msg.reactions; track r.emoji) {
+                    <button
+                      type="button"
+                      class="ec-reaction-pill"
+                      [class.ec-reaction-pill--active]="r.reactedByMe"
+                      (click)="onToggleReaction(msg.id, r.emoji)">
+                      <span>{{ r.emoji }}</span>
+                      <span>{{ r.count }}</span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        } @empty {
+          <div class="ec-empty-thread">
+            <span class="material-symbols-outlined ec-empty-icon">chat_bubble_outline</span>
+            <p>Aún no hay mensajes en esta conversación. ¡Envía el primero!</p>
+          </div>
+        }
+      </div>
+
+      <!-- COMPOSER -->
+      <footer class="ec-composer">
+        <textarea
+          class="ec-composer__input"
+          rows="1"
+          placeholder="Escribe un mensaje... (Enter para enviar, @mencionar, #folio)"
+          [ngModel]="messageText()"
+          (ngModelChange)="messageText.set($event)"
+          (keydown)="onComposerKeydown($event)"></textarea>
+        <button type="button" class="ec-send-btn" [disabled]="!messageText().trim()" (click)="onSendMessage()" title="Enviar mensaje">
+          <span class="material-symbols-outlined">send</span>
+        </button>
+      </footer>
+    } @else {
+      <div class="ec-empty-state">
+        <span class="material-symbols-outlined ec-empty-icon">forum</span>
+        <h3>Bienvenido a 4GUARD Chat</h3>
+        <p>Selecciona un Espacio o Mensaje Directo para comenzar a conversar con tu equipo.</p>
+      </div>
+    }
+  </main>
+
+  <!-- MODAL CREAR ESPACIO -->
+  @if (showNewSpaceModal()) {
+    <div class="ec-modal-backdrop" (click)="showNewSpaceModal.set(false)">
+      <div class="ec-modal" (click)="$event.stopPropagation()">
+        <h3>Crear Nuevo Espacio</h3>
+        <input type="text" class="ec-search-input mb-2" placeholder="Nombre (ej. #Caseta-Toluca)" [ngModel]="newSpaceName()" (ngModelChange)="newSpaceName.set($event)" />
+        <input type="text" class="ec-search-input mb-3" placeholder="Descripción breve (opcional)" [ngModel]="newSpaceDesc()" (ngModelChange)="newSpaceDesc.set($event)" />
+        <div class="ec-modal__actions">
+          <button type="button" class="ec-btn-secondary" (click)="showNewSpaceModal.set(false)">Cancelar</button>
+          <button type="button" class="ec-btn-primary" [disabled]="!newSpaceName().trim()" (click)="onCreateSpace()">Crear Espacio</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

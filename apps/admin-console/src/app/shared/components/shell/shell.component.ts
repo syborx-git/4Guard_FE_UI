@@ -72,6 +72,8 @@ import { PasswordCollapseComponent } from '../password-collapse/password-collaps
 import { QuickOperatorSwitchModalComponent } from './quick-operator-switch-modal/quick-operator-switch-modal.component';
 import { ForbotTriggerButtonComponent } from '../forbot/forbot-trigger-button/forbot-trigger-button.component';
 import { ForbotChatDrawerComponent } from '../forbot/forbot-chat-drawer/forbot-chat-drawer.component';
+import { EnterpriseChatComponent } from '../../../features/chat/enterprise-chat/enterprise-chat.component';
+import { ChatService } from '../../../features/chat/chat.service';
 import { ForbotEngineService } from '../../../core/forbot/services/forbot-engine.service';
 import { WarehouseMovementsService } from '../../../features/warehouse-movements/services/warehouse-movements.service';
 import { OperationalNotificationsComponent } from '../operational-notifications/operational-notifications.component';
@@ -88,6 +90,7 @@ import { OperationalNotificationsComponent } from '../operational-notifications/
     QuickOperatorSwitchModalComponent,
     ForbotTriggerButtonComponent,
     ForbotChatDrawerComponent,
+    EnterpriseChatComponent,
     OperationalNotificationsComponent
   ],
   templateUrl: './shell.component.html',
@@ -99,6 +102,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   protected readonly authState = inject(AuthState);
   protected readonly syncState = inject(SyncState);
   protected readonly forbotEngine = inject(ForbotEngineService);
+  protected readonly chatService = inject(ChatService);
   protected readonly smartNotification = inject(SmartNotificationService);
   private readonly movementsService = inject(WarehouseMovementsService);
   private readonly usersService = inject(UsersService);

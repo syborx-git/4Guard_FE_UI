@@ -905,8 +905,17 @@
 <!-- Drawer Conversacional ForBot AI -->
 <fg-forbot-chat-drawer></fg-forbot-chat-drawer>
 
-<!-- Floating Action Button (FAB) ForBot AI — Esquina Inferior Derecha -->
-@if (!forbotEngine.isDrawerOpen()) {
+<!-- Drawer de Mensajería Interna 4GUARD -->
+@if (chatService.isDrawerOpen()) {
+  <div class="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-[2px]" (click)="chatService.closeDrawer()">
+    <div class="w-full max-w-[780px] h-full shadow-2xl" (click)="$event.stopPropagation()">
+      <fg-enterprise-chat mode="drawer" (closeRequested)="chatService.closeDrawer()"></fg-enterprise-chat>
+    </div>
+  </div>
+}
+
+<!-- Floating Action Button (FAB) Speed-Dial — Esquina Inferior Derecha -->
+@if (!forbotEngine.isDrawerOpen() && !chatService.isDrawerOpen()) {
   <div class="fixed bottom-6 right-6 z-40">
     <fg-forbot-trigger-button id="tour-forbot-trigger"></fg-forbot-trigger-button>
   </div>

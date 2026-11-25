@@ -82,6 +82,15 @@ export const adminRoutes: Routes = [
 
   // Rutas protegidas bajo el shell principal
   {
+    path: 'chat',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/chat/enterprise-chat/enterprise-chat.component').then(
+        (m) => m.EnterpriseChatComponent
+      ),
+    title: '4GUARD Chat — Mensajería Empresarial',
+  },
+  {
     path: '',
     loadComponent: () =>
       import('./shared/components/shell/shell.component').then((m) => m.ShellComponent),
