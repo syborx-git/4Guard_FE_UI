@@ -38,11 +38,13 @@ export const authGuard: CanActivateFn = (route, state) => {
 
   // ─ CASO 2 / 3: Sesión expirada o inexistente ────────────────────────────────
   // Detección de dispositivo móvil (smartphone o tablet de chofer en caseta):
-  // Los choferes jamás deben ver la pantalla de login institucional del WMS.
+  // Los choferes jamás deben ver la pantalla de login institucional del WMS,
+  // pero si el usuario solicita explícitamente /chat (perfil Solo Chat), debe ir a /login.
+  const isChatRoute = requestedUrl?.startsWith('/chat');
   const isMobile = typeof navigator !== 'undefined' && 
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-  if (isMobile) {
+  if (isMobile && !isChatRoute) {
     const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const queryParams: Record<string, string> = {};
     if (searchParams) {
