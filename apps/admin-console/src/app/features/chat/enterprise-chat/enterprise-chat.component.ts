@@ -31,6 +31,7 @@ export class EnterpriseChatComponent implements OnInit {
   protected readonly authState = inject(AuthState);
 
   protected readonly searchQuery = signal<string>('');
+  protected readonly activeFilter = signal<'ALL' | 'UNREAD' | 'SPACE' | 'DM'>('ALL');
   protected readonly messageText = signal<string>('');
   protected readonly showNewSpaceModal = signal<boolean>(false);
   protected readonly newSpaceName = signal<string>('');
@@ -58,6 +59,10 @@ export class EnterpriseChatComponent implements OnInit {
   });
 
   protected readonly currentUserId = computed(() => this.authState.currentUser()?.id ?? '');
+  protected readonly currentUserName = computed(() => {
+    const u = this.authState.currentUser();
+    return u?.fullName || u?.username || 'Colaborador';
+  });
   protected readonly canCreateSpace = computed(() => {
     const role = (this.authState.currentUser()?.role || '').toUpperCase();
     return role.includes('ADMIN') || role.includes('SUPERVISOR') || role.includes('GERENTE') || role.includes('DIRECTOR');
@@ -65,15 +70,21 @@ export class EnterpriseChatComponent implements OnInit {
 
   protected readonly directMessages = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
+    const filter = this.activeFilter();
+    if (filter === 'SPACE') return [];
     return this.chatService.conversations()
       .filter((c) => c.type === 'DM')
+      .filter((c) => filter !== 'UNREAD' || (c.unreadCount || 0) > 0)
       .filter((c) => !q || c.name.toLowerCase().includes(q));
   });
 
   protected readonly spaces = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
+    const filter = this.activeFilter();
+    if (filter === 'DM') return [];
     return this.chatService.conversations()
       .filter((c) => c.type === 'SPACE' || c.type === 'THREAD')
+      .filter((c) => filter !== 'UNREAD' || (c.unreadCount || 0) > 0)
       .filter((c) => !q || c.name.toLowerCase().includes(q));
   });
 

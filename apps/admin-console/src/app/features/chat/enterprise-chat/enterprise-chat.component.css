@@ -590,3 +590,258 @@
   border: 1px solid var(--gold-border, rgba(197, 168, 107, 0.35));
   font-size: 0.74rem;
 }
+
+/* ── GOLDEN STANDARD UPGRADE: HEADER, CHIPS, SKELETONS & WELCOME CARD ── */
+.ec-shell--drawer .ec-sidebar {
+  width: 268px;
+  min-width: 248px;
+}
+
+.ec-brand__badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--gold-bg, rgba(197, 168, 107, 0.14));
+  border: 1px solid var(--border-card-gold, rgba(197, 168, 107, 0.35));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ec-online-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(0, 137, 123, 0.12);
+  color: var(--color-success, #00897b);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.ec-online-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-success, #00897b);
+}
+
+.ec-circle-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--border-card, rgba(76, 86, 105, 0.15));
+  background: var(--bg-card, #ffffff);
+  color: var(--text-secondary, #5a6477);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ec-circle-btn--sm {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.ec-circle-btn:hover {
+  border-color: var(--gold, #c5a86b);
+  color: var(--text-gold, #9b7626);
+  background: var(--gold-bg, rgba(197, 168, 107, 0.12));
+}
+
+.ec-filter-chips {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.ec-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-card, rgba(76, 86, 105, 0.14));
+  background: transparent;
+  color: var(--text-secondary, #5a6477);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ec-filter-chip:hover {
+  border-color: var(--gold-border, rgba(197, 168, 107, 0.4));
+}
+
+.ec-filter-chip--active {
+  background: var(--navy-mid, #25324a);
+  color: #ffffff;
+  border-color: var(--navy-mid, #25324a);
+}
+
+.ec-chip-count {
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--gold, #c5a86b);
+  color: #1c2940;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.ec-section-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.74rem;
+  color: var(--text-muted, #8b94a3);
+}
+
+.ec-link-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-gold, #9b7626);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ec-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.ec-skeleton-row {
+  height: 46px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(197, 168, 107, 0.08) 25%, rgba(197, 168, 107, 0.16) 50%, rgba(197, 168, 107, 0.08) 75%);
+  background-size: 200% 100%;
+  animation: pulse 1.5s infinite;
+}
+
+.ec-welcome-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 1.75rem 1.5rem;
+  border-radius: 18px;
+  background: var(--bg-card-exec, #ffffff);
+  border: 1px solid var(--border-card-gold, rgba(197, 168, 107, 0.32));
+  border-top: 3.5px solid var(--gold, #c5a86b);
+  box-shadow: var(--shadow-card, 0 12px 32px rgba(36, 44, 58, 0.08));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ec-welcome-card__icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--gold-bg, rgba(197, 168, 107, 0.14));
+  border: 1px solid var(--border-card-gold, rgba(197, 168, 107, 0.35));
+  color: var(--gold, #c5a86b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.85rem;
+}
+
+.ec-welcome-card__icon-wrap .material-symbols-outlined {
+  font-size: 1.85rem;
+}
+
+.ec-welcome-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--text-gold, #9b7626);
+  margin-bottom: 0.25rem;
+}
+
+.ec-welcome-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-primary, #1c2940);
+}
+
+.ec-welcome-desc {
+  margin: 0.45rem 0 1.2rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-secondary, #5a6477);
+}
+
+.ec-quick-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 1.15rem;
+}
+
+.ec-quick-action {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-card-gold, rgba(197, 168, 107, 0.3));
+  background: var(--bg-card, #ffffff);
+  color: var(--text-primary, #1c2940);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.ec-quick-action:hover {
+  border-color: var(--gold, #c5a86b);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(197, 168, 107, 0.14);
+}
+
+.ec-quick-action .material-symbols-outlined {
+  color: var(--gold, #c5a86b);
+  font-size: 1.45rem;
+}
+
+.ec-quick-action strong {
+  display: block;
+  font-size: 0.84rem;
+}
+
+.ec-quick-action span {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #5a6477);
+}
+
+.ec-tips-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.ec-tip-pill {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--gold-bg, rgba(197, 168, 107, 0.1));
+  border: 1px solid var(--gold-border, rgba(197, 168, 107, 0.25));
+  font-size: 0.72rem;
+  color: var(--text-secondary, #5a6477);
+}
+
+.ec-tip-pill strong {
+  color: var(--text-gold, #9b7626);
+}

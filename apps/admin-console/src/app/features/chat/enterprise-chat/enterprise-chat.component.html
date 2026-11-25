@@ -3,42 +3,79 @@
   <aside class="ec-sidebar" [class.ec-hidden-mobile]="mobileShowThread() && chatService.activeConversation()">
     <header class="ec-sidebar__header">
       <div class="ec-brand">
-        <span class="material-symbols-outlined ec-brand__icon">forum</span>
+        <div class="ec-brand__badge">
+          <span class="material-symbols-outlined ec-brand__icon">forum</span>
+        </div>
         <div>
-          <h2 class="ec-brand__title">4GUARD Chat</h2>
-          <span class="ec-brand__sub">Mensajería Interna</span>
+          <div class="flex items-center gap-2">
+            <h2 class="ec-brand__title">4GUARD Chat</h2>
+            <span class="ec-online-pill">
+              <span class="ec-online-pill__dot"></span>
+              En línea
+            </span>
+          </div>
+          <span class="ec-brand__sub">{{ currentUserName() }}</span>
         </div>
       </div>
 
       @if (mode === 'drawer') {
-        <button type="button" class="ec-icon-btn" (click)="closeRequested.emit()" title="Cerrar chat">
+        <button type="button" class="ec-circle-btn" (click)="closeRequested.emit()" title="Cerrar chat">
           <span class="material-symbols-outlined">close</span>
         </button>
       } @else if (mode === 'fullscreen') {
-        <button type="button" class="ec-icon-btn" (click)="onLogout()" title="Cerrar sesión" aria-label="Cerrar sesión">
+        <button type="button" class="ec-circle-btn" (click)="onLogout()" title="Cerrar sesión" aria-label="Cerrar sesión">
           <span class="material-symbols-outlined">logout</span>
         </button>
       }
     </header>
 
-    <!-- Buscador -->
+    <!-- Buscador + Chips de Filtro Rápido -->
     <div class="ec-search-wrap">
-      <span class="material-symbols-outlined ec-search-icon">search</span>
-      <input
-        type="search"
-        class="ec-search-input"
-        placeholder="Buscar persona o espacio..."
-        [ngModel]="searchQuery()"
-        (ngModelChange)="searchQuery.set($event)"
-      />
+      <div class="relative">
+        <span class="material-symbols-outlined ec-search-icon">search</span>
+        <input
+          #chatSearchInput
+          type="search"
+          class="ec-search-input"
+          placeholder="Buscar persona o espacio..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+        />
+      </div>
+
+      <div class="ec-filter-chips">
+        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'ALL'" (click)="activeFilter.set('ALL')">
+          Todos
+        </button>
+        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'UNREAD'" (click)="activeFilter.set('UNREAD')">
+          No leídos
+          @if (chatService.totalUnreadCount() > 0) {
+            <span class="ec-chip-count">{{ chatService.totalUnreadCount() }}</span>
+          }
+        </button>
+        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'SPACE'" (click)="activeFilter.set('SPACE')">
+          Espacios
+        </button>
+        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="activeFilter() === 'DM'" (click)="activeFilter.set('DM')">
+          DMs
+        </button>
+      </div>
     </div>
 
     <div class="ec-sidebar__scroll">
+      @if (chatService.isLoadingConversations() && chatService.conversations().length === 0) {
+        <div class="ec-skeleton-list">
+          <div class="ec-skeleton-row"></div>
+          <div class="ec-skeleton-row"></div>
+          <div class="ec-skeleton-row"></div>
+        </div>
+      }
+
       <!-- ESPACIOS -->
       <div class="ec-section-header">
-        <span>ESPACIOS</span>
+        <span>ESPACIOS ({{ spaces().length }})</span>
         @if (canCreateSpace()) {
-          <button type="button" class="ec-mini-btn" (click)="showNewSpaceModal.set(true)" title="Crear espacio">
+          <button type="button" class="ec-circle-btn ec-circle-btn--sm" (click)="showNewSpaceModal.set(true)" title="Crear espacio operativo">
             <span class="material-symbols-outlined">add</span>
           </button>
         }
@@ -63,11 +100,18 @@
             <span class="ec-conv-preview">{{ space.lastMessage?.content || space.description || 'Sin mensajes aún' }}</span>
           </div>
         </button>
+      } @empty {
+        <div class="ec-section-empty">
+          <span>Sin espacios visibles</span>
+          @if (canCreateSpace()) {
+            <button type="button" class="ec-link-btn" (click)="showNewSpaceModal.set(true)">+ Crear espacio</button>
+          }
+        </div>
       }
 
       <!-- MENSAJES DIRECTOS -->
       <div class="ec-section-header mt-3">
-        <span>MENSAJES DIRECTOS</span>
+        <span>MENSAJES DIRECTOS ({{ directMessages().length }})</span>
       </div>
 
       @for (dm of directMessages(); track dm.id) {
@@ -90,6 +134,10 @@
             <span class="ec-conv-preview">{{ dm.lastMessage?.content || 'Iniciar conversación...' }}</span>
           </div>
         </button>
+      } @empty {
+        <div class="ec-section-empty">
+          <span>Selecciona un colaborador abajo para iniciar un DM</span>
+        </div>
       }
 
       <!-- DIRECTORIO RÁPIDO DE COLABORADORES -->
@@ -107,6 +155,10 @@
             <span class="ec-conv-preview">&#64;{{ u.username }} · {{ u.roleName }}</span>
           </div>
         </button>
+      } @empty {
+        <div class="ec-section-empty">
+          <span>No hay colaboradores disponibles en este momento</span>
+        </div>
       }
     </div>
   </aside>
@@ -307,9 +359,41 @@
       </footer>
     } @else {
       <div class="ec-empty-state">
-        <span class="material-symbols-outlined ec-empty-icon">forum</span>
-        <h3>Bienvenido a 4GUARD Chat</h3>
-        <p>Selecciona un Espacio o Mensaje Directo para comenzar a conversar con tu equipo.</p>
+        <div class="ec-welcome-card">
+          <div class="ec-welcome-card__icon-wrap">
+            <span class="material-symbols-outlined">forum</span>
+          </div>
+          <span class="ec-welcome-eyebrow">COMUNICACIÓN OPERATIVA WMS</span>
+          <h3 class="ec-welcome-title">Bienvenido a 4GUARD Chat</h3>
+          <p class="ec-welcome-desc">
+            Coordina en tiempo real con Caseta, Recepción, Calidad y Embarques sin salir de tu operación.
+          </p>
+
+          <div class="ec-quick-actions">
+            @if (canCreateSpace()) {
+              <button type="button" class="ec-quick-action" (click)="showNewSpaceModal.set(true)">
+                <span class="material-symbols-outlined">add_circle</span>
+                <div>
+                  <strong>Crear Espacio Operativo</strong>
+                  <span>Canal por área o turno</span>
+                </div>
+              </button>
+            }
+            <button type="button" class="ec-quick-action" (click)="chatSearchInput.focus()">
+              <span class="material-symbols-outlined">person_search</span>
+              <div>
+                <strong>Buscar Colaborador</strong>
+                <span>Iniciar mensaje directo 1:1</span>
+              </div>
+            </button>
+          </div>
+
+          <div class="ec-tips-row">
+            <span class="ec-tip-pill"><strong>&#64;usuario</strong> Mencionar</span>
+            <span class="ec-tip-pill"><strong>#26516</strong> Folio</span>
+            <span class="ec-tip-pill"><strong>📎</strong> Imagen / PDF</span>
+          </div>
+        </div>
       </div>
     }
   </main>
