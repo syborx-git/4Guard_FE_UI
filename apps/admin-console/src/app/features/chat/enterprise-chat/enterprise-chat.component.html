@@ -6,7 +6,7 @@
         <div class="ec-brand__badge">
           <span class="material-symbols-outlined ec-brand__icon">forum</span>
         </div>
-        <div class="min-w-0">
+        <div class="min-w-0 overflow-hidden">
           <h2 class="ec-brand__title">4GUARD Chat</h2>
           <div class="ec-brand__meta">
             <span class="ec-online-pill">
@@ -18,7 +18,7 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-1.5 shrink-0">
+      <div class="ec-sidebar__actions flex items-center gap-1.5 shrink-0">
         @if (mode === 'drawer') {
         @if (authState.isExecutiveDirector()) {
         <button type="button" class="ec-circle-btn" (click)="openChatGovernance()"
@@ -30,7 +30,9 @@
           [title]="isExpanded ? 'Reducir tamaño' : 'Expandir ventana'" aria-label="Cambiar tamaño de ventana">
           <span class="material-symbols-outlined">{{ isExpanded ? 'close_fullscreen' : 'open_in_full' }}</span>
         </button>
-        <button type="button" class="ec-circle-btn" (click)="closeRequested.emit()" title="Cerrar chat">
+        <button type="button" class="ec-circle-btn"
+          [class.ec-mobile-only]="!!chatService.activeConversation()"
+          (click)="closeRequested.emit()" title="Cerrar chat">
           <span class="material-symbols-outlined">close</span>
         </button>
         } @else if (mode === 'fullscreen') {
@@ -539,14 +541,16 @@
         <div class="ec-msg__bubble" [class.ec-msg__bubble--mine]="msg.senderId === currentUserId()"
           [class.ec-msg__bubble--deleted]="msg.isDeleted" [class.ec-msg__bubble--pinned]="msg.isPinned && !msg.isDeleted">
           <div class="ec-msg__meta">
+            @if (!isMine(msg) && chatService.activeConversation()?.type !== 'DM') {
             <span class="ec-msg__author">
               {{ msg.senderFullName }}
-              @if (msg.isPinned && !msg.isDeleted) {
-              <span class="ec-msg__pin-badge" title="Mensaje fijado">
-                <span class="material-symbols-outlined">push_pin</span>
-              </span>
-              }
             </span>
+            }
+            @if (msg.isPinned && !msg.isDeleted) {
+            <span class="ec-msg__pin-badge" title="Mensaje fijado">
+              <span class="material-symbols-outlined">push_pin</span>
+            </span>
+            }
             <span class="ec-msg__time">{{ msg.createdAt | date:'HH:mm' }}</span>
           </div>
 

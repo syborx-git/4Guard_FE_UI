@@ -18,7 +18,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl, SafeUrl } from '@angular/platform-browser';
-import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import {
@@ -31,11 +30,11 @@ import {
   GovernanceDlpEventDto,
   GovernanceSpaceDto,
   PagedResponse,
-} from '../../../core/services/chat-governance.service';
-import { ChatService } from '../../chat/chat.service';
-import { ToastService } from '../../../core/services/toast.service';
+} from '../../core/services/chat-governance.service';
+import { ChatService } from '../chat/chat.service';
+import { ToastService } from '../../core/services/toast.service';
 
-export type GovernanceTab = 'overview' | 'spaces' | 'users' | 'audit' | 'policies';
+export type GovernanceTab = 'overview' | 'spaces' | 'users' | 'audit';
 export type SpaceStatusFilter = 'ALL' | 'ACTIVE' | 'FROZEN' | 'ARCHIVED';
 export type UserAccessFilter = 'ALL' | 'CHAT_ONLY' | 'WMS' | 'FROZEN';
 export type AuditSubView = 'messages' | 'dlp' | 'attachments';
@@ -47,7 +46,7 @@ const DEFAULT_PAGE_SIZE = 20;
 @Component({
   selector: 'fg-chat-governance',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   templateUrl: './chat-governance.component.html',
   styleUrl: './chat-governance.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -100,6 +99,9 @@ export class ChatGovernanceComponent implements OnInit {
   readonly freezeReason = signal<string>('');
   readonly isSubmittingFreeze = signal<boolean>(false);
   readonly freezeError = signal<string | null>(null);
+
+  readonly freezeReasonLength = computed(() => this.freezeReason().trim().length);
+  readonly freezeReasonValid = computed(() => this.freezeReasonLength() >= 5);
 
   // Tab 4: Auditoría Forense y DLP
   readonly auditSubView = signal<AuditSubView>('messages');
@@ -211,8 +213,6 @@ export class ChatGovernanceComponent implements OnInit {
       this.loadUsers(0);
     } else if (tab === 'audit') {
       this.ensureActiveAuditSubViewLoaded();
-    } else if (tab === 'policies' && !this.overview() && !this.isLoadingOverview()) {
-      this.loadOverview();
     }
   }
 
@@ -227,6 +227,12 @@ export class ChatGovernanceComponent implements OnInit {
     } else if (tab === 'audit') {
       this.reloadActiveAuditSubView(true);
     }
+  }
+
+  goToMessageAudit(): void {
+    this.activeTab.set('audit');
+    this.auditSubView.set('messages');
+    this.loadAuditMessages(0);
   }
 
   goToDlpAudit(): void {
@@ -773,7 +779,9 @@ export class ChatGovernanceComponent implements OnInit {
       return;
     }
     if (reason.length < 10) {
-      this.breakGlassError.set('El motivo debe tener al menos 10 caracteres para quedar registrado en wms.audit_logs.');
+      this.breakGlassError.set(
+        'El motivo debe tener al menos 10 caracteres para quedar registrado en la bitácora de auditoría.'
+      );
       return;
     }
 
@@ -789,7 +797,7 @@ export class ChatGovernanceComponent implements OnInit {
       .subscribe({
         next: (transcript) => {
           this.breakGlassTranscript.set(transcript);
-          this.toast.info('Inspección Break-Glass registrada de forma inmutable en wms.audit_logs.');
+          this.toast.info('Inspección Break-Glass registrada de forma inmutable en la bitácora de auditoría.');
           this.loadOverview();
           if (this.activeTab() === 'audit' && this.auditSubView() === 'dlp') {
             this.loadDlpEvents(this.dlpEventsPage());
@@ -895,7 +903,7 @@ export class ChatGovernanceComponent implements OnInit {
       SCREENSHOT_ATTEMPT: 'Intento de Captura (PrintScreen)',
       PRINT_BLOCKED: 'Impresión Bloqueada (Ctrl+P)',
       SAVE_BLOCKED: 'Guardado Bloqueado (Ctrl+S)',
-      BREAK_GLASS_ACCESS: 'Acceso Break-Glass WORM',
+      BREAK_GLASS_ACCESS: 'Acceso Break-Glass',
       USER_FROZEN: 'Usuario Congelado / Suspendido',
       USER_UNFROZEN: 'Usuario Descongelado',
       SPACE_FROZEN: 'Espacio Congelado',
@@ -917,6 +925,17 @@ export class ChatGovernanceComponent implements OnInit {
     if (key === 'HIGH' || key === 'CRITICAL') return 'danger';
     if (key === 'MEDIUM' || key === 'WARN') return 'warning';
     return 'info';
+  }
+
+  formatAttachmentType(contentType?: string | null): string {
+    if (this.isImageType(contentType)) return 'Imagen';
+    if (this.isPdfType(contentType)) return 'PDF';
+    const lower = (contentType || '').toLowerCase();
+    if (lower.includes('word') || lower.includes('document')) return 'Documento';
+    if (lower.includes('excel') || lower.includes('spreadsheet') || lower.includes('csv')) {
+      return 'Hoja de cálculo';
+    }
+    return 'Archivo';
   }
 
   isImageType(contentType?: string | null): boolean {

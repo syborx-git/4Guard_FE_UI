@@ -228,6 +228,7 @@ export class InactivityService implements OnDestroy {
     if (url.includes('/quality')) return 'Control de Calidad';
     if (url.includes('/layout')) return 'Gestión de Layout';
     if (url.includes('/performance')) return 'Rendimiento Operativo';
+    if (url.includes('/chat-governance')) return 'Gobierno de Chat';
     if (url.includes('/admin')) return 'Administración y Usuarios';
     if (url.includes('/profile')) return 'Mi Perfil';
     return 'Consola Operativa';

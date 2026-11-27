@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-import { rbacGuard } from '../../core/guards/rbac.guard';
 
 export const adminRoutes: Routes = [
   {
@@ -105,16 +104,6 @@ export const adminRoutes: Routes = [
     path: 'alerts-config',
     redirectTo: '/alerts-config',
     pathMatch: 'full',
-  },
-  {
-    path: 'chat-governance',
-    canActivate: [rbacGuard],
-    data: { directorOnly: true },
-    loadComponent: () =>
-      import('./chat-governance/chat-governance.component').then(
-        (m) => m.ChatGovernanceComponent
-      ),
-    title: '4GUARD WMS — Gobierno de Chat',
   },
 ];
 

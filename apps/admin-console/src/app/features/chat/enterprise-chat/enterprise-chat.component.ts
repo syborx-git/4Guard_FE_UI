@@ -142,6 +142,9 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   });
 
   protected readonly currentUserId = computed(() => this.authState.currentUser()?.id ?? '');
+  protected isMine(msg: ChatMessage): boolean {
+    return msg.senderId === this.currentUserId();
+  }
   protected readonly currentUserName = computed(() => {
     const u = this.authState.currentUser();
     return u?.fullName || u?.username || 'Colaborador';
@@ -316,7 +319,7 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
 
   openChatGovernance(): void {
     this.closeRequested.emit();
-    void this.router.navigate(['/admin/chat-governance']);
+    void this.router.navigate(['/chat-governance']);
   }
 
   private readonly handleWindowBlur = (): void => {

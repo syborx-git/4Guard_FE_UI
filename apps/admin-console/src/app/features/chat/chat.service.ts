@@ -85,7 +85,11 @@ export class ChatService {
       if (typeof document !== 'undefined' && document.hidden) return;
       this.loadConversations().subscribe({ error: () => {} });
       const activeId = this.activeConversationId();
-      if (this.isDrawerOpen() || window.location.pathname.includes('/chat')) {
+      if (
+        this.isDrawerOpen() ||
+        window.location.pathname === '/chat' ||
+        window.location.pathname.startsWith('/chat/')
+      ) {
         this.loadUsers().subscribe({ error: () => {} });
         if (activeId) {
           this.loadMessages(activeId).subscribe({ error: () => {} });

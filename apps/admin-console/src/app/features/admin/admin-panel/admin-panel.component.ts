@@ -26,7 +26,6 @@ import { IncidenceService, Incidence, IncidenceStatus, IncidenceType, IncidenceS
 import { AuditLogService } from '../services/audit.service';
 import { NotificationAdminService, NotificationAdminItem, NotificationSeverity } from '../services/notification-admin.service';
 import { RestrictSpecialCharsDirective } from '../../../shared/directives/restrict-special-chars.directive';
-import { AuthState } from '../../../core/auth/auth.state';
 
 interface AdminModuleCard {
   id: string;
@@ -34,7 +33,6 @@ interface AdminModuleCard {
   icon: string;
   description: string;
   category: 'STRUCTURE' | 'MERCHANDISE' | 'SECURITY' | 'SUPPORT';
-  directorOnly?: boolean;
   badgeCount?: () => number;
 }
 
@@ -126,7 +124,6 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
   protected readonly incidenceService = inject(IncidenceService);
   protected readonly auditService = inject(AuditLogService);
   protected readonly notifService = inject(NotificationAdminService);
-  protected readonly authState = inject(AuthState);
   private readonly router = inject(Router);
 
   // Estados de navegación e interfaz
@@ -579,7 +576,6 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     { id: 'roles', title: 'Roles y Matriz de Permisos', icon: 'shield_person', description: 'Nivel de jerarquía y matriz de accesos y llamadas a API.', category: 'SECURITY' },
     { id: 'shifts', title: 'Turnos y Horarios', icon: 'schedule', description: 'Configuración de jornadas operativas, horarios y disponibilidad de almacén.', category: 'SECURITY' },
     { id: 'sessions', title: 'Sesiones Activas', icon: 'group', description: 'Monitoreo en tiempo real de conexiones de usuario activas.', category: 'SECURITY' },
-    { id: 'chat-governance', title: 'Gobierno de Chat', icon: 'shield', description: 'Auditoría ejecutiva, congelamiento de cuentas, espacios y telemetría DLP.', category: 'SECURITY', directorOnly: true },
     
     // Soporte y Auditoría
     { id: 'inventory', title: 'Monitor de Inventario', icon: 'shelves', description: 'Saldos activos por SSCC, cuarentenas preventivas y lotes.', category: 'SUPPORT' },
@@ -692,10 +688,6 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
 
   // Selector de módulo principal
   protected selectModule(moduleId: string | null): void {
-    if (moduleId === 'chat-governance') {
-      this.router.navigate(['/admin/chat-governance']);
-      return;
-    }
     if (moduleId === 'sessions') {
       this.router.navigate(['/sessions']);
       return;

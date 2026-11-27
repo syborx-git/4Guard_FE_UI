@@ -290,6 +290,18 @@ export const adminRoutes: Routes = [
         title: '4GUARD WMS — Administración',
       },
 
+      // Gobierno de Chat (Módulo Directivo Independiente)
+      {
+        path: 'chat-governance',
+        canActivate: [rbacGuard],
+        data: { module: 'chat-governance', directorOnly: true },
+        loadComponent: () =>
+          import('./features/chat-governance/chat-governance.component').then(
+            (m) => m.ChatGovernanceComponent
+          ),
+        title: '4GUARD WMS — Gobierno de Chat',
+      },
+
       // Sesiones Activas (HU-011)
       {
         path: 'sessions',

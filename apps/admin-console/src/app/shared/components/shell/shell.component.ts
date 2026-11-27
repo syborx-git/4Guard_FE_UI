@@ -655,7 +655,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
-    { label: 'Gobierno Chat', route: '/admin/chat-governance', icon: 'shield', module: 'chat-governance', directorOnly: true },
+    { label: 'Gobierno Chat', route: '/chat-governance', icon: 'shield', module: 'chat-governance', directorOnly: true },
     { label: 'Almacén / Topología', route: '/catalogs/warehouse', icon: 'warehouse', module: 'catalogs' },
     { label: 'Consulta Inventario', route: '/inventory-query', icon: 'inventory', module: 'inventory-query' },
   ];

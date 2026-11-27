@@ -501,6 +501,8 @@ export class AuthState {
           normRole === 'ROLE_WAREHOUSE_MANAGER' ||
           normRole === 'WAREHOUSE_MANAGER'
         );
+      case 'chat-governance':
+        return this.isExecutiveDirector();
       default:
         return false;
     }

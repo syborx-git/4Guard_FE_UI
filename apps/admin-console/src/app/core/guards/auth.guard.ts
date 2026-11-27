@@ -117,6 +117,7 @@ function inferProcessName(url: string): string {
   if (url.includes('/carriers'))                       return 'Transportistas';
   if (url.includes('/suppliers'))                      return 'Proveedores';
   if (url.includes('/business-rules'))                 return 'Reglas de Negocio';
+  if (url.includes('/chat-governance'))                return 'Gobierno de Chat';
   if (url.includes('/admin'))                          return 'Administración';
   if (url.includes('/dashboard'))                      return '';
   return 'Consola Operativa 4GUARD';

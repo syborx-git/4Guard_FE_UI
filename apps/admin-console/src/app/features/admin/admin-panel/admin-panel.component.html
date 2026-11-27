@@ -227,7 +227,7 @@
         <div class="admin-modules-grid">
 
           @for (m of modules; track m.id) {
-            @if (m.category === 'SECURITY' && (!m.directorOnly || authState.isExecutiveDirector())) {
+            @if (m.category === 'SECURITY') {
 
               <article
                 class="admin-module-card"

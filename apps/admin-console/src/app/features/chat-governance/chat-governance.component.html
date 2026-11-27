@@ -8,26 +8,20 @@
     </div>
 
     <div class="hero-header__content">
-      <div class="hero-header__breadcrumb">
-        <a routerLink="/admin" class="btn-back-admin" title="Regresar al Hub de Administración">
-          <span class="back-arrow">←</span> ADMINISTRACIÓN WMS
-        </a>
-        <span class="breadcrumb-dot">·</span>
-        <span class="hero-header__eyebrow">DIRECCIÓN GENERAL • GOBIERNO DE COMUNICACIÓN</span>
-      </div>
+      <span class="hero-header__eyebrow">DIRECCIÓN GENERAL • GOBIERNO DE COMUNICACIÓN</span>
 
       <h1 class="hero-header__title">Panel de Control de Chats</h1>
       <p class="hero-header__subtitle">
-        Supervisión ejecutiva de espacios operativos, control de accesos Chat-Only/WMS, auditoría forense de mensajes y telemetría DLP.
+        Supervisión de espacios, control de accesos y auditoría de comunicación operativa.
       </p>
     </div>
 
     <div class="hero-header__actions">
       @if (lastUpdatedAt(); as updated) {
-        <div class="cg-sync-pill" title="Última actualización manual">
+        <span class="cg-sync-pill" title="Última actualización manual">
           <span class="cg-sync-pill__dot"></span>
           <span>Corte {{ formatTimeOnly(updated) }}</span>
-        </div>
+        </span>
       }
 
       <button
@@ -56,7 +50,7 @@
         (click)="selectTab('overview')"
       >
         <span class="material-symbols-outlined">insights</span>
-        <span>Resumen Ejecutivo</span>
+        <span>Resumen</span>
       </button>
 
       <button
@@ -68,7 +62,7 @@
         (click)="selectTab('spaces')"
       >
         <span class="material-symbols-outlined">workspaces</span>
-        <span>Espacios y Gobernanza</span>
+        <span>Espacios</span>
         @if (overview(); as ov) {
           <span class="tab-counter-pill">{{ ov.activeSpaces + ov.frozenSpaces }}</span>
         }
@@ -83,7 +77,7 @@
         (click)="selectTab('users')"
       >
         <span class="material-symbols-outlined">manage_accounts</span>
-        <span>Usuarios Chat y Accesos</span>
+        <span>Usuarios y Accesos</span>
         @if (overview(); as ov) {
           <span class="tab-counter-pill">{{ ov.totalChatUsers }}</span>
         }
@@ -98,24 +92,12 @@
         (click)="selectTab('audit')"
       >
         <span class="material-symbols-outlined">policy</span>
-        <span>Auditoría Forense y DLP</span>
+        <span>Auditoría y DLP</span>
         @if (overview(); as ov) {
           @if (ov.dlpAlertsLast7Days > 0) {
             <span class="tab-counter-pill tab-counter-pill--danger">{{ ov.dlpAlertsLast7Days }}</span>
           }
         }
-      </button>
-
-      <button
-        type="button"
-        role="tab"
-        class="executive-tab-btn"
-        [attr.aria-selected]="activeTab() === 'policies'"
-        [class.executive-tab-btn--active]="activeTab() === 'policies'"
-        (click)="selectTab('policies')"
-      >
-        <span class="material-symbols-outlined">verified_user</span>
-        <span>Políticas y Eficiencia</span>
       </button>
     </div>
   </nav>
@@ -193,8 +175,13 @@
             </div>
           </article>
 
-          <!-- KPI 3: Actividad 7 días -->
-          <article class="work-kpi-card work-kpi-card--blue">
+          <!-- KPI 3: Actividad 7 días (clic directo a Tab 4 Mensajes) -->
+          <button
+            type="button"
+            class="work-kpi-card work-kpi-card--blue work-kpi-card--clickable"
+            (click)="goToMessageAudit()"
+            title="Haz clic para revisar mensajes editados o eliminados"
+          >
             <div class="work-kpi-card__header">
               <span class="work-kpi-card__label">ACTIVIDAD (7 DÍAS)</span>
               <div class="work-kpi-card__icon-box">
@@ -207,9 +194,9 @@
                 <span class="work-kpi-dot dot--blue"></span>
                 <span>{{ ov.editedMessagesLast7Days }} editados • {{ ov.deletedMessagesLast7Days }} eliminados</span>
               </div>
-              <span class="cg-kpi-sub-muted">Trazabilidad preservada en BD</span>
+              <span class="cg-kpi-sub-muted">Clic para ver bitácora →</span>
             </div>
-          </article>
+          </button>
 
           <!-- KPI 4: Almacenamiento Adjuntos -->
           <article class="work-kpi-card work-kpi-card--purple">
@@ -225,7 +212,6 @@
                 <span class="work-kpi-dot dot--purple"></span>
                 <span><strong>{{ ov.totalAttachmentsCount | number }}</strong> archivos de evidencia</span>
               </div>
-              <span class="cg-kpi-sub-muted">Compresión Canvas JPEG 78% activa</span>
             </div>
           </article>
 
@@ -272,10 +258,6 @@
               <h2 class="cg-card__title">Últimas 5 Alertas DLP Recientes</h2>
             </div>
             <div class="cg-card__header-actions">
-              <button type="button" class="cg-btn-outline" (click)="openBreakGlassModal()">
-                <span class="material-symbols-outlined">lock_open_right</span>
-                <span>Acceso Break-Glass</span>
-              </button>
               <button type="button" class="cg-btn-gold" (click)="goToDlpAudit()">
                 <span class="material-symbols-outlined">policy</span>
                 <span>Ir a Auditoría DLP</span>
@@ -369,7 +351,7 @@
               (click)="setSpaceStatusFilter('ACTIVE')"
             >
               <span class="work-kpi-dot dot--emerald"></span>
-              ACTIVE
+              Activos
             </button>
             <button
               type="button"
@@ -378,7 +360,7 @@
               (click)="setSpaceStatusFilter('FROZEN')"
             >
               <span class="work-kpi-dot dot--amber"></span>
-              FROZEN
+              Congelados
             </button>
             <button
               type="button"
@@ -387,7 +369,7 @@
               (click)="setSpaceStatusFilter('ARCHIVED')"
             >
               <span class="work-kpi-dot dot--slate"></span>
-              ARCHIVED
+              Archivados
             </button>
           </div>
 
@@ -436,7 +418,7 @@
                   <th>Miembros</th>
                   <th>Mensajes</th>
                   <th>Última Actividad</th>
-                  <th class="text-right">Acciones Directivas</th>
+                  <th class="text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -478,62 +460,62 @@
                     <td class="cg-mono">{{ space.messageCount | number }}</td>
                     <td class="cg-mono cg-muted">{{ formatDateTime(space.lastMessageAt) }}</td>
                     <td class="text-right">
-                      <div class="cg-actions-row">
+                      <div class="cg-actions-row cg-actions-row--nowrap">
+                        <button
+                          type="button"
+                          class="cg-action-btn cg-action-btn--gold"
+                          (click)="openSpaceInChat(space.id)"
+                          title="Abrir este espacio en el chat"
+                        >
+                          <span class="material-symbols-outlined">open_in_new</span>
+                          <span>Abrir en Chat</span>
+                        </button>
+
                         @if (space.status === 'ACTIVE') {
                           <button
                             type="button"
-                            class="cg-action-btn cg-action-btn--warning"
+                            class="cg-action-btn cg-action-btn--icon cg-action-btn--warning"
                             [disabled]="updatingSpaceId() === space.id"
                             (click)="changeSpaceStatus(space, 'FROZEN')"
-                            title="Congelar en modo solo lectura"
+                            title="Congelar espacio (solo lectura)"
+                            aria-label="Congelar espacio"
                           >
                             <span class="material-symbols-outlined">ac_unit</span>
-                            <span>Congelar</span>
                           </button>
                         } @else {
                           <button
                             type="button"
-                            class="cg-action-btn cg-action-btn--success"
+                            class="cg-action-btn cg-action-btn--icon cg-action-btn--success"
                             [disabled]="updatingSpaceId() === space.id"
                             (click)="changeSpaceStatus(space, 'ACTIVE')"
                             title="Reactivar espacio"
+                            aria-label="Reactivar espacio"
                           >
                             <span class="material-symbols-outlined">play_arrow</span>
-                            <span>Reactivar</span>
                           </button>
                         }
 
                         @if (space.status !== 'ARCHIVED') {
                           <button
                             type="button"
-                            class="cg-action-btn cg-action-btn--neutral"
+                            class="cg-action-btn cg-action-btn--icon cg-action-btn--neutral"
                             [disabled]="updatingSpaceId() === space.id"
                             (click)="changeSpaceStatus(space, 'ARCHIVED')"
                             title="Archivar espacio"
+                            aria-label="Archivar espacio"
                           >
                             <span class="material-symbols-outlined">archive</span>
-                            <span>Archivar</span>
                           </button>
                         }
 
                         <button
                           type="button"
-                          class="cg-action-btn cg-action-btn--danger"
+                          class="cg-action-btn cg-action-btn--icon cg-action-btn--danger"
                           (click)="openBreakGlassModal(space.id, space.name)"
-                          title="Inspección forense Break-Glass"
+                          title="Inspección Break-Glass"
+                          aria-label="Inspección Break-Glass"
                         >
                           <span class="material-symbols-outlined">lock_open_right</span>
-                          <span>Break-Glass</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          class="cg-action-btn cg-action-btn--gold"
-                          (click)="openSpaceInChat(space.id)"
-                          title="Abrir este espacio en el drawer del chat"
-                        >
-                          <span class="material-symbols-outlined">open_in_new</span>
-                          <span>Abrir en Chat</span>
                         </button>
                       </div>
                     </td>
@@ -590,7 +572,7 @@
               [class.cg-filter-pill--active]="userFilter() === 'ALL'"
               (click)="setUserFilter('ALL')"
             >
-              Todos (ALL)
+              Todos
             </button>
             <button
               type="button"
@@ -599,7 +581,7 @@
               (click)="setUserFilter('CHAT_ONLY')"
             >
               <span class="work-kpi-dot dot--purple"></span>
-              Solo Chat (CHAT_ONLY)
+              Solo Chat
             </button>
             <button
               type="button"
@@ -617,7 +599,7 @@
               (click)="setUserFilter('FROZEN')"
             >
               <span class="work-kpi-dot dot--danger"></span>
-              Congelados (FROZEN)
+              Congelados
             </button>
           </div>
 
@@ -661,12 +643,11 @@
               <thead>
                 <tr>
                   <th>Colaborador</th>
-                  <th>Usuario</th>
                   <th>Perfil / Rol</th>
                   <th>Estado en Vivo</th>
                   <th>Último Login</th>
                   <th>Espacios</th>
-                  <th>Congelamiento / Restricción</th>
+                  <th>Restricción</th>
                   <th class="text-right">Acciones</th>
                 </tr>
               </thead>
@@ -678,13 +659,12 @@
                         <span class="cg-avatar">{{ getInitials(user.fullName) }}</span>
                         <div class="min-w-0">
                           <strong>{{ user.fullName }}</strong>
-                          @if (user.email) {
-                            <p class="cg-cell-sub cg-mono">{{ user.email }}</p>
-                          }
+                          <p class="cg-cell-sub cg-mono">
+                            &#64;{{ user.username }}@if (user.email) { · {{ user.email }} }
+                          </p>
                         </div>
                       </div>
                     </td>
-                    <td class="cg-mono">{{ user.username }}</td>
                     <td>
                       <div class="cg-role-stack">
                         @if (user.isChatOnly) {
@@ -837,7 +817,7 @@
             </button>
           </div>
 
-          <!-- Rango de días + Break-Glass -->
+          <!-- Rango de días -->
           <div class="cg-audit-controls-right">
             <div class="cg-range-group" role="group" aria-label="Rango de tiempo">
               <button
@@ -865,11 +845,6 @@
                 30 días
               </button>
             </div>
-
-            <button type="button" class="cg-btn-danger-outline" (click)="openBreakGlassModal()">
-              <span class="material-symbols-outlined">lock_open_right</span>
-              <span>Acceso Break-Glass</span>
-            </button>
           </div>
         </div>
 
@@ -877,7 +852,7 @@
         @if (auditSubView() === 'messages') {
           <div class="cg-subtoolbar">
             <span class="cg-subtoolbar__hint">
-              Comparativa inmutable de texto original previo a edición o borrado lógico.
+              Comparativa de texto original previo a edición o eliminación.
             </span>
             <div class="cg-pills-group">
               <button
@@ -963,7 +938,7 @@
                       </td>
                       <td>
                         @if (msg.isDeleted) {
-                          <span class="cg-deleted-text">[Mensaje eliminado lógicamente]</span>
+                          <span class="cg-deleted-text">[Mensaje eliminado]</span>
                         } @else {
                           <div class="cg-diff-current">{{ msg.content }}</div>
                         }
@@ -1060,10 +1035,7 @@
                         </span>
                       </td>
                       <td>
-                        <div class="cg-event-cell">
-                          <strong>{{ formatDlpEventType(evt.eventType) }}</strong>
-                          <code class="cg-mono cg-muted-xs">{{ evt.eventType }}</code>
-                        </div>
+                        <strong>{{ formatDlpEventType(evt.eventType) }}</strong>
                       </td>
                       <td><strong>{{ evt.userName || 'Sistema' }}</strong></td>
                       <td>
@@ -1127,11 +1099,11 @@
           }
         }
 
-        <!-- SUB-VISTA 3: GALERÍA FORENSE DE EVIDENCIAS (SIN CARGAR IMÁGENES EN TABLA) -->
+        <!-- SUB-VISTA 3: GALERÍA FORENSE DE EVIDENCIAS -->
         @if (auditSubView() === 'attachments') {
           <div class="cg-subtoolbar">
             <span class="cg-subtoolbar__hint">
-              Listado ligero por metadatos (sin precarga Base64 en memoria). Cada archivo se descarga bajo demanda al abrirlo.
+              Índice de archivos adjuntos en conversaciones. Cada evidencia se carga únicamente al abrirla.
             </span>
           </div>
 
@@ -1159,7 +1131,7 @@
                 <thead>
                   <tr>
                     <th>Archivo</th>
-                    <th>Tipo MIME</th>
+                    <th>Tipo</th>
                     <th>Tamaño</th>
                     <th>Remitente</th>
                     <th>Conversación</th>
@@ -1178,7 +1150,7 @@
                           <strong>{{ att.fileName }}</strong>
                         </div>
                       </td>
-                      <td><code class="cg-chip cg-mono">{{ att.contentType }}</code></td>
+                      <td><span class="cg-chip">{{ formatAttachmentType(att.contentType) }}</span></td>
                       <td class="cg-mono">{{ formatFileSize(att.fileSize) }}</td>
                       <td>{{ att.senderName }}</td>
                       <td>{{ att.conversationName }}</td>
@@ -1197,7 +1169,7 @@
                             {{ downloadingAttachmentId() === att.id ? 'sync' : 'visibility' }}
                           </span>
                           <span>
-                            {{ downloadingAttachmentId() === att.id ? 'Cargando...' : 'Ver / Descargar Evidencia' }}
+                            {{ downloadingAttachmentId() === att.id ? 'Cargando...' : 'Ver evidencia' }}
                           </span>
                         </button>
                       </td>
@@ -1240,89 +1212,6 @@
   }
 
   <!-- ══════════════════════════════════════════════════════════════════
-       TAB 5: POLÍTICAS Y EFICIENCIA
-       ══════════════════════════════════════════════════════════════════ -->
-  @if (activeTab() === 'policies') {
-    <section class="cg-tab-section" aria-label="Políticas de seguridad y eficiencia del ecosistema">
-      <div class="cg-policies-grid">
-        <article class="cg-policy-card">
-          <div class="cg-policy-card__icon cg-policy-card__icon--gold">
-            <span class="material-symbols-outlined">compress</span>
-          </div>
-          <div class="cg-policy-card__body">
-            <span class="cg-policy-card__tag">OPTIMIZACIÓN DE ALMACENAMIENTO</span>
-            <h3>Compresión Automática en Cliente</h3>
-            <p>
-              Fotos optimizadas vía HTML5 Canvas (máx. 1280px, JPEG 78%) ahorrando ~80-90% de BD/RAM.
-            </p>
-            @if (overview(); as ov) {
-              <div class="cg-policy-metric">
-                <span class="material-symbols-outlined">database</span>
-                <span>
-                  Uso actual: <b>{{ formatMb(ov.totalAttachmentsSizeMb) }}</b> en {{ ov.totalAttachmentsCount }} adjuntos
-                </span>
-              </div>
-            }
-          </div>
-        </article>
-
-        <article class="cg-policy-card">
-          <div class="cg-policy-card__icon cg-policy-card__icon--blue">
-            <span class="material-symbols-outlined">speed</span>
-          </div>
-          <div class="cg-policy-card__body">
-            <span class="cg-policy-card__tag">RENDIMIENTO Y BAJO CONSUMO RAM</span>
-            <h3>Consultas sin Base64</h3>
-            <p>
-              Listados forenses proyectados por metadatos; descarga bajo demanda por ID.
-            </p>
-            <div class="cg-policy-metric">
-              <span class="material-symbols-outlined">memory</span>
-              <span>Hidratación selectiva en visor con liberación automática de Blob URLs</span>
-            </div>
-          </div>
-        </article>
-
-        <article class="cg-policy-card">
-          <div class="cg-policy-card__icon cg-policy-card__icon--danger">
-            <span class="material-symbols-outlined">shield_lock</span>
-          </div>
-          <div class="cg-policy-card__body">
-            <span class="cg-policy-card__tag">PREVENCIÓN DE FUGA DE INFORMACIÓN</span>
-            <h3>DLP y Marca de Agua</h3>
-            <p>
-              Cortina anti-captura (<code>PrintScreen</code>), bloqueo <code>Ctrl+P</code>/<code>Ctrl+S</code>, reportes en tiempo real y marca de agua dinámica.
-            </p>
-            @if (overview(); as ov) {
-              <div class="cg-policy-metric">
-                <span class="material-symbols-outlined">notifications_active</span>
-                <span>{{ ov.dlpAlertsLast7Days }} evento(s) DLP reportados en los últimos 7 días</span>
-              </div>
-            }
-          </div>
-        </article>
-
-        <article class="cg-policy-card">
-          <div class="cg-policy-card__icon cg-policy-card__icon--emerald">
-            <span class="material-symbols-outlined">gavel</span>
-          </div>
-          <div class="cg-policy-card__body">
-            <span class="cg-policy-card__tag">CUMPLIMIENTO E INMUTABILIDAD</span>
-            <h3>Privacidad 1-a-1 &amp; WORM</h3>
-            <p>
-              Acceso excepcional únicamente vía <em>Break-Glass</em> con rastro inmutable en <code>wms.audit_logs</code>.
-            </p>
-            <div class="cg-policy-metric">
-              <span class="material-symbols-outlined">verified_user</span>
-              <span>Motivo obligatorio (mín. 10 caracteres) + registro de IP y operador</span>
-            </div>
-          </div>
-        </article>
-      </div>
-    </section>
-  }
-
-  <!-- ══════════════════════════════════════════════════════════════════
        MODAL: CONGELAR USUARIO (TAB 3)
        ══════════════════════════════════════════════════════════════════ -->
   @if (freezeModalUser(); as targetUser) {
@@ -1354,7 +1243,7 @@
             <span class="cg-avatar">{{ getInitials(targetUser.fullName) }}</span>
             <div>
               <strong>{{ targetUser.fullName }}</strong>
-              <p>{{ targetUser.username }} • {{ formatRoleName(targetUser.roleName) }}</p>
+              <p>&#64;{{ targetUser.username }} • {{ formatRoleName(targetUser.roleName) }}</p>
             </div>
           </div>
 
@@ -1420,9 +1309,14 @@
           </div>
 
           <div class="cg-field-group">
-            <label for="cg-freeze-reason" class="cg-field-label">
-              Motivo obligatorio <span class="cg-required">*</span>
-            </label>
+            <div class="cg-field-label-row">
+              <label for="cg-freeze-reason" class="cg-field-label">
+                Motivo obligatorio (mínimo 5 caracteres) <span class="cg-required">*</span>
+              </label>
+              <span class="cg-char-counter" [class.cg-char-counter--ok]="freezeReasonValid()">
+                {{ freezeReasonLength() }} / 5 mín.
+              </span>
+            </div>
             <textarea
               id="cg-freeze-reason"
               rows="3"
@@ -1453,7 +1347,7 @@
           <button
             type="button"
             class="cg-btn-danger"
-            [disabled]="isSubmittingFreeze() || freezeReason().trim().length < 5"
+            [disabled]="isSubmittingFreeze() || !freezeReasonValid()"
             (click)="submitFreeze()"
           >
             <span class="material-symbols-outlined" [class.animate-spin]="isSubmittingFreeze()">
@@ -1484,7 +1378,7 @@
               <span class="material-symbols-outlined">lock_open_right</span>
             </span>
             <div>
-              <span class="cg-modal__eyebrow">INSPECCIÓN FORENSE EXCEPCIONAL (WORM)</span>
+              <span class="cg-modal__eyebrow">INSPECCIÓN EXCEPCIONAL DE AUDITORÍA</span>
               <h2 id="break-glass-title">
                 {{ breakGlassTranscript() ? 'Transcripción Break-Glass (Solo Lectura)' : 'Acceso Break-Glass' }}
               </h2>
@@ -1506,9 +1400,9 @@
             <div class="cg-worm-warning" role="alert">
               <span class="material-symbols-outlined">gpp_maybe</span>
               <div>
-                <strong>Registro Inmutable Obligatorio (WORM)</strong>
+                <strong>Registro Inmutable Obligatorio</strong>
                 <p>
-                  Este acceso excepcional quedará registrado de forma inmutable en <code>wms.audit_logs</code> con tu usuario, fecha, IP y justificación.
+                  Este acceso excepcional quedará registrado de forma inmutable en la bitácora de auditoría con tu usuario, fecha, IP y justificación.
                 </p>
               </div>
             </div>
@@ -1588,7 +1482,7 @@
                   <span class="cg-chip">{{ transcript.conversationType }}</span>
                 </div>
                 <div>
-                  <span class="cg-transcript-meta__label">AUDITADO EN (WORM)</span>
+                  <span class="cg-transcript-meta__label">AUDITADO EN</span>
                   <span class="cg-mono">{{ formatDateTime(transcript.auditedAt) }}</span>
                 </div>
                 <div class="cg-transcript-meta__full">
@@ -1622,7 +1516,7 @@
                       </div>
                     }
                     <p class="cg-transcript-msg__content">
-                      {{ m.isDeleted ? '[Mensaje eliminado lógicamente]' : m.content }}
+                      {{ m.isDeleted ? '[Mensaje eliminado]' : m.content }}
                     </p>
                   </article>
                 } @empty {
@@ -1695,7 +1589,7 @@
             } @else {
               <div class="cg-preview-fallback">
                 <span class="material-symbols-outlined">description</span>
-                <strong>Vista previa no disponible para este formato ({{ att.contentType }})</strong>
+                <strong>Vista previa no disponible para este formato ({{ formatAttachmentType(att.contentType) }})</strong>
                 @if (previewSafeUrl(); as dlUrl) {
                   <a [href]="dlUrl" [download]="att.fileName" class="cg-btn-gold cg-no-underline">
                     <span class="material-symbols-outlined">download</span>
