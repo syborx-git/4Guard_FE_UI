@@ -44,12 +44,18 @@ export interface ChatMessage {
   senderUsername: string;
   senderFullName: string;
   parentMessageId?: string | null;
+  parentMessageContent?: string | null;
+  parentSenderName?: string | null;
   content: string;
   messageType: 'TEXT' | 'SYSTEM' | 'ENTITY_REF';
   metadataJson?: string | null;
   isEdited: boolean;
   editedAt?: string | null;
   isDeleted: boolean;
+  isPinned?: boolean;
+  pinnedAt?: string | null;
+  pinnedBy?: string | null;
+  pinnedByName?: string | null;
   createdAt: string;
   reactions: ReactionSummary[];
   attachments: ChatAttachment[];

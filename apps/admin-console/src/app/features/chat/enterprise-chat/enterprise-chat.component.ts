@@ -73,10 +73,43 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
     Array<{ fileName: string; contentType: string; fileSize: number; storageUrl: string }>
   >([]);
   protected readonly mentionQuery = signal<string | null>(null);
+  protected readonly replyingTo = signal<ChatMessage | null>(null);
+  protected readonly highlightedMessageId = signal<string | null>(null);
+  protected readonly isPinnedExpanded = signal<boolean>(false);
+  protected readonly showThreadSearch = signal<boolean>(false);
+  protected readonly threadSearchQuery = signal<string>('');
+  protected readonly threadSearchResults = signal<ChatMessage[]>([]);
+  protected readonly isSearchingThread = signal<boolean>(false);
+  protected readonly showEvidenceGallery = signal<boolean>(false);
+  protected readonly evidenceFilter = signal<'ALL' | 'IMAGE' | 'PDF'>('ALL');
+  protected readonly evidenceItems = signal<ChatAttachment[]>([]);
+  protected readonly isLoadingEvidence = signal<boolean>(false);
+  protected readonly showUsageGuide = signal<boolean>(false);
 
   private lastTypingSentAt = 0;
+  private highlightTimeout: any = null;
+  private searchDebounceTimeout: any = null;
 
   protected readonly quickEmojis = ['👍', '✅', '👀', '🚚', '⚠️'];
+
+  protected readonly filteredEvidence = computed<ChatAttachment[]>(() => {
+    const filter = this.evidenceFilter();
+    const items = this.evidenceItems();
+    if (filter === 'IMAGE') {
+      return items.filter((a) => (a.contentType || '').toLowerCase().startsWith('image/'));
+    }
+    if (filter === 'PDF') {
+      return items.filter((a) => (a.contentType || '').toLowerCase().includes('pdf'));
+    }
+    return items;
+  });
+
+  protected readonly evidenceCounts = computed(() => {
+    const items = this.evidenceItems();
+    const images = items.filter((a) => (a.contentType || '').toLowerCase().startsWith('image/')).length;
+    const pdfs = items.filter((a) => (a.contentType || '').toLowerCase().includes('pdf')).length;
+    return { all: items.length, images, pdfs };
+  });
 
   protected readonly mentionCandidates = computed(() => {
     const q = this.mentionQuery();
@@ -211,6 +244,13 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   }
 
   onSelectConversation(conv: ConversationSummary): void {
+    this.replyingTo.set(null);
+    this.isPinnedExpanded.set(false);
+    this.showThreadSearch.set(false);
+    this.threadSearchQuery.set('');
+    this.threadSearchResults.set([]);
+    this.showEvidenceGallery.set(false);
+    this.showUsageGuide.set(false);
     this.chatService.selectConversation(conv.id);
     this.mobileShowThread.set(true);
   }
@@ -237,10 +277,158 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
     if (!convId || (!text && attachments.length === 0)) return;
 
     const finalContent = text || `📎 ${attachments.map((a) => a.fileName).join(', ')}`;
+    const parentId = this.replyingTo()?.id;
     this.messageText.set('');
     this.mentionQuery.set(null);
     this.pendingAttachments.set([]);
-    this.chatService.sendMessage(convId, finalContent, attachments).subscribe();
+    this.replyingTo.set(null);
+    this.chatService.sendMessage(convId, finalContent, attachments, parentId).subscribe();
+  }
+
+  onStartReply(msg: ChatMessage): void {
+    this.replyingTo.set(msg);
+  }
+
+  onCancelReply(): void {
+    this.replyingTo.set(null);
+  }
+
+  onTogglePin(msg: ChatMessage): void {
+    if (!this.isManagerOrDirector()) return;
+    this.chatService.togglePinMessage(msg.id, !msg.isPinned).subscribe({ error: () => {} });
+  }
+
+  togglePinnedExpanded(): void {
+    this.isPinnedExpanded.update((v) => !v);
+  }
+
+  jumpToMessage(messageId?: string | null): void {
+    if (!messageId || typeof document === 'undefined') return;
+    const target = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    this.highlightedMessageId.set(messageId);
+    clearTimeout(this.highlightTimeout);
+    this.highlightTimeout = setTimeout(() => {
+      if (this.highlightedMessageId() === messageId) {
+        this.highlightedMessageId.set(null);
+      }
+    }, 1800);
+  }
+
+  toggleThreadSearch(): void {
+    const next = !this.showThreadSearch();
+    this.showThreadSearch.set(next);
+    if (next) {
+      this.showEvidenceGallery.set(false);
+      this.showUsageGuide.set(false);
+    } else {
+      this.threadSearchQuery.set('');
+      this.threadSearchResults.set([]);
+      this.isSearchingThread.set(false);
+    }
+  }
+
+  onThreadSearchInput(query: string): void {
+    this.threadSearchQuery.set(query);
+    const trimmed = query.trim();
+    clearTimeout(this.searchDebounceTimeout);
+
+    if (!trimmed) {
+      this.threadSearchResults.set([]);
+      this.isSearchingThread.set(false);
+      return;
+    }
+
+    const qLower = trimmed.toLowerCase();
+    const localMatches = this.chatService
+      .messages()
+      .filter(
+        (m) =>
+          !m.isDeleted &&
+          ((m.content || '').toLowerCase().includes(qLower) ||
+            (m.senderFullName || '').toLowerCase().includes(qLower))
+      );
+    this.threadSearchResults.set(localMatches);
+
+    const convId = this.chatService.activeConversationId();
+    if (!convId) return;
+
+    this.isSearchingThread.set(true);
+    this.searchDebounceTimeout = setTimeout(() => {
+      this.chatService.searchConversationMessages(convId, trimmed).subscribe({
+        next: (remote) => {
+          if (this.threadSearchQuery().trim() === trimmed) {
+            this.threadSearchResults.set(remote.length > 0 ? remote : localMatches);
+            this.isSearchingThread.set(false);
+          }
+        },
+        error: () => {
+          if (this.threadSearchQuery().trim() === trimmed) {
+            this.threadSearchResults.set(localMatches);
+            this.isSearchingThread.set(false);
+          }
+        },
+      });
+    }, 250);
+  }
+
+  toggleEvidenceGallery(): void {
+    const next = !this.showEvidenceGallery();
+    this.showEvidenceGallery.set(next);
+    if (next) {
+      this.showThreadSearch.set(false);
+      this.showUsageGuide.set(false);
+      this.loadEvidence();
+    }
+  }
+
+  loadEvidence(): void {
+    const convId = this.chatService.activeConversationId();
+    if (!convId) return;
+
+    const localMap = new Map<string, ChatAttachment>();
+    for (const msg of this.chatService.messages()) {
+      if (msg.isDeleted || !msg.attachments?.length) continue;
+      for (const att of msg.attachments) {
+        const key = att.id || att.storageUrl;
+        if (key && !localMap.has(key)) {
+          localMap.set(key, att);
+        }
+      }
+    }
+    const localList = Array.from(localMap.values());
+    this.evidenceItems.set(localList);
+    this.isLoadingEvidence.set(true);
+
+    this.chatService.loadConversationEvidence(convId).subscribe({
+      next: (remote) => {
+        if (this.chatService.activeConversationId() === convId) {
+          this.evidenceItems.set(remote.length > 0 ? remote : localList);
+          this.isLoadingEvidence.set(false);
+        }
+      },
+      error: () => {
+        if (this.chatService.activeConversationId() === convId) {
+          this.evidenceItems.set(localList);
+          this.isLoadingEvidence.set(false);
+        }
+      },
+    });
+  }
+
+  toggleUsageGuide(): void {
+    const next = !this.showUsageGuide();
+    this.showUsageGuide.set(next);
+    if (next) {
+      this.showThreadSearch.set(false);
+      this.showEvidenceGallery.set(false);
+    }
+  }
+
+  onToggleSound(): void {
+    this.chatService.toggleSound();
   }
 
   onComposerInput(value: string): void {
@@ -539,6 +727,8 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    clearTimeout(this.highlightTimeout);
+    clearTimeout(this.searchDebounceTimeout);
     this.stopCameraStream();
   }
 }

@@ -226,7 +226,25 @@
           </span>
         </div>
       </div>
-      <div class="flex items-center gap-1 shrink-0">
+      <div class="ec-thread-header__actions flex items-center gap-1 shrink-0">
+        <button type="button" class="ec-icon-btn" [class.ec-icon-btn--active]="showThreadSearch()"
+          (click)="toggleThreadSearch()" title="Buscar en esta conversación" aria-label="Buscar en esta conversación">
+          <span class="material-symbols-outlined">search</span>
+        </button>
+        <button type="button" class="ec-icon-btn" [class.ec-icon-btn--active]="showEvidenceGallery()"
+          (click)="toggleEvidenceGallery()" title="Galería de evidencia compartida"
+          aria-label="Galería de evidencia compartida">
+          <span class="material-symbols-outlined">photo_library</span>
+        </button>
+        <button type="button" class="ec-icon-btn" (click)="onToggleSound()"
+          [title]="chatService.soundEnabled() ? 'Silenciar alertas de sonido' : 'Activar alertas de sonido'"
+          [attr.aria-label]="chatService.soundEnabled() ? 'Silenciar sonido' : 'Activar sonido'">
+          <span class="material-symbols-outlined">{{ chatService.soundEnabled() ? 'volume_up' : 'volume_off' }}</span>
+        </button>
+        <button type="button" class="ec-icon-btn" [class.ec-icon-btn--active]="showUsageGuide()"
+          (click)="toggleUsageGuide()" title="Guía rápida de uso" aria-label="Guía rápida de uso">
+          <span class="material-symbols-outlined">help_outline</span>
+        </button>
         @if (mode === 'fullscreen') {
         <button type="button" class="ec-icon-btn" (click)="themeService.toggleTheme()"
           [title]="themeService.themeLabel()" [attr.aria-label]="themeService.themeLabel()">
@@ -254,6 +272,191 @@
       </div>
     </header>
 
+    <!-- GUÍA RÁPIDA DE USO (POPOVER COLAPSABLE) -->
+    @if (showUsageGuide()) {
+    <section class="ec-guide-popover" aria-label="Guía rápida de 4GUARD Chat">
+      <div class="ec-guide-popover__header">
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined ec-gold-icon">tips_and_updates</span>
+          <strong>Guía rápida de 4GUARD Chat</strong>
+        </div>
+        <button type="button" class="ec-mini-btn" (click)="toggleUsageGuide()" title="Cerrar guía"
+          aria-label="Cerrar guía">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="ec-guide-grid">
+        <div class="ec-guide-item">
+          <span class="ec-guide-badge">&#64;menciones</span>
+          <span>Escribe <strong>&#64;usuario</strong> para notificar directamente a un colaborador.</span>
+        </div>
+        <div class="ec-guide-item">
+          <span class="ec-guide-badge">#folios</span>
+          <span>Escribe <strong>#26516</strong> para resaltar referencias y folios operativos.</span>
+        </div>
+        <div class="ec-guide-item">
+          <span class="ec-guide-badge">Responder</span>
+          <span>Usa el ícono de respuesta en cualquier mensaje para citarlo con enlace directo.</span>
+        </div>
+        <div class="ec-guide-item">
+          <span class="ec-guide-badge">Fijar</span>
+          <span>Gerencia y Dirección pueden fijar avisos clave en la parte superior del canal.</span>
+        </div>
+        <div class="ec-guide-item">
+          <span class="ec-guide-badge">Cámara / PDF</span>
+          <span>Usa el botón <strong>+</strong> para capturar foto en vivo o adjuntar imágenes y PDFs (máx. 2 MB).</span>
+        </div>
+      </div>
+    </section>
+    }
+
+    <!-- BANNER COLAPSABLE DE MENSAJES FIJADOS -->
+    @if (chatService.pinnedMessages()[0]; as latestPin) {
+    <section class="ec-pinned-banner" aria-label="Mensajes fijados">
+      <div class="ec-pinned-banner__row">
+        <button type="button" class="ec-pinned-banner__main" (click)="jumpToMessage(latestPin.id)"
+          title="Ir al mensaje fijado">
+          <span class="material-symbols-outlined ec-pinned-icon">push_pin</span>
+          <div class="ec-pinned-banner__text">
+            <span class="ec-pinned-banner__label">
+              Fijado · {{ latestPin.senderFullName }}
+              @if (chatService.pinnedMessages().length > 1) {
+              <span class="ec-pinned-count">({{ chatService.pinnedMessages().length }})</span>
+              }
+            </span>
+            <span class="ec-pinned-banner__preview">{{ latestPin.content }}</span>
+          </div>
+        </button>
+        <div class="ec-pinned-banner__actions">
+          @if (chatService.pinnedMessages().length > 1) {
+          <button type="button" class="ec-mini-btn" (click)="togglePinnedExpanded()"
+            [title]="isPinnedExpanded() ? 'Ocultar fijados' : 'Ver todos los fijados'"
+            aria-label="Alternar lista de mensajes fijados">
+            <span class="material-symbols-outlined">{{ isPinnedExpanded() ? 'expand_less' : 'expand_more' }}</span>
+          </button>
+          }
+          @if (isManagerOrDirector()) {
+          <button type="button" class="ec-mini-btn" (click)="onTogglePin(latestPin)" title="Desfijar mensaje"
+            aria-label="Desfijar mensaje">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+          }
+        </div>
+      </div>
+
+      @if (isPinnedExpanded() && chatService.pinnedMessages().length > 1) {
+      <div class="ec-pinned-list">
+        @for (pin of chatService.pinnedMessages(); track pin.id) {
+        <div class="ec-pinned-list__item">
+          <button type="button" class="ec-pinned-list__jump" (click)="jumpToMessage(pin.id)">
+            <span class="ec-pinned-list__author">{{ pin.senderFullName }}</span>
+            <span class="ec-pinned-list__content">{{ pin.content }}</span>
+          </button>
+          @if (isManagerOrDirector()) {
+          <button type="button" class="ec-mini-btn" (click)="onTogglePin(pin)" title="Desfijar"
+            aria-label="Desfijar mensaje">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+          }
+        </div>
+        }
+      </div>
+      }
+    </section>
+    }
+
+    <!-- BÚSQUEDA EN LA CONVERSACIÓN -->
+    @if (showThreadSearch()) {
+    <section class="ec-thread-search" aria-label="Buscar en conversación">
+      <div class="ec-thread-search__bar">
+        <span class="material-symbols-outlined ec-thread-search__icon">search</span>
+        <input type="search" class="ec-thread-search__input" placeholder="Buscar mensajes en esta conversación..."
+          [ngModel]="threadSearchQuery()" (ngModelChange)="onThreadSearchInput($event)" />
+        @if (isSearchingThread()) {
+        <span class="ec-thread-search__status">Buscando...</span>
+        }
+        <button type="button" class="ec-mini-btn" (click)="toggleThreadSearch()" title="Cerrar búsqueda"
+          aria-label="Cerrar búsqueda">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      @if (threadSearchQuery().trim().length > 0) {
+      <div class="ec-thread-search__results">
+        @for (hit of threadSearchResults(); track hit.id) {
+        <button type="button" class="ec-thread-search__hit" (click)="jumpToMessage(hit.id)">
+          <div class="ec-thread-search__hit-top">
+            <strong>{{ hit.senderFullName }}</strong>
+            <span>{{ hit.createdAt | date:'dd/MM HH:mm' }}</span>
+          </div>
+          <span class="ec-thread-search__hit-text">{{ hit.content }}</span>
+        </button>
+        } @empty {
+        <div class="ec-thread-search__empty">Sin coincidencias para "{{ threadSearchQuery() }}"</div>
+        }
+      </div>
+      }
+    </section>
+    }
+
+    <!-- GALERÍA DE EVIDENCIA COMPARTIDA -->
+    @if (showEvidenceGallery()) {
+    <section class="ec-evidence-panel" aria-label="Galería de evidencia compartida">
+      <div class="ec-evidence-panel__header">
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined ec-gold-icon">photo_library</span>
+          <strong>Evidencia compartida</strong>
+        </div>
+        <button type="button" class="ec-mini-btn" (click)="toggleEvidenceGallery()" title="Cerrar galería"
+          aria-label="Cerrar galería">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="ec-evidence-tabs">
+        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="evidenceFilter() === 'ALL'"
+          (click)="evidenceFilter.set('ALL')">
+          Todos ({{ evidenceCounts().all }})
+        </button>
+        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="evidenceFilter() === 'IMAGE'"
+          (click)="evidenceFilter.set('IMAGE')">
+          Fotos ({{ evidenceCounts().images }})
+        </button>
+        <button type="button" class="ec-filter-chip" [class.ec-filter-chip--active]="evidenceFilter() === 'PDF'"
+          (click)="evidenceFilter.set('PDF')">
+          PDFs ({{ evidenceCounts().pdfs }})
+        </button>
+      </div>
+
+      <div class="ec-evidence-grid">
+        @for (att of filteredEvidence(); track att.id || att.storageUrl) {
+        @if (att.contentType.startsWith('image/')) {
+        <button type="button" class="ec-evidence-card ec-evidence-card--img" (click)="openPreview(att)"
+          [title]="att.fileName">
+          <img [src]="att.storageUrl" [alt]="att.fileName" class="ec-evidence-thumb"
+            (contextmenu)="!canDownloadAttachments() && $event.preventDefault()" />
+          <span class="ec-evidence-name">{{ att.fileName }}</span>
+        </button>
+        } @else {
+        <button type="button" class="ec-evidence-card ec-evidence-card--pdf" (click)="openPreview(att)"
+          [title]="att.fileName">
+          <span class="material-symbols-outlined ec-evidence-pdf-icon">picture_as_pdf</span>
+          <span class="ec-evidence-name">{{ att.fileName }}</span>
+        </button>
+        }
+        } @empty {
+        <div class="ec-evidence-empty">
+          @if (isLoadingEvidence()) {
+          <span>Cargando evidencia...</span>
+          } @else {
+          <span>No hay archivos compartidos en esta categoría.</span>
+          }
+        </div>
+        }
+      </div>
+    </section>
+    }
+
     <!-- FEED DE MENSAJES -->
     <div class="ec-messages">
       @if (chatService.hasMoreMessages()) {
@@ -265,13 +468,29 @@
       </div>
       }
       @for (msg of chatService.messages(); track msg.id) {
-      <div class="ec-msg" [class.ec-msg--mine]="msg.senderId === currentUserId()">
+      <div class="ec-msg" [attr.data-message-id]="msg.id" [class.ec-msg--mine]="msg.senderId === currentUserId()"
+        [class.ec-msg--highlighted]="highlightedMessageId() === msg.id">
         <div class="ec-msg__bubble" [class.ec-msg__bubble--mine]="msg.senderId === currentUserId()"
-          [class.ec-msg__bubble--deleted]="msg.isDeleted">
+          [class.ec-msg__bubble--deleted]="msg.isDeleted" [class.ec-msg__bubble--pinned]="msg.isPinned && !msg.isDeleted">
           <div class="ec-msg__meta">
-            <span class="ec-msg__author">{{ msg.senderFullName }}</span>
+            <span class="ec-msg__author">
+              {{ msg.senderFullName }}
+              @if (msg.isPinned && !msg.isDeleted) {
+              <span class="ec-msg__pin-badge" title="Mensaje fijado">
+                <span class="material-symbols-outlined">push_pin</span>
+              </span>
+              }
+            </span>
             <span class="ec-msg__time">{{ msg.createdAt | date:'HH:mm' }}</span>
           </div>
+
+          @if (msg.parentMessageId && !msg.isDeleted) {
+          <button type="button" class="ec-quote-snippet" (click)="jumpToMessage(msg.parentMessageId)"
+            title="Ir al mensaje citado">
+            <span class="ec-quote-snippet__author">{{ msg.parentSenderName || 'Mensaje citado' }}</span>
+            <span class="ec-quote-snippet__text">{{ msg.parentMessageContent || 'Ver mensaje original' }}</span>
+          </button>
+          }
 
           @if (editingMessageId() === msg.id) {
           <div class="ec-edit-box">
@@ -325,6 +544,17 @@
           <div class="ec-msg__actions">
             @for (emoji of quickEmojis; track emoji) {
             <button type="button" class="ec-emoji-btn" (click)="onToggleReaction(msg.id, emoji)">{{ emoji }}</button>
+            }
+            <button type="button" class="ec-mini-btn" (click)="onStartReply(msg)" title="Responder"
+              aria-label="Responder">
+              <span class="material-symbols-outlined">reply</span>
+            </button>
+            @if (isManagerOrDirector()) {
+            <button type="button" class="ec-mini-btn" [class.ec-mini-btn--pinned]="msg.isPinned"
+              (click)="onTogglePin(msg)" [title]="msg.isPinned ? 'Desfijar mensaje' : 'Fijar mensaje'"
+              [attr.aria-label]="msg.isPinned ? 'Desfijar mensaje' : 'Fijar mensaje'">
+              <span class="material-symbols-outlined">push_pin</span>
+            </button>
             }
             @if (msg.senderId === currentUserId()) {
             <button type="button" class="ec-mini-btn" (click)="onStartEdit(msg)" title="Editar">
@@ -389,6 +619,21 @@
         <button type="button" (click)="removePendingAttachment($index)" title="Quitar">✕</button>
       </span>
       }
+    </div>
+    }
+
+    <!-- BANNER DE RESPUESTA CITADA -->
+    @if (replyingTo(); as replyTarget) {
+    <div class="ec-reply-banner">
+      <span class="material-symbols-outlined ec-reply-banner__icon">reply</span>
+      <div class="ec-reply-banner__body">
+        <span class="ec-reply-banner__author">Respondiendo a {{ replyTarget.senderFullName }}</span>
+        <span class="ec-reply-banner__preview">{{ replyTarget.content }}</span>
+      </div>
+      <button type="button" class="ec-mini-btn ec-reply-banner__close" (click)="onCancelReply()"
+        title="Cancelar respuesta" aria-label="Cancelar respuesta">
+        <span class="material-symbols-outlined">close</span>
+      </button>
     </div>
     }
 

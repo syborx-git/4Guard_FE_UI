@@ -3,13 +3,17 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, Subscription, tap, map } from 'rxjs';
 import { StompClientService } from '@4guard/shared-core';
 import { environment } from '../../../environments/environment';
+import { AuthState } from '../../core/auth/auth.state';
 import {
   ApiResponse,
+  ChatAttachment,
   ChatMessage,
   ChatUser,
   ConversationSummary,
   NotificationPref,
 } from './chat.models';
+
+const CHAT_SOUND_STORAGE_KEY = '4guard_chat_sound';
 
 @Injectable({
   providedIn: 'root',
@@ -17,12 +21,14 @@ import {
 export class ChatService {
   private readonly http = inject(HttpClient);
   private readonly stompService = inject(StompClientService);
+  private readonly authState = inject(AuthState);
   private readonly baseUrl = `${environment.apiBaseUrl || ''}/api/v1/chat`;
 
   // Estado reactivo con Signals (ADR-006)
   readonly conversations = signal<ConversationSummary[]>([]);
   readonly activeConversationId = signal<string | null>(null);
   readonly messages = signal<ChatMessage[]>([]);
+  readonly pinnedMessages = signal<ChatMessage[]>([]);
   readonly users = signal<ChatUser[]>([]);
   readonly loadError = signal<string | null>(null);
   readonly isLoadingConversations = signal<boolean>(false);
@@ -31,12 +37,14 @@ export class ChatService {
   readonly hasMoreMessages = signal<boolean>(false);
   readonly typingUser = signal<string | null>(null);
   readonly latestIncomingAlert = signal<{ conversationId: string; senderName: string; preview: string } | null>(null);
+  readonly soundEnabled = signal<boolean>(this.readSoundPref());
 
   private pollingId: any = null;
   private userQueueSub: Subscription | null = null;
   private activeTopicSub: Subscription | null = null;
   private typingTimeout: any = null;
   private alertTimeout: any = null;
+  private audioCtx: AudioContext | null = null;
 
   readonly activeConversation = computed<ConversationSummary | null>(() => {
     const id = this.activeConversationId();
@@ -94,6 +102,126 @@ export class ChatService {
     this.activeTopicSub = null;
   }
 
+  private readSoundPref(): boolean {
+    if (typeof window === 'undefined') return true;
+    try {
+      const stored = window.localStorage.getItem(CHAT_SOUND_STORAGE_KEY);
+      return stored === null ? true : stored !== 'false';
+    } catch {
+      return true;
+    }
+  }
+
+  toggleSound(): void {
+    const next = !this.soundEnabled();
+    this.soundEnabled.set(next);
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(CHAT_SOUND_STORAGE_KEY, String(next));
+      } catch {
+        // Ignorar errores de almacenamiento privado
+      }
+    }
+    if (next) {
+      this.requestNotificationPermission();
+    }
+  }
+
+  requestNotificationPermission(): void {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      try {
+        Notification.requestPermission().catch(() => {});
+      } catch {
+        // Ignorar navegadores que no devuelven Promise
+      }
+    }
+  }
+
+  private playIncomingChime(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!this.audioCtx) {
+        this.audioCtx = new AudioCtx();
+      }
+      if (this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume().catch(() => {});
+      }
+      const now = this.audioCtx.currentTime;
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.setValueAtTime(1174.66, now + 0.09);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.075, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+      osc.connect(gain);
+      gain.connect(this.audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } catch {
+      // Ignorar restricciones de autoplay o falta de soporte de Web Audio
+    }
+  }
+
+  private handleIncomingNotification(evt: any, msg: ChatMessage): void {
+    const currentUser = this.authState.currentUser();
+    const isFromMe =
+      (!!currentUser?.id && msg.senderId === currentUser.id) ||
+      (!!currentUser?.username &&
+        (msg.senderUsername === currentUser.username || evt.senderUsername === currentUser.username));
+    if (isFromMe) return;
+
+    const convId = evt.conversationId || msg.conversationId;
+    const conv = this.conversations().find((c) => c.id === convId);
+    const pref: NotificationPref = conv?.myNotificationPref || 'ALL';
+    if (pref === 'MUTED') return;
+
+    if (pref === 'MENTIONS') {
+      const uname = currentUser?.username?.trim();
+      if (!uname) return;
+      const escaped = uname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const mentionRe = new RegExp(`@${escaped}(?:\\b|$)`, 'i');
+      if (!mentionRe.test(msg.content || '')) return;
+    }
+
+    if (this.soundEnabled()) {
+      this.playIncomingChime();
+    }
+
+    const isHiddenOrClosed = (typeof document !== 'undefined' && document.hidden) || !this.isDrawerOpen();
+    if (
+      isHiddenOrClosed &&
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'granted'
+    ) {
+      try {
+        new Notification(msg.senderFullName || evt.senderUsername || '4GUARD Chat', {
+          body: msg.content || 'Archivo adjunto',
+          tag: `4guard-chat-${convId || msg.id}`,
+        });
+      } catch {
+        // Ignorar errores de notificación nativa
+      }
+    }
+  }
+
+  private syncPinnedMessage(msg: ChatMessage): void {
+    this.pinnedMessages.update((list) => {
+      const filtered = list.filter((m) => m.id !== msg.id);
+      if (msg.isPinned && !msg.isDeleted) {
+        return [msg, ...filtered];
+      }
+      return filtered;
+    });
+  }
+
   private initStompUserQueue(): void {
     if (this.userQueueSub || typeof window === 'undefined') return;
     try {
@@ -101,15 +229,18 @@ export class ChatService {
         next: (evt: any) => {
           if (!evt) return;
           this.loadConversations().subscribe({ error: () => {} });
-          if (evt.eventType === 'MESSAGE_CREATED' && !this.isDrawerOpen() && evt.payload) {
+          if (evt.eventType === 'MESSAGE_CREATED' && evt.payload) {
             const msg = evt.payload as ChatMessage;
-            this.latestIncomingAlert.set({
-              conversationId: evt.conversationId || msg.conversationId,
-              senderName: msg.senderFullName || evt.senderUsername || 'Nuevo mensaje',
-              preview: msg.content || 'Archivo adjunto',
-            });
-            clearTimeout(this.alertTimeout);
-            this.alertTimeout = setTimeout(() => this.latestIncomingAlert.set(null), 5000);
+            this.handleIncomingNotification(evt, msg);
+            if (!this.isDrawerOpen()) {
+              this.latestIncomingAlert.set({
+                conversationId: evt.conversationId || msg.conversationId,
+                senderName: msg.senderFullName || evt.senderUsername || 'Nuevo mensaje',
+                preview: msg.content || 'Archivo adjunto',
+              });
+              clearTimeout(this.alertTimeout);
+              this.alertTimeout = setTimeout(() => this.latestIncomingAlert.set(null), 5000);
+            }
           }
         },
         error: () => {},
@@ -144,12 +275,18 @@ export class ChatService {
               list.some((m) => m.id === payload.id) ? list : [...list, payload]
             );
             this.markAsRead(conversationId).subscribe({ error: () => {} });
+          } else if (evt.eventType === 'MESSAGE_PINNED') {
+            this.messages.update((list) => list.map((m) => (m.id === payload.id ? payload : m)));
+            this.syncPinnedMessage(payload);
           } else if (
             evt.eventType === 'MESSAGE_UPDATED' ||
             evt.eventType === 'MESSAGE_DELETED' ||
             evt.eventType === 'REACTION_UPDATED'
           ) {
             this.messages.update((list) => list.map((m) => (m.id === payload.id ? payload : m)));
+            if (evt.eventType === 'MESSAGE_DELETED') {
+              this.syncPinnedMessage({ ...payload, isPinned: false });
+            }
           }
         },
         error: () => {},
@@ -192,9 +329,71 @@ export class ChatService {
 
   selectConversation(conversationId: string): void {
     this.activeConversationId.set(conversationId);
+    this.pinnedMessages.set([]);
     this.subscribeToConversationTopic(conversationId);
     this.loadMessages(conversationId).subscribe();
+    this.loadPinnedMessages(conversationId).subscribe({ error: () => {} });
     this.markAsRead(conversationId).subscribe();
+  }
+
+  loadPinnedMessages(conversationId: string): Observable<ChatMessage[]> {
+    return this.http
+      .get<ApiResponse<ChatMessage[]>>(`${this.baseUrl}/conversations/${conversationId}/pinned`)
+      .pipe(
+        map((res) => res.data || []),
+        tap({
+          next: (list) => {
+            if (this.activeConversationId() === conversationId) {
+              this.pinnedMessages.set(list);
+            }
+          },
+          error: () => {
+            if (this.activeConversationId() === conversationId) {
+              this.pinnedMessages.set([]);
+            }
+          },
+        })
+      );
+  }
+
+  togglePinMessage(messageId: string, pinned?: boolean): Observable<ChatMessage> {
+    return this.http
+      .put<ApiResponse<ChatMessage>>(`${this.baseUrl}/messages/${messageId}/pin`, { pinned })
+      .pipe(
+        map((res) => res.data),
+        tap((updated) => {
+          this.messages.update((list) => list.map((m) => (m.id === updated.id ? updated : m)));
+          this.syncPinnedMessage(updated);
+        })
+      );
+  }
+
+  searchConversationMessages(conversationId: string, q: string): Observable<ChatMessage[]> {
+    const params = new HttpParams().set('q', q);
+    return this.http
+      .get<ApiResponse<ChatMessage[]>>(`${this.baseUrl}/conversations/${conversationId}/messages/search`, { params })
+      .pipe(map((res) => res.data || []));
+  }
+
+  loadConversationEvidence(conversationId: string): Observable<ChatAttachment[]> {
+    return this.http
+      .get<ApiResponse<any[]>>(`${this.baseUrl}/conversations/${conversationId}/evidence`)
+      .pipe(
+        map((res) => {
+          const items = res.data || [];
+          const result: ChatAttachment[] = [];
+          for (const item of items) {
+            if (item && Array.isArray(item.attachments)) {
+              for (const att of item.attachments) {
+                if (att && att.storageUrl) result.push(att as ChatAttachment);
+              }
+            } else if (item && item.storageUrl) {
+              result.push(item as ChatAttachment);
+            }
+          }
+          return result;
+        })
+      );
   }
 
   startDirectMessage(targetUserId: string): Observable<ConversationSummary> {
@@ -276,17 +475,21 @@ export class ChatService {
   sendMessage(
     conversationId: string,
     content: string,
-    attachments?: Array<{ fileName: string; contentType: string; fileSize: number; storageUrl: string }>
+    attachments?: Array<{ fileName: string; contentType: string; fileSize: number; storageUrl: string }>,
+    parentMessageId?: string
   ): Observable<ChatMessage> {
     return this.http
       .post<ApiResponse<ChatMessage>>(`${this.baseUrl}/conversations/${conversationId}/messages`, {
         content,
         attachments: attachments && attachments.length > 0 ? attachments : undefined,
+        parentMessageId: parentMessageId || undefined,
       })
       .pipe(
         map((res) => res.data),
         tap((msg) => {
-          this.messages.update((list) => [...list, msg]);
+          this.messages.update((list) =>
+            list.some((m) => m.id === msg.id) ? list : [...list, msg]
+          );
           this.conversations.update((list) =>
             list.map((c) =>
               c.id === conversationId ? { ...c, lastMessage: msg, lastMessageAt: msg.createdAt } : c
