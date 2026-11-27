@@ -1021,6 +1021,7 @@ const PROXY_CONFIG = {
     "secure": false,
     "ws": true,
     "changeOrigin": true,
+    "rewriteWsOrigin": true,
     "logLevel": "info"
   },
   "/api/v1/ws-wms": {
@@ -1028,6 +1029,7 @@ const PROXY_CONFIG = {
     "secure": false,
     "ws": true,
     "changeOrigin": true,
+    "rewriteWsOrigin": true,
     "logLevel": "info"
   },
   "/api": {
