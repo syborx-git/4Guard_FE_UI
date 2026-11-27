@@ -241,6 +241,27 @@
   backdrop-filter: blur(8px);
 }
 
+.cg-pilot-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.95rem;
+  color: var(--cg-gold-text);
+  font-family: var(--cg-font-body);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: rgba(197, 168, 107, 0.08);
+  border: 1px solid var(--cg-gold-border);
+  border-radius: var(--cg-radius-pill);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+
+  .material-symbols-outlined {
+    font-size: 15px;
+    color: var(--cg-gold);
+  }
+}
+
 .cg-sync-pill__dot {
   width: 6px;
   height: 6px;
