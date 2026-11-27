@@ -285,52 +285,57 @@
   position: relative;
   flex: 1;
   overflow-y: auto;
-  padding: 1.25rem 1.4rem 1.4rem;
+  overflow-x: hidden;
+  padding: 0.75rem 1.4rem 1.4rem;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 1.05rem;
   background-color: #070b12;
 
   /* Fondo multicapa: Patrón SVG Isométrico WMS (Racks + AGV + CAD) + Iluminación High-Bay */
   background-image:
     url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='60'%20viewBox='0%200%20120%2060'%3E%20%3C!--%201.%20Blueprint%20Grid%20%26%20Structural%20Aisle%20Lines%20--%3E%20%3Cpath%20d='M0%2030L60%200L120%2030L60%2060Z'%20fill='none'%20stroke='rgba(197,168,107,0.05)'%20stroke-width='0.6'/%3E%20%3Cpath%20d='M0%200L120%2060'%20fill='none'%20stroke='rgba(148,163,184,0.038)'%20stroke-width='0.55'/%3E%20%3C!--%202.%20Continuous%20AGV%20Main%20Aisle%20Highway%20(diagonal%20transit%20artery)%20--%3E%20%3Cpath%20d='M0%2060L120%200'%20fill='none'%20stroke='rgba(197,168,107,0.085)'%20stroke-width='0.75'%20stroke-dasharray='3,3'/%3E%20%3C!--%20AGV%20Floor%20Guidance%20Sensors%20%26%20Crossway%20Reflectors%20--%3E%20%3Ccircle%20cx='60'%20cy='30'%20r='2'%20fill='none'%20stroke='rgba(56,189,248,0.14)'%20stroke-width='0.5'/%3E%20%3Ccircle%20cx='60'%20cy='30'%20r='0.7'%20fill='rgba(56,189,248,0.22)'/%3E%20%3Ccircle%20cx='0'%20cy='60'%20r='2'%20fill='none'%20stroke='rgba(56,189,248,0.14)'%20stroke-width='0.5'/%3E%20%3Ccircle%20cx='0'%20cy='60'%20r='0.7'%20fill='rgba(56,189,248,0.22)'/%3E%20%3Ccircle%20cx='120'%20cy='0'%20r='2'%20fill='none'%20stroke='rgba(56,189,248,0.14)'%20stroke-width='0.5'/%3E%20%3Ccircle%20cx='120'%20cy='0'%20r='0.7'%20fill='rgba(56,189,248,0.22)'/%3E%3C!--%203.%20Isometric%20Industrial%20High-Bay%20Pallet%20Rack%20Bay%20--%3E%20%3Cpath%20d='M40%2030V12%20M68%2044V26%20M28%2024V6%20M56%2038V20'%20fill='none'%20stroke='rgba(197,168,107,0.13)'%20stroke-width='0.8'%20stroke-linecap='round'/%3E%20%3Cpath%20d='M39%2030.5H41%20M67%2044.5H69%20M27%2024.5H29%20M55%2038.5H57'%20fill='none'%20stroke='rgba(197,168,107,0.13)'%20stroke-width='0.6'/%3E%20%3Cpath%20d='M40%2021L68%2035%20M28%2015L56%2029%20M28%2015L40%2021%20M56%2029L68%2035'%20fill='none'%20stroke='rgba(197,168,107,0.11)'%20stroke-width='0.7'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M40%2012L68%2026%20M28%206L56%2020%20M28%206L40%2012%20M56%2020L68%2026'%20fill='none'%20stroke='rgba(197,168,107,0.11)'%20stroke-width='0.7'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M28%2024L40%2021%20M28%2015L40%2030%20M28%2015L40%2012%20M28%206L40%2021'%20fill='none'%20stroke='rgba(148,163,184,0.055)'%20stroke-width='0.5'%20stroke-dasharray='1.5,1.5'/%3E%20%3Cpath%20d='M56%2038L68%2035%20M56%2029L68%2044%20M56%2029L68%2026%20M56%2020L68%2035'%20fill='none'%20stroke='rgba(148,163,184,0.055)'%20stroke-width='0.5'%20stroke-dasharray='1.5,1.5'/%3E%20%3Cpath%20d='M44%2016.5L52%2020.5L47%2023L39%2019Z'%20fill='rgba(197,168,107,0.025)'%20stroke='rgba(197,168,107,0.16)'%20stroke-width='0.65'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M39%2019V22.5L47%2026.5V23%20M47%2026.5L52%2024V20.5'%20fill='none'%20stroke='rgba(197,168,107,0.16)'%20stroke-width='0.65'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M40%2023L46%2026%20M48%2026L51%2024.5'%20fill='none'%20stroke='rgba(197,168,107,0.10)'%20stroke-width='0.55'/%3E%20%3Cpath%20d='M54%2021.5L62%2025.5L57%2028L49%2024Z'%20fill='rgba(197,168,107,0.025)'%20stroke='rgba(197,168,107,0.16)'%20stroke-width='0.65'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M49%2024V27.5L57%2031.5V28%20M57%2031.5L62%2029V25.5'%20fill='none'%20stroke='rgba(197,168,107,0.16)'%20stroke-width='0.65'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M50%2028L56%2031%20M58%2031L61%2029.5'%20fill='none'%20stroke='rgba(197,168,107,0.10)'%20stroke-width='0.55'/%3E%20%3C!--%204.%20Precision%20CAD%20Coordinate%20Crosshairs%20(+)%20--%3E%20%3Cpath%20d='M-2%200H2%20M0%20-2V2%20M118%200H122%20M120%20-2V2%20M-2%2060H2%20M0%2058V62%20M118%2060H122%20M120%2058V62'%20fill='none'%20stroke='rgba(197,168,107,0.20)'%20stroke-width='0.65'/%3E%20%3Cpath%20d='M58%200H62%20M60%20-2V2%20M58%2060H62%20M60%2058V62'%20fill='none'%20stroke='rgba(197,168,107,0.20)'%20stroke-width='0.65'/%3E%20%3Cpath%20d='M-2%2030H2%20M0%2028V32%20M118%2030H122%20M120%2028V32'%20fill='none'%20stroke='rgba(197,168,107,0.20)'%20stroke-width='0.65'/%3E%20%3Ccircle%20cx='92'%20cy='14'%20r='0.9'%20fill='rgba(197,168,107,0.18)'/%3E%20%3Ccircle%20cx='28'%20cy='46'%20r='0.9'%20fill='rgba(197,168,107,0.18)'/%3E%20%3Ccircle%20cx='92'%20cy='46'%20r='0.7'%20fill='rgba(148,163,184,0.12)'/%3E%20%3Ccircle%20cx='28'%20cy='14'%20r='0.7'%20fill='rgba(148,163,184,0.12)'/%3E%20%3C!--%205.%20Optical%20Floor%20Matrix%20Tags%20--%3E%20%3Crect%20x='91'%20y='45'%20width='2'%20height='2'%20fill='rgba(56,189,248,0.14)'%20stroke='rgba(56,189,248,0.24)'%20stroke-width='0.4'/%3E%20%3Crect%20x='27'%20y='13'%20width='2'%20height='2'%20fill='rgba(56,189,248,0.14)'%20stroke='rgba(56,189,248,0.24)'%20stroke-width='0.4'/%3E%20%3C/svg%3E"),
-    radial-gradient(circle at 14% 18%, rgba(197, 168, 107, 0.055) 0%, transparent 46%),
-    radial-gradient(circle at 86% 82%, rgba(56, 189, 248, 0.038) 0%, transparent 44%),
-    linear-gradient(165deg, #070b12 0%, #0a111c 52%, #0e1826 100%);
+    radial-gradient(ellipse 75% 55% at 15% 15%, rgba(197, 168, 107, 0.095) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 55% at 88% 85%, rgba(56, 189, 248, 0.065) 0%, transparent 52%),
+    linear-gradient(160deg, #070c14 0%, #0d1626 48%, #122034 100%);
   background-size: 120px 60px, 100% 100%, 100% 100%, 100% 100%;
   background-repeat: repeat, no-repeat, no-repeat, no-repeat;
   background-position: 0 0, 0 0, 0 0, 0 0;
+  background-attachment: local, fixed, fixed, fixed;
 }
 
 :host-context(.theme-light) .ec-messages {
   background-color: #f4f7fb;
   background-image:
     url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='60'%20viewBox='0%200%20120%2060'%3E%20%3C!--%201.%20Blueprint%20Grid%20%26%20Structural%20Aisle%20Lines%20--%3E%20%3Cpath%20d='M0%2030L60%200L120%2030L60%2060Z'%20fill='none'%20stroke='rgba(155,118,38,0.06)'%20stroke-width='0.6'/%3E%20%3Cpath%20d='M0%200L120%2060'%20fill='none'%20stroke='rgba(100,116,139,0.045)'%20stroke-width='0.55'/%3E%20%3C!--%202.%20Continuous%20AGV%20Main%20Aisle%20Highway%20(diagonal%20transit%20artery)%20--%3E%20%3Cpath%20d='M0%2060L120%200'%20fill='none'%20stroke='rgba(155,118,38,0.095)'%20stroke-width='0.75'%20stroke-dasharray='3,3'/%3E%20%3C!--%20AGV%20Floor%20Guidance%20Sensors%20%26%20Crossway%20Reflectors%20--%3E%20%3Ccircle%20cx='60'%20cy='30'%20r='2'%20fill='none'%20stroke='rgba(2,132,199,0.16)'%20stroke-width='0.5'/%3E%20%3Ccircle%20cx='60'%20cy='30'%20r='0.7'%20fill='rgba(2,132,199,0.28)'/%3E%20%3Ccircle%20cx='0'%20cy='60'%20r='2'%20fill='none'%20stroke='rgba(2,132,199,0.16)'%20stroke-width='0.5'/%3E%20%3Ccircle%20cx='0'%20cy='60'%20r='0.7'%20fill='rgba(2,132,199,0.28)'/%3E%20%3Ccircle%20cx='120'%20cy='0'%20r='2'%20fill='none'%20stroke='rgba(2,132,199,0.16)'%20stroke-width='0.5'/%3E%20%3Ccircle%20cx='120'%20cy='0'%20r='0.7'%20fill='rgba(2,132,199,0.28)'/%3E%3C!--%203.%20Isometric%20Industrial%20High-Bay%20Pallet%20Rack%20Bay%20--%3E%20%3Cpath%20d='M40%2030V12%20M68%2044V26%20M28%2024V6%20M56%2038V20'%20fill='none'%20stroke='rgba(155,118,38,0.15)'%20stroke-width='0.8'%20stroke-linecap='round'/%3E%20%3Cpath%20d='M39%2030.5H41%20M67%2044.5H69%20M27%2024.5H29%20M55%2038.5H57'%20fill='none'%20stroke='rgba(155,118,38,0.15)'%20stroke-width='0.6'/%3E%20%3Cpath%20d='M40%2021L68%2035%20M28%2015L56%2029%20M28%2015L40%2021%20M56%2029L68%2035'%20fill='none'%20stroke='rgba(155,118,38,0.13)'%20stroke-width='0.7'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M40%2012L68%2026%20M28%206L56%2020%20M28%206L40%2012%20M56%2020L68%2026'%20fill='none'%20stroke='rgba(155,118,38,0.13)'%20stroke-width='0.7'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M28%2024L40%2021%20M28%2015L40%2030%20M28%2015L40%2012%20M28%206L40%2021'%20fill='none'%20stroke='rgba(100,116,139,0.07)'%20stroke-width='0.5'%20stroke-dasharray='1.5,1.5'/%3E%20%3Cpath%20d='M56%2038L68%2035%20M56%2029L68%2044%20M56%2029L68%2026%20M56%2020L68%2035'%20fill='none'%20stroke='rgba(100,116,139,0.07)'%20stroke-width='0.5'%20stroke-dasharray='1.5,1.5'/%3E%20%3Cpath%20d='M44%2016.5L52%2020.5L47%2023L39%2019Z'%20fill='rgba(155,118,38,0.03)'%20stroke='rgba(155,118,38,0.18)'%20stroke-width='0.65'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M39%2019V22.5L47%2026.5V23%20M47%2026.5L52%2024V20.5'%20fill='none'%20stroke='rgba(155,118,38,0.18)'%20stroke-width='0.65'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M40%2023L46%2026%20M48%2026L51%2024.5'%20fill='none'%20stroke='rgba(155,118,38,0.12)'%20stroke-width='0.55'/%3E%20%3Cpath%20d='M54%2021.5L62%2025.5L57%2028L49%2024Z'%20fill='rgba(155,118,38,0.03)'%20stroke='rgba(155,118,38,0.18)'%20stroke-width='0.65'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M49%2024V27.5L57%2031.5V28%20M57%2031.5L62%2029V25.5'%20fill='none'%20stroke='rgba(155,118,38,0.18)'%20stroke-width='0.65'%20stroke-linejoin='round'/%3E%20%3Cpath%20d='M50%2028L56%2031%20M58%2031L61%2029.5'%20fill='none'%20stroke='rgba(155,118,38,0.12)'%20stroke-width='0.55'/%3E%20%3C!--%204.%20Precision%20CAD%20Coordinate%20Crosshairs%20(+)%20--%3E%20%3Cpath%20d='M-2%200H2%20M0%20-2V2%20M118%200H122%20M120%20-2V2%20M-2%2060H2%20M0%2058V62%20M118%2060H122%20M120%2058V62'%20fill='none'%20stroke='rgba(155,118,38,0.24)'%20stroke-width='0.65'/%3E%20%3Cpath%20d='M58%200H62%20M60%20-2V2%20M58%2060H62%20M60%2058V62'%20fill='none'%20stroke='rgba(155,118,38,0.24)'%20stroke-width='0.65'/%3E%20%3Cpath%20d='M-2%2030H2%20M0%2028V32%20M118%2030H122%20M120%2028V32'%20fill='none'%20stroke='rgba(155,118,38,0.24)'%20stroke-width='0.65'/%3E%20%3Ccircle%20cx='92'%20cy='14'%20r='0.9'%20fill='rgba(155,118,38,0.22)'/%3E%20%3Ccircle%20cx='28'%20cy='46'%20r='0.9'%20fill='rgba(155,118,38,0.22)'/%3E%3Ccircle%20cx='92'%20cy='46'%20r='0.7'%20fill='rgba(100,116,139,0.15)'/%3E%3Ccircle%20cx='28'%20cy='14'%20r='0.7'%20fill='rgba(100,116,139,0.15)'/%3E%20%3C!--%205.%20Optical%20Floor%20Matrix%20Tags%20--%3E%20%3Crect%20x='91'%20y='45'%20width='2'%20height='2'%20fill='rgba(2,132,199,0.14)'%20stroke='rgba(2,132,199,0.28)'%20stroke-width='0.4'/%3E%20%3Crect%20x='27'%20y='13'%20width='2'%20height='2'%20fill='rgba(2,132,199,0.14)'%20stroke='rgba(2,132,199,0.28)'%20stroke-width='0.4'/%3E%20%3C/svg%3E"),
-    radial-gradient(circle at 15% 20%, rgba(197, 168, 107, 0.08) 0%, transparent 48%),
-    radial-gradient(circle at 85% 80%, rgba(2, 132, 199, 0.04) 0%, transparent 45%),
-    linear-gradient(165deg, #f8fafc 0%, #edf2f7 100%);
+    radial-gradient(ellipse 75% 55% at 15% 18%, rgba(197, 168, 107, 0.13) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 50% at 88% 82%, rgba(56, 189, 248, 0.08) 0%, transparent 52%),
+    linear-gradient(160deg, #fafbfc 0%, #f1f5f9 52%, #e4ecf5 100%);
   background-size: 120px 60px, 100% 100%, 100% 100%, 100% 100%;
   background-repeat: repeat, no-repeat, no-repeat, no-repeat;
   background-position: 0 0, 0 0, 0 0, 0 0;
+  background-attachment: local, fixed, fixed, fixed;
 }
 
-/* ── 2. BANNER DE FASE PILOTO (PÍLDORA FLOTANTE GLASSMORPHISM) ────────────── */
+/* ── 2. BANNER DE FASE PILOTO (PÍLDORA FLOTANTE STICKY GLASSMORPHISM) ─────── */
 .ec-pilot-banner {
+  position: sticky;
+  top: 0;
   align-self: center;
   width: fit-content;
-  max-width: calc(100% - 2rem);
-  margin: 0.75rem auto 0.4rem;
+  max-width: calc(100% - 1rem);
+  margin: 0 auto 0.35rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   padding: 0.42rem 1.15rem;
   border-radius: 9999px;
-  background: linear-gradient(135deg, rgba(16, 26, 42, 0.8) 0%, rgba(10, 18, 30, 0.72) 100%);
-  border: 1px solid rgba(197, 168, 107, 0.35);
+  background: linear-gradient(135deg, rgba(16, 26, 42, 0.84) 0%, rgba(10, 18, 30, 0.76) 100%);
+  border: 1px solid rgba(197, 168, 107, 0.38);
   box-shadow:
-    0 8px 24px -4px rgba(0, 0, 0, 0.45),
-    0 2px 6px rgba(197, 168, 107, 0.12),
+    0 8px 24px -4px rgba(0, 0, 0, 0.48),
+    0 2px 6px rgba(197, 168, 107, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
     inset 0 -1px 0 rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(14px) saturate(180%);
@@ -341,7 +346,7 @@
   letter-spacing: 0.02em;
   line-height: 1.3;
   text-align: center;
-  z-index: 5;
+  z-index: 12;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
 }
@@ -595,28 +600,55 @@
   background: rgba(255, 255, 255, 0.14);
 }
 
-/* ── 4. BARRA FLOTANTE DE ACCIONES (ESTILO SLACK/LINEAR) ─────────────────── */
+/* ── 4. BARRA FLOTANTE DE ACCIONES (ESTILO SLACK/LINEAR — SIN CLIPPING) ─── */
 .ec-msg__actions {
   position: absolute;
-  top: -14px;
-  right: 12px;
+  bottom: calc(100% + 5px);
+  top: auto;
+  left: 0;
+  right: auto;
   display: inline-flex;
   align-items: center;
-  gap: 0.15rem;
-  padding: 0.18rem 0.35rem;
+  gap: 0.12rem;
+  padding: 0.18rem 0.4rem;
   border-radius: 9999px;
-  background: rgba(14, 22, 35, 0.94);
-  border: 1px solid rgba(197, 168, 107, 0.35);
+  background: linear-gradient(135deg, rgba(18, 28, 44, 0.96) 0%, rgba(11, 18, 30, 0.96) 100%);
+  border: 1px solid rgba(197, 168, 107, 0.38);
   box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.4),
-    0 0 8px rgba(197, 168, 107, 0.12);
+    0 8px 22px rgba(0, 0, 0, 0.48),
+    0 0 10px rgba(197, 168, 107, 0.14);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  z-index: 8;
+  white-space: nowrap;
+  z-index: 15;
   opacity: 0;
   pointer-events: none;
   transform: translateY(4px) scale(0.96);
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+/* Puente invisible inferior para que al mover el cursor desde la burbuja hacia la barra no se cierre */
+.ec-msg__actions::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 10px;
+}
+
+/* Mensajes propios: anclar a la derecha para que se expanda hacia la izquierda */
+.ec-msg--mine .ec-msg__actions {
+  left: auto;
+  right: 0;
+}
+
+:host-context(.theme-light) .ec-msg__actions {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 250, 252, 0.97) 100%);
+  border-color: rgba(197, 168, 107, 0.48);
+  box-shadow:
+    0 6px 18px rgba(15, 23, 42, 0.14),
+    0 0 8px rgba(197, 168, 107, 0.12);
 }
 
 .ec-msg:hover .ec-msg__actions,
@@ -638,6 +670,9 @@
     border: none;
     box-shadow: none;
     backdrop-filter: none;
+  }
+  .ec-msg__actions::after {
+    display: none;
   }
 }
 
@@ -798,32 +833,118 @@
 .ec-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: radial-gradient(circle at 50% 35%, rgba(12, 22, 38, 0.68) 0%, rgba(4, 8, 16, 0.84) 100%);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 60;
+  padding: 1rem;
+}
+
+:host-context(.theme-light) .ec-modal-backdrop {
+  background: radial-gradient(circle at 50% 35%, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0.52) 100%);
 }
 
 .ec-modal {
-  width: 90%;
-  max-width: 400px;
+  width: 92%;
+  max-width: 440px;
   max-height: 90dvh;
   overflow-y: auto;
-  padding: 1.25rem;
-  border-radius: 16px;
-  background: var(--bg-card, #ffffff);
-  color: var(--text-primary, #1c2940);
-  border: 1px solid var(--border-card-gold, rgba(197, 168, 107, 0.35));
+  padding: 1.45rem 1.5rem;
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse 90% 55% at 12% 0%, rgba(197, 168, 107, 0.18) 0%, transparent 58%),
+    radial-gradient(ellipse 80% 55% at 92% 100%, rgba(56, 189, 248, 0.12) 0%, transparent 55%),
+    linear-gradient(155deg, #162338 0%, #0f1828 46%, #09101c 100%);
+  color: #f1f5f9;
+  border: 1px solid rgba(197, 168, 107, 0.38);
+  border-top-color: rgba(212, 175, 55, 0.55);
+  box-shadow:
+    0 28px 64px rgba(0, 0, 0, 0.68),
+    0 0 32px rgba(197, 168, 107, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+:host-context(.theme-light) .ec-modal {
+  background:
+    radial-gradient(ellipse 90% 55% at 12% 0%, rgba(197, 168, 107, 0.22) 0%, transparent 58%),
+    radial-gradient(ellipse 75% 55% at 92% 100%, rgba(56, 189, 248, 0.12) 0%, transparent 55%),
+    linear-gradient(155deg, #ffffff 0%, #f9f6ee 48%, #e9f0f8 100%);
+  color: #1c2940;
+  border: 1px solid rgba(197, 168, 107, 0.45);
+  border-top-color: rgba(212, 175, 55, 0.65);
+  box-shadow:
+    0 24px 56px rgba(15, 23, 42, 0.2),
+    0 4px 18px rgba(197, 168, 107, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.ec-modal h3 {
+  margin: 0 0 1rem;
+  font-size: 1.12rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  background: linear-gradient(90deg, #ffffff 0%, #e8d5a8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+:host-context(.theme-light) .ec-modal h3 {
+  background: linear-gradient(90deg, #1c2940 0%, #8a6922 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.ec-modal .ec-search-input {
+  background: rgba(8, 13, 22, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: #f1f5f9;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.ec-modal .ec-search-input:focus {
+  outline: none;
+  border-color: rgba(212, 175, 55, 0.65);
+  background: rgba(10, 16, 28, 0.82);
+  box-shadow: 0 0 0 3px rgba(197, 168, 107, 0.16);
+}
+
+:host-context(.theme-light) .ec-modal .ec-search-input {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: #1c2940;
+}
+
+:host-context(.theme-light) .ec-modal .ec-search-input:focus {
+  border-color: rgba(180, 140, 55, 0.7);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(197, 168, 107, 0.18);
 }
 
 .ec-member-list {
-  border: 1px solid var(--border-card, rgba(76, 86, 105, 0.2));
+  border: 1px solid rgba(197, 168, 107, 0.22);
+  background: rgba(8, 13, 22, 0.55);
+  border-radius: 12px;
+}
+
+:host-context(.theme-light) .ec-member-list {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.78);
 }
 
 .ec-member-row {
-  border-bottom: 1px solid var(--border-card, rgba(76, 86, 105, 0.12));
-  color: var(--text-primary, #1c2940);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+  transition: background 0.15s ease;
+}
+
+:host-context(.theme-light) .ec-member-row {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  color: #1c2940;
 }
 
 .ec-member-row:last-child {
@@ -831,32 +952,61 @@
 }
 
 .ec-member-row:hover {
-  background: var(--bg-card-hover, rgba(197, 168, 107, 0.1));
+  background: rgba(197, 168, 107, 0.14);
 }
 
 .ec-modal__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(197, 168, 107, 0.16);
 }
 
 .ec-btn-primary {
-  padding: 0.5rem 1rem;
+  padding: 0.55rem 1.15rem;
   border-radius: 10px;
-  border: none;
-  background: var(--gold, #c5a86b);
-  color: #1c2940;
-  font-weight: 600;
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  background: linear-gradient(135deg, #d8ba76 0%, #b89448 100%);
+  color: #101929;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(197, 168, 107, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.ec-btn-primary:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 6px 18px rgba(197, 168, 107, 0.38);
+  transform: translateY(-1px);
 }
 
 .ec-btn-secondary {
-  padding: 0.5rem 1rem;
+  padding: 0.55rem 1.05rem;
   border-radius: 10px;
-  border: 1px solid var(--border-card, rgba(76, 86, 105, 0.2));
-  background: transparent;
-  color: var(--text-primary, #1c2940);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ec-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(197, 168, 107, 0.35);
+}
+
+:host-context(.theme-light) .ec-btn-secondary {
+  border-color: rgba(76, 86, 105, 0.25);
+  background: rgba(255, 255, 255, 0.7);
+  color: #334155;
+}
+
+:host-context(.theme-light) .ec-btn-secondary:hover {
+  background: #ffffff;
+  border-color: rgba(197, 168, 107, 0.5);
 }
 
 .ec-mobile-only {

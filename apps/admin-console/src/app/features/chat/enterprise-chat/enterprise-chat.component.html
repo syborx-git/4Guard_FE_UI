@@ -340,12 +340,6 @@
       }
     </header>
 
-    <!-- BANNER INFORMATIVO: FASE PILOTO DE EVALUACIÓN -->
-    <div class="ec-pilot-banner" role="status" aria-label="Aviso de disponibilidad de fase piloto">
-      <span class="material-symbols-outlined ec-pilot-banner__icon">shield</span>
-      <span class="ec-pilot-banner__text">Fase Piloto de Comunicación Interna: Disponible por 30 días</span>
-    </div>
-
     <!-- GUÍA RÁPIDA DE USO (POPOVER COLAPSABLE) -->
     @if (showUsageGuide()) {
     <section class="ec-guide-popover" aria-label="Guía rápida de 4GUARD Chat">
@@ -533,6 +527,12 @@
 
     <!-- FEED DE MENSAJES -->
     <div class="ec-messages">
+      <!-- BANNER INFORMATIVO: FASE PILOTO DE EVALUACIÓN (FLOTANTE SOBRE WALLPAPER) -->
+      <div class="ec-pilot-banner" role="status" aria-label="Aviso de disponibilidad de fase piloto">
+        <span class="material-symbols-outlined ec-pilot-banner__icon">shield</span>
+        <span class="ec-pilot-banner__text">Fase Piloto de Comunicación Interna: Disponible por 30 días</span>
+      </div>
+
       @if (chatService.hasMoreMessages()) {
       <div class="flex justify-center mb-2">
         <button type="button" class="ec-load-more-btn" [disabled]="chatService.isLoadingMessages()"
