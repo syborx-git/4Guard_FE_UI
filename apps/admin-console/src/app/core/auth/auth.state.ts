@@ -41,6 +41,24 @@ export class AuthState {
   readonly roleLevel = computed(() => this._currentUser()?.roleLevel ?? 0);
   readonly permissions = computed(() => this._currentUser()?.permissions ?? []);
 
+  private static readonly EXECUTIVE_DIRECTOR_ROLES = new Set([
+    'ADMIN',
+    'CEO',
+    'DIRECTOR',
+    'SUPER_ADMIN',
+  ]);
+
+  /**
+   * Indica si el usuario pertenece estrictamente a Dirección Ejecutiva
+   * (ADMIN, CEO, DIRECTOR, SUPER_ADMIN), sin bypass para gerencias operativas.
+   */
+  readonly isExecutiveDirector = computed<boolean>(() => {
+    const rawRole = this.role();
+    if (!rawRole) return false;
+    const normalized = String(rawRole).trim().toUpperCase().replace(/^ROLE_/, '');
+    return AuthState.EXECUTIVE_DIRECTOR_ROLES.has(normalized);
+  });
+
   /** Indica si el usuario actual es exclusivo de chat (CHAT_ONLY) conforme a ADR-022 */
   readonly isChatOnlyUser = computed(() => {
     const user = this._currentUser();

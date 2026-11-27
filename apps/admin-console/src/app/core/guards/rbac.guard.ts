@@ -21,6 +21,11 @@ export const rbacGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   // Extraer configuración RBAC desde los datos de la ruta
   const module        = route.data?.['module'] as string | undefined;
   const requiredRoles = route.data?.['roles']  as UserRole[] | undefined;
+  const directorOnly  = route.data?.['directorOnly'] === true;
+
+  if (directorOnly && !authState.isExecutiveDirector()) {
+    return router.createUrlTree(['/dashboard']);
+  }
 
   const fallbackUrl = authState.canAccessModule('security') && !authState.canAccessModule('dashboard')
     ? '/security'

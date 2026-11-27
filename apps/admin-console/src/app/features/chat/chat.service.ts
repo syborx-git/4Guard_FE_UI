@@ -4,6 +4,7 @@ import { Observable, Subscription, tap, map } from 'rxjs';
 import { StompClientService } from '@4guard/shared-core';
 import { environment } from '../../../environments/environment';
 import { AuthState } from '../../core/auth/auth.state';
+import { ToastService } from '../../core/services/toast.service';
 import {
   ApiResponse,
   ChatAttachment,
@@ -22,6 +23,7 @@ export class ChatService {
   private readonly http = inject(HttpClient);
   private readonly stompService = inject(StompClientService);
   private readonly authState = inject(AuthState);
+  private readonly toastService = inject(ToastService);
   private readonly baseUrl = `${environment.apiBaseUrl || ''}/api/v1/chat`;
 
   // Estado reactivo con Signals (ADR-006)
@@ -31,6 +33,7 @@ export class ChatService {
   readonly pinnedMessages = signal<ChatMessage[]>([]);
   readonly users = signal<ChatUser[]>([]);
   readonly loadError = signal<string | null>(null);
+  readonly chatFrozenReason = signal<string | null>(null);
   readonly isLoadingConversations = signal<boolean>(false);
   readonly isLoadingMessages = signal<boolean>(false);
   readonly isDrawerOpen = signal<boolean>(false);
@@ -222,12 +225,31 @@ export class ChatService {
     });
   }
 
+  private handleChatFrozen(evt: any): void {
+    const reason = evt?.payload?.reason || evt?.reason || evt?.payload?.message || evt?.message;
+    const alertMsg = reason
+      ? `Tu acceso al chat fue congelado por Dirección: ${reason}`
+      : 'Tu acceso al chat fue congelado por Dirección.';
+    this.chatFrozenReason.set(alertMsg);
+    this.loadError.set(alertMsg);
+    this.toastService.error(alertMsg, 8000);
+    this.stopPolling();
+    this.closeDrawer();
+    if (this.authState.isChatOnlyUser()) {
+      void this.stompService.disconnect();
+    }
+  }
+
   private initStompUserQueue(): void {
     if (this.userQueueSub || typeof window === 'undefined') return;
     try {
       this.userQueueSub = this.stompService.watchUserQueue<any>('chat').subscribe({
         next: (evt: any) => {
           if (!evt) return;
+          if (evt.eventType === 'CHAT_FROZEN') {
+            this.handleChatFrozen(evt);
+            return;
+          }
           this.loadConversations().subscribe({ error: () => {} });
           if (evt.eventType === 'MESSAGE_CREATED' && evt.payload) {
             const msg = evt.payload as ChatMessage;
@@ -258,6 +280,10 @@ export class ChatService {
       this.activeTopicSub = this.stompService.watchTopic<any>(`/topic/chat.${conversationId}`).subscribe({
         next: (evt: any) => {
           if (!evt || !evt.eventType) return;
+          if (evt.eventType === 'CHAT_FROZEN') {
+            this.handleChatFrozen(evt);
+            return;
+          }
           if (evt.eventType === 'TYPING') {
             const me = this.authState.currentUser();
             if (

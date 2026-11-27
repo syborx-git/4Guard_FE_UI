@@ -65,6 +65,7 @@ export interface NavItem {
   route: string;
   icon: string;   // Material Symbols name
   module: string;
+  directorOnly?: boolean;
   badge?: () => number;
   children?: SubNavItem[];
 }
@@ -654,13 +655,18 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Calidad', route: '/quality', icon: 'fact_check', module: 'quality' },
     { label: 'Rendimiento', route: '/performance', icon: 'monitoring', module: 'performance' },
     { label: 'Administrar', route: '/admin', icon: 'manage_accounts', module: 'admin' },
+    { label: 'Gobierno Chat', route: '/admin/chat-governance', icon: 'shield', module: 'chat-governance', directorOnly: true },
     { label: 'Almacén / Topología', route: '/catalogs/warehouse', icon: 'warehouse', module: 'catalogs' },
     { label: 'Consulta Inventario', route: '/inventory-query', icon: 'inventory', module: 'inventory-query' },
   ];
 
   /** Filtra los nav items segun el rol del usuario */
   protected readonly visibleNavItems = computed(() =>
-    this.navItems.filter((item) => this.authState.canAccessModule(item.module)),
+    this.navItems.filter((item) =>
+      item.directorOnly
+        ? this.authState.isExecutiveDirector()
+        : this.authState.canAccessModule(item.module)
+    ),
   );
 
   protected readonly expandedSubmenus = signal<Set<string>>(new Set<string>());

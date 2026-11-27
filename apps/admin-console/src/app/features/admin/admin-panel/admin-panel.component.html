@@ -227,10 +227,11 @@
         <div class="admin-modules-grid">
 
           @for (m of modules; track m.id) {
-            @if (m.category === 'SECURITY') {
+            @if (m.category === 'SECURITY' && (!m.directorOnly || authState.isExecutiveDirector())) {
 
               <article
                 class="admin-module-card"
+                [id]="'admin-card-' + m.id"
                 tabindex="0"
                 role="button"
                 (click)="selectModule(m.id)"

@@ -15,9 +15,12 @@ import {
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Router } from '@angular/router';
+import { EMPTY, catchError } from 'rxjs';
 import { ChatService } from '../chat.service';
 import { AuthState } from '../../../core/auth/auth.state';
 import { ThemeService } from '../../../core/services/theme.service';
+import { ChatGovernanceService } from '../../../core/services/chat-governance.service';
 import { ChatAttachment, ChatMessage, ConversationSummary } from '../chat.models';
 
 @Component({
@@ -46,6 +49,18 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   protected readonly authState = inject(AuthState);
   protected readonly themeService = inject(ThemeService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly router = inject(Router);
+  private readonly chatGovernanceService = inject(ChatGovernanceService);
+
+  private static readonly MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
+  private static readonly MAX_IMAGE_DIMENSION = 1280;
+  private static readonly IMAGE_JPEG_QUALITY = 0.78;
+  private static readonly COMPRESSIBLE_IMAGE_TYPES = new Set([
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+  ]);
 
   protected readonly isAttachMenuOpen = signal<boolean>(false);
   protected readonly previewAttachment = signal<ChatAttachment | null>(null);
@@ -268,6 +283,7 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
       } catch {
         // Ignorar restricciones de portapapeles
       }
+      this.reportDlpAttempt('PRINT_SCREEN_ATTEMPT', 'Intento bloqueado de captura de pantalla (PrintScreen)');
       return;
     }
 
@@ -276,8 +292,32 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
       (event.key.toLowerCase() === 'p' || event.key.toLowerCase() === 's')
     ) {
       event.preventDefault();
+      const keyLower = event.key.toLowerCase();
+      this.reportDlpAttempt(
+        keyLower === 'p' ? 'PRINT_ATTEMPT' : 'SAVE_ATTEMPT',
+        keyLower === 'p'
+          ? 'Intento bloqueado de impresión (Ctrl+P)'
+          : 'Intento bloqueado de guardado local (Ctrl+S)'
+      );
     }
   };
+
+  private reportDlpAttempt(eventType: string, description: string): void {
+    const conversationId = this.chatService.activeConversationId() ?? undefined;
+    this.chatGovernanceService
+      .reportDlpEvent({
+        conversationId,
+        eventType,
+        description,
+      })
+      .pipe(catchError(() => EMPTY))
+      .subscribe();
+  }
+
+  openChatGovernance(): void {
+    this.closeRequested.emit();
+    void this.router.navigate(['/admin/chat-governance']);
+  }
 
   private readonly handleWindowBlur = (): void => {
     if (!this.canDownloadAttachments() && (this.previewAttachment() !== null || this.mode === 'fullscreen')) {
@@ -549,24 +589,105 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
     if (!input.files || input.files.length === 0) return;
 
     Array.from(input.files).forEach((file) => {
-      if (file.size > 2 * 1024 * 1024) return; // Máximo 2MB por archivo
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = typeof reader.result === 'string' ? reader.result : '';
-        if (!result) return;
-        this.pendingAttachments.update((list) => [
-          ...list,
-          {
-            fileName: file.name,
-            contentType: file.type || 'application/octet-stream',
-            fileSize: file.size,
-            storageUrl: result,
-          },
-        ]);
-      };
-      reader.readAsDataURL(file);
+      const mime = (file.type || '').toLowerCase();
+      if (EnterpriseChatComponent.COMPRESSIBLE_IMAGE_TYPES.has(mime)) {
+        void this.compressAndQueueImage(file);
+        return;
+      }
+      this.readRawFileAsAttachment(file);
     });
     input.value = '';
+  }
+
+  private readRawFileAsAttachment(file: File): void {
+    if (file.size > EnterpriseChatComponent.MAX_ATTACHMENT_BYTES) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      if (!result) return;
+      this.pendingAttachments.update((list) => [
+        ...list,
+        {
+          fileName: file.name,
+          contentType: file.type || 'application/octet-stream',
+          fileSize: file.size,
+          storageUrl: result,
+        },
+      ]);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  private async compressAndQueueImage(file: File): Promise<void> {
+    if (typeof document === 'undefined' || typeof Image === 'undefined') {
+      this.readRawFileAsAttachment(file);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('No se pudo decodificar la imagen'));
+        image.src = objectUrl;
+      });
+
+      const srcWidth = img.naturalWidth || img.width;
+      const srcHeight = img.naturalHeight || img.height;
+      if (!srcWidth || !srcHeight) {
+        this.readRawFileAsAttachment(file);
+        return;
+      }
+
+      const encoded = this.renderCompressedJpeg(img, srcWidth, srcHeight);
+      if (!encoded || encoded.fileSize > EnterpriseChatComponent.MAX_ATTACHMENT_BYTES) {
+        return;
+      }
+
+      const baseName = file.name.replace(/\.(png|webp|jpe?g)$/i, '');
+      this.pendingAttachments.update((list) => [
+        ...list,
+        {
+          fileName: `${baseName}.jpg`,
+          contentType: 'image/jpeg',
+          fileSize: encoded.fileSize,
+          storageUrl: encoded.dataUrl,
+        },
+      ]);
+    } catch {
+      this.readRawFileAsAttachment(file);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
+
+  private renderCompressedJpeg(
+    source: CanvasImageSource,
+    srcWidth: number,
+    srcHeight: number
+  ): { dataUrl: string; fileSize: number } | null {
+    const scale = Math.min(
+      1,
+      EnterpriseChatComponent.MAX_IMAGE_DIMENSION / Math.max(srcWidth, srcHeight)
+    );
+    const width = Math.max(1, Math.round(srcWidth * scale));
+    const height = Math.max(1, Math.round(srcHeight * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.drawImage(source, 0, 0, width, height);
+    let dataUrl = canvas.toDataURL('image/jpeg', EnterpriseChatComponent.IMAGE_JPEG_QUALITY);
+    if (dataUrl.length > EnterpriseChatComponent.MAX_ATTACHMENT_BYTES) {
+      dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    }
+    const base64Part = dataUrl.split(',')[1] || '';
+    const approxBytes = Math.round((base64Part.length * 3) / 4);
+    return { dataUrl, fileSize: approxBytes };
   }
 
   removePendingAttachment(index: number): void {
@@ -807,32 +928,17 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
     const video = this.cameraVideoRef?.nativeElement;
     if (!video || !video.videoWidth || !video.videoHeight) return;
 
-    const maxDim = 1280;
-    const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
-    const width = Math.round(video.videoWidth * scale);
-    const height = Math.round(video.videoHeight * scale);
+    const encoded = this.renderCompressedJpeg(video, video.videoWidth, video.videoHeight);
+    if (!encoded) return;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.drawImage(video, 0, 0, width, height);
-    let dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-    if (dataUrl.length > 2 * 1024 * 1024) {
-      dataUrl = canvas.toDataURL('image/jpeg', 0.65);
-    }
-
-    const approxBytes = Math.round((dataUrl.length * 3) / 4);
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     this.pendingAttachments.update((list) => [
       ...list,
       {
         fileName: `captura-${stamp}.jpg`,
         contentType: 'image/jpeg',
-        fileSize: approxBytes,
-        storageUrl: dataUrl,
+        fileSize: encoded.fileSize,
+        storageUrl: encoded.dataUrl,
       },
     ]);
     this.closeCameraModal();

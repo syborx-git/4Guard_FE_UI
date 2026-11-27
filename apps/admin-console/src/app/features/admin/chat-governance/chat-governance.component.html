@@ -1,0 +1,1712 @@
+<div class="cg-page">
+  <!-- ══════════════════════════════════════════════════════════════════
+       GOLDEN STANDARD HERO HEADER
+       ══════════════════════════════════════════════════════════════════ -->
+  <header class="hero-header">
+    <div class="hero-header__icon-box">
+      <span class="material-symbols-outlined">shield</span>
+    </div>
+
+    <div class="hero-header__content">
+      <div class="hero-header__breadcrumb">
+        <a routerLink="/admin" class="btn-back-admin" title="Regresar al Hub de Administración">
+          <span class="back-arrow">←</span> ADMINISTRACIÓN WMS
+        </a>
+        <span class="breadcrumb-dot">·</span>
+        <span class="hero-header__eyebrow">DIRECCIÓN GENERAL • GOBIERNO DE COMUNICACIÓN</span>
+      </div>
+
+      <h1 class="hero-header__title">Panel de Control de Chats</h1>
+      <p class="hero-header__subtitle">
+        Supervisión ejecutiva de espacios operativos, control de accesos Chat-Only/WMS, auditoría forense de mensajes y telemetría DLP.
+      </p>
+    </div>
+
+    <div class="hero-header__actions">
+      @if (lastUpdatedAt(); as updated) {
+        <div class="cg-sync-pill" title="Última actualización manual">
+          <span class="cg-sync-pill__dot"></span>
+          <span>Corte {{ formatTimeOnly(updated) }}</span>
+        </div>
+      }
+
+      <button
+        type="button"
+        class="btn-refresh"
+        (click)="refreshCurrentView()"
+        [disabled]="isAnyRefreshing()"
+      >
+        <span class="material-symbols-outlined" [class.animate-spin]="isAnyRefreshing()">sync</span>
+        <span>{{ isAnyRefreshing() ? 'Actualizando...' : 'Actualizar' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       BARRA DE PESTAÑAS EJECUTIVAS (PILL NAV)
+       ══════════════════════════════════════════════════════════════════ -->
+  <nav class="executive-tabs-nav" aria-label="Secciones de gobierno de chats">
+    <div class="executive-tabs-bar" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        class="executive-tab-btn"
+        [attr.aria-selected]="activeTab() === 'overview'"
+        [class.executive-tab-btn--active]="activeTab() === 'overview'"
+        (click)="selectTab('overview')"
+      >
+        <span class="material-symbols-outlined">insights</span>
+        <span>Resumen Ejecutivo</span>
+      </button>
+
+      <button
+        type="button"
+        role="tab"
+        class="executive-tab-btn"
+        [attr.aria-selected]="activeTab() === 'spaces'"
+        [class.executive-tab-btn--active]="activeTab() === 'spaces'"
+        (click)="selectTab('spaces')"
+      >
+        <span class="material-symbols-outlined">workspaces</span>
+        <span>Espacios y Gobernanza</span>
+        @if (overview(); as ov) {
+          <span class="tab-counter-pill">{{ ov.activeSpaces + ov.frozenSpaces }}</span>
+        }
+      </button>
+
+      <button
+        type="button"
+        role="tab"
+        class="executive-tab-btn"
+        [attr.aria-selected]="activeTab() === 'users'"
+        [class.executive-tab-btn--active]="activeTab() === 'users'"
+        (click)="selectTab('users')"
+      >
+        <span class="material-symbols-outlined">manage_accounts</span>
+        <span>Usuarios Chat y Accesos</span>
+        @if (overview(); as ov) {
+          <span class="tab-counter-pill">{{ ov.totalChatUsers }}</span>
+        }
+      </button>
+
+      <button
+        type="button"
+        role="tab"
+        class="executive-tab-btn"
+        [attr.aria-selected]="activeTab() === 'audit'"
+        [class.executive-tab-btn--active]="activeTab() === 'audit'"
+        (click)="selectTab('audit')"
+      >
+        <span class="material-symbols-outlined">policy</span>
+        <span>Auditoría Forense y DLP</span>
+        @if (overview(); as ov) {
+          @if (ov.dlpAlertsLast7Days > 0) {
+            <span class="tab-counter-pill tab-counter-pill--danger">{{ ov.dlpAlertsLast7Days }}</span>
+          }
+        }
+      </button>
+
+      <button
+        type="button"
+        role="tab"
+        class="executive-tab-btn"
+        [attr.aria-selected]="activeTab() === 'policies'"
+        [class.executive-tab-btn--active]="activeTab() === 'policies'"
+        (click)="selectTab('policies')"
+      >
+        <span class="material-symbols-outlined">verified_user</span>
+        <span>Políticas y Eficiencia</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 1: RESUMEN EJECUTIVO
+       ══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'overview') {
+    <section class="cg-tab-section" aria-label="Resumen ejecutivo de mensajería">
+      @if (isLoadingOverview() && !overview()) {
+        <div class="cg-state-panel">
+          <div class="cg-spinner-wrap">
+            <span class="material-symbols-outlined animate-spin">sync</span>
+          </div>
+          <span class="cg-state-eyebrow">Telemetría Directiva</span>
+          <h2>Cargando indicadores de gobierno</h2>
+          <p>Consolidando métricas en vivo de usuarios, espacios, evidencias y eventos DLP.</p>
+        </div>
+      } @else if (overviewError() && !overview()) {
+        <div class="cg-state-panel cg-state-panel--error">
+          <div class="cg-state-icon cg-state-icon--danger">
+            <span class="material-symbols-outlined">error</span>
+          </div>
+          <span class="cg-state-eyebrow cg-state-eyebrow--danger">Error de consulta</span>
+          <h2>No fue posible cargar el resumen</h2>
+          <p>{{ overviewError() }}</p>
+          <button type="button" class="cg-btn-primary" (click)="loadOverview()">
+            <span class="material-symbols-outlined">refresh</span>
+            <span>Reintentar</span>
+          </button>
+        </div>
+      } @else {
+        @if (overview(); as ov) {
+        <!-- GRID DE TARJETAS KPI -->
+        <div class="cg-kpi-grid">
+          <!-- KPI 1: Usuarios Online -->
+          <article class="work-kpi-card work-kpi-card--emerald">
+            <div class="work-kpi-card__header">
+              <span class="work-kpi-card__label">USUARIOS ONLINE</span>
+              <div class="work-kpi-card__icon-box">
+                <span class="material-symbols-outlined">wifi_tethering</span>
+              </div>
+            </div>
+            <div class="work-kpi-card__value">
+              {{ ov.onlineUsers }} <span class="cg-kpi-denom">/ {{ ov.totalChatUsers }}</span>
+            </div>
+            <div class="work-kpi-card__footer cg-kpi-footer-col">
+              <div class="cg-kpi-meta-row">
+                <span class="work-kpi-dot dot--emerald"></span>
+                <span>Solo Chat en línea: <strong>{{ ov.chatOnlyOnline }} / {{ ov.chatOnlyUsers }}</strong></span>
+              </div>
+              @if (ov.frozenUsers > 0) {
+                <span class="cg-kpi-sub-alert">{{ ov.frozenUsers }} usuario(s) congelado(s)</span>
+              }
+            </div>
+          </article>
+
+          <!-- KPI 2: Espacios -->
+          <article class="work-kpi-card work-kpi-card--gold">
+            <div class="work-kpi-card__header">
+              <span class="work-kpi-card__label">ESPACIOS OPERATIVOS</span>
+              <div class="work-kpi-card__icon-box">
+                <span class="material-symbols-outlined">forum</span>
+              </div>
+            </div>
+            <div class="work-kpi-card__value">
+              {{ ov.activeSpaces }} <span class="cg-kpi-denom">activos</span>
+            </div>
+            <div class="work-kpi-card__footer cg-kpi-footer-col">
+              <div class="cg-kpi-meta-row">
+                <span class="work-kpi-dot dot--amber"></span>
+                <span>{{ ov.frozenSpaces }} congelados • {{ ov.archivedSpaces }} archivados</span>
+              </div>
+              <span class="cg-kpi-sub-muted">{{ ov.totalDms }} conversaciones directas (1:1)</span>
+            </div>
+          </article>
+
+          <!-- KPI 3: Actividad 7 días -->
+          <article class="work-kpi-card work-kpi-card--blue">
+            <div class="work-kpi-card__header">
+              <span class="work-kpi-card__label">ACTIVIDAD (7 DÍAS)</span>
+              <div class="work-kpi-card__icon-box">
+                <span class="material-symbols-outlined">chat_bubble</span>
+              </div>
+            </div>
+            <div class="work-kpi-card__value">{{ ov.messagesLast7Days | number }}</div>
+            <div class="work-kpi-card__footer cg-kpi-footer-col">
+              <div class="cg-kpi-meta-row">
+                <span class="work-kpi-dot dot--blue"></span>
+                <span>{{ ov.editedMessagesLast7Days }} editados • {{ ov.deletedMessagesLast7Days }} eliminados</span>
+              </div>
+              <span class="cg-kpi-sub-muted">Trazabilidad preservada en BD</span>
+            </div>
+          </article>
+
+          <!-- KPI 4: Almacenamiento Adjuntos -->
+          <article class="work-kpi-card work-kpi-card--purple">
+            <div class="work-kpi-card__header">
+              <span class="work-kpi-card__label">ALMACENAMIENTO ADJUNTOS</span>
+              <div class="work-kpi-card__icon-box">
+                <span class="material-symbols-outlined">perm_media</span>
+              </div>
+            </div>
+            <div class="work-kpi-card__value">{{ formatMb(ov.totalAttachmentsSizeMb) }}</div>
+            <div class="work-kpi-card__footer cg-kpi-footer-col">
+              <div class="cg-kpi-meta-row">
+                <span class="work-kpi-dot dot--purple"></span>
+                <span><strong>{{ ov.totalAttachmentsCount | number }}</strong> archivos de evidencia</span>
+              </div>
+              <span class="cg-kpi-sub-muted">Compresión Canvas JPEG 78% activa</span>
+            </div>
+          </article>
+
+          <!-- KPI 5: Alertas DLP 7d (Rojo si > 0, clic directo a Tab 4) -->
+          <button
+            type="button"
+            class="work-kpi-card work-kpi-card--clickable"
+            [class.work-kpi-card--danger]="ov.dlpAlertsLast7Days > 0"
+            [class.work-kpi-card--emerald]="ov.dlpAlertsLast7Days === 0"
+            (click)="goToDlpAudit()"
+            title="Haz clic para abrir la Auditoría DLP"
+          >
+            <div class="work-kpi-card__header">
+              <span class="work-kpi-card__label">ALERTAS DLP (7 DÍAS)</span>
+              <div class="work-kpi-card__icon-box" [class.cg-icon-danger]="ov.dlpAlertsLast7Days > 0">
+                <span class="material-symbols-outlined">
+                  {{ ov.dlpAlertsLast7Days > 0 ? 'gpp_maybe' : 'verified_user' }}
+                </span>
+              </div>
+            </div>
+            <div class="work-kpi-card__value" [class.cg-value-danger]="ov.dlpAlertsLast7Days > 0">
+              {{ ov.dlpAlertsLast7Days }}
+            </div>
+            <div class="work-kpi-card__footer cg-kpi-footer-col">
+              <div class="cg-kpi-meta-row">
+                <span
+                  class="work-kpi-dot"
+                  [class.dot--danger]="ov.dlpAlertsLast7Days > 0"
+                  [class.dot--emerald]="ov.dlpAlertsLast7Days === 0"
+                ></span>
+                <span>
+                  {{ ov.dlpAlertsLast7Days > 0 ? 'Clic para auditar incidentes →' : 'Sin incidentes en los últimos 7 días' }}
+                </span>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <!-- MINI FEED DE ÚLTIMAS 5 ALERTAS DLP -->
+        <article class="cg-card">
+          <header class="cg-card__header">
+            <div>
+              <span class="cg-card__eyebrow">TELEMETRÍA DE PREVENCIÓN DE FUGA DE DATOS</span>
+              <h2 class="cg-card__title">Últimas 5 Alertas DLP Recientes</h2>
+            </div>
+            <div class="cg-card__header-actions">
+              <button type="button" class="cg-btn-outline" (click)="openBreakGlassModal()">
+                <span class="material-symbols-outlined">lock_open_right</span>
+                <span>Acceso Break-Glass</span>
+              </button>
+              <button type="button" class="cg-btn-gold" (click)="goToDlpAudit()">
+                <span class="material-symbols-outlined">policy</span>
+                <span>Ir a Auditoría DLP</span>
+              </button>
+            </div>
+          </header>
+
+          @if (isLoadingRecentDlp() && recentDlpAlerts().length === 0) {
+            <div class="cg-inline-state">
+              <span class="material-symbols-outlined animate-spin">sync</span>
+              <span>Consultando alertas DLP recientes...</span>
+            </div>
+          } @else if (recentDlpAlerts().length === 0) {
+            <div class="cg-inline-state cg-inline-state--clean">
+              <span class="material-symbols-outlined">verified_user</span>
+              <div>
+                <strong>Perímetro limpio en los últimos 7 días</strong>
+                <p>No se registraron intentos de captura, impresión bloqueada ni accesos excepcionales recientes.</p>
+              </div>
+            </div>
+          } @else {
+            <div class="cg-feed-list">
+              @for (evt of recentDlpAlerts(); track evt.id) {
+                <div class="cg-feed-item">
+                  <div class="cg-feed-item__left">
+                    <span class="cg-badge" [attr.data-tone]="dlpSeverityTone(evt.severity)">
+                      {{ dlpSeverityLabel(evt.severity) }}
+                    </span>
+                    <div class="cg-feed-item__info">
+                      <div class="cg-feed-item__title">
+                        <strong>{{ formatDlpEventType(evt.eventType) }}</strong>
+                        @if (evt.conversationName) {
+                          <span class="cg-chip">{{ evt.conversationName }}</span>
+                        }
+                      </div>
+                      <p class="cg-feed-item__meta">
+                        <span>Usuario: <b>{{ evt.userName || 'Sistema' }}</b></span>
+                        @if (evt.ipAddress) {
+                          <span>• IP: <code class="cg-mono">{{ evt.ipAddress }}</code></span>
+                        }
+                        @if (evt.description) {
+                          <span>• {{ evt.description }}</span>
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div class="cg-feed-item__right">
+                    <span class="cg-mono cg-muted">{{ formatDateTime(evt.createdAt) }}</span>
+                    @if (evt.conversationId) {
+                      <button
+                        type="button"
+                        class="cg-btn-icon-text"
+                        (click)="openBreakGlassModal(evt.conversationId, evt.conversationName || '')"
+                        title="Inspeccionar conversación con Break-Glass"
+                      >
+                        <span class="material-symbols-outlined">visibility</span>
+                        <span>Break-Glass</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </article>
+        }
+      }
+    </section>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 2: ESPACIOS Y GOBERNANZA
+       ══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'spaces') {
+    <section class="cg-tab-section" aria-label="Gobernanza de espacios operativos">
+      <article class="cg-card">
+        <div class="cg-toolbar">
+          <div class="cg-pills-group" role="group" aria-label="Filtrar espacios por estado">
+            <button
+              type="button"
+              class="cg-filter-pill"
+              [class.cg-filter-pill--active]="spaceStatusFilter() === 'ALL'"
+              (click)="setSpaceStatusFilter('ALL')"
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              class="cg-filter-pill"
+              [class.cg-filter-pill--active]="spaceStatusFilter() === 'ACTIVE'"
+              (click)="setSpaceStatusFilter('ACTIVE')"
+            >
+              <span class="work-kpi-dot dot--emerald"></span>
+              ACTIVE
+            </button>
+            <button
+              type="button"
+              class="cg-filter-pill"
+              [class.cg-filter-pill--active]="spaceStatusFilter() === 'FROZEN'"
+              (click)="setSpaceStatusFilter('FROZEN')"
+            >
+              <span class="work-kpi-dot dot--amber"></span>
+              FROZEN
+            </button>
+            <button
+              type="button"
+              class="cg-filter-pill"
+              [class.cg-filter-pill--active]="spaceStatusFilter() === 'ARCHIVED'"
+              (click)="setSpaceStatusFilter('ARCHIVED')"
+            >
+              <span class="work-kpi-dot dot--slate"></span>
+              ARCHIVED
+            </button>
+          </div>
+
+          <div class="cg-search-box">
+            <span class="material-symbols-outlined cg-search-box__icon">search</span>
+            <input
+              type="search"
+              class="cg-search-input"
+              placeholder="Buscar espacio por nombre o categoría..."
+              [ngModel]="spaceSearch()"
+              (ngModelChange)="onSpaceSearchChange($event)"
+              (keydown.enter)="loadSpaces(0)"
+            />
+            @if (spaceSearch()) {
+              <button type="button" class="cg-search-clear" (click)="clearSpaceSearch()" title="Limpiar">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        @if (isLoadingSpaces()) {
+          <div class="cg-state-panel cg-state-panel--compact">
+            <span class="material-symbols-outlined animate-spin cg-spinner-lg">sync</span>
+            <p>Cargando espacios operativos...</p>
+          </div>
+        } @else if (spacesError()) {
+          <div class="cg-state-panel cg-state-panel--compact cg-state-panel--error">
+            <span class="material-symbols-outlined cg-spinner-lg">error</span>
+            <p>{{ spacesError() }}</p>
+            <button type="button" class="cg-btn-primary" (click)="loadSpaces(spacesPage())">Reintentar</button>
+          </div>
+        } @else if (spacesList().length === 0) {
+          <div class="cg-state-panel cg-state-panel--compact">
+            <span class="material-symbols-outlined cg-spinner-lg">search_off</span>
+            <p>No se encontraron espacios con los filtros actuales.</p>
+          </div>
+        } @else {
+          <div class="cg-table-scroll">
+            <table class="cg-table">
+              <thead>
+                <tr>
+                  <th>Espacio</th>
+                  <th>Categoría</th>
+                  <th>Estado</th>
+                  <th>Miembros</th>
+                  <th>Mensajes</th>
+                  <th>Última Actividad</th>
+                  <th class="text-right">Acciones Directivas</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (space of spacesList(); track space.id) {
+                  <tr>
+                    <td>
+                      <div class="cg-cell-title">
+                        <span class="material-symbols-outlined cg-space-icon">tag</span>
+                        <div class="min-w-0">
+                          <strong>{{ space.name }}</strong>
+                          @if (space.description) {
+                            <p class="cg-cell-sub">{{ space.description }}</p>
+                          }
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="cg-chip">{{ space.category || 'General' }}</span>
+                    </td>
+                    <td>
+                      @if (space.status === 'ACTIVE') {
+                        <span class="cg-badge" data-tone="success">
+                          <span class="work-kpi-dot dot--emerald"></span>
+                          Activo
+                        </span>
+                      } @else if (space.status === 'FROZEN') {
+                        <span class="cg-badge" data-tone="warning">
+                          <span class="material-symbols-outlined">ac_unit</span>
+                          Solo Lectura
+                        </span>
+                      } @else {
+                        <span class="cg-badge" data-tone="neutral">
+                          <span class="material-symbols-outlined">archive</span>
+                          Archivado
+                        </span>
+                      }
+                    </td>
+                    <td class="cg-mono">{{ space.memberCount }}</td>
+                    <td class="cg-mono">{{ space.messageCount | number }}</td>
+                    <td class="cg-mono cg-muted">{{ formatDateTime(space.lastMessageAt) }}</td>
+                    <td class="text-right">
+                      <div class="cg-actions-row">
+                        @if (space.status === 'ACTIVE') {
+                          <button
+                            type="button"
+                            class="cg-action-btn cg-action-btn--warning"
+                            [disabled]="updatingSpaceId() === space.id"
+                            (click)="changeSpaceStatus(space, 'FROZEN')"
+                            title="Congelar en modo solo lectura"
+                          >
+                            <span class="material-symbols-outlined">ac_unit</span>
+                            <span>Congelar</span>
+                          </button>
+                        } @else {
+                          <button
+                            type="button"
+                            class="cg-action-btn cg-action-btn--success"
+                            [disabled]="updatingSpaceId() === space.id"
+                            (click)="changeSpaceStatus(space, 'ACTIVE')"
+                            title="Reactivar espacio"
+                          >
+                            <span class="material-symbols-outlined">play_arrow</span>
+                            <span>Reactivar</span>
+                          </button>
+                        }
+
+                        @if (space.status !== 'ARCHIVED') {
+                          <button
+                            type="button"
+                            class="cg-action-btn cg-action-btn--neutral"
+                            [disabled]="updatingSpaceId() === space.id"
+                            (click)="changeSpaceStatus(space, 'ARCHIVED')"
+                            title="Archivar espacio"
+                          >
+                            <span class="material-symbols-outlined">archive</span>
+                            <span>Archivar</span>
+                          </button>
+                        }
+
+                        <button
+                          type="button"
+                          class="cg-action-btn cg-action-btn--danger"
+                          (click)="openBreakGlassModal(space.id, space.name)"
+                          title="Inspección forense Break-Glass"
+                        >
+                          <span class="material-symbols-outlined">lock_open_right</span>
+                          <span>Break-Glass</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          class="cg-action-btn cg-action-btn--gold"
+                          (click)="openSpaceInChat(space.id)"
+                          title="Abrir este espacio en el drawer del chat"
+                        >
+                          <span class="material-symbols-outlined">open_in_new</span>
+                          <span>Abrir en Chat</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @if (spacesData(); as pageInfo) {
+            <footer class="cg-pagination-footer">
+              <span>
+                Mostrando <b>{{ spacesList().length }}</b> de <b>{{ pageInfo.totalElements }}</b> espacios
+              </span>
+              <div class="cg-pagination-controls">
+                <button
+                  type="button"
+                  [disabled]="spacesPage() === 0"
+                  (click)="changeSpacesPage(-1)"
+                  aria-label="Página anterior"
+                >
+                  <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+                <span>
+                  PÁGINA <b>{{ spacesPage() + 1 }}</b> DE <b>{{ Math.max(1, pageInfo.totalPages) }}</b>
+                </span>
+                <button
+                  type="button"
+                  [disabled]="spacesPage() + 1 >= Math.max(1, pageInfo.totalPages)"
+                  (click)="changeSpacesPage(1)"
+                  aria-label="Página siguiente"
+                >
+                  <span class="material-symbols-outlined">chevron_right</span>
+                </button>
+              </div>
+            </footer>
+          }
+        }
+      </article>
+    </section>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 3: USUARIOS CHAT Y ACCESOS
+       ══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'users') {
+    <section class="cg-tab-section" aria-label="Control de usuarios de chat y accesos">
+      <article class="cg-card">
+        <div class="cg-toolbar">
+          <div class="cg-pills-group" role="group" aria-label="Filtrar usuarios por tipo o estado">
+            <button
+              type="button"
+              class="cg-filter-pill"
+              [class.cg-filter-pill--active]="userFilter() === 'ALL'"
+              (click)="setUserFilter('ALL')"
+            >
+              Todos (ALL)
+            </button>
+            <button
+              type="button"
+              class="cg-filter-pill"
+              [class.cg-filter-pill--active]="userFilter() === 'CHAT_ONLY'"
+              (click)="setUserFilter('CHAT_ONLY')"
+            >
+              <span class="work-kpi-dot dot--purple"></span>
+              Solo Chat (CHAT_ONLY)
+            </button>
+            <button
+              type="button"
+              class="cg-filter-pill"
+              [class.cg-filter-pill--active]="userFilter() === 'WMS'"
+              (click)="setUserFilter('WMS')"
+            >
+              <span class="work-kpi-dot dot--blue"></span>
+              Personal WMS
+            </button>
+            <button
+              type="button"
+              class="cg-filter-pill"
+              [class.cg-filter-pill--active]="userFilter() === 'FROZEN'"
+              (click)="setUserFilter('FROZEN')"
+            >
+              <span class="work-kpi-dot dot--danger"></span>
+              Congelados (FROZEN)
+            </button>
+          </div>
+
+          <div class="cg-search-box">
+            <span class="material-symbols-outlined cg-search-box__icon">search</span>
+            <input
+              type="search"
+              class="cg-search-input"
+              placeholder="Buscar por nombre, usuario o correo..."
+              [ngModel]="userSearch()"
+              (ngModelChange)="onUserSearchChange($event)"
+              (keydown.enter)="loadUsers(0)"
+            />
+            @if (userSearch()) {
+              <button type="button" class="cg-search-clear" (click)="clearUserSearch()" title="Limpiar">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        @if (isLoadingUsers()) {
+          <div class="cg-state-panel cg-state-panel--compact">
+            <span class="material-symbols-outlined animate-spin cg-spinner-lg">sync</span>
+            <p>Cargando directorio y estado de accesos...</p>
+          </div>
+        } @else if (usersError()) {
+          <div class="cg-state-panel cg-state-panel--compact cg-state-panel--error">
+            <span class="material-symbols-outlined cg-spinner-lg">error</span>
+            <p>{{ usersError() }}</p>
+            <button type="button" class="cg-btn-primary" (click)="loadUsers(usersPage())">Reintentar</button>
+          </div>
+        } @else if (usersList().length === 0) {
+          <div class="cg-state-panel cg-state-panel--compact">
+            <span class="material-symbols-outlined cg-spinner-lg">person_off</span>
+            <p>No se encontraron usuarios para los filtros seleccionados.</p>
+          </div>
+        } @else {
+          <div class="cg-table-scroll">
+            <table class="cg-table">
+              <thead>
+                <tr>
+                  <th>Colaborador</th>
+                  <th>Usuario</th>
+                  <th>Perfil / Rol</th>
+                  <th>Estado en Vivo</th>
+                  <th>Último Login</th>
+                  <th>Espacios</th>
+                  <th>Congelamiento / Restricción</th>
+                  <th class="text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (user of usersList(); track user.id) {
+                  <tr>
+                    <td>
+                      <div class="cg-user-cell">
+                        <span class="cg-avatar">{{ getInitials(user.fullName) }}</span>
+                        <div class="min-w-0">
+                          <strong>{{ user.fullName }}</strong>
+                          @if (user.email) {
+                            <p class="cg-cell-sub cg-mono">{{ user.email }}</p>
+                          }
+                        </div>
+                      </div>
+                    </td>
+                    <td class="cg-mono">{{ user.username }}</td>
+                    <td>
+                      <div class="cg-role-stack">
+                        @if (user.isChatOnly) {
+                          <span class="cg-badge" data-tone="purple">Solo Chat</span>
+                        } @else {
+                          <span class="cg-badge" data-tone="info">WMS</span>
+                        }
+                        <span class="cg-role-name">{{ formatRoleName(user.roleName) }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      @if (user.online) {
+                        <span class="cg-live-pill cg-live-pill--online">
+                          <span class="cg-live-dot"></span>
+                          En línea
+                        </span>
+                      } @else {
+                        <span class="cg-live-pill cg-live-pill--offline">
+                          <span class="cg-live-dot"></span>
+                          Desconectado
+                        </span>
+                      }
+                    </td>
+                    <td class="cg-mono cg-muted">{{ formatDateTime(user.lastLogin) }}</td>
+                    <td class="cg-mono">{{ user.spacesCount }}</td>
+                    <td>
+                      @if (isUserFrozen(user)) {
+                        <div class="cg-freeze-cell">
+                          <span class="cg-badge" data-tone="danger">
+                            <span class="material-symbols-outlined">lock</span>
+                            @if (!user.isEnabled) {
+                              Cuenta Suspendida
+                            } @else if (isFreezeIndefinite(user.chatFrozenUntil)) {
+                              Congelado (Indefinido)
+                            } @else {
+                              Hasta {{ formatDateTime(user.chatFrozenUntil) }}
+                            }
+                          </span>
+                          @if (user.chatFrozenReason) {
+                            <p class="cg-freeze-reason" [title]="user.chatFrozenReason">
+                              {{ user.chatFrozenReason }}
+                            </p>
+                          }
+                        </div>
+                      } @else {
+                        <span class="cg-badge" data-tone="success">Habilitado</span>
+                      }
+                    </td>
+                    <td class="text-right">
+                      <div class="cg-actions-row">
+                        @if (isUserFrozen(user)) {
+                          <button
+                            type="button"
+                            class="cg-action-btn cg-action-btn--success"
+                            [disabled]="unfreezingUserId() === user.id"
+                            (click)="onUnfreezeUser(user)"
+                          >
+                            <span class="material-symbols-outlined">lock_open</span>
+                            <span>{{ unfreezingUserId() === user.id ? 'Restableciendo...' : 'Descongelar' }}</span>
+                          </button>
+                        } @else {
+                          <button
+                            type="button"
+                            class="cg-action-btn cg-action-btn--danger"
+                            (click)="openFreezeModal(user)"
+                          >
+                            <span class="material-symbols-outlined">ac_unit</span>
+                            <span>Congelar</span>
+                          </button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @if (usersData(); as pageInfo) {
+            <footer class="cg-pagination-footer">
+              <span>
+                Mostrando <b>{{ usersList().length }}</b> de <b>{{ pageInfo.totalElements }}</b> usuarios
+              </span>
+              <div class="cg-pagination-controls">
+                <button
+                  type="button"
+                  [disabled]="usersPage() === 0"
+                  (click)="changeUsersPage(-1)"
+                  aria-label="Página anterior"
+                >
+                  <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+                <span>
+                  PÁGINA <b>{{ usersPage() + 1 }}</b> DE <b>{{ Math.max(1, pageInfo.totalPages) }}</b>
+                </span>
+                <button
+                  type="button"
+                  [disabled]="usersPage() + 1 >= Math.max(1, pageInfo.totalPages)"
+                  (click)="changeUsersPage(1)"
+                  aria-label="Página siguiente"
+                >
+                  <span class="material-symbols-outlined">chevron_right</span>
+                </button>
+              </div>
+            </footer>
+          }
+        }
+      </article>
+    </section>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 4: AUDITORÍA FORENSE Y DLP
+       ══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'audit') {
+    <section class="cg-tab-section" aria-label="Auditoría forense y prevención DLP">
+      <article class="cg-card">
+        <div class="cg-audit-header-bar">
+          <!-- Sub-vistas -->
+          <div class="cg-pills-group" role="tablist" aria-label="Sub-vistas de auditoría forense">
+            <button
+              type="button"
+              role="tab"
+              class="cg-filter-pill"
+              [class.cg-filter-pill--active]="auditSubView() === 'messages'"
+              (click)="selectAuditSubView('messages')"
+            >
+              <span class="material-symbols-outlined">difference</span>
+              <span>Mensajes Editados/Eliminados</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="cg-filter-pill"
+              [class.cg-filter-pill--active]="auditSubView() === 'dlp'"
+              (click)="selectAuditSubView('dlp')"
+            >
+              <span class="material-symbols-outlined">security</span>
+              <span>Eventos de Seguridad DLP</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="cg-filter-pill"
+              [class.cg-filter-pill--active]="auditSubView() === 'attachments'"
+              (click)="selectAuditSubView('attachments')"
+            >
+              <span class="material-symbols-outlined">folder_eye</span>
+              <span>Galería Forense de Evidencias</span>
+            </button>
+          </div>
+
+          <!-- Rango de días + Break-Glass -->
+          <div class="cg-audit-controls-right">
+            <div class="cg-range-group" role="group" aria-label="Rango de tiempo">
+              <button
+                type="button"
+                class="cg-range-btn"
+                [class.cg-range-btn--active]="auditDays() === 1"
+                (click)="setAuditDays(1)"
+              >
+                Hoy (1d)
+              </button>
+              <button
+                type="button"
+                class="cg-range-btn"
+                [class.cg-range-btn--active]="auditDays() === 7"
+                (click)="setAuditDays(7)"
+              >
+                7 días
+              </button>
+              <button
+                type="button"
+                class="cg-range-btn"
+                [class.cg-range-btn--active]="auditDays() === 30"
+                (click)="setAuditDays(30)"
+              >
+                30 días
+              </button>
+            </div>
+
+            <button type="button" class="cg-btn-danger-outline" (click)="openBreakGlassModal()">
+              <span class="material-symbols-outlined">lock_open_right</span>
+              <span>Acceso Break-Glass</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SUB-VISTA 1: MENSAJES EDITADOS / ELIMINADOS -->
+        @if (auditSubView() === 'messages') {
+          <div class="cg-subtoolbar">
+            <span class="cg-subtoolbar__hint">
+              Comparativa inmutable de texto original previo a edición o borrado lógico.
+            </span>
+            <div class="cg-pills-group">
+              <button
+                type="button"
+                class="cg-mini-pill"
+                [class.cg-mini-pill--active]="auditMessageType() === 'ALL'"
+                (click)="setAuditMessageType('ALL')"
+              >
+                Todos
+              </button>
+              <button
+                type="button"
+                class="cg-mini-pill"
+                [class.cg-mini-pill--active]="auditMessageType() === 'EDITED'"
+                (click)="setAuditMessageType('EDITED')"
+              >
+                Editados
+              </button>
+              <button
+                type="button"
+                class="cg-mini-pill"
+                [class.cg-mini-pill--active]="auditMessageType() === 'DELETED'"
+                (click)="setAuditMessageType('DELETED')"
+              >
+                Eliminados
+              </button>
+            </div>
+          </div>
+
+          @if (isLoadingAuditMessages()) {
+            <div class="cg-state-panel cg-state-panel--compact">
+              <span class="material-symbols-outlined animate-spin cg-spinner-lg">sync</span>
+              <p>Cargando historial forense de mensajes...</p>
+            </div>
+          } @else if (auditMessagesError()) {
+            <div class="cg-state-panel cg-state-panel--compact cg-state-panel--error">
+              <span class="material-symbols-outlined cg-spinner-lg">error</span>
+              <p>{{ auditMessagesError() }}</p>
+              <button type="button" class="cg-btn-primary" (click)="loadAuditMessages(auditMessagesPage())">
+                Reintentar
+              </button>
+            </div>
+          } @else if (auditMessagesList().length === 0) {
+            <div class="cg-state-panel cg-state-panel--compact">
+              <span class="material-symbols-outlined cg-spinner-lg">history</span>
+              <p>Sin mensajes editados o eliminados en el rango seleccionado.</p>
+            </div>
+          } @else {
+            <div class="cg-table-scroll">
+              <table class="cg-table">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Autor</th>
+                    <th>Espacio / Conversación</th>
+                    <th>Original (Previo)</th>
+                    <th>Actual</th>
+                    <th>Fecha</th>
+                    <th class="text-right">Inspección</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (msg of auditMessagesList(); track msg.id) {
+                    <tr>
+                      <td>
+                        @if (msg.isDeleted) {
+                          <span class="cg-badge" data-tone="danger">Eliminado</span>
+                        } @else {
+                          <span class="cg-badge" data-tone="warning">Editado</span>
+                        }
+                      </td>
+                      <td><strong>{{ msg.senderName }}</strong></td>
+                      <td>
+                        <div class="cg-conv-cell">
+                          <strong>{{ msg.conversationName }}</strong>
+                          <span class="cg-chip">{{ msg.conversationType }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="cg-diff-original">
+                          {{ msg.originalContent || '—' }}
+                        </div>
+                      </td>
+                      <td>
+                        @if (msg.isDeleted) {
+                          <span class="cg-deleted-text">[Mensaje eliminado lógicamente]</span>
+                        } @else {
+                          <div class="cg-diff-current">{{ msg.content }}</div>
+                        }
+                      </td>
+                      <td class="cg-mono cg-muted">
+                        {{ formatDateTime(msg.deletedAt || msg.editedAt || msg.createdAt) }}
+                      </td>
+                      <td class="text-right">
+                        <button
+                          type="button"
+                          class="cg-action-btn cg-action-btn--danger"
+                          (click)="openBreakGlassModal(msg.conversationId, msg.conversationName)"
+                          title="Inspeccionar hilo completo con Break-Glass"
+                        >
+                          <span class="material-symbols-outlined">lock_open_right</span>
+                          <span>Break-Glass</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            @if (auditMessagesData(); as pageInfo) {
+              <footer class="cg-pagination-footer">
+                <span>
+                  Mostrando <b>{{ auditMessagesList().length }}</b> de <b>{{ pageInfo.totalElements }}</b> registros
+                </span>
+                <div class="cg-pagination-controls">
+                  <button
+                    type="button"
+                    [disabled]="auditMessagesPage() === 0"
+                    (click)="changeAuditMessagesPage(-1)"
+                  >
+                    <span class="material-symbols-outlined">chevron_left</span>
+                  </button>
+                  <span>
+                    PÁGINA <b>{{ auditMessagesPage() + 1 }}</b> DE <b>{{ Math.max(1, pageInfo.totalPages) }}</b>
+                  </span>
+                  <button
+                    type="button"
+                    [disabled]="auditMessagesPage() + 1 >= Math.max(1, pageInfo.totalPages)"
+                    (click)="changeAuditMessagesPage(1)"
+                  >
+                    <span class="material-symbols-outlined">chevron_right</span>
+                  </button>
+                </div>
+              </footer>
+            }
+          }
+        }
+
+        <!-- SUB-VISTA 2: EVENTOS DE SEGURIDAD DLP -->
+        @if (auditSubView() === 'dlp') {
+          @if (isLoadingDlpEvents()) {
+            <div class="cg-state-panel cg-state-panel--compact">
+              <span class="material-symbols-outlined animate-spin cg-spinner-lg">sync</span>
+              <p>Cargando eventos de seguridad DLP...</p>
+            </div>
+          } @else if (dlpEventsError()) {
+            <div class="cg-state-panel cg-state-panel--compact cg-state-panel--error">
+              <span class="material-symbols-outlined cg-spinner-lg">error</span>
+              <p>{{ dlpEventsError() }}</p>
+              <button type="button" class="cg-btn-primary" (click)="loadDlpEvents(dlpEventsPage())">
+                Reintentar
+              </button>
+            </div>
+          } @else if (dlpEventsList().length === 0) {
+            <div class="cg-state-panel cg-state-panel--compact">
+              <span class="material-symbols-outlined cg-spinner-lg">verified_user</span>
+              <p>No hay eventos DLP registrados en este periodo.</p>
+            </div>
+          } @else {
+            <div class="cg-table-scroll">
+              <table class="cg-table">
+                <thead>
+                  <tr>
+                    <th>Severidad</th>
+                    <th>Tipo de Evento</th>
+                    <th>Usuario</th>
+                    <th>Contexto / Conversación</th>
+                    <th>Dirección IP</th>
+                    <th>Fecha</th>
+                    <th class="text-right">Inspección</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (evt of dlpEventsList(); track evt.id) {
+                    <tr>
+                      <td>
+                        <span class="cg-badge" [attr.data-tone]="dlpSeverityTone(evt.severity)">
+                          {{ dlpSeverityLabel(evt.severity) }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="cg-event-cell">
+                          <strong>{{ formatDlpEventType(evt.eventType) }}</strong>
+                          <code class="cg-mono cg-muted-xs">{{ evt.eventType }}</code>
+                        </div>
+                      </td>
+                      <td><strong>{{ evt.userName || 'Sistema' }}</strong></td>
+                      <td>
+                        <div class="cg-conv-cell">
+                          @if (evt.conversationName) {
+                            <strong>{{ evt.conversationName }}</strong>
+                          }
+                          @if (evt.description) {
+                            <p class="cg-cell-sub">{{ evt.description }}</p>
+                          }
+                        </div>
+                      </td>
+                      <td class="cg-mono">{{ evt.ipAddress || '—' }}</td>
+                      <td class="cg-mono cg-muted">{{ formatDateTime(evt.createdAt) }}</td>
+                      <td class="text-right">
+                        @if (evt.conversationId) {
+                          <button
+                            type="button"
+                            class="cg-action-btn cg-action-btn--danger"
+                            (click)="openBreakGlassModal(evt.conversationId, evt.conversationName || '')"
+                          >
+                            <span class="material-symbols-outlined">lock_open_right</span>
+                            <span>Break-Glass</span>
+                          </button>
+                        } @else {
+                          <span class="cg-muted">—</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            @if (dlpEventsData(); as pageInfo) {
+              <footer class="cg-pagination-footer">
+                <span>
+                  Mostrando <b>{{ dlpEventsList().length }}</b> de <b>{{ pageInfo.totalElements }}</b> eventos
+                </span>
+                <div class="cg-pagination-controls">
+                  <button
+                    type="button"
+                    [disabled]="dlpEventsPage() === 0"
+                    (click)="changeDlpEventsPage(-1)"
+                  >
+                    <span class="material-symbols-outlined">chevron_left</span>
+                  </button>
+                  <span>
+                    PÁGINA <b>{{ dlpEventsPage() + 1 }}</b> DE <b>{{ Math.max(1, pageInfo.totalPages) }}</b>
+                  </span>
+                  <button
+                    type="button"
+                    [disabled]="dlpEventsPage() + 1 >= Math.max(1, pageInfo.totalPages)"
+                    (click)="changeDlpEventsPage(1)"
+                  >
+                    <span class="material-symbols-outlined">chevron_right</span>
+                  </button>
+                </div>
+              </footer>
+            }
+          }
+        }
+
+        <!-- SUB-VISTA 3: GALERÍA FORENSE DE EVIDENCIAS (SIN CARGAR IMÁGENES EN TABLA) -->
+        @if (auditSubView() === 'attachments') {
+          <div class="cg-subtoolbar">
+            <span class="cg-subtoolbar__hint">
+              Listado ligero por metadatos (sin precarga Base64 en memoria). Cada archivo se descarga bajo demanda al abrirlo.
+            </span>
+          </div>
+
+          @if (isLoadingAttachments()) {
+            <div class="cg-state-panel cg-state-panel--compact">
+              <span class="material-symbols-outlined animate-spin cg-spinner-lg">sync</span>
+              <p>Cargando índice de evidencias adjuntas...</p>
+            </div>
+          } @else if (attachmentsError()) {
+            <div class="cg-state-panel cg-state-panel--compact cg-state-panel--error">
+              <span class="material-symbols-outlined cg-spinner-lg">error</span>
+              <p>{{ attachmentsError() }}</p>
+              <button type="button" class="cg-btn-primary" (click)="loadAuditAttachments(attachmentsPage())">
+                Reintentar
+              </button>
+            </div>
+          } @else if (attachmentsList().length === 0) {
+            <div class="cg-state-panel cg-state-panel--compact">
+              <span class="material-symbols-outlined cg-spinner-lg">attach_file</span>
+              <p>No hay evidencias adjuntas en el periodo seleccionado.</p>
+            </div>
+          } @else {
+            <div class="cg-table-scroll">
+              <table class="cg-table">
+                <thead>
+                  <tr>
+                    <th>Archivo</th>
+                    <th>Tipo MIME</th>
+                    <th>Tamaño</th>
+                    <th>Remitente</th>
+                    <th>Conversación</th>
+                    <th>Fecha</th>
+                    <th class="text-right">Evidencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (att of attachmentsList(); track att.id) {
+                    <tr>
+                      <td>
+                        <div class="cg-cell-title">
+                          <span class="material-symbols-outlined cg-gold-icon">
+                            {{ isImageType(att.contentType) ? 'image' : isPdfType(att.contentType) ? 'picture_as_pdf' : 'description' }}
+                          </span>
+                          <strong>{{ att.fileName }}</strong>
+                        </div>
+                      </td>
+                      <td><code class="cg-chip cg-mono">{{ att.contentType }}</code></td>
+                      <td class="cg-mono">{{ formatFileSize(att.fileSize) }}</td>
+                      <td>{{ att.senderName }}</td>
+                      <td>{{ att.conversationName }}</td>
+                      <td class="cg-mono cg-muted">{{ formatDateTime(att.createdAt) }}</td>
+                      <td class="text-right">
+                        <button
+                          type="button"
+                          class="cg-action-btn cg-action-btn--gold"
+                          [disabled]="downloadingAttachmentId() === att.id"
+                          (click)="openAttachmentOnDemand(att)"
+                        >
+                          <span
+                            class="material-symbols-outlined"
+                            [class.animate-spin]="downloadingAttachmentId() === att.id"
+                          >
+                            {{ downloadingAttachmentId() === att.id ? 'sync' : 'visibility' }}
+                          </span>
+                          <span>
+                            {{ downloadingAttachmentId() === att.id ? 'Cargando...' : 'Ver / Descargar Evidencia' }}
+                          </span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            @if (attachmentsData(); as pageInfo) {
+              <footer class="cg-pagination-footer">
+                <span>
+                  Mostrando <b>{{ attachmentsList().length }}</b> de <b>{{ pageInfo.totalElements }}</b> evidencias
+                </span>
+                <div class="cg-pagination-controls">
+                  <button
+                    type="button"
+                    [disabled]="attachmentsPage() === 0"
+                    (click)="changeAttachmentsPage(-1)"
+                  >
+                    <span class="material-symbols-outlined">chevron_left</span>
+                  </button>
+                  <span>
+                    PÁGINA <b>{{ attachmentsPage() + 1 }}</b> DE <b>{{ Math.max(1, pageInfo.totalPages) }}</b>
+                  </span>
+                  <button
+                    type="button"
+                    [disabled]="attachmentsPage() + 1 >= Math.max(1, pageInfo.totalPages)"
+                    (click)="changeAttachmentsPage(1)"
+                  >
+                    <span class="material-symbols-outlined">chevron_right</span>
+                  </button>
+                </div>
+              </footer>
+            }
+          }
+        }
+      </article>
+    </section>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       TAB 5: POLÍTICAS Y EFICIENCIA
+       ══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'policies') {
+    <section class="cg-tab-section" aria-label="Políticas de seguridad y eficiencia del ecosistema">
+      <div class="cg-policies-grid">
+        <article class="cg-policy-card">
+          <div class="cg-policy-card__icon cg-policy-card__icon--gold">
+            <span class="material-symbols-outlined">compress</span>
+          </div>
+          <div class="cg-policy-card__body">
+            <span class="cg-policy-card__tag">OPTIMIZACIÓN DE ALMACENAMIENTO</span>
+            <h3>Compresión Automática en Cliente</h3>
+            <p>
+              Fotos optimizadas vía HTML5 Canvas (máx. 1280px, JPEG 78%) ahorrando ~80-90% de BD/RAM.
+            </p>
+            @if (overview(); as ov) {
+              <div class="cg-policy-metric">
+                <span class="material-symbols-outlined">database</span>
+                <span>
+                  Uso actual: <b>{{ formatMb(ov.totalAttachmentsSizeMb) }}</b> en {{ ov.totalAttachmentsCount }} adjuntos
+                </span>
+              </div>
+            }
+          </div>
+        </article>
+
+        <article class="cg-policy-card">
+          <div class="cg-policy-card__icon cg-policy-card__icon--blue">
+            <span class="material-symbols-outlined">speed</span>
+          </div>
+          <div class="cg-policy-card__body">
+            <span class="cg-policy-card__tag">RENDIMIENTO Y BAJO CONSUMO RAM</span>
+            <h3>Consultas sin Base64</h3>
+            <p>
+              Listados forenses proyectados por metadatos; descarga bajo demanda por ID.
+            </p>
+            <div class="cg-policy-metric">
+              <span class="material-symbols-outlined">memory</span>
+              <span>Hidratación selectiva en visor con liberación automática de Blob URLs</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="cg-policy-card">
+          <div class="cg-policy-card__icon cg-policy-card__icon--danger">
+            <span class="material-symbols-outlined">shield_lock</span>
+          </div>
+          <div class="cg-policy-card__body">
+            <span class="cg-policy-card__tag">PREVENCIÓN DE FUGA DE INFORMACIÓN</span>
+            <h3>DLP y Marca de Agua</h3>
+            <p>
+              Cortina anti-captura (<code>PrintScreen</code>), bloqueo <code>Ctrl+P</code>/<code>Ctrl+S</code>, reportes en tiempo real y marca de agua dinámica.
+            </p>
+            @if (overview(); as ov) {
+              <div class="cg-policy-metric">
+                <span class="material-symbols-outlined">notifications_active</span>
+                <span>{{ ov.dlpAlertsLast7Days }} evento(s) DLP reportados en los últimos 7 días</span>
+              </div>
+            }
+          </div>
+        </article>
+
+        <article class="cg-policy-card">
+          <div class="cg-policy-card__icon cg-policy-card__icon--emerald">
+            <span class="material-symbols-outlined">gavel</span>
+          </div>
+          <div class="cg-policy-card__body">
+            <span class="cg-policy-card__tag">CUMPLIMIENTO E INMUTABILIDAD</span>
+            <h3>Privacidad 1-a-1 &amp; WORM</h3>
+            <p>
+              Acceso excepcional únicamente vía <em>Break-Glass</em> con rastro inmutable en <code>wms.audit_logs</code>.
+            </p>
+            <div class="cg-policy-metric">
+              <span class="material-symbols-outlined">verified_user</span>
+              <span>Motivo obligatorio (mín. 10 caracteres) + registro de IP y operador</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       MODAL: CONGELAR USUARIO (TAB 3)
+       ══════════════════════════════════════════════════════════════════ -->
+  @if (freezeModalUser(); as targetUser) {
+    <div class="cg-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="freeze-modal-title">
+      <div class="cg-modal" (click)="$event.stopPropagation()">
+        <header class="cg-modal__header">
+          <div class="cg-modal__title-wrap">
+            <span class="cg-modal__icon cg-modal__icon--danger">
+              <span class="material-symbols-outlined">ac_unit</span>
+            </span>
+            <div>
+              <span class="cg-modal__eyebrow">GOBIERNO DE ACCESOS</span>
+              <h2 id="freeze-modal-title">Congelar Acceso de Usuario</h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="cg-icon-close"
+            [disabled]="isSubmittingFreeze()"
+            (click)="closeFreezeModal()"
+            aria-label="Cerrar modal"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div class="cg-modal__body">
+          <div class="cg-target-banner">
+            <span class="cg-avatar">{{ getInitials(targetUser.fullName) }}</span>
+            <div>
+              <strong>{{ targetUser.fullName }}</strong>
+              <p>{{ targetUser.username }} • {{ formatRoleName(targetUser.roleName) }}</p>
+            </div>
+          </div>
+
+          <div class="cg-field-group">
+            <label class="cg-field-label">Alcance de la medida</label>
+            <div class="cg-radio-cards">
+              <button
+                type="button"
+                class="cg-radio-card"
+                [class.cg-radio-card--active]="freezeChatOnly()"
+                (click)="freezeChatOnly.set(true)"
+              >
+                <span class="material-symbols-outlined">chat_error</span>
+                <div>
+                  <strong>Solo congelar Chat (mantiene acceso WMS/RF)</strong>
+                  <span>Bloquea envío y acceso al chat manteniendo la operación en almacén.</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                class="cg-radio-card cg-radio-card--danger"
+                [class.cg-radio-card--active]="!freezeChatOnly()"
+                (click)="freezeChatOnly.set(false)"
+              >
+                <span class="material-symbols-outlined">block</span>
+                <div>
+                  <strong>Suspender cuenta y revocar sesiones</strong>
+                  <span>Deshabilita el acceso total al sistema WMS/Chat y expulsa sesiones activas.</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div class="cg-field-group">
+            <label class="cg-field-label">Duración</label>
+            <div class="cg-duration-pills">
+              <button
+                type="button"
+                class="cg-filter-pill"
+                [class.cg-filter-pill--active]="freezeDuration() === 24"
+                (click)="freezeDuration.set(24)"
+              >
+                24 horas
+              </button>
+              <button
+                type="button"
+                class="cg-filter-pill"
+                [class.cg-filter-pill--active]="freezeDuration() === 168"
+                (click)="freezeDuration.set(168)"
+              >
+                7 días
+              </button>
+              <button
+                type="button"
+                class="cg-filter-pill"
+                [class.cg-filter-pill--active]="freezeDuration() === 'INDEFINITE'"
+                (click)="freezeDuration.set('INDEFINITE')"
+              >
+                Indefinido
+              </button>
+            </div>
+          </div>
+
+          <div class="cg-field-group">
+            <label for="cg-freeze-reason" class="cg-field-label">
+              Motivo obligatorio <span class="cg-required">*</span>
+            </label>
+            <textarea
+              id="cg-freeze-reason"
+              rows="3"
+              class="cg-textarea"
+              placeholder="Ej. Uso indebido de canal operativo o incumplimiento de política DLP..."
+              [ngModel]="freezeReason()"
+              (ngModelChange)="freezeReason.set($event)"
+            ></textarea>
+          </div>
+
+          @if (freezeError()) {
+            <div class="cg-form-error" role="alert">
+              <span class="material-symbols-outlined">error</span>
+              <span>{{ freezeError() }}</span>
+            </div>
+          }
+        </div>
+
+        <footer class="cg-modal__footer">
+          <button
+            type="button"
+            class="cg-btn-secondary"
+            [disabled]="isSubmittingFreeze()"
+            (click)="closeFreezeModal()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="cg-btn-danger"
+            [disabled]="isSubmittingFreeze() || freezeReason().trim().length < 5"
+            (click)="submitFreeze()"
+          >
+            <span class="material-symbols-outlined" [class.animate-spin]="isSubmittingFreeze()">
+              {{ isSubmittingFreeze() ? 'sync' : 'ac_unit' }}
+            </span>
+            <span>{{ isSubmittingFreeze() ? 'Aplicando...' : 'Confirmar Congelamiento' }}</span>
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       MODAL / DRAWER: ACCESO EXCEPCIONAL BREAK-GLASS (SOLO LECTURA)
+       ══════════════════════════════════════════════════════════════════ -->
+  @if (showBreakGlassModal()) {
+    <div
+      class="cg-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="break-glass-title"
+      (click)="closeBreakGlassModal()"
+    >
+      <div class="cg-modal cg-modal--wide" (click)="$event.stopPropagation()">
+        <header class="cg-modal__header">
+          <div class="cg-modal__title-wrap">
+            <span class="cg-modal__icon cg-modal__icon--danger">
+              <span class="material-symbols-outlined">lock_open_right</span>
+            </span>
+            <div>
+              <span class="cg-modal__eyebrow">INSPECCIÓN FORENSE EXCEPCIONAL (WORM)</span>
+              <h2 id="break-glass-title">
+                {{ breakGlassTranscript() ? 'Transcripción Break-Glass (Solo Lectura)' : 'Acceso Break-Glass' }}
+              </h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="cg-icon-close"
+            [disabled]="isSubmittingBreakGlass()"
+            (click)="closeBreakGlassModal()"
+            aria-label="Cerrar"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        @if (!breakGlassTranscript()) {
+          <div class="cg-modal__body">
+            <div class="cg-worm-warning" role="alert">
+              <span class="material-symbols-outlined">gpp_maybe</span>
+              <div>
+                <strong>Registro Inmutable Obligatorio (WORM)</strong>
+                <p>
+                  Este acceso excepcional quedará registrado de forma inmutable en <code>wms.audit_logs</code> con tu usuario, fecha, IP y justificación.
+                </p>
+              </div>
+            </div>
+
+            <div class="cg-field-group">
+              <label for="cg-bg-conv-id" class="cg-field-label">
+                ID de Conversación / Espacio / DM <span class="cg-required">*</span>
+              </label>
+              <input
+                id="cg-bg-conv-id"
+                type="text"
+                class="cg-input cg-mono"
+                placeholder="UUID de la conversación (ej. 550e8400-e29b-41d4-a716-446655440000)"
+                [ngModel]="breakGlassConversationId()"
+                (ngModelChange)="breakGlassConversationId.set($event)"
+              />
+              @if (breakGlassConversationLabel()) {
+                <span class="cg-field-hint">Espacio/Conversación: <b>{{ breakGlassConversationLabel() }}</b></span>
+              }
+            </div>
+
+            <div class="cg-field-group">
+              <div class="cg-field-label-row">
+                <label for="cg-bg-reason" class="cg-field-label">
+                  Motivo de auditoría (mínimo 10 caracteres) <span class="cg-required">*</span>
+                </label>
+                <span class="cg-char-counter" [class.cg-char-counter--ok]="breakGlassReasonValid()">
+                  {{ breakGlassReasonLength() }} / 10 mín.
+                </span>
+              </div>
+              <textarea
+                id="cg-bg-reason"
+                rows="3"
+                class="cg-textarea"
+                placeholder="Describe el folio de incidencia, investigación de seguridad o motivo directivo..."
+                [ngModel]="breakGlassReason()"
+                (ngModelChange)="breakGlassReason.set($event)"
+              ></textarea>
+            </div>
+
+            @if (breakGlassError()) {
+              <div class="cg-form-error" role="alert">
+                <span class="material-symbols-outlined">error</span>
+                <span>{{ breakGlassError() }}</span>
+              </div>
+            }
+          </div>
+
+          <footer class="cg-modal__footer">
+            <button
+              type="button"
+              class="cg-btn-secondary"
+              [disabled]="isSubmittingBreakGlass()"
+              (click)="closeBreakGlassModal()"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="cg-btn-danger"
+              [disabled]="!breakGlassCanSubmit()"
+              (click)="submitBreakGlass()"
+            >
+              <span class="material-symbols-outlined" [class.animate-spin]="isSubmittingBreakGlass()">
+                {{ isSubmittingBreakGlass() ? 'sync' : 'policy' }}
+              </span>
+              <span>{{ isSubmittingBreakGlass() ? 'Registrando e inspeccionando...' : 'Registrar Acceso y Ver Mensajes' }}</span>
+            </button>
+          </footer>
+        } @else {
+          @if (breakGlassTranscript(); as transcript) {
+            <div class="cg-modal__body">
+              <div class="cg-transcript-meta">
+                <div>
+                  <span class="cg-transcript-meta__label">CONVERSACIÓN</span>
+                  <strong>{{ transcript.conversationName }}</strong>
+                  <span class="cg-chip">{{ transcript.conversationType }}</span>
+                </div>
+                <div>
+                  <span class="cg-transcript-meta__label">AUDITADO EN (WORM)</span>
+                  <span class="cg-mono">{{ formatDateTime(transcript.auditedAt) }}</span>
+                </div>
+                <div class="cg-transcript-meta__full">
+                  <span class="cg-transcript-meta__label">MOTIVO REGISTRADO</span>
+                  <p>{{ transcript.reason }}</p>
+                </div>
+              </div>
+
+              <div class="cg-transcript-list">
+                @for (m of transcript.messages; track m.id) {
+                  <article class="cg-transcript-msg" [class.cg-transcript-msg--deleted]="m.isDeleted">
+                    <header class="cg-transcript-msg__header">
+                      <strong>{{ m.senderName }}</strong>
+                      <div class="cg-transcript-msg__badges">
+                        @if (m.isEdited) {
+                          <span class="cg-badge" data-tone="warning">Editado</span>
+                        }
+                        @if (m.isDeleted) {
+                          <span class="cg-badge" data-tone="danger">Eliminado</span>
+                        }
+                        @if (m.attachmentCount > 0) {
+                          <span class="cg-chip">{{ m.attachmentCount }} adjunto(s)</span>
+                        }
+                        <span class="cg-mono cg-muted">{{ formatDateTime(m.createdAt) }}</span>
+                      </div>
+                    </header>
+
+                    @if (m.originalContent) {
+                      <div class="cg-diff-original cg-diff-original--inline">
+                        <span class="cg-diff-tag">Original:</span> {{ m.originalContent }}
+                      </div>
+                    }
+                    <p class="cg-transcript-msg__content">
+                      {{ m.isDeleted ? '[Mensaje eliminado lógicamente]' : m.content }}
+                    </p>
+                  </article>
+                } @empty {
+                  <div class="cg-inline-state">
+                    <span class="material-symbols-outlined">forum</span>
+                    <span>Esta conversación no contiene mensajes registrados.</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <footer class="cg-modal__footer">
+              <button type="button" class="cg-btn-secondary" (click)="resetBreakGlassTranscript()">
+                Nueva consulta
+              </button>
+              <button type="button" class="cg-btn-primary" (click)="closeBreakGlassModal()">
+                Cerrar visor
+              </button>
+            </footer>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       MODAL: VISOR BAJO DEMANDA DE EVIDENCIA (TAB 4 - GALERÍA FORENSE)
+       ══════════════════════════════════════════════════════════════════ -->
+  @if (previewAttachment(); as att) {
+    <div
+      class="cg-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="evidence-preview-title"
+      (click)="closeAttachmentPreview()"
+    >
+      <div class="cg-preview-modal" (click)="$event.stopPropagation()">
+        <header class="cg-preview-modal__header">
+          <div class="cg-cell-title min-w-0">
+            <span class="material-symbols-outlined cg-gold-icon">
+              {{ isImageType(att.contentType) ? 'image' : isPdfType(att.contentType) ? 'picture_as_pdf' : 'description' }}
+            </span>
+            <div class="min-w-0">
+              <strong id="evidence-preview-title" class="cg-truncate">{{ att.fileName }}</strong>
+              <p class="cg-cell-sub">
+                {{ att.senderName }} • {{ att.conversationName }} • {{ formatFileSize(att.fileSize) }}
+              </p>
+            </div>
+          </div>
+
+          <div class="cg-actions-row">
+            @if (previewSafeUrl(); as downloadUrl) {
+              <a [href]="downloadUrl" [download]="att.fileName" class="cg-btn-gold cg-no-underline">
+                <span class="material-symbols-outlined">download</span>
+                <span>Descargar</span>
+              </a>
+            }
+            <button type="button" class="cg-icon-close" (click)="closeAttachmentPreview()" aria-label="Cerrar visor">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="cg-preview-modal__body">
+          @if (isImageType(att.contentType) && previewSafeUrl(); as imgUrl) {
+            <img [src]="imgUrl" [alt]="att.fileName" class="cg-preview-img" />
+          } @else {
+            @if (isPdfType(att.contentType) && previewSafeResourceUrl(); as pdfUrl) {
+              <iframe [src]="pdfUrl" class="cg-preview-pdf" title="Vista previa PDF forense"></iframe>
+            } @else {
+              <div class="cg-preview-fallback">
+                <span class="material-symbols-outlined">description</span>
+                <strong>Vista previa no disponible para este formato ({{ att.contentType }})</strong>
+                @if (previewSafeUrl(); as dlUrl) {
+                  <a [href]="dlUrl" [download]="att.fileName" class="cg-btn-gold cg-no-underline">
+                    <span class="material-symbols-outlined">download</span>
+                    <span>Descargar archivo ({{ formatFileSize(att.fileSize) }})</span>
+                  </a>
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>
