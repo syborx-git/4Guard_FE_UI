@@ -9,7 +9,7 @@
     <div class="login-brand__content">
       <!-- Hero Logo Redondeado con Máximo Énfasis -->
       <div class="login-brand__hero-logo-wrap">
-        <img src="/assets/logo-4guard.svg" alt="4GUARD Logo" class="login-brand__hero-logo-img" />
+        <img src="assets/logo-4guard.svg" alt="4GUARD Logo" class="login-brand__hero-logo-img" />
       </div>
 
       <!-- Copy central -->
@@ -31,6 +31,17 @@
   <main class="login-form-panel">
     <div class="login-form-container">
       <div class="login-form__card">
+
+        <!-- Brand lockup integrado (visible en desktop y destacado en móvil) -->
+        <div class="login-card-brand">
+          <div class="login-card-brand__logo-wrap">
+            <img src="assets/logo-4guard.svg" alt="4GUARD Logo" class="login-card-brand__logo-img" />
+          </div>
+          <div class="login-card-brand__meta">
+            <span class="login-card-brand__title">4GUARD</span>
+            <span class="login-card-brand__badge">WMS &bull; CONTROL OPERATIVO</span>
+          </div>
+        </div>
 
         <!-- VISTA 1: FORMULARIO TRADICIONAL MINIMALISTA -->
         @if (viewState() === 'login') {

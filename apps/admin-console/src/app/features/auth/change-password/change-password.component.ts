@@ -173,7 +173,7 @@ export class ChangePasswordComponent {
         if (response.success) {
           // Actualizar inmediatamente la sesión en memoria y LocalStorage
           this.authState.updateCurrentUser({ changePasswordRequired: false });
-          this.router.navigate(['/dashboard']);
+          this.router.navigate([this.authState.isChatOnlyUser() ? '/chat' : '/dashboard']);
         } else {
           this.serverError.set(response.message || 'No se pudo actualizar la contraseña.');
         }

@@ -17,6 +17,8 @@
 
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 
 /** Rutas que el guard NO debe guardar como returnUrl (evitar loops de redireccion). */
@@ -33,7 +35,25 @@ export const authGuard: CanActivateFn = (route, state) => {
 
   // ─ CASO 1: Sesión válida y token vigente ───────────────────────────────────
   if (isLogged && !isExpired) {
+    if (authService.getCurrentUser()?.changePasswordRequired) {
+      return router.createUrlTree(['/change-password']);
+    }
     return true;
+  }
+
+  // ─ CASO 1B: Access token expirado pero existe refresh token (sesión 7 días) ─
+  if (hasToken && isExpired && authService.getRefreshToken()) {
+    return authService.refreshToken().pipe(
+      map(() =>
+        authService.getCurrentUser()?.changePasswordRequired
+          ? router.createUrlTree(['/change-password'])
+          : true
+      ),
+      catchError(() => {
+        authService.clearSessionAndRedirect('session_expired');
+        return of(false);
+      })
+    );
   }
 
   // ─ CASO 2 / 3: Sesión expirada o inexistente ────────────────────────────────

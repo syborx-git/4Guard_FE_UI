@@ -66,6 +66,9 @@ export class InactivityService implements OnDestroy {
       startWith(null),
       switchMap(() => timer(this.INACTIVITY_TIME))
     ).subscribe(() => {
+      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/chat')) {
+        return;
+      }
       // Se cumplió el tiempo de inactividad real si el usuario está autenticado y no hay advertencia previa
       if (this.authState.currentUser() && !this.showWarning()) {
         this.triggerWarning();
@@ -134,7 +137,7 @@ export class InactivityService implements OnDestroy {
       next: (response) => {
         if (response && response.success && response.data) {
           this.authState.setSession(response.data);
-          this.handleKeepAliveSuccess();
+          this.handleKeepAliveSuccess(response.data.expiresAt);
         } else {
           this.autoLogout();
         }
@@ -146,12 +149,12 @@ export class InactivityService implements OnDestroy {
     });
   }
 
-  private handleKeepAliveSuccess(): void {
+  private handleKeepAliveSuccess(expiresAt?: string): void {
     this.isProcessing.set(false);
     this.showWarning.set(false);
     this.stopCountdown();
 
-    const newExpiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const newExpiresAt = expiresAt || new Date(Date.now() + 60 * 60 * 1000).toISOString();
     localStorage.setItem('4g_expires_at', newExpiresAt);
 
     this.writeAuditLog('SESSION_KEEP_ALIVE_REFRESHED');

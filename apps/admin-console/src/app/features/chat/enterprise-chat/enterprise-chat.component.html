@@ -557,6 +557,12 @@
             </button>
             }
             @if (msg.senderId === currentUserId()) {
+            @if (conv.type === 'SPACE') {
+            <button type="button" class="ec-mini-btn" (click)="openReadInfo(msg)" title="Información de lectura"
+              aria-label="Información de lectura">
+              <span class="material-symbols-outlined">info</span>
+            </button>
+            }
             <button type="button" class="ec-mini-btn" (click)="onStartEdit(msg)" title="Editar">
               <span class="material-symbols-outlined">edit</span>
             </button>
@@ -577,6 +583,19 @@
             </button>
             }
           </div>
+          }
+
+          @if (msg.senderId === currentUserId() && !msg.isDeleted && conv.type === 'DM') {
+          @if (getDmReadReceipt(conv, msg); as receipt) {
+          <div class="ec-read-receipt" [class.ec-read-receipt--read]="receipt.read">
+            <span class="material-symbols-outlined ec-read-receipt__icon">{{ receipt.read ? 'done_all' : 'done' }}</span>
+            @if (receipt.read) {
+            <span>Leído {{ receipt.readAt | date:'HH:mm' }}</span>
+            } @else {
+            <span>Enviado</span>
+            }
+          </div>
+          }
           }
         </div>
       </div>
@@ -892,5 +911,66 @@
       </div>
     </div>
   </div>
+  }
+
+  <!-- MODAL INFORMACIÓN DE LECTURA (ESPACIOS) -->
+  @if (readInfoMessage(); as rMsg) {
+  @if (chatService.activeConversation(); as activeConv) {
+  @if (getSpaceReadInfo(activeConv, rMsg); as readInfo) {
+  <div class="ec-modal-backdrop" (click)="closeReadInfo()">
+    <div class="ec-modal ec-read-info-modal" (click)="$event.stopPropagation()">
+      <div class="ec-read-info-header">
+        <div class="ec-read-info-header__title">
+          <span class="material-symbols-outlined ec-gold-icon">done_all</span>
+          <h3>Información de lectura</h3>
+        </div>
+        <button type="button" class="ec-circle-btn" (click)="closeReadInfo()" title="Cerrar" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <p class="ec-read-info-preview">{{ rMsg.content }}</p>
+
+      <div class="ec-read-info-section">
+        <div class="ec-read-info-section__title">
+          <span class="material-symbols-outlined ec-read-info-icon--read">done_all</span>
+          <span>Leído por ({{ readInfo.readBy.length }})</span>
+        </div>
+        <div class="ec-read-info-list">
+          @for (item of readInfo.readBy; track item.userId) {
+          <div class="ec-read-info-row">
+            <span class="ec-read-info-name">{{ item.fullName }}</span>
+            <span class="ec-read-info-time">{{ item.readAt | date:'HH:mm' }}</span>
+          </div>
+          } @empty {
+          <div class="ec-read-info-empty">Aún nadie ha leído este mensaje.</div>
+          }
+        </div>
+      </div>
+
+      <div class="ec-read-info-section">
+        <div class="ec-read-info-section__title">
+          <span class="material-symbols-outlined ec-read-info-icon--pending">schedule</span>
+          <span>Pendiente ({{ readInfo.pending.length }})</span>
+        </div>
+        <div class="ec-read-info-list">
+          @for (item of readInfo.pending; track item.userId) {
+          <div class="ec-read-info-row">
+            <span class="ec-read-info-name">{{ item.fullName }}</span>
+            <span class="ec-read-info-status">Sin leer</span>
+          </div>
+          } @empty {
+          <div class="ec-read-info-empty">Todos los miembros ya leyeron este mensaje.</div>
+          }
+        </div>
+      </div>
+
+      <div class="ec-modal__actions">
+        <button type="button" class="ec-btn-primary" (click)="closeReadInfo()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+  }
+  }
   }
 </div>

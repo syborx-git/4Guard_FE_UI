@@ -259,10 +259,39 @@ export class ChatService {
         next: (evt: any) => {
           if (!evt || !evt.eventType) return;
           if (evt.eventType === 'TYPING') {
+            const me = this.authState.currentUser();
+            if (
+              evt.senderId === me?.id ||
+              evt.payload?.userId === me?.id ||
+              (me?.username &&
+                (evt.senderUsername === me.username || evt.payload?.username === me.username))
+            ) {
+              return;
+            }
             const name = evt.payload?.fullName || evt.senderUsername || 'Alguien';
             this.typingUser.set(name);
             clearTimeout(this.typingTimeout);
             this.typingTimeout = setTimeout(() => this.typingUser.set(null), 3500);
+            return;
+          }
+
+          if (evt.eventType === 'CONVERSATION_READ') {
+            const readerId = evt.payload?.userId || evt.senderId;
+            const readAt = evt.payload?.lastReadAt || evt.timestamp;
+            if (readerId && readAt) {
+              this.conversations.update((list) =>
+                list.map((c) =>
+                  c.id === conversationId
+                    ? {
+                        ...c,
+                        participants: c.participants.map((p) =>
+                          p.userId === readerId ? { ...p, lastReadAt: readAt } : p
+                        ),
+                      }
+                    : c
+                )
+              );
+            }
             return;
           }
 
@@ -274,7 +303,9 @@ export class ChatService {
             this.messages.update((list) =>
               list.some((m) => m.id === payload.id) ? list : [...list, payload]
             );
-            this.markAsRead(conversationId).subscribe({ error: () => {} });
+            if (payload.senderId !== this.authState.currentUser()?.id) {
+              this.markAsRead(conversationId).subscribe({ error: () => {} });
+            }
           } else if (evt.eventType === 'MESSAGE_PINNED') {
             this.messages.update((list) => list.map((m) => (m.id === payload.id ? payload : m)));
             this.syncPinnedMessage(payload);
@@ -328,6 +359,8 @@ export class ChatService {
   }
 
   selectConversation(conversationId: string): void {
+    this.typingUser.set(null);
+    clearTimeout(this.typingTimeout);
     this.activeConversationId.set(conversationId);
     this.pinnedMessages.set([]);
     this.subscribeToConversationTopic(conversationId);

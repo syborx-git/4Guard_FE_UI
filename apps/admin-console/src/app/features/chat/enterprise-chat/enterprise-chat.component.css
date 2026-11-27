@@ -284,6 +284,10 @@
   border-color: var(--gold-border, rgba(197, 168, 107, 0.35));
 }
 
+.ec-msg__bubble--mine .ec-msg__text {
+  color: #ffffff;
+}
+
 .ec-msg__bubble--mine .ec-msg__author,
 .ec-msg__bubble--mine .ec-msg__time {
   color: rgba(255, 255, 255, 0.78);
@@ -1615,13 +1619,47 @@
 }
 
 @media (max-width: 767px) {
+  .ec-thread-header {
+    padding: max(0.65rem, env(safe-area-inset-top, 0px)) 0.65rem 0.65rem;
+    gap: 0.35rem;
+    overflow: hidden;
+  }
+  .ec-thread-header__left {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 0.45rem;
+  }
+  .ec-thread-header__left .ec-conv-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 0.78rem;
+  }
+  .ec-thread-title {
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ec-thread-sub {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .ec-thread-header__actions {
+    flex-shrink: 0;
+    gap: 0.125rem;
     overflow-x: auto;
     scrollbar-width: none;
-    max-width: 60vw;
+    max-width: 46vw;
   }
   .ec-thread-header__actions::-webkit-scrollbar {
     display: none;
+  }
+  .ec-thread-header .ec-icon-btn {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0.25rem;
   }
   .ec-thread-search__input {
     font-size: 16px;
@@ -1633,4 +1671,143 @@
     min-width: 44px;
     min-height: 44px;
   }
+}
+
+/* ── READ RECEIPTS (DM FOOTER & SPACE READ INFO MODAL) ── */
+.ec-read-receipt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  width: 100%;
+  margin-top: 0.3rem;
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.ec-read-receipt--read {
+  color: var(--gold, #c5a86b);
+}
+
+.ec-read-receipt__icon {
+  font-size: 0.92rem;
+}
+
+.ec-read-info-modal {
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ec-read-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ec-read-info-header__title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ec-read-info-header__title h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-primary, #1c2940);
+}
+
+.ec-read-info-preview {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: var(--bg-page, #f8fafc);
+  border: 1px solid var(--border-card, rgba(76, 86, 105, 0.14));
+  color: var(--text-secondary, #5a6477);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ec-read-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ec-read-info-section__title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-gold, #9b7626);
+}
+
+.ec-read-info-icon--read {
+  font-size: 1rem;
+  color: var(--color-success, #00897b);
+}
+
+.ec-read-info-icon--pending {
+  font-size: 1rem;
+  color: var(--text-muted, #8b94a3);
+}
+
+.ec-read-info-list {
+  max-height: 150px;
+  overflow-y: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border-card, rgba(76, 86, 105, 0.15));
+  background: var(--bg-page, #f8fafc);
+}
+
+.ec-read-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-card, rgba(76, 86, 105, 0.1));
+  font-size: 0.8rem;
+  color: var(--text-primary, #1c2940);
+}
+
+.ec-read-info-row:last-child {
+  border-bottom: none;
+}
+
+.ec-read-info-name {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ec-read-info-time {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-success, #00897b);
+  flex-shrink: 0;
+}
+
+.ec-read-info-status {
+  font-size: 0.72rem;
+  color: var(--text-muted, #8b94a3);
+  flex-shrink: 0;
+}
+
+.ec-read-info-empty {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.76rem;
+  color: var(--text-secondary, #5a6477);
 }

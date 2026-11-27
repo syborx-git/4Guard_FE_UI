@@ -533,7 +533,7 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
         role: raw.role,
         status: 'ACTIVE',
         isEnabled: true,
-        changePasswordRequired: false,
+        changePasswordRequired: true,
         failedAttempts: 0,
         lockedUntil: null,
         permanentlyLocked: false

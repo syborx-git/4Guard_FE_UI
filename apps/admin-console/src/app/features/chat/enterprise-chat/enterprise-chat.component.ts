@@ -85,6 +85,7 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   protected readonly evidenceItems = signal<ChatAttachment[]>([]);
   protected readonly isLoadingEvidence = signal<boolean>(false);
   protected readonly showUsageGuide = signal<boolean>(false);
+  protected readonly readInfoMessage = signal<ChatMessage | null>(null);
 
   private lastTypingSentAt = 0;
   private highlightTimeout: any = null;
@@ -137,7 +138,12 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
     );
   });
 
-  protected readonly canCreateSpace = this.isManagerOrDirector;
+  protected readonly isDirector = computed(() => {
+    const r = (this.authState.currentUser()?.role || '').toUpperCase();
+    return r.includes('CEO') || r.includes('DIRECTOR') || r.includes('ADMIN');
+  });
+
+  protected readonly canCreateSpace = this.isDirector;
   protected readonly canDownloadAttachments = this.isManagerOrDirector;
 
   protected readonly safePreviewUrl = computed<SafeResourceUrl | null>(() => {
@@ -251,6 +257,7 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
     this.threadSearchResults.set([]);
     this.showEvidenceGallery.set(false);
     this.showUsageGuide.set(false);
+    this.readInfoMessage.set(null);
     this.chatService.selectConversation(conv.id);
     this.mobileShowThread.set(true);
   }
@@ -541,6 +548,7 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   }
 
   openCreateSpaceModal(): void {
+    if (!this.canCreateSpace()) return;
     this.newSpaceName.set('');
     this.newSpaceDesc.set('');
     this.newSpaceCategory.set('');
@@ -556,6 +564,7 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   }
 
   onCreateSpace(): void {
+    if (!this.canCreateSpace()) return;
     const name = this.newSpaceName().trim();
     if (!name) return;
     const category = this.newSpaceCategory().trim();
@@ -578,6 +587,7 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   }
 
   openManageMembersModal(conv: ConversationSummary): void {
+    if (!this.canCreateSpace()) return;
     this.manageMemberIds.set(conv.participants.map((p) => p.userId));
     this.manageMemberSearch.set('');
     this.showManageMembersModal.set(true);
@@ -590,11 +600,53 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   }
 
   onSaveSpaceMembers(): void {
+    if (!this.canCreateSpace()) return;
     const conv = this.chatService.activeConversation();
     if (!conv || conv.type === 'DM') return;
     this.chatService.updateSpaceMembers(conv.id, this.manageMemberIds()).subscribe(() => {
       this.showManageMembersModal.set(false);
     });
+  }
+
+  getDmReadReceipt(conv: ConversationSummary, msg: ChatMessage): { read: boolean; readAt?: string } {
+    const other = conv.participants.find((p) => p.userId !== this.currentUserId());
+    if (!other?.lastReadAt) return { read: false };
+    const readMs = new Date(other.lastReadAt).getTime();
+    const msgMs = new Date(msg.createdAt).getTime();
+    if (!isNaN(readMs) && !isNaN(msgMs) && readMs >= msgMs) {
+      return { read: true, readAt: other.lastReadAt };
+    }
+    return { read: false };
+  }
+
+  openReadInfo(msg: ChatMessage): void {
+    this.readInfoMessage.set(msg);
+  }
+
+  closeReadInfo(): void {
+    this.readInfoMessage.set(null);
+  }
+
+  getSpaceReadInfo(
+    conv: ConversationSummary,
+    msg: ChatMessage
+  ): {
+    readBy: Array<{ userId: string; fullName: string; readAt: string }>;
+    pending: Array<{ userId: string; fullName: string }>;
+  } {
+    const msgMs = new Date(msg.createdAt).getTime();
+    const others = conv.participants.filter((p) => p.userId !== msg.senderId);
+    const readBy: Array<{ userId: string; fullName: string; readAt: string }> = [];
+    const pending: Array<{ userId: string; fullName: string }> = [];
+    for (const p of others) {
+      const readMs = p.lastReadAt ? new Date(p.lastReadAt).getTime() : NaN;
+      if (!isNaN(readMs) && !isNaN(msgMs) && readMs >= msgMs) {
+        readBy.push({ userId: p.userId, fullName: p.fullName || p.username, readAt: p.lastReadAt });
+      } else {
+        pending.push({ userId: p.userId, fullName: p.fullName || p.username });
+      }
+    }
+    return { readBy, pending };
   }
 
   toggleAttachMenu(): void {

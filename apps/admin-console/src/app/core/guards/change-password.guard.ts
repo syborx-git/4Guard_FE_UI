@@ -12,9 +12,11 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { AuthState } from '../auth/auth.state';
 
 export const changePasswordGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
+  const authState = inject(AuthState);
   const router = inject(Router);
 
   // Sin sesión activa: redirigir al login
@@ -28,6 +30,6 @@ export const changePasswordGuard: CanActivateFn = () => {
     return true;
   }
 
-  // Ya cambió la contraseña: redirigir al dashboard
-  return router.createUrlTree(['/dashboard']);
+  // Ya cambió la contraseña: redirigir al destino según perfil
+  return router.createUrlTree([authState.isChatOnlyUser() ? '/chat' : '/dashboard']);
 };

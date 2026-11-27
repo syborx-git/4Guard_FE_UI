@@ -28,6 +28,12 @@ export class AuthService {
   private readonly API_URL = `${environment.apiBaseUrl}/api/v1/auth`;
   private refreshSubscription?: Subscription;
 
+  constructor() {
+    if (typeof window !== 'undefined' && this.isAuthenticated() && !this.isTokenExpired()) {
+      this.scheduleTokenRefresh();
+    }
+  }
+
   /**
    * Genera un token JWT sintético válido con cabecera y claims RFC 7519 para entorno de desarrollo/local.
    */
