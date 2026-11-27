@@ -5,7 +5,11 @@
  * - Padrón de operadores guardado localmente (offline-first, ADR-012).
  * - Motor: @vladmandic/face-api (TinyFaceDetector + landmarks tiny + descriptor de 128 puntos).
  */
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 export interface FaceOperatorProfile {
   id: string;
@@ -30,15 +34,35 @@ const MODELS_URL = 'assets/face-models';
 /** Distancia euclidiana máxima para considerar la misma persona (face-api recomienda 0.6; usamos 0.5 por seguridad). */
 const MATCH_THRESHOLD = 0.5;
 
-const DEMO_PROFILES: FaceOperatorProfile[] = [
-  { id: 'op-alex-01', employeeCode: 'MC-001', fullName: 'Alex Gabriel Pérez Garduño', role: 'OPERATOR', title: 'Montacarguista', descriptors: [] },
-  { id: 'op-christian-02', employeeCode: 'MC-002', fullName: 'Christian Durán', role: 'OPERATOR', title: 'Montacarguista', descriptors: [] },
-  { id: 'op-mario-03', employeeCode: 'MC-003', fullName: 'Mario Sánchez', role: 'OPERATOR', title: 'Montacarguista', descriptors: [] },
-  { id: 'vip-alejandro-01', employeeCode: 'VIP-001', fullName: 'Alejandro Barraza', role: 'ADMIN', title: 'Director General', descriptors: [] },
+/**
+ * Operadores estándar del catálogo de 4GUARD WMS (ADR-012).
+ * Homologados con STANDARD_FORKLIFT_OPERATORS en el backend y admin-console.
+ */
+const DEFAULT_OPERATOR_PROFILES: FaceOperatorProfile[] = [
+  { id: '852584b7-37c7-4a5f-b4dc-c7b6097a9c51', employeeCode: 'MC-001', fullName: 'Hector Villalva Ayala', role: 'OPERATOR', title: 'Líder de Turno', descriptors: [] },
+  { id: 'b51345cb-bc76-4b3c-8386-d7595c14a83a', employeeCode: 'MC-002', fullName: 'Alex Gabriel Perez Garduño', role: 'OPERATOR', title: 'Operador Especialista', descriptors: [] },
+  { id: '401954d5-dcc8-48bb-8a17-48a68d31580b', employeeCode: 'MC-003', fullName: 'Alfredo Ramirez Gonzalez', role: 'OPERATOR', title: 'Operador de Andén', descriptors: [] },
+  { id: '721954d5-ecc8-48bb-8a17-48a68d31580c', employeeCode: 'MC-004', fullName: 'Carlos Mendez Morales', role: 'OPERATOR', title: 'Montacarguista Senior', descriptors: [] },
 ];
+
+function isBannedOperator(p: { id?: string; employeeCode?: string; fullName?: string }): boolean {
+  const name = (p.fullName || '').toLowerCase();
+  const code = (p.employeeCode || '').toLowerCase();
+  const id = (p.id || '').toLowerCase();
+  return (
+    name.includes('christian') ||
+    name.includes('barraza') ||
+    name.includes('mario s') ||
+    id.includes('christian') ||
+    id.includes('alejandro') ||
+    id.includes('mario') ||
+    code.includes('vip')
+  );
+}
 
 @Injectable({ providedIn: 'root' })
 export class FacialRecognitionService {
+  private readonly http = inject(HttpClient);
   private faceapi: any = null;
   private modelsPromise: Promise<void> | null = null;
   private stream: MediaStream | null = null;
@@ -46,21 +70,82 @@ export class FacialRecognitionService {
   readonly modelsReady = signal(false);
   readonly profiles = signal<FaceOperatorProfile[]>(this.loadProfiles());
 
+  constructor() {
+    // Sincronizar catálogo real de montacarguistas desde el backend
+    this.loadBackendOperators();
+  }
+
   // ── Padrón ──────────────────────────────────────────────────────────────
   private loadProfiles(): FaceOperatorProfile[] {
     try {
       const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
       if (raw) {
         const saved = JSON.parse(raw) as FaceOperatorProfile[];
-        // Asegura que los perfiles demo siempre existan
-        const merged = [...saved];
-        for (const d of DEMO_PROFILES) {
-          if (!merged.some((p) => p.id === d.id)) merged.push({ ...d });
+        // Filtrar perfiles obsoletos o de demo que ya no deben figurar
+        const cleanSaved = saved.filter((p) => !isBannedOperator(p));
+        const merged = [...cleanSaved];
+        for (const d of DEFAULT_OPERATOR_PROFILES) {
+          if (!merged.some((p) => p.id === d.id || p.employeeCode === d.employeeCode)) {
+            merged.push({ ...d });
+          }
         }
         return merged;
       }
     } catch {}
-    return DEMO_PROFILES.map((p) => ({ ...p }));
+    return DEFAULT_OPERATOR_PROFILES.map((p) => ({ ...p }));
+  }
+
+  /**
+   * Consulta el backend (/api/v1/forklift-operators?status=ACTIVO) para obtener la lista
+   * actualizada de montacarguistas activos registrados en la base de datos y conserva
+   * los descriptores biométricos enrolados previamente en el dispositivo.
+   */
+  async loadBackendOperators(): Promise<void> {
+    try {
+      const apiBase = (environment as any).apiBaseUrl ?? '';
+      const url = `${apiBase}/api/v1/forklift-operators?status=ACTIVO`;
+      const res: any = await firstValueFrom(
+        this.http.get<any>(url).pipe(
+          catchError(() => of(null))
+        )
+      );
+
+      const rawList = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      if (rawList && rawList.length > 0) {
+        const currentProfiles = this.profiles();
+        const merged: FaceOperatorProfile[] = rawList
+          .filter((op: any) => !isBannedOperator({ id: op.id, employeeCode: op.code, fullName: op.fullName }))
+          .map((op: any) => {
+            const code = op.code || 'MC-001';
+            const fullName = (
+              op.fullName ||
+              `${op.firstName || ''} ${op.lastNamePaternal || ''} ${op.lastNameMaternal || ''}`
+            ).trim() || 'Montacarguista';
+            const title = op.jobTitle || 'Montacarguista';
+            const id = op.id || `op-${code.toLowerCase()}`;
+
+            // Buscar si ya tiene enrolamiento de rostro previo en esta tablet
+            const existing = currentProfiles.find((p) => p.id === id || p.employeeCode === code);
+            return {
+              id,
+              employeeCode: code,
+              fullName,
+              role: 'OPERATOR' as const,
+              title,
+              descriptors: existing?.descriptors || [],
+              photo: existing?.photo,
+              enrolledAt: existing?.enrolledAt,
+            };
+          });
+
+        if (merged.length > 0) {
+          this.profiles.set(merged);
+          this.persist();
+        }
+      }
+    } catch (err) {
+      console.warn('[FacialRecognitionService] No se pudieron sincronizar operadores del backend:', err);
+    }
   }
 
   private persist(): void {

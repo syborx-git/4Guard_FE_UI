@@ -78,6 +78,7 @@ export class RfLoginComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     await this.initBiometrics();
+    this.face.loadBackendOperators();
   }
 
   /**
@@ -401,6 +402,7 @@ export class RfLoginComponent implements OnInit, OnDestroy {
 
   /** Abre el visor. Si aún no hay rostros enrolados, ofrece primero el enrolamiento. */
   protected async openFaceScan(): Promise<void> {
+    this.face.loadBackendOperators();
     this.error.set(null);
     this.faceMatched.set(null);
     this.showFaceModal.set(true);
@@ -415,6 +417,7 @@ export class RfLoginComponent implements OnInit, OnDestroy {
   }
 
   protected openFaceEnrollPicker(): void {
+    this.face.loadBackendOperators();
     this.stopFaceLoop();
     this.face.stopCamera();
     this.faceMatched.set(null);
