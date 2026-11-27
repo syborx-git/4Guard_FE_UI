@@ -161,6 +161,20 @@ export class ReceivingScanComponent implements OnInit, OnDestroy {
     const found = this.availableLots().find((l) => l.lotNumber === this.activeLot());
     return found?.expirationDate || '2027-11-03';
   });
+  protected readonly selectedPalletTare = computed(() => {
+    const t = (this.selectedPalletType() || '').toLowerCase();
+    if (t.includes('chep')) return 28;
+    if (t.includes('plást') || t.includes('plast')) return 18;
+    return 25;
+  });
+  protected readonly activeLotStatus = computed(() => {
+    const found = this.availableLots().find((l) => l.lotNumber === this.activeLot());
+    return found?.isCompliant === false ? 'En Revisión' : 'Liberado';
+  });
+  protected readonly activeLotQa = computed(() => {
+    const found = this.availableLots().find((l) => l.lotNumber === this.activeLot());
+    return found?.isCompliant === false ? 'Q/A Pendiente' : 'Q/A Aprobado';
+  });
 
   // Modal + Lote
   protected readonly showAddLotModal = signal<boolean>(false);

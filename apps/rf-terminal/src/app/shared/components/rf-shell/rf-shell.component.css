@@ -27,10 +27,12 @@
    display: flex;
    align-items: center;
    justify-content: space-between;
-   gap: 0.75rem;
-   padding: 0.75rem 1.25rem;
+   flex-wrap: wrap;
+   row-gap: 0.45rem;
+   column-gap: 0.75rem;
+   padding: 0.55rem 1.1rem;
    background: #ffffff;
-   border-bottom: 2px solid rgba(76, 86, 105, 0.18);
+   border-bottom: 1px solid rgba(76, 86, 105, 0.18);
    z-index: 100;
    box-shadow: 0 4px 18px rgba(23, 32, 51, 0.08);
    transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -1203,15 +1205,21 @@
  }
 
  .pwa-badge-btn--update {
-   background: rgba(234, 195, 73, 0.15);
-   border-color: rgba(234, 195, 73, 0.4);
-   color: #F6E05E;
+   background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+   border-color: #fbbf24;
+   color: #020617;
+   box-shadow: 0 2px 10px rgba(245, 158, 11, 0.35);
+ }
+
+ .pwa-badge-btn--update .material-symbols-outlined {
+   color: #020617 !important;
  }
 
  .pwa-badge-btn--update:hover {
-   background: rgba(234, 195, 73, 0.28);
-   border-color: #EAC349;
+   background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+   border-color: #fde68a;
    transform: translateY(-1px);
+   box-shadow: 0 4px 14px rgba(245, 158, 11, 0.5);
  }
 
  .pwa-badge-btn--install {

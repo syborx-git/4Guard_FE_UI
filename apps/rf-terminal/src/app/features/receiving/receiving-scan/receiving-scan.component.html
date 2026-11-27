@@ -74,10 +74,8 @@
               <span class="manifest-tag-icon">
                 <span class="material-symbols-outlined text-amber-400 text-base">receipt_long</span>
               </span>
-              <div class="flex flex-col">
-                <span class="manifest-folio-lbl">Remisión / Folio Activo</span>
-                <span class="manifest-folio-val font-mono">#{{ rec.folio }}</span>
-              </div>
+              <span class="manifest-folio-lbl">REMISIÓN / FOLIO ACTIVO:</span>
+              <span class="manifest-folio-pill font-mono">#{{ rec.folio }}</span>
               <span class="manifest-status-badge" [class.badge--in-progress]="rec.status === 'IN_PROGRESS' || rec.status === 'REGISTERED'">
                 <span class="status-pulse-dot"></span>
                 <span>{{ rec.status === 'DISCHARGED' ? 'Descarga Concluida' : 'En Descarga Física' }}</span>
@@ -200,6 +198,10 @@
           </select>
           <span class="material-symbols-outlined custom-select-arrow">arrow_drop_down</span>
         </div>
+        <div class="param-meta-bar">
+          <span class="param-meta-muted">Categoría: Alimentos</span>
+          <span class="param-meta-accent param-meta-accent--cyan">Unidad: CJ</span>
+        </div>
       </div>
 
       <!-- 2. Piezas por Tarima -->
@@ -260,6 +262,10 @@
           </select>
           <span class="material-symbols-outlined custom-select-arrow">arrow_drop_down</span>
         </div>
+        <div class="param-meta-bar">
+          <span class="param-meta-muted">Medidas: 1.0 x 1.2 m</span>
+          <span class="param-meta-accent param-meta-accent--emerald">Tara: {{ selectedPalletTare() }} kg</span>
+        </div>
       </div>
 
       <!-- 4. Lote Activo + Botón (+ Lote) -->
@@ -290,6 +296,10 @@
             }
           </select>
           <span class="material-symbols-outlined custom-select-arrow">arrow_drop_down</span>
+        </div>
+        <div class="param-meta-bar">
+          <span class="param-meta-muted">Estado: {{ activeLotStatus() }}</span>
+          <span class="param-meta-accent param-meta-accent--purple">{{ activeLotQa() }}</span>
         </div>
       </div>
     </div>
@@ -683,11 +693,9 @@
       class="btn-bottom-conclude"
       [disabled]="scannedCount() === 0">
       <div class="btn-conclude-glow"></div>
-      <span class="material-symbols-outlined text-2xl">verified</span>
-      <div class="flex flex-col text-left">
-        <span class="font-extrabold text-sm tracking-wide">CONCLUIR DESCARGA FÍSICA (F01)</span>
-        <span class="text-[11px] opacity-90 font-mono">{{ scannedCount() }} Tarimas • {{ totalPiecesScanned() | number:'1.0-2' }} Pzas • {{ selectedReception()?.rampNumber ? ('Rampa ' + selectedReception()?.rampNumber) : 'En Espera de Andén' }}</span>
-      </div>
+      <span class="material-symbols-outlined text-xl shrink-0">verified_user</span>
+      <span class="btn-conclude-title">CONCLUIR DESCARGA FÍSICA (F01)</span>
+      <span class="btn-conclude-stats font-mono">{{ scannedCount() }} TARIMAS • {{ totalPiecesScanned() | number:'1.0-2' }} PZAS • {{ selectedReception()?.rampNumber ? ('RAMPA ' + selectedReception()?.rampNumber) : 'EN ESPERA' }}</span>
     </button>
   </footer>
 
