@@ -228,41 +228,47 @@
       </div>
       <div class="ec-thread-header__actions flex items-center gap-1 shrink-0">
         <button type="button" class="ec-icon-btn" [class.ec-icon-btn--active]="showThreadSearch()"
-          (click)="toggleThreadSearch()" title="Buscar en esta conversación" aria-label="Buscar en esta conversación">
+          (click)="closeHeaderMenu(); toggleThreadSearch()" title="Buscar en esta conversación"
+          aria-label="Buscar en esta conversación">
           <span class="material-symbols-outlined">search</span>
         </button>
-        <button type="button" class="ec-icon-btn" [class.ec-icon-btn--active]="showEvidenceGallery()"
-          (click)="toggleEvidenceGallery()" title="Galería de evidencia compartida"
-          aria-label="Galería de evidencia compartida">
+        <button type="button" class="ec-icon-btn ec-desktop-only-action"
+          [class.ec-icon-btn--active]="showEvidenceGallery()" (click)="toggleEvidenceGallery()"
+          title="Galería de evidencia compartida" aria-label="Galería de evidencia compartida">
           <span class="material-symbols-outlined">photo_library</span>
         </button>
-        <button type="button" class="ec-icon-btn" (click)="onToggleSound()"
+        <button type="button" class="ec-icon-btn ec-desktop-only-action" (click)="onToggleSound()"
           [title]="chatService.soundEnabled() ? 'Silenciar alertas de sonido' : 'Activar alertas de sonido'"
           [attr.aria-label]="chatService.soundEnabled() ? 'Silenciar sonido' : 'Activar sonido'">
           <span class="material-symbols-outlined">{{ chatService.soundEnabled() ? 'volume_up' : 'volume_off' }}</span>
         </button>
-        <button type="button" class="ec-icon-btn" [class.ec-icon-btn--active]="showUsageGuide()"
+        <button type="button" class="ec-icon-btn ec-desktop-only-action" [class.ec-icon-btn--active]="showUsageGuide()"
           (click)="toggleUsageGuide()" title="Guía rápida de uso" aria-label="Guía rápida de uso">
           <span class="material-symbols-outlined">help_outline</span>
         </button>
         @if (mode === 'fullscreen') {
-        <button type="button" class="ec-icon-btn" (click)="themeService.toggleTheme()"
+        <button type="button" class="ec-icon-btn ec-desktop-only-action" (click)="themeService.toggleTheme()"
           [title]="themeService.themeLabel()" [attr.aria-label]="themeService.themeLabel()">
           <span class="material-symbols-outlined">{{ themeService.themeIcon() }}</span>
         </button>
         }
         @if (conv.type === 'SPACE' && canCreateSpace()) {
-        <button type="button" class="ec-icon-btn" (click)="openManageMembersModal(conv)"
+        <button type="button" class="ec-icon-btn ec-desktop-only-action" (click)="openManageMembersModal(conv)"
           title="Gestionar miembros del espacio">
           <span class="material-symbols-outlined">group_add</span>
         </button>
         }
-        <button type="button" class="ec-icon-btn" (click)="cycleNotificationPref(conv)"
+        <button type="button" class="ec-icon-btn ec-desktop-only-action" (click)="cycleNotificationPref(conv)"
           [title]="'Notificaciones: ' + (conv.myNotificationPref || 'ALL') + ' (clic para cambiar)'">
           <span class="material-symbols-outlined">
             {{ conv.myNotificationPref === 'MUTED' ? 'notifications_off' : (conv.myNotificationPref === 'MENTIONS' ?
             'notifications_paused' : 'notifications_active') }}
           </span>
+        </button>
+        <button type="button" class="ec-icon-btn ec-mobile-only" [class.ec-icon-btn--active]="isHeaderMenuOpen()"
+          (click)="toggleHeaderMenu()" title="Más opciones" aria-label="Más opciones"
+          [attr.aria-expanded]="isHeaderMenuOpen()">
+          <span class="material-symbols-outlined">more_vert</span>
         </button>
         @if (mode === 'drawer') {
         <button type="button" class="ec-icon-btn" (click)="closeRequested.emit()" title="Cerrar">
@@ -270,6 +276,54 @@
         </button>
         }
       </div>
+
+      @if (isHeaderMenuOpen()) {
+      <div class="ec-header-menu-backdrop" (click)="closeHeaderMenu()" aria-hidden="true"></div>
+      <div class="ec-header-menu" role="menu" aria-label="Opciones de conversación">
+        <button type="button" class="ec-header-menu__item" role="menuitem"
+          [class.ec-header-menu__item--active]="showEvidenceGallery()"
+          (click)="toggleEvidenceGallery(); closeHeaderMenu()">
+          <span class="material-symbols-outlined ec-header-menu__icon">photo_library</span>
+          <span class="ec-header-menu__label">Evidencias compartidas</span>
+        </button>
+        <button type="button" class="ec-header-menu__item" role="menuitem"
+          (click)="onToggleSound(); closeHeaderMenu()">
+          <span class="material-symbols-outlined ec-header-menu__icon">{{ chatService.soundEnabled() ? 'volume_up' :
+            'volume_off' }}</span>
+          <span class="ec-header-menu__label">Sonido</span>
+          <span class="ec-header-menu__meta">{{ chatService.soundEnabled() ? 'Activo' : 'Silenciado' }}</span>
+        </button>
+        <button type="button" class="ec-header-menu__item" role="menuitem"
+          [class.ec-header-menu__item--active]="showUsageGuide()" (click)="toggleUsageGuide(); closeHeaderMenu()">
+          <span class="material-symbols-outlined ec-header-menu__icon">help_outline</span>
+          <span class="ec-header-menu__label">Guía rápida</span>
+        </button>
+        @if (mode === 'fullscreen') {
+        <button type="button" class="ec-header-menu__item" role="menuitem"
+          (click)="themeService.toggleTheme(); closeHeaderMenu()">
+          <span class="material-symbols-outlined ec-header-menu__icon">{{ themeService.themeIcon() }}</span>
+          <span class="ec-header-menu__label">{{ themeService.themeLabel() }}</span>
+        </button>
+        }
+        <button type="button" class="ec-header-menu__item" role="menuitem"
+          (click)="cycleNotificationPref(conv); closeHeaderMenu()">
+          <span class="material-symbols-outlined ec-header-menu__icon">
+            {{ conv.myNotificationPref === 'MUTED' ? 'notifications_off' : (conv.myNotificationPref === 'MENTIONS' ?
+            'notifications_paused' : 'notifications_active') }}
+          </span>
+          <span class="ec-header-menu__label">Notificaciones</span>
+          <span class="ec-header-menu__meta">{{ conv.myNotificationPref === 'MUTED' ? 'Silenciadas' :
+            (conv.myNotificationPref === 'MENTIONS' ? 'Menciones' : 'Todas') }}</span>
+        </button>
+        @if (conv.type === 'SPACE' && canCreateSpace()) {
+        <button type="button" class="ec-header-menu__item" role="menuitem"
+          (click)="openManageMembersModal(conv); closeHeaderMenu()">
+          <span class="material-symbols-outlined ec-header-menu__icon">group_add</span>
+          <span class="ec-header-menu__label">Gestionar miembros</span>
+        </button>
+        }
+      </div>
+      }
     </header>
 
     <!-- GUÍA RÁPIDA DE USO (POPOVER COLAPSABLE) -->

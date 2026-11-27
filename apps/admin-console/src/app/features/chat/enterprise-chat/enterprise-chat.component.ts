@@ -86,6 +86,7 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   protected readonly isLoadingEvidence = signal<boolean>(false);
   protected readonly showUsageGuide = signal<boolean>(false);
   protected readonly readInfoMessage = signal<ChatMessage | null>(null);
+  protected readonly isHeaderMenuOpen = signal<boolean>(false);
 
   private lastTypingSentAt = 0;
   private highlightTimeout: any = null;
@@ -258,12 +259,22 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
     this.showEvidenceGallery.set(false);
     this.showUsageGuide.set(false);
     this.readInfoMessage.set(null);
+    this.isHeaderMenuOpen.set(false);
     this.chatService.selectConversation(conv.id);
     this.mobileShowThread.set(true);
   }
 
   onBackToListMobile(): void {
+    this.isHeaderMenuOpen.set(false);
     this.mobileShowThread.set(false);
+  }
+
+  toggleHeaderMenu(): void {
+    this.isHeaderMenuOpen.update((v) => !v);
+  }
+
+  closeHeaderMenu(): void {
+    this.isHeaderMenuOpen.set(false);
   }
 
   onLogout(): void {

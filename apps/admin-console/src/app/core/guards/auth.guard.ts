@@ -41,8 +41,10 @@ export const authGuard: CanActivateFn = (route, state) => {
     return true;
   }
 
-  // ─ CASO 1B: Access token expirado pero existe refresh token (sesión 7 días) ─
-  if (hasToken && isExpired && authService.getRefreshToken()) {
+  // ─ CASO 1B: Access token expirado pero existe refresh token (sesión 7 días, exclusivo CHAT_ONLY) ─
+  const currentRole = (authService.getCurrentUser()?.role || '').toUpperCase();
+  const isChatOnlyUser = currentRole.includes('CHAT_ONLY');
+  if (isChatOnlyUser && hasToken && isExpired && authService.getRefreshToken()) {
     return authService.refreshToken().pipe(
       map(() =>
         authService.getCurrentUser()?.changePasswordRequired
