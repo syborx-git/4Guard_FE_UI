@@ -303,6 +303,9 @@ export class ChatService {
             this.messages.update((list) =>
               list.some((m) => m.id === payload.id) ? list : [...list, payload]
             );
+            if (payload.attachments?.some((a) => !a.storageUrl)) {
+              this.loadMessages(conversationId).subscribe({ error: () => {} });
+            }
             if (payload.senderId !== this.authState.currentUser()?.id) {
               this.markAsRead(conversationId).subscribe({ error: () => {} });
             }
@@ -315,6 +318,12 @@ export class ChatService {
             evt.eventType === 'REACTION_UPDATED'
           ) {
             this.messages.update((list) => list.map((m) => (m.id === payload.id ? payload : m)));
+            if (
+              evt.eventType === 'MESSAGE_UPDATED' &&
+              payload.attachments?.some((a) => !a.storageUrl)
+            ) {
+              this.loadMessages(conversationId).subscribe({ error: () => {} });
+            }
             if (evt.eventType === 'MESSAGE_DELETED') {
               this.syncPinnedMessage({ ...payload, isPinned: false });
             }

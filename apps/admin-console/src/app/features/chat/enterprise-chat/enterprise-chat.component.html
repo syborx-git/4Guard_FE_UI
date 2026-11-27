@@ -487,7 +487,7 @@
         @if (att.contentType.startsWith('image/')) {
         <button type="button" class="ec-evidence-card ec-evidence-card--img" (click)="openPreview(att)"
           [title]="att.fileName">
-          <img [src]="att.storageUrl" [alt]="att.fileName" class="ec-evidence-thumb"
+          <img [src]="att.storageUrl" [alt]="att.fileName" class="ec-evidence-thumb" draggable="false"
             (contextmenu)="!canDownloadAttachments() && $event.preventDefault()" />
           <span class="ec-evidence-name">{{ att.fileName }}</span>
         </button>
@@ -578,7 +578,7 @@
             <button type="button" (click)="openPreview(att)"
               class="ec-att-image-link text-left cursor-pointer border-0 bg-transparent p-0"
               title="Previsualizar imagen">
-              <img [src]="att.storageUrl" [alt]="att.fileName" class="ec-att-image"
+              <img [src]="att.storageUrl" [alt]="att.fileName" class="ec-att-image" draggable="false"
                 (contextmenu)="!canDownloadAttachments() && $event.preventDefault()" />
             </button>
             } @else {
@@ -910,12 +910,27 @@
 
       <div class="ec-preview-modal__body">
         @if (att.contentType.startsWith('image/')) {
-        <img [src]="att.storageUrl" [alt]="att.fileName" class="ec-preview-img"
+        <img [src]="att.storageUrl" [alt]="att.fileName" class="ec-preview-img" draggable="false"
           (contextmenu)="!canDownloadAttachments() && $event.preventDefault()" />
         } @else {
         @if (safePreviewUrl(); as safeUrl) {
         <iframe [src]="safeUrl" class="ec-preview-pdf" title="Vista previa PDF"></iframe>
         }
+        }
+        @if (!canDownloadAttachments()) {
+        <div class="ec-dlp-watermark" aria-hidden="true">
+          @for (tile of watermarkTiles; track tile) {
+          <span class="ec-dlp-watermark__item">{{ watermarkText() }}</span>
+          }
+        </div>
+        }
+        @if (isPrivacyCurtainActive()) {
+        <div class="ec-dlp-curtain" role="alert" aria-live="polite">
+          <div class="ec-dlp-curtain__card">
+            <span class="material-symbols-outlined ec-dlp-curtain__icon">shield_lock</span>
+            <p class="ec-dlp-curtain__text">Contenido protegido — vuelve a la ventana para continuar</p>
+          </div>
+        </div>
         }
       </div>
     </div>
@@ -1026,5 +1041,15 @@
   </div>
   }
   }
+  }
+
+  <!-- CORTINA DE PRIVACIDAD DLP -->
+  @if (isPrivacyCurtainActive()) {
+  <div class="ec-dlp-curtain ec-dlp-curtain--shell" role="alert" aria-live="polite">
+    <div class="ec-dlp-curtain__card">
+      <span class="material-symbols-outlined ec-dlp-curtain__icon">shield_lock</span>
+      <p class="ec-dlp-curtain__text">Contenido protegido — vuelve a la ventana para continuar</p>
+    </div>
+  </div>
   }
 </div>

@@ -87,10 +87,13 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   protected readonly showUsageGuide = signal<boolean>(false);
   protected readonly readInfoMessage = signal<ChatMessage | null>(null);
   protected readonly isHeaderMenuOpen = signal<boolean>(false);
+  protected readonly isPrivacyCurtainActive = signal<boolean>(false);
+  protected readonly watermarkTiles = Array.from({ length: 18 }, (_, i) => i);
 
   private lastTypingSentAt = 0;
   private highlightTimeout: any = null;
   private searchDebounceTimeout: any = null;
+  private privacyCurtainTimeout: any = null;
 
   protected readonly quickEmojis = ['👍', '✅', '👀', '🚚', '⚠️'];
 
@@ -146,6 +149,12 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
 
   protected readonly canCreateSpace = this.isDirector;
   protected readonly canDownloadAttachments = this.isManagerOrDirector;
+
+  protected readonly watermarkText = computed(() => {
+    const u = this.authState.currentUser();
+    const tag = u?.username ? '@' + u.username : this.currentUserName();
+    return tag + ' · 4GUARD CONFIDENCIAL · ' + new Date().toLocaleDateString('es-MX');
+  });
 
   protected readonly safePreviewUrl = computed<SafeResourceUrl | null>(() => {
     const att = this.previewAttachment();
@@ -244,10 +253,69 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
     );
   });
 
+  private readonly handleWindowKeydown = (event: KeyboardEvent): void => {
+    if (this.canDownloadAttachments()) return;
+
+    if (event.key === 'PrintScreen') {
+      event.preventDefault();
+      this.isPrivacyCurtainActive.set(true);
+      clearTimeout(this.privacyCurtainTimeout);
+      this.privacyCurtainTimeout = setTimeout(() => {
+        this.isPrivacyCurtainActive.set(false);
+      }, 2500);
+      try {
+        navigator.clipboard?.writeText?.('')?.catch?.(() => {});
+      } catch {
+        // Ignorar restricciones de portapapeles
+      }
+      return;
+    }
+
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      (event.key.toLowerCase() === 'p' || event.key.toLowerCase() === 's')
+    ) {
+      event.preventDefault();
+    }
+  };
+
+  private readonly handleWindowBlur = (): void => {
+    if (!this.canDownloadAttachments() && (this.previewAttachment() !== null || this.mode === 'fullscreen')) {
+      clearTimeout(this.privacyCurtainTimeout);
+      this.isPrivacyCurtainActive.set(true);
+    }
+  };
+
+  private readonly handleWindowFocus = (): void => {
+    clearTimeout(this.privacyCurtainTimeout);
+    this.isPrivacyCurtainActive.set(false);
+  };
+
+  private readonly handleVisibilityChange = (): void => {
+    if (typeof document === 'undefined') return;
+    if (document.visibilityState === 'hidden') {
+      if (!this.canDownloadAttachments() && (this.previewAttachment() !== null || this.mode === 'fullscreen')) {
+        clearTimeout(this.privacyCurtainTimeout);
+        this.isPrivacyCurtainActive.set(true);
+      }
+    } else if (document.visibilityState === 'visible') {
+      clearTimeout(this.privacyCurtainTimeout);
+      this.isPrivacyCurtainActive.set(false);
+    }
+  };
+
   ngOnInit(): void {
     this.chatService.loadConversations().subscribe();
     this.chatService.loadUsers().subscribe();
     this.chatService.startPolling();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', this.handleWindowKeydown);
+      window.addEventListener('blur', this.handleWindowBlur);
+      window.addEventListener('focus', this.handleWindowFocus);
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    }
   }
 
   onSelectConversation(conv: ConversationSummary): void {
@@ -792,6 +860,15 @@ export class EnterpriseChatComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     clearTimeout(this.highlightTimeout);
     clearTimeout(this.searchDebounceTimeout);
+    clearTimeout(this.privacyCurtainTimeout);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this.handleWindowKeydown);
+      window.removeEventListener('blur', this.handleWindowBlur);
+      window.removeEventListener('focus', this.handleWindowFocus);
+    }
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    }
     this.stopCameraStream();
   }
 }
