@@ -3,14 +3,11 @@
        GOLDEN STANDARD HERO HEADER
        ══════════════════════════════════════════════════════════════════ -->
   <header class="hero-header">
-    <div class="hero-header__icon-box">
-      <span class="material-symbols-outlined">shield</span>
-    </div>
-
     <div class="hero-header__content">
-      <span class="hero-header__eyebrow">DIRECCIÓN GENERAL • GOBIERNO DE COMUNICACIÓN</span>
-
-      <h1 class="hero-header__title">Panel de Control de Chats</h1>
+      <div class="hero-header__title-row">
+        <span class="material-symbols-outlined hero-header__icon">shield</span>
+        <h1 class="hero-header__title">Panel de Control de Chats</h1>
+      </div>
       <p class="hero-header__subtitle">
         Supervisión de espacios, control de accesos y auditoría de comunicación operativa.
       </p>
@@ -18,9 +15,9 @@
 
     <div class="hero-header__actions">
       @if (lastUpdatedAt(); as updated) {
-        <span class="cg-sync-pill" title="Última actualización manual">
+        <span class="cg-sync-pill" title="Última sincronización">
           <span class="cg-sync-pill__dot"></span>
-          <span>Corte {{ formatTimeOnly(updated) }}</span>
+          <span>Sincronizado {{ formatTimeOnly(updated) }}</span>
         </span>
       }
 
@@ -131,7 +128,7 @@
         </div>
       } @else {
         @if (overview(); as ov) {
-        <!-- GRID DE TARJETAS KPI -->
+        <!-- GRID DE 4 TARJETAS KPI BALANCEADAS (1 FILA COMPLETA) -->
         <div class="cg-kpi-grid">
           <!-- KPI 1: Usuarios Online -->
           <article class="work-kpi-card work-kpi-card--emerald">
@@ -155,7 +152,7 @@
             </div>
           </article>
 
-          <!-- KPI 2: Espacios -->
+          <!-- KPI 2: Espacios y DMs -->
           <article class="work-kpi-card work-kpi-card--gold">
             <div class="work-kpi-card__header">
               <span class="work-kpi-card__label">ESPACIOS OPERATIVOS</span>
@@ -169,13 +166,15 @@
             <div class="work-kpi-card__footer cg-kpi-footer-col">
               <div class="cg-kpi-meta-row">
                 <span class="work-kpi-dot dot--amber"></span>
-                <span>{{ ov.frozenSpaces }} congelados • {{ ov.archivedSpaces }} archivados</span>
+                <span>{{ ov.frozenSpaces }} congelados • {{ ov.totalDms }} directos</span>
               </div>
-              <span class="cg-kpi-sub-muted">{{ ov.totalDms }} conversaciones directas (1:1)</span>
+              @if (ov.archivedSpaces > 0) {
+                <span class="cg-kpi-sub-muted">{{ ov.archivedSpaces }} espacios archivados</span>
+              }
             </div>
           </article>
 
-          <!-- KPI 3: Actividad 7 días (clic directo a Tab 4 Mensajes) -->
+          <!-- KPI 3: Actividad y Evidencias (clic directo a Tab 4 Mensajes) -->
           <button
             type="button"
             class="work-kpi-card work-kpi-card--blue work-kpi-card--clickable"
@@ -194,28 +193,11 @@
                 <span class="work-kpi-dot dot--blue"></span>
                 <span>{{ ov.editedMessagesLast7Days }} editados • {{ ov.deletedMessagesLast7Days }} eliminados</span>
               </div>
-              <span class="cg-kpi-sub-muted">Clic para ver bitácora →</span>
+              <span class="cg-kpi-sub-muted">{{ ov.totalAttachmentsCount | number }} evidencias ({{ formatMb(ov.totalAttachmentsSizeMb) }})</span>
             </div>
           </button>
 
-          <!-- KPI 4: Almacenamiento Adjuntos -->
-          <article class="work-kpi-card work-kpi-card--purple">
-            <div class="work-kpi-card__header">
-              <span class="work-kpi-card__label">ALMACENAMIENTO ADJUNTOS</span>
-              <div class="work-kpi-card__icon-box">
-                <span class="material-symbols-outlined">perm_media</span>
-              </div>
-            </div>
-            <div class="work-kpi-card__value">{{ formatMb(ov.totalAttachmentsSizeMb) }}</div>
-            <div class="work-kpi-card__footer cg-kpi-footer-col">
-              <div class="cg-kpi-meta-row">
-                <span class="work-kpi-dot dot--purple"></span>
-                <span><strong>{{ ov.totalAttachmentsCount | number }}</strong> archivos de evidencia</span>
-              </div>
-            </div>
-          </article>
-
-          <!-- KPI 5: Alertas DLP 7d (Rojo si > 0, clic directo a Tab 4) -->
+          <!-- KPI 4: Seguridad y DLP (Rojo si > 0, clic directo a Tab 4) -->
           <button
             type="button"
             class="work-kpi-card work-kpi-card--clickable"
@@ -225,7 +207,7 @@
             title="Haz clic para abrir la Auditoría DLP"
           >
             <div class="work-kpi-card__header">
-              <span class="work-kpi-card__label">ALERTAS DLP (7 DÍAS)</span>
+              <span class="work-kpi-card__label">SEGURIDAD Y DLP (7 DÍAS)</span>
               <div class="work-kpi-card__icon-box" [class.cg-icon-danger]="ov.dlpAlertsLast7Days > 0">
                 <span class="material-symbols-outlined">
                   {{ ov.dlpAlertsLast7Days > 0 ? 'gpp_maybe' : 'verified_user' }}
@@ -243,24 +225,24 @@
                   [class.dot--emerald]="ov.dlpAlertsLast7Days === 0"
                 ></span>
                 <span>
-                  {{ ov.dlpAlertsLast7Days > 0 ? 'Clic para auditar incidentes →' : 'Sin incidentes en los últimos 7 días' }}
+                  {{ ov.dlpAlertsLast7Days > 0 ? 'Incidentes detectados • Clic para auditar →' : 'Perímetro protegido sin incidentes' }}
                 </span>
               </div>
             </div>
           </button>
         </div>
 
-        <!-- MINI FEED DE ÚLTIMAS 5 ALERTAS DLP -->
+        <!-- PANEL DE MONITOREO DE SEGURIDAD DLP -->
         <article class="cg-card">
           <header class="cg-card__header">
             <div>
-              <span class="cg-card__eyebrow">TELEMETRÍA DE PREVENCIÓN DE FUGA DE DATOS</span>
-              <h2 class="cg-card__title">Últimas 5 Alertas DLP Recientes</h2>
+              <span class="cg-card__eyebrow">MONITOREO DE PREVENCIÓN DE FUGA DE INFORMACIÓN</span>
+              <h2 class="cg-card__title">Incidentes y Telemetría DLP (Últimos 7 Días)</h2>
             </div>
             <div class="cg-card__header-actions">
               <button type="button" class="cg-btn-gold" (click)="goToDlpAudit()">
                 <span class="material-symbols-outlined">policy</span>
-                <span>Ir a Auditoría DLP</span>
+                <span>Bitácora Forense DLP →</span>
               </button>
             </div>
           </header>
