@@ -66,6 +66,7 @@ export class RemissionHistoryComponent implements OnInit {
   readonly isLoading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
   readonly selectedItem = signal<RemissionHistoryItem | null>(null);
+  readonly isKpiCollapsed = signal<boolean>(true);
 
   readonly summary = computed<RemissionHistorySummary>(
     () => this.data()?.summary ?? EMPTY_SUMMARY
@@ -231,6 +232,10 @@ export class RemissionHistoryComponent implements OnInit {
     if (next < 1 || next > this.totalPages()) return;
     this.page.set(next);
     this.load();
+  }
+
+  toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update(v => !v);
   }
 
   openDetail(item: RemissionHistoryItem): void {

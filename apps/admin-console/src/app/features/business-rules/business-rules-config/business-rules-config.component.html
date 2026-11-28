@@ -11,47 +11,50 @@
     <div class="br-hero__content">
 
       <!-- Contenido Izquierdo -->
-      <div class="br-hero__main">
-        <nav class="br-hero__breadcrumb" aria-label="Navegación secundaria">
-          <a routerLink="/admin" class="btn-back-admin" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
-            <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
-            <span>Administración WMS</span>
-          </a>
-          <span class="br-hero__breadcrumb-sep">·</span>
-          <span class="br-hero__breadcrumb-current">CONFIGURACIÓN OPERATIVA</span>
-          <span class="br-hero__badge">HU-131</span>
-        </nav>
+      <div class="br-hero__left">
+        <div class="br-hero__icon-wrap">
+          <span class="material-symbols-outlined br-hero__icon">gavel</span>
+        </div>
 
-        <h1 class="br-hero__title">
-          <span class="material-symbols-outlined br-hero__title-icon">gavel</span>
-          Motor de Reglas de Negocio
-        </h1>
+        <div class="br-hero__main">
+          <nav class="br-hero__breadcrumb" aria-label="Navegación secundaria">
+            <a routerLink="/admin" class="btn-back-admin" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="br-hero__breadcrumb-sep">·</span>
+            <span class="br-hero__breadcrumb-current">CONFIGURACIÓN OPERATIVA</span>
+            <span class="br-hero__badge">HU-131</span>
+          </nav>
 
-        <p class="br-hero__description">
-          Configura las estrategias, parámetros y restricciones que controlan el comportamiento operativo del WMS.
-        </p>
+          <h1 class="br-hero__title">Motor de Reglas de Negocio</h1>
 
-        <!-- Estado Enriquecido del Motor Operativo (Punto 6) -->
-        <div class="br-hero__meta">
-          <span class="br-hero__meta-item br-hero__meta-item--live">
-            <span class="br-live-dot"></span>
-            Motor operativo estable
-          </span>
-          <span class="br-hero__meta-sep">•</span>
-          <span class="br-hero__meta-item">
-            <span class="material-symbols-outlined">check_circle</span>
-            {{ kpis().totalActive }} reglas activas
-          </span>
-          <span class="br-hero__meta-sep">•</span>
-          <span class="br-hero__meta-item br-hero__meta-item--critical">
-            <span class="material-symbols-outlined">warning</span>
-            {{ kpis().totalCritical }} reglas críticas
-          </span>
-          <span class="br-hero__meta-sep">•</span>
-          <span class="br-hero__meta-item">
-            <span class="material-symbols-outlined">pending_actions</span>
-            1 modificación pendiente
-          </span>
+          <p class="br-hero__description">
+            Configura las estrategias, parámetros y restricciones que controlan el comportamiento operativo del WMS.
+          </p>
+
+          <!-- Estado Enriquecido del Motor Operativo (Punto 6) -->
+          <div class="br-hero__meta">
+            <span class="br-hero__meta-item br-hero__meta-item--live">
+              <span class="br-live-dot"></span>
+              Motor operativo estable
+            </span>
+            <span class="br-hero__meta-sep">•</span>
+            <span class="br-hero__meta-item">
+              <span class="material-symbols-outlined">check_circle</span>
+              {{ kpis().totalActive }} reglas activas
+            </span>
+            <span class="br-hero__meta-sep">•</span>
+            <span class="br-hero__meta-item br-hero__meta-item--critical">
+              <span class="material-symbols-outlined">warning</span>
+              {{ kpis().totalCritical }} reglas críticas
+            </span>
+            <span class="br-hero__meta-sep">•</span>
+            <span class="br-hero__meta-item">
+              <span class="material-symbols-outlined">pending_actions</span>
+              1 modificación pendiente
+            </span>
+          </div>
         </div>
       </div>
 

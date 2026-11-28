@@ -24,6 +24,7 @@
   --text-secondary: #5a6477;
   --text-muted:     #8b94a3;
   --text-gold:      #9b7626;
+  --font-display:   'Outfit', 'Inter', system-ui, sans-serif;
   --radius-xl:      18px;
 
   display: block;
@@ -78,7 +79,8 @@
 
 /* ── Dark Mode Override ──────────────────────────────────────────────── */
 :host-context(.theme-dark),
-:host-context(.dark) {
+:host-context(.dark),
+:host-context([data-theme='dark']) {
   --gold:           #d0af67;
   --gold-light:     #e1c47c;
   --gold-bg:        rgba(208, 175, 103, 0.12);
@@ -133,6 +135,14 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.35));
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  transition: all 0.25s ease;
 }
 
 .carriers-header__top {
@@ -153,15 +163,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 54px;
-  height: 54px;
+  width: 52px;
+  height: 52px;
   border-radius: 14px;
   background: linear-gradient(145deg, #172033, #25324a);
+  border: 1px solid rgba(197, 168, 107, 0.35);
   box-shadow: 0 8px 20px rgba(23, 32, 51, 0.22);
   flex-shrink: 0;
 }
 
-.carriers-header__icon { color: #fff; font-size: 26px; }
+.carriers-header__icon { color: var(--gold-light, #e0c87a); font-size: 26px; }
 
 .carriers-header__copy {
   display: flex;
@@ -177,7 +188,7 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ac-gold);
+  color: var(--text-gold);
 }
 
 .carriers-header__eyebrow-tag {
@@ -186,7 +197,7 @@
   border: 1px solid var(--ac-gold-border);
   border-radius: 5px;
   padding: 1px 7px;
-  color: var(--ac-gold);
+  color: var(--text-gold);
   transition: all var(--ac-ease);
 }
 .carriers-header__eyebrow-tag:hover {
@@ -197,8 +208,9 @@
 .carriers-header__eyebrow-sep { opacity: 0.4; }
 
 .carriers-header__title {
-  font-size: 1.7rem;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--ac-txt-1);
   margin: 0;
@@ -206,7 +218,7 @@
 }
 
 .carriers-header__subtitle {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--ac-txt-2);
   margin: 0;
 }

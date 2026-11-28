@@ -10,7 +10,8 @@
       <!-- Breadcrumb Row: Botón Regresar ADMINISTRACIÓN WMS + Categoría -->
       <div class="hero-header__breadcrumb">
         <a routerLink="/admin" class="btn-back-admin" title="Regresar al Hub de Administración">
-          <span class="back-arrow">←</span> ADMINISTRACIÓN WMS
+          <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+          <span>Administración WMS</span>
         </a>
         <span class="breadcrumb-dot">·</span>
         <span class="hero-header__eyebrow">MONITOREO Y AUDITORÍA · SEGURIDAD</span>
@@ -271,68 +272,116 @@
   @if (activeTab() === 'work-hours' && isDirectorGeneral()) {
     <section class="work-hours-container">
 
-      <!-- ── 1. TARJETAS DE KPIS EJECUTIVOS DE JORNADA ── -->
-      <div class="work-hours-kpis-grid">
-        <!-- KPI 1: Total Horas Hombre -->
-        <div class="work-kpi-card work-kpi-card--gold">
-          <div class="work-kpi-card__header">
-            <span class="work-kpi-card__label">TOTAL HORAS HOMBRE</span>
-            <div class="work-kpi-card__icon-box">
-              <span class="material-symbols-outlined">timer</span>
-            </div>
-          </div>
-          <div class="work-kpi-card__value">{{ kpiTotalHoursFormatted() }}</div>
-          <div class="work-kpi-card__footer">
-            <span class="material-symbols-outlined text-xs">verified</span>
-            <span>Tiempo efectivo acumulado hoy</span>
-          </div>
+      <!-- ── 1. TARJETAS DE KPIS EJECUTIVOS DE JORNADA (COLAPSABLE) ── -->
+      <section aria-label="Métricas de Jornadas y Horas Trabajadas" class="wms-kpi-section">
+        <div class="wms-kpi-header">
+          <span class="wms-kpi-header__title">
+            <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+            <span>Métricas de Jornadas y Productividad</span>
+          </span>
+          <button
+            type="button"
+            (click)="toggleKpiCollapse()"
+            class="wms-kpi-toggle-btn"
+            [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+          >
+            <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+            <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+          </button>
         </div>
 
-        <!-- KPI 2: Colaboradores Activos -->
-        <div class="work-kpi-card work-kpi-card--emerald">
-          <div class="work-kpi-card__header">
-            <span class="work-kpi-card__label">PERSONAL CON ASISTENCIA</span>
-            <div class="work-kpi-card__icon-box">
-              <span class="material-symbols-outlined">badge</span>
-            </div>
-          </div>
-          <div class="work-kpi-card__value">{{ kpiActiveUsersCount() }} / {{ filteredWorkHours().length }}</div>
-          <div class="work-kpi-card__footer">
-            <span class="work-kpi-dot dot--emerald"></span>
-            <span>Con registro de inicio de sesión</span>
-          </div>
-        </div>
+        @if (isKpiCollapsed()) {
+          <div class="wms-kpi-summary-bar animate-fade-in">
+            <div class="wms-kpi-summary-items">
+              <div class="wms-kpi-summary-item">
+                <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+                <span class="wms-kpi-summary-label">Total Horas Hombre:</span>
+                <strong class="wms-kpi-summary-value">{{ kpiTotalHoursFormatted() }}</strong>
+              </div>
 
-        <!-- KPI 3: Promedio Horas / Usuario -->
-        <div class="work-kpi-card work-kpi-card--blue">
-          <div class="work-kpi-card__header">
-            <span class="work-kpi-card__label">PROMEDIO POR JORNADA</span>
-            <div class="work-kpi-card__icon-box">
-              <span class="material-symbols-outlined">pace</span>
-            </div>
-          </div>
-          <div class="work-kpi-card__value">{{ kpiAvgMinutesPerUser() }}</div>
-          <div class="work-kpi-card__footer">
-            <span class="material-symbols-outlined text-xs">trending_up</span>
-            <span>Meta estándar: 8h 00m</span>
-          </div>
-        </div>
+              <div class="wms-kpi-summary-item">
+                <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+                <span class="wms-kpi-summary-label">Con Asistencia:</span>
+                <strong class="wms-kpi-summary-value text-emerald-600 dark:text-emerald-400">{{ kpiActiveUsersCount() }} / {{ filteredWorkHours().length }}</strong>
+              </div>
 
-        <!-- KPI 4: Desconexiones por Inactividad (-15m) -->
-        <div class="work-kpi-card work-kpi-card--amber">
-          <div class="work-kpi-card__header">
-            <span class="work-kpi-card__label">EXPULSIONES POR INACTIVIDAD</span>
-            <div class="work-kpi-card__icon-box">
-              <span class="material-symbols-outlined">hourglass_disabled</span>
+              <div class="wms-kpi-summary-item">
+                <span class="wms-kpi-summary-dot wms-kpi-summary-dot--blue"></span>
+                <span class="wms-kpi-summary-label">Promedio Jornada:</span>
+                <strong class="wms-kpi-summary-value text-blue-600 dark:text-blue-400">{{ kpiAvgMinutesPerUser() }}</strong>
+              </div>
+
+              <div class="wms-kpi-summary-item">
+                <span class="wms-kpi-summary-dot wms-kpi-summary-dot--warning"></span>
+                <span class="wms-kpi-summary-label">Expulsiones Inactividad:</span>
+                <strong class="wms-kpi-summary-value text-amber-500">{{ kpiTotalTimeouts() }}</strong>
+              </div>
             </div>
           </div>
-          <div class="work-kpi-card__value">{{ kpiTotalTimeouts() }}</div>
-          <div class="work-kpi-card__footer">
-            <span class="work-kpi-dot dot--amber"></span>
-            <span>-15 min deducidos por cada timeout</span>
+        } @else {
+          <div class="work-hours-kpis-grid animate-fade-in">
+            <!-- KPI 1: Total Horas Hombre -->
+            <div class="work-kpi-card work-kpi-card--gold">
+              <div class="work-kpi-card__header">
+                <span class="work-kpi-card__label">TOTAL HORAS HOMBRE</span>
+                <div class="work-kpi-card__icon-box">
+                  <span class="material-symbols-outlined">timer</span>
+                </div>
+              </div>
+              <div class="work-kpi-card__value">{{ kpiTotalHoursFormatted() }}</div>
+              <div class="work-kpi-card__footer">
+                <span class="material-symbols-outlined text-xs">verified</span>
+                <span>Tiempo efectivo acumulado hoy</span>
+              </div>
+            </div>
+
+            <!-- KPI 2: Colaboradores Activos -->
+            <div class="work-kpi-card work-kpi-card--emerald">
+              <div class="work-kpi-card__header">
+                <span class="work-kpi-card__label">PERSONAL CON ASISTENCIA</span>
+                <div class="work-kpi-card__icon-box">
+                  <span class="material-symbols-outlined">badge</span>
+                </div>
+              </div>
+              <div class="work-kpi-card__value">{{ kpiActiveUsersCount() }} / {{ filteredWorkHours().length }}</div>
+              <div class="work-kpi-card__footer">
+                <span class="work-kpi-dot dot--emerald"></span>
+                <span>Con registro de inicio de sesión</span>
+              </div>
+            </div>
+
+            <!-- KPI 3: Promedio Horas / Usuario -->
+            <div class="work-kpi-card work-kpi-card--blue">
+              <div class="work-kpi-card__header">
+                <span class="work-kpi-card__label">PROMEDIO POR JORNADA</span>
+                <div class="work-kpi-card__icon-box">
+                  <span class="material-symbols-outlined">pace</span>
+                </div>
+              </div>
+              <div class="work-kpi-card__value">{{ kpiAvgMinutesPerUser() }}</div>
+              <div class="work-kpi-card__footer">
+                <span class="material-symbols-outlined text-xs">trending_up</span>
+                <span>Meta estándar: 8h 00m</span>
+              </div>
+            </div>
+
+            <!-- KPI 4: Desconexiones por Inactividad (-15m) -->
+            <div class="work-kpi-card work-kpi-card--amber">
+              <div class="work-kpi-card__header">
+                <span class="work-kpi-card__label">EXPULSIONES POR INACTIVIDAD</span>
+                <div class="work-kpi-card__icon-box">
+                  <span class="material-symbols-outlined">hourglass_disabled</span>
+                </div>
+              </div>
+              <div class="work-kpi-card__value">{{ kpiTotalTimeouts() }}</div>
+              <div class="work-kpi-card__footer">
+                <span class="work-kpi-dot dot--amber"></span>
+                <span>-15 min deducidos por cada timeout</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      </section>
 
       <!-- ── 2. BARRA DE FILTROS Y CONTROLES EJECUTIVOS ── -->
       <div class="work-directory-card">

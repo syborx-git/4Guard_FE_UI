@@ -49,6 +49,7 @@ export class AuditConsoleComponent implements OnInit {
   readonly isLoading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
   readonly selectedItem = signal<AuditLogItem | null>(null);
+  readonly isKpiCollapsed = signal<boolean>(true);
 
   readonly filteredItems = computed(() => {
     const q = this.searchTerm().trim().toLowerCase();
@@ -175,6 +176,10 @@ export class AuditConsoleComponent implements OnInit {
 
   closeDetail(): void {
     this.selectedItem.set(null);
+  }
+
+  toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update(v => !v);
   }
 
   formatDateTime(value: string | null): string {

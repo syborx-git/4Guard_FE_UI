@@ -44,52 +44,106 @@
     </div>
   </header>
 
-  <!-- Métricas Ejecutivas de Trazabilidad (KPI Cards con Borde Prestige Gold) -->
-  <section class="history-kpis" aria-label="Resumen ejecutivo del historial">
-    <article class="history-kpi">
-      <span class="history-kpi__icon material-symbols-outlined">receipt_long</span>
-      <div class="history-kpi__content">
-        <span class="history-kpi__label">TOTAL REMISIONES</span>
-        <strong class="history-kpi__value">{{ summary().total }}</strong>
-        <span class="history-kpi__subtext">Registros consolidados</span>
-      </div>
-    </article>
+  <!-- Métricas Ejecutivas de Trazabilidad (Colapsable / Comprimible) -->
+  <section class="wms-kpi-section" aria-label="Métricas de Remisiones">
+    <div class="wms-kpi-header">
+      <span class="wms-kpi-header__title">
+        <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+        <span>Métricas de Remisiones</span>
+      </span>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="wms-kpi-toggle-btn"
+        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+      >
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
+    </div>
 
-    <article class="history-kpi history-kpi--success">
-      <span class="history-kpi__icon material-symbols-outlined">check_circle</span>
-      <div class="history-kpi__content">
-        <span class="history-kpi__label">VERIFICADAS (COMPLETADAS)</span>
-        <strong class="history-kpi__value">{{ summary().completed }}</strong>
-        <span class="history-kpi__subtext">Aprobadas con descarga OK</span>
-      </div>
-    </article>
+    @if (isKpiCollapsed()) {
+      <div class="wms-kpi-summary-bar animate-fade-in">
+        <div class="wms-kpi-summary-items">
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+            <span class="wms-kpi-summary-label">Total Remisiones:</span>
+            <strong class="wms-kpi-summary-value">{{ summary().total }}</strong>
+          </div>
 
-    <article class="history-kpi history-kpi--danger">
-      <span class="history-kpi__icon material-symbols-outlined">cancel</span>
-      <div class="history-kpi__content">
-        <span class="history-kpi__label">CANCELADAS / ANULADAS</span>
-        <strong class="history-kpi__value">{{ summary().cancelled }}</strong>
-        <span class="history-kpi__subtext">Con bitácora de auditoría</span>
-      </div>
-    </article>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+            <span class="wms-kpi-summary-label">Verificadas:</span>
+            <strong class="wms-kpi-summary-value">{{ summary().completed }}</strong>
+          </div>
 
-    <article class="history-kpi history-kpi--warning">
-      <span class="history-kpi__icon material-symbols-outlined">pending_actions</span>
-      <div class="history-kpi__content">
-        <span class="history-kpi__label">PENDIENTES EN CURSO</span>
-        <strong class="history-kpi__value">{{ summary().pending }}</strong>
-        <span class="history-kpi__subtext">En caseta o patio</span>
-      </div>
-    </article>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--danger"></span>
+            <span class="wms-kpi-summary-label">Canceladas:</span>
+            <strong class="wms-kpi-summary-value">{{ summary().cancelled }}</strong>
+          </div>
 
-    <article class="history-kpi history-kpi--load">
-      <span class="history-kpi__icon material-symbols-outlined">pallet</span>
-      <div class="history-kpi__content">
-        <span class="history-kpi__label">CARGA EN VISTA</span>
-        <strong class="history-kpi__value">{{ totalPalletsInView() }} <small>tarimas</small></strong>
-        <span class="history-kpi__subtext">{{ totalPiecesInView() }} piezas totales</span>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--warning"></span>
+            <span class="wms-kpi-summary-label">Pendientes:</span>
+            <strong class="wms-kpi-summary-value">{{ summary().pending }}</strong>
+          </div>
+
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--gold"></span>
+            <span class="wms-kpi-summary-label">Carga en vista:</span>
+            <strong class="wms-kpi-summary-value">{{ totalPalletsInView() }} tar. / {{ totalPiecesInView() }} pzs.</strong>
+          </div>
+        </div>
       </div>
-    </article>
+    } @else {
+      <div class="history-kpis animate-fade-in" aria-label="Resumen ejecutivo del historial">
+        <article class="history-kpi">
+          <span class="history-kpi__icon material-symbols-outlined">receipt_long</span>
+          <div class="history-kpi__content">
+            <span class="history-kpi__label">TOTAL REMISIONES</span>
+            <strong class="history-kpi__value">{{ summary().total }}</strong>
+            <span class="history-kpi__subtext">Registros consolidados</span>
+          </div>
+        </article>
+
+        <article class="history-kpi history-kpi--success">
+          <span class="history-kpi__icon material-symbols-outlined">check_circle</span>
+          <div class="history-kpi__content">
+            <span class="history-kpi__label">VERIFICADAS (COMPLETADAS)</span>
+            <strong class="history-kpi__value">{{ summary().completed }}</strong>
+            <span class="history-kpi__subtext">Aprobadas con descarga OK</span>
+          </div>
+        </article>
+
+        <article class="history-kpi history-kpi--danger">
+          <span class="history-kpi__icon material-symbols-outlined">cancel</span>
+          <div class="history-kpi__content">
+            <span class="history-kpi__label">CANCELADAS / ANULADAS</span>
+            <strong class="history-kpi__value">{{ summary().cancelled }}</strong>
+            <span class="history-kpi__subtext">Con bitácora de auditoría</span>
+          </div>
+        </article>
+
+        <article class="history-kpi history-kpi--warning">
+          <span class="history-kpi__icon material-symbols-outlined">pending_actions</span>
+          <div class="history-kpi__content">
+            <span class="history-kpi__label">PENDIENTES EN CURSO</span>
+            <strong class="history-kpi__value">{{ summary().pending }}</strong>
+            <span class="history-kpi__subtext">En caseta o patio</span>
+          </div>
+        </article>
+
+        <article class="history-kpi history-kpi--load">
+          <span class="history-kpi__icon material-symbols-outlined">pallet</span>
+          <div class="history-kpi__content">
+            <span class="history-kpi__label">CARGA EN VISTA</span>
+            <strong class="history-kpi__value">{{ totalPalletsInView() }} <small>tarimas</small></strong>
+            <span class="history-kpi__subtext">{{ totalPiecesInView() }} piezas totales</span>
+          </div>
+        </article>
+      </div>
+    }
   </section>
 
   <!-- Barra de Filtros Avanzada con Soporte Dual Theme -->

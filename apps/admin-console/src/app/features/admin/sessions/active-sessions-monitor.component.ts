@@ -63,11 +63,16 @@ export class ActiveSessionsMonitorComponent implements OnInit {
   // Estado reactivo: Horas Trabajadas (Dirección General)
   workHours = signal<UserWorkHours[]>([]);
   isLoadingWorkHours = signal<boolean>(false);
+  isKpiCollapsed = signal<boolean>(false);
   readonly todayIso = new Date().toISOString().slice(0, 10);
   selectedDate = signal<string>(new Date().toISOString().slice(0, 10));
   selectedRole = signal<string>('ALL');
   searchQuery = signal<string>('');
   expandedUserIds = signal<Set<string>>(new Set());
+
+  toggleKpiCollapse(): void {
+    this.isKpiCollapsed.update(v => !v);
+  }
 
   // Atajo de teclado ⌘K / Ctrl+K para buscar
   @HostListener('window:keydown', ['$event'])

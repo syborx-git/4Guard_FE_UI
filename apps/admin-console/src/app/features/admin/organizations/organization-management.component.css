@@ -63,43 +63,6 @@
   background: var(--bg-page);
 }
 
-:host-context(.theme-dark),
-:host-context(.dark) {
-  --border-card-gold: rgba(208, 175, 103, 0.28);
-  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
-
-  --bg-page:        #0b1119;
-  --bg-card:        rgba(17, 26, 38, 0.94);
-  --bg-card-hover:  rgba(23, 35, 50, 0.98);
-  --border-card:    rgba(255, 255, 255, 0.08);
-  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-
-  --text-primary:   #edf1f5;
-  --text-secondary: #9aa6b4;
-  --text-muted:     #667585;
-  --text-gold:      #d0af67;
-
-  --navy:           #dfe7ef;
-  --navy-mid:       #16212f;
-  --navy-light:     #1f2d3e;
-  --gold:           #d0af67;
-  --gold-light:     #e1c47c;
-  --gold-bg:        rgba(208, 175, 103, 0.12);
-  --gold-border:    rgba(208, 175, 103, 0.25);
-
-  --c-success:      #67c78b;
-  --c-success-bg:   rgba(76, 175, 112, 0.12);
-  --c-success-bdr:  rgba(76, 175, 112, 0.24);
-  --c-warning:      #e0aa4f;
-  --c-warning-bg:   rgba(224, 170, 79, 0.12);
-  --c-warning-bdr:  rgba(224, 170, 79, 0.24);
-  --c-danger:       #ef7773;
-  --c-danger-bg:    rgba(239, 83, 80, 0.12);
-  --c-danger-bdr:   rgba(239, 83, 80, 0.24);
-  --c-info:         #77a8df;
-  --c-info-bg:      rgba(96, 165, 250, 0.12);
-}
-
 /* ─────────────────────────────────────────────────────────────
    PÁGINA
    ───────────────────────────────────────────────────────────── */
@@ -320,10 +283,12 @@
 
 .orgs-split {
   display: flex;
+  flex-direction: column;
+  width: 100%;
   gap: 1.25rem;
   flex: 1;
   min-height: 0;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -610,6 +575,8 @@
 
 .orgs-detail {
   flex: 1;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32));
   border-top: 3.5px solid var(--gold) !important;
@@ -948,62 +915,6 @@
    TIMELINE AUDITORÍA EN VIVO — Heredado de styles.css global
    ───────────────────────────────────────────────────────────── */
 
-/* ─────────────────────────────────────────────────────────────
-   DARK MODE — :host-context(.theme-dark)
-   ───────────────────────────────────────────────────────────── */
-
-:host-context(.theme-dark) {
-  --bg-page:       #0d0b12;
-  --bg-card:       rgba(33, 29, 42, 0.90);
-  --border-card:   rgba(255,255,255,0.07);
-  --shadow-card:   0 18px 42px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04);
-  --text-primary:  #eceaf1;
-  --text-secondary:#9d99a8;
-  --text-muted:    #6a6577;
-  --text-gold:     #d6b667;
-  --gold-bg:       rgba(214, 182, 103, 0.08);
-  --gold-border:   rgba(214, 182, 103, 0.20);
-}
-
-:host-context(.theme-dark) .orgs-page {
-  background:
-    radial-gradient(circle at 90% 5%, rgba(197, 168, 107, 0.07), transparent 30rem),
-    var(--bg-page);
-  color: var(--text-primary);
-}
-
-:host-context(.theme-dark) .orgs-kpi-card,
-:host-context(.theme-dark) .orgs-directory,
-:host-context(.theme-dark) .orgs-detail {
-  background: var(--bg-card-exec);
-  border-color: var(--border-card-gold);
-  border-top: 3.5px solid var(--gold) !important;
-  box-shadow: var(--shadow-card);
-}
-
-:host-context(.theme-dark) .orgs-search__input,
-:host-context(.theme-dark) .orgs-filter-select,
-:host-context(.theme-dark) .fg-input,
-:host-context(.theme-dark) .fg-select,
-:host-context(.theme-dark) .fg-textarea {
-  background: rgba(255,255,255,0.04);
-  border-color: rgba(255,255,255,0.09);
-  color: var(--text-primary);
-}
-
-:host-context(.theme-dark) .org-item:hover { background: rgba(214, 182, 103, 0.04); }
-:host-context(.theme-dark) .org-item--selected { background: rgba(214, 182, 103, 0.07) !important; }
-
-:host-context(.theme-dark) .orgs-form-header {
-  background: rgba(24, 21, 30, 0.7);
-  border-color: var(--border-card);
-}
-
-:host-context(.theme-dark) .carriers-tl-content {
-  background: rgba(255,255,255,0.03);
-  border-color: rgba(255,255,255,0.07);
-}
-
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
@@ -1031,8 +942,12 @@
 
 :host-context(.theme-dark),
 :host-context(.dark) {
+  --border-card-gold: rgba(208, 175, 103, 0.28);
+  --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
+
   --navy:           #080e18;
   --navy-mid:       #0f172a;
+  --navy-light:     #1f2d3e;
   --gold:           #d0af67;
   --gold-light:     #e1c47c;
   --gold-bg:        rgba(208, 175, 103, 0.12);
@@ -1040,6 +955,7 @@
 
   --bg-page:        #080e18;
   --bg-card:        rgba(15, 23, 42, 0.95);
+  --bg-card-hover:  rgba(23, 35, 50, 0.98);
   --border-card:    rgba(255, 255, 255, 0.10);
   --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
@@ -1047,6 +963,40 @@
   --text-secondary: #94a3b8;
   --text-muted:     #64748b;
   --text-gold:      #d0af67;
+
+  --c-success:      #67c78b;
+  --c-success-bg:   rgba(76, 175, 112, 0.12);
+  --c-success-bdr:  rgba(76, 175, 112, 0.24);
+  --c-warning:      #e0aa4f;
+  --c-warning-bg:   rgba(224, 170, 79, 0.12);
+  --c-warning-bdr:  rgba(224, 170, 79, 0.24);
+  --c-danger:       #ef7773;
+  --c-danger-bg:    rgba(239, 83, 80, 0.12);
+  --c-danger-bdr:   rgba(239, 83, 80, 0.24);
+  --c-inactive:     #64748b;
+  --c-inactive-bg:  rgba(100, 116, 139, 0.12);
+  --c-info:         #77a8df;
+  --c-info-bg:      rgba(96, 165, 250, 0.12);
+}
+
+:host-context(.theme-dark) .orgs-header__eyebrow-btn:hover,
+:host-context(.dark) .orgs-header__eyebrow-btn:hover {
+  background: rgba(208, 175, 103, 0.22);
+  color: var(--gold-light);
+}
+
+:host-context(.theme-dark) .orgs-btn--primary,
+:host-context(.dark) .orgs-btn--primary {
+  background: linear-gradient(135deg, #d0af67 0%, #b8860b 100%);
+  color: #080e18;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(208, 175, 103, 0.25);
+}
+
+:host-context(.theme-dark) .orgs-btn--primary:hover:not(:disabled),
+:host-context(.dark) .orgs-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e1c47c 0%, #c59b27 100%);
+  box-shadow: 0 6px 18px rgba(208, 175, 103, 0.35);
 }
 
 :host-context(.theme-dark) .orgs-page,
@@ -1078,6 +1028,7 @@
 :host-context(.theme-dark) .orgs-kpi-card--total .orgs-kpi-card__icon-wrap,
 :host-context(.dark) .orgs-kpi-card--total .orgs-kpi-card__icon-wrap {
   background: rgba(255, 255, 255, 0.06);
+  color: #dfe7ef;
 }
 
 :host-context(.theme-dark) .orgs-kpi-card__skeleton,

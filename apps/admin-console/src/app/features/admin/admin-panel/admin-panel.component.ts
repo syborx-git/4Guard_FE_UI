@@ -25,6 +25,7 @@ import { MovementService, InventoryMovement } from '../services/movement.service
 import { IncidenceService, Incidence, IncidenceStatus, IncidenceType, IncidenceSeverity } from '../services/incidence.service';
 import { AuditLogService } from '../services/audit.service';
 import { NotificationAdminService, NotificationAdminItem, NotificationSeverity } from '../services/notification-admin.service';
+import { AuthState, isDirectorGeneralRole } from '../../../core/auth/auth.state';
 import { RestrictSpecialCharsDirective } from '../../../shared/directives/restrict-special-chars.directive';
 
 interface AdminModuleCard {
@@ -124,6 +125,7 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
   protected readonly incidenceService = inject(IncidenceService);
   protected readonly auditService = inject(AuditLogService);
   protected readonly notifService = inject(NotificationAdminService);
+  private readonly authState = inject(AuthState);
   private readonly router = inject(Router);
 
   // Estados de navegación e interfaz
@@ -375,7 +377,10 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
         ];
       }
       case 'users': {
-        const users = this.userAdminService.users();
+        const hideDirector = this.authState.isOperationsManager();
+        const users = hideDirector
+          ? this.userAdminService.users().filter(u => !isDirectorGeneralRole(u.role))
+          : this.userAdminService.users();
         return [
           {
             label: 'Total Usuarios',
@@ -398,7 +403,10 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
         ];
       }
       case 'roles': {
-        const roles = this.roleService.roles();
+        const hideDirector = this.authState.isOperationsManager();
+        const roles = hideDirector
+          ? this.roleService.roles().filter(r => !isDirectorGeneralRole(r.name))
+          : this.roleService.roles();
         return [
           {
             label: 'Total Roles',
@@ -637,13 +645,17 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
         }
         break;
       case 'users':
-        list = this.userAdminService.users();
+        list = this.authState.isOperationsManager()
+          ? this.userAdminService.users().filter(u => !isDirectorGeneralRole(u.role))
+          : this.userAdminService.users();
         if (search) {
           list = list.filter(u => u.username.toLowerCase().includes(search) || u.email.toLowerCase().includes(search) || `${u.firstName} ${u.lastName}`.toLowerCase().includes(search) || (u.branchName || '').toLowerCase().includes(search));
         }
         break;
       case 'roles':
-        list = this.roleService.roles();
+        list = this.authState.isOperationsManager()
+          ? this.roleService.roles().filter(r => !isDirectorGeneralRole(r.name))
+          : this.roleService.roles();
         if (search) {
           list = list.filter(r => r.name.toLowerCase().includes(search));
         }

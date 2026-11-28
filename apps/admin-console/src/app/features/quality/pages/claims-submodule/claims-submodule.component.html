@@ -110,7 +110,7 @@
       <!-- Botón Principal: Registrar Nuevo Reclamo -->
       <button type="button" class="btn-create-claim" (click)="openCreateClaimModal()">
         <span class="material-symbols-outlined">add_circle</span>
-        <span>+ Registrar Nuevo Reclamo</span>
+        <span>Registrar Nuevo Reclamo</span>
       </button>
     </div>
 
@@ -617,7 +617,7 @@
 
         <div class="modal-body space-y-3">
           
-          <div class="grid grid-cols-2 gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50">
             <div>
               <span class="text-[11px] text-slate-500 uppercase font-bold block">Producto</span>
               <strong class="text-sm text-slate-800 dark:text-slate-100">{{ selectedClaim()!.sku }}</strong>
@@ -626,14 +626,14 @@
             <div>
               <span class="text-[11px] text-slate-500 uppercase font-bold block">Cliente</span>
               <strong class="text-sm text-slate-800 dark:text-slate-100">{{ selectedClaim()!.clientName }}</strong>
-              <div class="mt-1 flex items-center gap-2">
+              <div class="mt-1 flex flex-wrap items-center gap-2">
                 <span class="text-xs text-amber-600 font-mono font-bold">LOTE: {{ selectedClaim()!.batchNumber }}</span>
                 <span class="text-xs text-blue-600 font-mono">REM: {{ selectedClaim()!.remisionNumber }}</span>
               </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
               <span class="text-[10px] text-slate-500 font-bold block uppercase">Material Dañado</span>
               <strong class="text-base text-amber-600">{{ selectedClaim()!.damagedQty }} Pzas</strong>
@@ -679,8 +679,8 @@
     <div class="modal-backdrop" (click)="closePrintModal()">
       <div class="modal-card max-w-3xl w-full p-3 sm:p-4 space-y-2.5 max-h-[96vh] flex flex-col overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800" (click)="$event.stopPropagation()">
         
-        <!-- Barra Superior en UNA SOLA FILA -->
-        <div class="flex items-center justify-between gap-3 no-print border-b border-slate-200 dark:border-slate-800 pb-2.5 flex-shrink-0">
+        <!-- Barra Superior -->
+        <div class="flex flex-wrap items-center justify-between gap-2 no-print border-b border-slate-200 dark:border-slate-800 pb-2.5 flex-shrink-0">
           <div class="flex items-center gap-2 min-w-0">
             <span class="material-symbols-outlined text-amber-500 text-base shrink-0">print</span>
             <span class="font-black text-xs text-slate-800 dark:text-slate-100 uppercase tracking-wider truncate">
@@ -688,7 +688,7 @@
             </span>
           </div>
 
-          <div class="flex items-center gap-2 shrink-0">
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
             <!-- Botón 1-Clic Descarga Directa -->
             <button
               type="button"

@@ -9,6 +9,18 @@ import { SessionStorageService } from '../services/session-storage.service';
 import { AuthService } from '../services/auth.service';
 import { AuthenticatedUser, JwtSession, ShiftType } from '../models/auth.models';
 
+const DIRECTOR_GENERAL_ROLES = new Set(['ADMIN', 'CEO', 'SUPER_ADMIN']);
+
+/**
+ * Determina si un nombre de rol corresponde a Director General (`ADMIN`, `CEO`, `SUPER_ADMIN`),
+ * normalizando mayúsculas, espacios y prefijo `ROLE_`.
+ */
+export function isDirectorGeneralRole(role?: string | null): boolean {
+  if (!role) return false;
+  const normalized = String(role).trim().toUpperCase().replace(/^ROLE_/, '');
+  return DIRECTOR_GENERAL_ROLES.has(normalized);
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -40,6 +52,13 @@ export class AuthState {
   readonly role = computed(() => this._currentUser()?.role ?? null);
   readonly roleLevel = computed(() => this._currentUser()?.roleLevel ?? 0);
   readonly permissions = computed(() => this._currentUser()?.permissions ?? []);
+
+  readonly isDirectorGeneral = computed(() => isDirectorGeneralRole(this.role()));
+  readonly isOperationsManager = computed(() => {
+    if (this.isDirectorGeneral()) return false;
+    const r = (this.role() || '').trim().toUpperCase().replace(/^ROLE_/, '');
+    return r === 'OPERATIONS_MANAGER' || r === 'WAREHOUSE_MANAGER';
+  });
 
   /** Nombre completo del usuario para visualización en UI */
   readonly userFullName = computed(() => this._currentUser()?.fullName ?? '');

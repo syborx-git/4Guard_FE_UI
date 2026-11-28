@@ -28,6 +28,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 import { RolePermissionService } from '../../services/role-permission.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { AuthState, isDirectorGeneralRole } from '../../../../core/auth/auth.state';
 import {
   Role,
   Permission,
@@ -58,6 +59,7 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   protected readonly roleService = inject(RolePermissionService);
   private readonly toastService = inject(ToastService);
+  private readonly authState = inject(AuthState);
   private readonly destroy$ = new Subject<void>();
 
   // ─── Estado de la Vista (Signals Reactivos) ─────────────────────────────────
@@ -122,10 +124,19 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
     return clean.length >= 8 ? clean.slice(0, 8).toUpperCase() : clean.padEnd(8, '0').toUpperCase();
   }
 
+  // ─── Computed Roles Visibles según RBAC ──────────────────────────────────────
+
+  protected readonly visibleRoles = computed(() => {
+    const roles = this.roleService.roles();
+    return this.authState.isOperationsManager()
+      ? roles.filter(r => !isDirectorGeneralRole(r.name))
+      : roles;
+  });
+
   // ─── Computed Lista Filtrada de Roles ────────────────────────────────────────
 
   protected readonly filteredRoles = computed(() => {
-    let list = this.roleService.roles();
+    let list = this.visibleRoles();
     const search = this.filterText().toLowerCase().trim();
     const typeVal = this.filterType();
 
@@ -175,9 +186,9 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
 
   // ─── Computed KPIs ──────────────────────────────────────────────────────────
 
-  protected readonly kpiTotalRoles  = computed(() => this.roleService.totalCount());
-  protected readonly kpiSystemRoles = computed(() => this.roleService.systemRolesCount());
-  protected readonly kpiCustomRoles = computed(() => this.roleService.customRolesCount());
+  protected readonly kpiTotalRoles  = computed(() => this.visibleRoles().length);
+  protected readonly kpiSystemRoles = computed(() => this.visibleRoles().filter(r => r.isSystem).length);
+  protected readonly kpiCustomRoles = computed(() => this.visibleRoles().filter(r => !r.isSystem).length);
 
   // ─── Formulario Reactivo ─────────────────────────────────────────────────────
 
@@ -536,14 +547,14 @@ export class RoleManagementComponent implements OnInit, OnDestroy {
   protected get loadErrorMessage(): string { return this.roleService.loadError() ?? ''; }
 
   protected get isListEmpty(): boolean {
-    return !this.isLoading && !this.hasLoadError && this.roleService.roles().length === 0;
+    return !this.isLoading && !this.hasLoadError && this.visibleRoles().length === 0;
   }
 
   protected get hasNoResults(): boolean {
     return (
       !this.isLoading &&
       !this.hasLoadError &&
-      this.roleService.roles().length > 0 &&
+      this.visibleRoles().length > 0 &&
       this.filteredRoles().length === 0
     );
   }

@@ -8,6 +8,7 @@ import { UserRole, ROLE_LABELS } from '@4guard/shared-core';
 
 import { UsersService } from '../../../core/services/users.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { AuthState, isDirectorGeneralRole } from '../../../core/auth/auth.state';
 import { UserAdminService, UserAdminItem, UserStatus } from '../services/user-admin.service';
 import { BranchService } from '../services/branch.service';
 import { UserAuditLogDto } from '../../../core/models/user.models';
@@ -47,6 +48,7 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly userAdminService = inject(UserAdminService);
   private readonly branchService = inject(BranchService);
   private readonly roleService = inject(RolePermissionService);
+  private readonly authState = inject(AuthState);
   private readonly destroy$ = new Subject<void>();
 
   // ── Element References ───────────────────────────────────
@@ -218,7 +220,7 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
     lastName: ['', [Validators.required, Validators.maxLength(100), noWhitespaceValidator]],
     username: ['', [Validators.required, Validators.maxLength(50), noWhitespaceValidator]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
-    role: ['ADMIN', Validators.required],
+    role: ['', Validators.required],
     branchId: [null],
     status: ['ACTIVE', Validators.required]
   });
@@ -228,10 +230,17 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // ── Catálogo de Roles Dinámicos desde la Base de Datos ────
   protected readonly availableRoles = computed(() => {
+    const hideDirector = this.authState.isOperationsManager();
     const dbRoles = this.roleService.roles();
     if (dbRoles && dbRoles.length > 0) {
       return dbRoles
-        .filter(r => r.name !== 'VIGILANCIA' && r.name !== 'WAREHOUSE_OPERATOR' && r.name !== 'ROLE_WAREHOUSE_OPERATOR' && r.name !== 'FORKLIFT_OPERATOR')
+        .filter(r =>
+          r.name !== 'VIGILANCIA' &&
+          r.name !== 'WAREHOUSE_OPERATOR' &&
+          r.name !== 'ROLE_WAREHOUSE_OPERATOR' &&
+          r.name !== 'FORKLIFT_OPERATOR' &&
+          (!hideDirector || !isDirectorGeneralRole(r.name))
+        )
         .map(r => ({
           id: r.id,
           name: r.name.replace('ROLE_', ''),
@@ -239,7 +248,7 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
         }));
     }
     // Fallback con catálogo oficial de roles del sistema WMS (Organigrama Oficial)
-    return [
+    const fallbackRoles = [
       { id: 'ADMIN', name: 'ADMIN', label: 'Director General' },
       { id: 'OPERATIONS_MANAGER', name: 'OPERATIONS_MANAGER', label: 'Gerente de Operaciones' },
       { id: 'OPERATIONS_COORDINATOR', name: 'OPERATIONS_COORDINATOR', label: 'Coordinador de Operaciones' },
@@ -251,12 +260,22 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
       { id: 'SECURITY_GUARD', name: 'SECURITY_GUARD', label: 'Guardia de Seguridad' },
       { id: 'SECURITY_ASSISTANT', name: 'SECURITY_ASSISTANT', label: 'Ayudante de Seguridad' },
     ];
+    return hideDirector
+      ? fallbackRoles.filter(r => !isDirectorGeneralRole(r.name))
+      : fallbackRoles;
+  });
+
+  // ── Usuarios Visibles según RBAC (Oculta montacarguistas y Director General para Gerente) ──
+  protected readonly visibleUsers = computed(() => {
+    const hideDirector = this.authState.isOperationsManager();
+    return this.userAdminService.users().filter(u =>
+      !this.isForkliftOperator(u) && (!hideDirector || !isDirectorGeneralRole(u.role))
+    );
   });
 
   // ── Computed Lista Filtrada (Reactiva en tiempo real) ─────
   protected readonly filteredUsers = computed(() => {
-    // Excluir montacarguistas / operarios de terminal de este módulo (tienen su módulo exclusivo)
-    let list = this.userAdminService.users().filter(u => !this.isForkliftOperator(u));
+    let list = this.visibleUsers();
 
     const search = this.filterText().toLowerCase().trim();
     const statusVal = this.filterStatus();
@@ -289,11 +308,11 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   // ── Computed KPIs ────────────────────────────────────────
-  protected readonly totalUsers = computed(() => this.userAdminService.users().filter(u => !this.isForkliftOperator(u)).length);
-  protected readonly systemUsersCount = computed(() => this.userAdminService.users().filter(u => !this.isForkliftOperator(u)).length);
+  protected readonly totalUsers = computed(() => this.visibleUsers().length);
+  protected readonly systemUsersCount = computed(() => this.visibleUsers().length);
   protected readonly operatorUsersCount = computed(() => this.userAdminService.users().filter(u => this.isForkliftOperator(u)).length);
-  protected readonly kpiActive = computed(() => this.userAdminService.users().filter(u => !this.isForkliftOperator(u) && u.status === 'ACTIVE').length);
-  protected readonly kpiInactive = computed(() => this.userAdminService.users().filter(u => !this.isForkliftOperator(u) && u.status !== 'ACTIVE').length);
+  protected readonly kpiActive = computed(() => this.visibleUsers().filter(u => u.status === 'ACTIVE').length);
+  protected readonly kpiInactive = computed(() => this.visibleUsers().filter(u => u.status !== 'ACTIVE').length);
   protected readonly kpiAdminSupervisors = computed(() => {
     const adminSupervisorSet = new Set([
       'ADMIN', 'ROLE_ADMIN',
@@ -306,7 +325,7 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
       'CONTROL_DESK', 'ROLE_CONTROL_DESK',
       'SUPERVISOR', 'ROLE_SUPERVISOR'
     ]);
-    return this.userAdminService.users().filter(u => {
+    return this.visibleUsers().filter(u => {
       const role = (u.role || '').toUpperCase().trim();
       const cleanRole = role.replace('ROLE_', '');
       return adminSupervisorSet.has(role) || adminSupervisorSet.has(cleanRole);
@@ -420,7 +439,10 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
   protected startNewUser(): void {
     this.selectedUser.set(null);
     this.formMode.set('new');
-    const firstRole = this.availableRoles()[0]?.name || 'OPERATIONS_MANAGER';
+    const firstAllowedRole = this.availableRoles().find(
+      r => !this.authState.isOperationsManager() || !isDirectorGeneralRole(r.name)
+    );
+    const firstRole = firstAllowedRole?.name || 'OPERATIONS_MANAGER';
     const firstBranch = this.availableBranches()[0]?.id || null;
     this.form.reset({
       firstName: '',
@@ -512,8 +534,16 @@ export class UsersListComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    this.isSaving.set(true);
     const raw = this.form.getRawValue();
+
+    if (this.authState.isOperationsManager() && isDirectorGeneralRole(raw.role)) {
+      const msg = 'Permisos insuficientes: el Gerente de Operaciones no puede asignar el rol de Director General.';
+      this.backendError.set(msg);
+      this.toastService.error(`❌ ${msg}`, 5500);
+      return;
+    }
+
+    this.isSaving.set(true);
     const branch = this.availableBranches().find(b => b.id === raw.branchId);
     const branchName = branch ? branch.name : (raw.branchId ? 'Sucursal Seleccionada' : 'Acceso Corporativo');
 

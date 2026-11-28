@@ -75,7 +75,8 @@
 }
 
 :host-context(.theme-dark),
-:host-context(.dark) {
+:host-context(.dark),
+:host-context([data-theme='dark']) {
   --border-card-gold: rgba(208, 175, 103, 0.24);
   --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
 
@@ -178,7 +179,15 @@
 .admin-hero {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 1rem;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.35));
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  transition: all 0.25s ease;
 }
 
 .admin-hero__eyebrow {
@@ -224,7 +233,7 @@
 }
 
 .admin-hero__icon .material-symbols-outlined {
-  color: #e0c87a;
+  color: var(--gold-light, #e0c87a);
   font-size: 26px !important;
 }
 
@@ -236,8 +245,8 @@
 
 .admin-hero__title {
   font-family: var(--font-display);
-  font-size: 1.85rem;
-  font-weight: 600;
+  font-size: 1.6rem;
+  font-weight: 700;
   color: var(--color-text-main);
   letter-spacing: -0.025em;
   margin: 0;
@@ -245,7 +254,7 @@
 }
 
 .admin-hero__subtitle {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--color-text-dim);
   margin: 0;
   max-width: 680px;
@@ -1495,16 +1504,19 @@
 }
 
 /* Variables locales para el Dark Theme */
-:host(.theme-dark) .crud-layout {
-  --catalog-bg-workspace: #08090d;
-  --catalog-bg-card: rgba(18, 22, 31, 0.72);
-  --catalog-border: rgba(255, 255, 255, 0.07);
-  --catalog-text-primary: #f1f4f8;
-  --catalog-text-secondary: #94a3b8;
-  --catalog-text-muted: #64748b;
-  --catalog-input-bg: rgba(255, 255, 255, 0.03);
-  --catalog-input-border: rgba(255, 255, 255, 0.08);
-  --catalog-sidebar-bg: rgba(18, 22, 31, 0.6);
+:host(.theme-dark) .crud-layout,
+:host-context(.theme-dark) .crud-layout,
+:host-context(.dark) .crud-layout,
+:host-context([data-theme='dark']) .crud-layout {
+  --catalog-bg-workspace: #0b1119;
+  --catalog-bg-card: rgba(17, 26, 38, 0.94);
+  --catalog-border: rgba(255, 255, 255, 0.08);
+  --catalog-text-primary: #edf1f5;
+  --catalog-text-secondary: #9aa6b4;
+  --catalog-text-muted: #667585;
+  --catalog-input-bg: rgba(255, 255, 255, 0.04);
+  --catalog-input-border: rgba(255, 255, 255, 0.10);
+  --catalog-sidebar-bg: rgba(17, 26, 38, 0.85);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1676,16 +1688,95 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   CABECERA DEL CATÁLOGO (PROTOTIPO CLEAN)
+   CABECERA DEL CATÁLOGO (HOMOLOGADA GOLD STANDARD USUARIOS)
    ───────────────────────────────────────────────────────────── */
 .crud-layout .catalog-header {
   display: flex !important;
   flex-direction: column !important;
-  gap: 0.6rem !important;
+  gap: 1rem !important;
   padding: 0 !important;
   border-bottom: none !important;
   background: transparent !important;
   margin-bottom: 0.25rem !important;
+}
+
+.crud-layout .catalog-header__left {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 1.1rem !important;
+}
+
+.crud-layout .catalog-header__icon-wrap {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 54px !important;
+  height: 54px !important;
+  border-radius: 14px !important;
+  background: linear-gradient(145deg, #172033, #25324a) !important;
+  box-shadow: 0 8px 20px rgba(23, 32, 51, 0.22) !important;
+  flex-shrink: 0 !important;
+}
+
+:host(.theme-dark) .crud-layout .catalog-header__icon-wrap,
+:host-context(.theme-dark) .crud-layout .catalog-header__icon-wrap,
+:host-context(.dark) .crud-layout .catalog-header__icon-wrap,
+:host-context([data-theme='dark']) .crud-layout .catalog-header__icon-wrap {
+  background: linear-gradient(145deg, #16212f, #1f2d3e) !important;
+  border: 1px solid var(--border-card-gold) !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+.crud-layout .catalog-header__icon {
+  color: #ffffff !important;
+  font-size: 26px !important;
+}
+
+.crud-layout .catalog-header__copy {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.25rem !important;
+  min-width: 0 !important;
+}
+
+.crud-layout .catalog-header__eyebrow {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: var(--text-gold) !important;
+}
+
+.crud-layout .catalog-header__eyebrow-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  background: var(--gold-bg) !important;
+  border: 1px solid var(--gold-border) !important;
+  border-radius: 5px !important;
+  padding: 1px 7px !important;
+  color: var(--text-gold) !important;
+  cursor: pointer !important;
+  transition: all 0.16s ease !important;
+}
+
+.crud-layout .catalog-header__eyebrow-tag:hover {
+  background: rgba(197, 168, 107, 0.22) !important;
+  border-color: var(--gold) !important;
+}
+
+.crud-layout .catalog-header__eyebrow-tag .material-symbols-outlined {
+  font-size: 14px !important;
+}
+
+.crud-layout .catalog-header__eyebrow-sep {
+  opacity: 0.4 !important;
 }
 
 .crud-layout .catalog-eyebrow {
@@ -1730,29 +1821,31 @@
 
 .crud-layout .catalog-title {
   font-family: var(--catalog-font-display) !important;
-  font-size: 1.8rem !important;
-  font-weight: 700 !important;
-  color: var(--catalog-text-primary) !important;
+  font-size: 1.7rem !important;
+  font-weight: 500 !important;
+  color: var(--text-primary) !important;
   margin: 0 !important;
-  letter-spacing: -0.02em !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.025em !important;
   display: flex !important;
   align-items: center !important;
+  flex-wrap: wrap !important;
   gap: 0.5rem !important;
 }
 
 .crud-layout .catalog-title-sub {
-  font-size: 1.05rem !important;
+  font-size: 0.95rem !important;
   font-weight: 400 !important;
-  color: var(--catalog-text-muted) !important;
+  color: var(--text-muted) !important;
 }
 
 .crud-layout .catalog-description {
   font-family: var(--catalog-font-sans) !important;
-  font-size: 0.85rem !important;
-  line-height: 1.55 !important;
-  color: var(--catalog-text-secondary) !important;
+  font-size: 0.82rem !important;
+  line-height: 1.45 !important;
+  color: var(--text-secondary) !important;
   max-width: 900px !important;
-  margin: 0.15rem 0 0 0 !important;
+  margin: 0 !important;
 }
 
 .crud-layout .sidebar-menu {
@@ -2001,32 +2094,35 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
 }
 
-/* Tarjeta de Métrica */
+/* Tarjeta de Métrica (Acabado Ejecutivo Dorado) */
 .crud-layout .catalog-metric-card {
-  border: 1px solid var(--catalog-border) !important;
-  border-radius: 12px !important;
+  background: var(--bg-card-exec) !important;
+  border: 1.5px solid var(--border-card-gold) !important;
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px) !important;
   padding: 1.25rem !important;
   display: flex !important;
   align-items: center !important;
   gap: 1rem !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02) !important;
+  box-shadow: var(--shadow-card) !important;
   transition: var(--catalog-transition) !important;
   position: relative !important;
   overflow: hidden !important;
 }
 
-:host(.theme-light) .crud-layout .catalog-metric-card {
-  background: rgba(255, 255, 255, 0.45) !important;
-}
-
-:host(.theme-dark) .crud-layout .catalog-metric-card {
-  background: rgba(255, 255, 255, 0.02) !important;
+:host(.theme-dark) .crud-layout .catalog-metric-card,
+:host-context(.theme-dark) .crud-layout .catalog-metric-card,
+:host-context(.dark) .crud-layout .catalog-metric-card,
+:host-context([data-theme='dark']) .crud-layout .catalog-metric-card {
+  background: var(--bg-card-exec) !important;
+  border-color: var(--border-card-gold) !important;
+  box-shadow: var(--shadow-card) !important;
 }
 
 .crud-layout .catalog-metric-card:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04) !important;
-  border-color: rgba(208, 175, 103, 0.2) !important;
+  box-shadow: var(--shadow-card) !important;
+  border-color: var(--gold) !important;
 }
 
 /* Contenedor del Icono cuadrado */
@@ -2135,11 +2231,13 @@
    FASE 3 — HOMOLOGACIÓN VISUAL DE TABLAS, BADGES Y ACCIONES (GOOGLE AI)
    ========================================================================== */
 
-/* Contenedor de la Tabla */
+/* Contenedor de la Tabla (Acabado Ejecutivo Dorado) */
 .crud-layout .table-container {
-  border: 1px solid var(--catalog-border) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.02) !important;
+  background: var(--bg-card-exec) !important;
+  border: 1.5px solid var(--border-card-gold) !important;
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px) !important;
+  box-shadow: var(--shadow-card) !important;
   overflow: auto !important;
   transition: var(--catalog-transition) !important;
   max-width: 100% !important;
@@ -2149,12 +2247,13 @@
   scrollbar-color: rgba(208, 175, 103, 0.25) transparent !important;
 }
 
-:host(.theme-light) .crud-layout .table-container {
-  background: rgba(255, 255, 255, 0.45) !important;
-}
-
-:host(.theme-dark) .crud-layout .table-container {
-  background: rgba(255, 255, 255, 0.02) !important;
+:host(.theme-dark) .crud-layout .table-container,
+:host-context(.theme-dark) .crud-layout .table-container,
+:host-context(.dark) .crud-layout .table-container,
+:host-context([data-theme='dark']) .crud-layout .table-container {
+  background: var(--bg-card-exec) !important;
+  border-color: var(--border-card-gold) !important;
+  box-shadow: var(--shadow-card) !important;
 }
 
 /* Scrollbar para Webkit browsers */
@@ -2209,7 +2308,10 @@
   backdrop-filter: blur(8px) !important;
 }
 
-:host(.theme-dark) .crud-layout .fg-table th {
+:host(.theme-dark) .crud-layout .fg-table th,
+:host-context(.theme-dark) .crud-layout .fg-table th,
+:host-context(.dark) .crud-layout .fg-table th,
+:host-context([data-theme='dark']) .crud-layout .fg-table th {
   background: rgba(20, 26, 38, 0.95) !important;
   color: #94a3b8 !important;
   backdrop-filter: blur(8px) !important;
@@ -2230,7 +2332,10 @@
   color: #17243d !important;
 }
 
-:host(.theme-dark) .crud-layout .fg-table td {
+:host(.theme-dark) .crud-layout .fg-table td,
+:host-context(.theme-dark) .crud-layout .fg-table td,
+:host-context(.dark) .crud-layout .fg-table td,
+:host-context([data-theme='dark']) .crud-layout .fg-table td {
   color: #edf1f5 !important;
 }
 
@@ -2471,25 +2576,28 @@
   background: rgba(208, 175, 103, 0.35) !important;
 }
 
-/* Footer & Pagination Polish */
+/* Footer & Pagination Polish (Acabado Ejecutivo Dorado) */
 .crud-layout .table-footer {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 1.25rem 1.5rem !important;
-  border: 1px solid var(--catalog-border) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.01) !important;
+  padding: 1.15rem 1.5rem !important;
+  background: var(--bg-card-exec) !important;
+  border: 1.5px solid var(--border-card-gold) !important;
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px) !important;
+  box-shadow: var(--shadow-card) !important;
   margin-top: 1.25rem !important;
   transition: var(--catalog-transition) !important;
 }
 
-:host(.theme-light) .crud-layout .table-footer {
-  background: rgba(255, 255, 255, 0.45) !important;
-}
-
-:host(.theme-dark) .crud-layout .table-footer {
-  background: rgba(255, 255, 255, 0.02) !important;
+:host(.theme-dark) .crud-layout .table-footer,
+:host-context(.theme-dark) .crud-layout .table-footer,
+:host-context(.dark) .crud-layout .table-footer,
+:host-context([data-theme='dark']) .crud-layout .table-footer {
+  background: var(--bg-card-exec) !important;
+  border-color: var(--border-card-gold) !important;
+  box-shadow: var(--shadow-card) !important;
 }
 
 .crud-layout .table-footer__info {
@@ -2504,7 +2612,10 @@
   font-weight: 600 !important;
 }
 
-:host(.theme-dark) .crud-layout .table-footer__info b {
+:host(.theme-dark) .crud-layout .table-footer__info b,
+:host-context(.theme-dark) .crud-layout .table-footer__info b,
+:host-context(.dark) .crud-layout .table-footer__info b,
+:host-context([data-theme='dark']) .crud-layout .table-footer__info b {
   color: #fff !important;
 }
 
@@ -2564,15 +2675,18 @@
   color: var(--catalog-text-secondary) !important;
 }
 
-:host(.theme-dark) .crud-layout .pagination-current b {
+:host(.theme-dark) .crud-layout .pagination-current b,
+:host-context(.theme-dark) .crud-layout .pagination-current b,
+:host-context(.dark) .crud-layout .pagination-current b,
+:host-context([data-theme='dark']) .crud-layout .pagination-current b {
   color: #fff !important;
 }
 
 /* Typography Uniformity & Consistency */
 .crud-layout .catalog-title {
   font-family: var(--catalog-font-display) !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.02em !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.025em !important;
 }
 
 .crud-layout .catalog-category-label {
@@ -2639,19 +2753,25 @@
 
 /* Smooth consistent shadows */
 .crud-layout .catalog-metric-card {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.01) !important;
+  box-shadow: var(--shadow-card) !important;
 }
 
-:host(.theme-dark) .crud-layout .catalog-metric-card {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+:host(.theme-dark) .crud-layout .catalog-metric-card,
+:host-context(.theme-dark) .crud-layout .catalog-metric-card,
+:host-context(.dark) .crud-layout .catalog-metric-card,
+:host-context([data-theme='dark']) .crud-layout .catalog-metric-card {
+  box-shadow: var(--shadow-card) !important;
 }
 
 .crud-layout .table-container {
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.01) !important;
+  box-shadow: var(--shadow-card) !important;
 }
 
-:host(.theme-dark) .crud-layout .table-container {
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3) !important;
+:host(.theme-dark) .crud-layout .table-container,
+:host-context(.theme-dark) .crud-layout .table-container,
+:host-context(.dark) .crud-layout .table-container,
+:host-context([data-theme='dark']) .crud-layout .table-container {
+  box-shadow: var(--shadow-card) !important;
 }
 
 

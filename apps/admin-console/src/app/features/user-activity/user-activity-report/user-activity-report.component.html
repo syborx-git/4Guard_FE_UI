@@ -4,54 +4,48 @@
 <div class="ua-page">
 
   <!-- ═══════════════════════════════════════════════════════════
-       HERO (COMPACTO ~25% MENOS)
+       HEADER PRINCIPAL — HOMOLOGADO GOLD STANDARD USUARIOS
        ═══════════════════════════════════════════════════════════ -->
   <header class="ua-hero">
-    <div class="ua-hero__glow ua-hero__glow--gold"></div>
-    <div class="ua-hero__glow ua-hero__glow--blue"></div>
-
     <div class="ua-hero__content">
-      <!-- Left: breadcrumb + título + meta -->
+      <!-- Left: icono navy 54x54 + eyebrow + título + subtítulo + meta -->
       <div class="ua-hero__main">
-
-        <!-- Breadcrumb / Eyebrow (Golden Standard) -->
-        <div class="ua-hero__breadcrumb">
-          <a routerLink="/admin" class="btn-back-admin" title="Regresar a Administración WMS">
-            <span class="material-symbols-outlined">arrow_back</span>
-            <span>ADMINISTRACIÓN WMS</span>
-          </a>
-          <span class="ua-hero__breadcrumb-sep">/</span>
-          <span class="ua-hero__eyebrow">MONITOREO · TRAZABILIDAD · ACTIVIDAD DE USUARIOS</span>
+        <div class="ua-hero__icon-wrap">
+          <span class="material-symbols-outlined">manage_search</span>
         </div>
 
-        <!-- Título -->
-        <div class="ua-hero__title-row">
-          <div class="ua-hero__icon-wrap">
-            <span class="material-symbols-outlined">manage_search</span>
+        <div class="ua-hero__copy">
+          <!-- Breadcrumb / Eyebrow (Golden Standard) -->
+          <div class="ua-hero__breadcrumb">
+            <a routerLink="/admin" class="btn-back-admin" title="Regresar a Administración WMS">
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span>Administración WMS</span>
+            </a>
+            <span class="ua-hero__breadcrumb-sep">·</span>
+            <span class="ua-hero__eyebrow">Monitoreo · Trazabilidad · Actividad de Usuarios</span>
           </div>
-          <div class="ua-hero__title-block">
-            <h1 class="ua-hero__title">Reporte de actividad por usuario</h1>
-            <p class="ua-hero__description">
-              Consulta, analiza y exporta las acciones realizadas por los usuarios dentro de la operación.
-            </p>
-          </div>
-        </div>
 
-        <!-- Meta row -->
-        <div class="ua-hero__metadata">
-          <div class="ua-hero__meta-item">
-            <span class="material-symbols-outlined">schedule</span>
-            <span>Última consulta: {{ lastRefreshed() | date:'dd/MM/yyyy HH:mm:ss' }}</span>
-          </div>
-          <div class="ua-hero__meta-sep">·</div>
-          <div class="ua-hero__meta-item">
-            <span class="ua-hero__dot"></span>
-            <span>{{ filteredEvents().length }} eventos en vista</span>
-          </div>
-          <div class="ua-hero__meta-sep ua-hero__rls-sep">|</div>
-          <div class="ua-hero__rls-note">
-            <span class="material-symbols-outlined">shield</span>
-            Limitado por organización, almacén y permisos RLS
+          <h1 class="ua-hero__title">Reporte de actividad por usuario</h1>
+          <p class="ua-hero__description">
+            Consulta, analiza y exporta las acciones realizadas por los usuarios dentro de la operación.
+          </p>
+
+          <!-- Meta row -->
+          <div class="ua-hero__metadata">
+            <div class="ua-hero__meta-item">
+              <span class="material-symbols-outlined">schedule</span>
+              <span>Última consulta: {{ lastRefreshed() | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+            </div>
+            <div class="ua-hero__meta-sep">·</div>
+            <div class="ua-hero__meta-item">
+              <span class="ua-hero__dot"></span>
+              <span>{{ filteredEvents().length }} eventos en vista</span>
+            </div>
+            <div class="ua-hero__meta-sep ua-hero__rls-sep">|</div>
+            <div class="ua-hero__rls-note">
+              <span class="material-symbols-outlined">shield</span>
+              Limitado por organización, almacén y permisos RLS
+            </div>
           </div>
         </div>
       </div>

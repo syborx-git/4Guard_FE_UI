@@ -1,25 +1,107 @@
 /* ════════════════════════════════════════════════════════════════
    PERFIL DE USUARIO (BENTO) — ESTÁNDAR TARJETA EJECUTIVA 4GUARD WMS
-   Soporte completo Modo Claro & Modo Oscuro (.theme-dark / .dark)
+   Soporte completo Modo Claro & Modo Oscuro (.theme-dark / .dark / [data-theme='dark'])
    ════════════════════════════════════════════════════════════════ */
 
 :host {
   --gold:             #c5a86b;
-  --border-card-gold: rgba(197, 168, 107, 0.32);
+  --gold-light:       #e0c87a;
+  --border-card-gold: rgba(197, 168, 107, 0.35);
+  --bg-card:          rgba(255, 255, 255, 0.94);
   --bg-card-exec:     linear-gradient(145deg, #ffffff 0%, #fdfbf7 40%, #f7f0e1 100%);
   --shadow-card:      0 12px 32px rgba(36, 44, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   --radius-xl:        18px;
+
+  --text-primary:     #1c2940;
+  --text-secondary:   #5a6477;
+  --text-gold:        #9b7626;
+  --font-display:     'Outfit', 'Inter', system-ui, sans-serif;
+  --font-body:        'Inter', system-ui, sans-serif;
 
   display: block;
   width: 100%;
 }
 
 :host-context(.theme-dark),
-:host-context(.dark) {
+:host-context(.dark),
+:host-context([data-theme='dark']) {
   --gold:             #d0af67;
+  --gold-light:       #e1c47c;
   --border-card-gold: rgba(208, 175, 103, 0.28);
+  --bg-card:          rgba(17, 26, 38, 0.94);
   --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
   --shadow-card:      0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --text-primary:     #edf1f5;
+  --text-secondary:   #9aa6b4;
+  --text-gold:        #d0af67;
+}
+
+/* ── HERO EJECUTIVO DE PERFIL ─────────────────────────────────── */
+.profile-hero {
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.35));
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  transition: all 0.25s ease;
+}
+
+.profile-hero__left {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+}
+
+.profile-hero__icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #172033, #25324a);
+  border: 1px solid rgba(197, 168, 107, 0.35);
+  box-shadow: 0 8px 20px rgba(23, 32, 51, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profile-hero__icon {
+  color: var(--gold-light, #e0c87a);
+  font-size: 26px;
+}
+
+.profile-hero__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.profile-hero__eyebrow {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-gold);
+}
+
+.profile-hero__title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.profile-hero__subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.35;
 }
 
 .profile-exec-card {
@@ -31,7 +113,8 @@
 }
 
 :host-context(.theme-dark) .profile-exec-card,
-:host-context(.dark) .profile-exec-card {
+:host-context(.dark) .profile-exec-card,
+:host-context([data-theme='dark']) .profile-exec-card {
   background: var(--bg-card-exec) !important;
   border: 1.5px solid var(--border-card-gold) !important;
   border-top: 3.5px solid var(--gold) !important;
@@ -49,16 +132,19 @@
 }
 
 :host-context(.theme-dark) .profile-exec-card .text-white,
-:host-context(.dark) .profile-exec-card .text-white {
+:host-context(.dark) .profile-exec-card .text-white,
+:host-context([data-theme='dark']) .profile-exec-card .text-white {
   color: #ffffff;
 }
 
 :host-context(.theme-dark) .profile-exec-card .text-gray-300,
-:host-context(.dark) .profile-exec-card .text-gray-300 {
+:host-context(.dark) .profile-exec-card .text-gray-300,
+:host-context([data-theme='dark']) .profile-exec-card .text-gray-300 {
   color: #d1d5db;
 }
 
 :host-context(.theme-dark) .profile-exec-card .text-gray-400,
-:host-context(.dark) .profile-exec-card .text-gray-400 {
+:host-context(.dark) .profile-exec-card .text-gray-400,
+:host-context([data-theme='dark']) .profile-exec-card .text-gray-400 {
   color: #9ca3af;
 }

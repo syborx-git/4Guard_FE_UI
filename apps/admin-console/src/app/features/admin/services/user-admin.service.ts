@@ -2,6 +2,7 @@ import { Injectable, signal, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { UserRole } from '@4guard/shared-core';
 import { UsersService } from '../../../core/services/users.service';
+import { AuthState, isDirectorGeneralRole } from '../../../core/auth/auth.state';
 import { RolePermissionService } from './role-permission.service';
 import { BranchService } from './branch.service';
 import { ApiResponse, UserProfileDto, CreateUserRequest, UserAuditLogDto } from '../../../core/models/user.models';
@@ -35,6 +36,7 @@ export interface UserAdminItem {
 })
 export class UserAdminService {
   private readonly usersService = inject(UsersService);
+  private readonly authState = inject(AuthState);
   private readonly roleService = inject(RolePermissionService);
   private readonly branchService = inject(BranchService);
   
@@ -66,10 +68,14 @@ export class UserAdminService {
       tap(response => {
         if (response.success && response.data && response.data.length > 0) {
           this.originalDtos.clear();
-          const mapped = response.data.map(dto => {
-            this.originalDtos.set(dto.id, dto);
-            return this.mapDtoToItem(dto);
-          });
+          const hideDirector = this.authState.isOperationsManager();
+          const mapped = response.data
+            .map(dto => ({ dto, item: this.mapDtoToItem(dto) }))
+            .filter(({ item }) => !hideDirector || !isDirectorGeneralRole(item.role))
+            .map(({ dto, item }) => {
+              this.originalDtos.set(dto.id, dto);
+              return item;
+            });
           this.items.set(mapped);
         }
       }),
@@ -142,6 +148,22 @@ export class UserAdminService {
       } else {
         roleId = '88888888-8888-8888-8888-888888888888'; // Fallback a Gerente de Operaciones
       }
+    }
+
+    // Validación defensiva RBAC: Gerente de Operaciones no puede asignar rol de Director General
+    if (
+      this.authState.isOperationsManager() &&
+      (
+        isDirectorGeneralRole(rawRole) ||
+        isDirectorGeneralRole(foundDbRole?.name) ||
+        roleId === '66666666-6666-6666-6666-666666666666'
+      )
+    ) {
+      return throwError(() => new HttpErrorResponse({
+        status: 403,
+        statusText: 'Forbidden',
+        error: { message: 'Permisos insuficientes: el Gerente de Operaciones no puede crear usuarios con rol de Director General.' }
+      }));
     }
 
     // 2. Resolver organizationId buscando en usuarios existentes
@@ -260,6 +282,23 @@ export class UserAdminService {
           updatedDto.roleId = matchingDto.roleId;
         }
       }
+    }
+
+    // Validación defensiva RBAC: Gerente de Operaciones no puede asignar ni modificar usuarios con rol Director General
+    if (
+      this.authState.isOperationsManager() &&
+      (
+        isDirectorGeneralRole(updatedFields.role) ||
+        isDirectorGeneralRole(updatedDto.roleName) ||
+        isDirectorGeneralRole(originalDto?.roleName) ||
+        updatedDto.roleId === '66666666-6666-6666-6666-666666666666'
+      )
+    ) {
+      return throwError(() => new HttpErrorResponse({
+        status: 403,
+        statusText: 'Forbidden',
+        error: { message: 'Permisos insuficientes: el Gerente de Operaciones no puede asignar ni modificar el rol de Director General.' }
+      }));
     }
 
     // Si se pasa contraseña, incluirla para que el backend la actualice

@@ -34,16 +34,6 @@
         </div>
       </div>
 
-      <button
-        id="btn-new-operator"
-        class="carriers-btn carriers-btn--primary"
-        type="button"
-        (click)="startNewOperator()"
-        aria-label="Registrar nuevo montacarguista">
-        <span class="material-symbols-outlined">add</span>
-        Nuevo montacarguista
-      </button>
-
     </div>
 
     <!-- ── Sección Métricas Operativas (Colapsable / Comprimible) ── -->
@@ -347,7 +337,7 @@
       (click)="startNewOperator(); closeOperatorDropdown()"
       aria-label="Registrar nuevo montacarguista">
       <span class="material-symbols-outlined">person_add</span>
-      + Nuevo Montacarguista
+      Nuevo Montacarguista
     </button>
   </div>
 
@@ -403,7 +393,7 @@
               <div class="flex items-center gap-2">
                 <button
                   class="carriers-btn carriers-btn--ghost carriers-btn--sm"
-                  style="color: var(--accent-gold); border-color: rgba(197, 168, 107, 0.4);"
+                  style="color: var(--gold); border-color: rgba(197, 168, 107, 0.4);"
                   type="button"
                   (click)="openResetPinModal(selectedOperator()!)"
                   title="Restablecer PIN de acceso a la terminal RF">

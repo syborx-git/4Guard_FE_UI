@@ -151,54 +151,9 @@ h1, h2, h3, h4, h5, h6 {
   transition: border-color 300ms ease, box-shadow 300ms ease;
 }
 
-.card-surface::before {
-  content: '' !important;
-  position: absolute !important;
-  inset: -2px !important;
-  border-radius: inherit !important;
-  padding: 2px !important;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    transparent 120deg,
-    rgba(197, 168, 107, 0.45) 155deg,
-    rgba(224, 200, 122, 0.85) 185deg,
-    rgba(212, 175, 55, 0.95) 215deg,
-    rgba(184, 134, 11, 0.85) 245deg,
-    rgba(197, 168, 107, 0.50) 275deg,
-    transparent 305deg,
-    transparent 360deg
-  ) !important;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-  -webkit-mask-composite: xor !important;
-  mask-composite: exclude !important;
-  pointer-events: none !important;
-  z-index: 10 !important;
-  opacity: 0.65 !important;
-  filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.45)) !important;
-  transition: opacity 300ms ease, filter 300ms ease !important;
-  animation: star-border-spin 6.5s linear infinite !important;
-}
-
-.card-surface:hover::before {
-  opacity: 1.0 !important;
-  animation-duration: 3s !important;
-  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.75)) drop-shadow(0 0 5px rgba(224, 200, 122, 0.65)) !important;
-}
-
 .card-surface:hover {
   border-color: rgba(212, 175, 55, 0.75) !important;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12), 0 0 24px rgba(212, 175, 55, 0.35) !important;
-}
-
-@keyframes star-border-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* ── DIRECTORIO LATERAL MASTER (4 COL) ──────────────────────────── */
@@ -319,7 +274,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .verif-list {
-  max-height: 650px;
+  max-height: calc(100vh - 280px);
+  min-height: 220px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -607,8 +563,9 @@ h1, h2, h3, h4, h5, h6 {
 
 .form-block-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
   border-bottom: 1px solid var(--border-card);
   padding-bottom: 0.4rem;
 }
@@ -653,8 +610,15 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 0 2px var(--gold-bg);
 }
 
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .criteria-interactive-table {
   width: 100%;
+  min-width: 680px;
   border-collapse: collapse;
   font-size: 0.78rem;
 }
@@ -782,7 +746,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2.5rem 1.5rem;
+  padding: 1rem;
   box-sizing: border-box;
 }
 
@@ -793,7 +757,7 @@ h1, h2, h3, h4, h5, h6 {
   border-top: 3.5px solid var(--gold) !important;
   max-width: 860px;
   width: 100%;
-  max-height: 80vh;
+  max-height: 92vh;
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
@@ -803,13 +767,14 @@ h1, h2, h3, h4, h5, h6 {
 
 .print-modal-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   padding: 0.85rem 1.25rem;
   border-bottom: 1px solid var(--border-card);
   background: var(--bg-card);
   flex-shrink: 0;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .print-modal-actions {
@@ -885,4 +850,16 @@ h1, h2, h3, h4, h5, h6 {
   overflow-y: auto;
   padding: 1.25rem;
   background: var(--bg-page);
+}
+
+@media (max-width: 1279px) {
+  .verif-list {
+    max-height: 260px;
+  }
+}
+
+@media (max-width: 640px) {
+  .form-capture-card {
+    padding: 0.85rem;
+  }
 }

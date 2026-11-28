@@ -1,19 +1,25 @@
 <div class="audit-page">
   <header class="audit-header">
     <div class="audit-header__left">
-      <a routerLink="/admin" class="audit-back">
-        <span class="material-symbols-outlined">arrow_back</span>
-        Volver a Administrar
-      </a>
-      <span class="audit-eyebrow">
-        <span class="material-symbols-outlined">verified_user</span>
-        MONITOREO Y SOPORTE · AUDITORÍA
-      </span>
-      <h1 class="audit-title">Consola de Auditoría</h1>
-      <p class="audit-subtitle">
-        Bitácora inmutable de llamadas a API, modificaciones y accesos del sistema,
-        con trazabilidad de operador, entidad, dirección IP y comparador de cambios.
-      </p>
+      <div class="audit-header__icon-wrap">
+        <span class="material-symbols-outlined audit-header__icon">verified_user</span>
+      </div>
+
+      <div class="audit-header__copy">
+        <div class="audit-header__eyebrow">
+          <a routerLink="/admin" class="audit-header__eyebrow-tag">
+            <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
+            <span>Administración WMS</span>
+          </a>
+          <span class="audit-header__eyebrow-sep">·</span>
+          <span>Monitoreo y Soporte · Auditoría</span>
+        </div>
+        <h1 class="audit-title">Consola de Auditoría</h1>
+        <p class="audit-subtitle">
+          Bitácora inmutable de llamadas a API, modificaciones y accesos del sistema,
+          con trazabilidad de operador, entidad, dirección IP y comparador de cambios.
+        </p>
+      </div>
     </div>
 
     <button type="button" class="audit-refresh" (click)="load()" [disabled]="isLoading()">
@@ -22,54 +28,114 @@
     </button>
   </header>
 
-  <section class="audit-kpis" aria-label="Resumen de auditoría">
-    <article class="audit-kpi">
-      <span class="material-symbols-outlined">receipt_long</span>
-      <div>
-        <span class="audit-kpi__label">EVENTOS</span>
-        <strong class="audit-kpi__value">{{ summary().total }}</strong>
-      </div>
-    </article>
+  <section class="wms-kpi-section" aria-label="Métricas de Auditoría">
+    <div class="wms-kpi-header">
+      <span class="wms-kpi-header__title">
+        <span class="material-symbols-outlined wms-kpi-header__icon">analytics</span>
+        <span>Métricas de Auditoría</span>
+      </span>
+      <button
+        type="button"
+        (click)="toggleKpiCollapse()"
+        class="wms-kpi-toggle-btn"
+        [title]="isKpiCollapsed() ? 'Expandir panel de métricas' : 'Compactar panel de métricas'"
+      >
+        <span class="material-symbols-outlined text-sm">{{ isKpiCollapsed() ? 'unfold_more' : 'unfold_less' }}</span>
+        <span>{{ isKpiCollapsed() ? 'Expandir Métricas' : 'Compactar Vista' }}</span>
+      </button>
+    </div>
 
-    <article class="audit-kpi audit-kpi--info">
-      <span class="material-symbols-outlined">group</span>
-      <div>
-        <span class="audit-kpi__label">USUARIOS ÚNICOS</span>
-        <strong class="audit-kpi__value">{{ summary().uniqueUsers }}</strong>
-      </div>
-    </article>
+    @if (isKpiCollapsed()) {
+      <div class="wms-kpi-summary-bar animate-fade-in">
+        <div class="wms-kpi-summary-items">
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--total"></span>
+            <span class="wms-kpi-summary-label">Eventos:</span>
+            <strong class="wms-kpi-summary-value">{{ summary().total }}</strong>
+          </div>
 
-    <article class="audit-kpi audit-kpi--success">
-      <span class="material-symbols-outlined">add_circle</span>
-      <div>
-        <span class="audit-kpi__label">CREACIONES</span>
-        <strong class="audit-kpi__value">{{ summary().creates }}</strong>
-      </div>
-    </article>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--info"></span>
+            <span class="wms-kpi-summary-label">Usuarios únicos:</span>
+            <strong class="wms-kpi-summary-value">{{ summary().uniqueUsers }}</strong>
+          </div>
 
-    <article class="audit-kpi audit-kpi--warning">
-      <span class="material-symbols-outlined">edit</span>
-      <div>
-        <span class="audit-kpi__label">MODIFICACIONES</span>
-        <strong class="audit-kpi__value">{{ summary().updates }}</strong>
-      </div>
-    </article>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--active"></span>
+            <span class="wms-kpi-summary-label">Creaciones:</span>
+            <strong class="wms-kpi-summary-value">{{ summary().creates }}</strong>
+          </div>
 
-    <article class="audit-kpi audit-kpi--danger">
-      <span class="material-symbols-outlined">delete</span>
-      <div>
-        <span class="audit-kpi__label">ELIMINACIONES</span>
-        <strong class="audit-kpi__value">{{ summary().deletes }}</strong>
-      </div>
-    </article>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--warning"></span>
+            <span class="wms-kpi-summary-label">Modificaciones:</span>
+            <strong class="wms-kpi-summary-value">{{ summary().updates }}</strong>
+          </div>
 
-    <article class="audit-kpi audit-kpi--danger">
-      <span class="material-symbols-outlined">error</span>
-      <div>
-        <span class="audit-kpi__label">ERRORES / RECHAZOS</span>
-        <strong class="audit-kpi__value">{{ summary().errors }}</strong>
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--danger"></span>
+            <span class="wms-kpi-summary-label">Eliminaciones:</span>
+            <strong class="wms-kpi-summary-value">{{ summary().deletes }}</strong>
+          </div>
+
+          <div class="wms-kpi-summary-item">
+            <span class="wms-kpi-summary-dot wms-kpi-summary-dot--rose"></span>
+            <span class="wms-kpi-summary-label">Errores:</span>
+            <strong class="wms-kpi-summary-value">{{ summary().errors }}</strong>
+          </div>
+        </div>
       </div>
-    </article>
+    } @else {
+      <div class="audit-kpis animate-fade-in" aria-label="Resumen de auditoría">
+        <article class="audit-kpi">
+          <span class="material-symbols-outlined">receipt_long</span>
+          <div>
+            <span class="audit-kpi__label">EVENTOS</span>
+            <strong class="audit-kpi__value">{{ summary().total }}</strong>
+          </div>
+        </article>
+
+        <article class="audit-kpi audit-kpi--info">
+          <span class="material-symbols-outlined">group</span>
+          <div>
+            <span class="audit-kpi__label">USUARIOS ÚNICOS</span>
+            <strong class="audit-kpi__value">{{ summary().uniqueUsers }}</strong>
+          </div>
+        </article>
+
+        <article class="audit-kpi audit-kpi--success">
+          <span class="material-symbols-outlined">add_circle</span>
+          <div>
+            <span class="audit-kpi__label">CREACIONES</span>
+            <strong class="audit-kpi__value">{{ summary().creates }}</strong>
+          </div>
+        </article>
+
+        <article class="audit-kpi audit-kpi--warning">
+          <span class="material-symbols-outlined">edit</span>
+          <div>
+            <span class="audit-kpi__label">MODIFICACIONES</span>
+            <strong class="audit-kpi__value">{{ summary().updates }}</strong>
+          </div>
+        </article>
+
+        <article class="audit-kpi audit-kpi--danger">
+          <span class="material-symbols-outlined">delete</span>
+          <div>
+            <span class="audit-kpi__label">ELIMINACIONES</span>
+            <strong class="audit-kpi__value">{{ summary().deletes }}</strong>
+          </div>
+        </article>
+
+        <article class="audit-kpi audit-kpi--danger">
+          <span class="material-symbols-outlined">error</span>
+          <div>
+            <span class="audit-kpi__label">ERRORES / RECHAZOS</span>
+            <strong class="audit-kpi__value">{{ summary().errors }}</strong>
+          </div>
+        </article>
+      </div>
+    }
   </section>
 
   <section class="audit-filters">

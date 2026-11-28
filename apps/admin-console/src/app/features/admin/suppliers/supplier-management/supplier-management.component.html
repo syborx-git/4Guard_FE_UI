@@ -412,13 +412,13 @@
         @if (canCreate()) {
           <button
             id="btn-new-supplier-bar"
-            class="users-btn users-btn--primary"
+            class="supplier-btn supplier-btn--primary"
             type="button"
             (click)="startNewSupplier(); closeSupplierDropdown()"
             [disabled]="isSaving"
             aria-label="Registrar nuevo proveedor">
             <span class="material-symbols-outlined">add</span>
-            + Nuevo proveedor
+            Nuevo proveedor
           </button>
         }
       </div>

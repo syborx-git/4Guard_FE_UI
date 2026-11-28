@@ -55,7 +55,8 @@
 }
 
 :host-context(.theme-dark),
-:host-context(.dark) {
+:host-context(.dark),
+:host-context([data-theme='dark']) {
   --navy:           #0b1119;
   --navy-mid:       #172033;
   --gold:           #d0af67;
@@ -129,8 +130,8 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   min-height: 100%;
   width: 100%;
-  padding: 1.75rem 2rem;
-  gap: 1.25rem;
+  padding: 1rem 1.25rem;
+  gap: 0.85rem;
   font-family: var(--font-body);
   color: var(--text-primary);
   background:
@@ -139,11 +140,27 @@ h1, h2, h3, h4, h5, h6 {
   overflow-x: hidden;
 }
 
+@media (max-width: 768px) {
+  .quality-page {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+}
+
 /* ── HEADER HOMOLOGADO ── */
 .quality-header {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.65rem;
+  background: var(--bg-card-exec, var(--bg-card));
+  border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.35));
+  border-top: 3.5px solid var(--gold) !important;
+  border-radius: var(--radius-xl, 18px);
+  padding: 0.85rem 1.15rem;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s ease;
 }
 
 .quality-header__top {
@@ -164,8 +181,8 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 14px;
   background: linear-gradient(145deg, #172033, #25324a);
   border: 1px solid rgba(197, 168, 107, 0.35);
@@ -174,8 +191,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .quality-header__icon {
-  color: var(--gold-light);
-  font-size: 26px;
+  color: var(--gold-light, #e0c87a);
+  font-size: 22px;
 }
 
 .quality-header__copy {
@@ -221,7 +238,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .quality-header__title {
   font-family: var(--font-display);
-  font-size: 1.65rem;
+  font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--text-primary);
@@ -230,7 +247,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .quality-header__subtitle {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   color: var(--text-secondary);
   margin: 0;
   line-height: 1.35;
@@ -326,23 +343,23 @@ h1, h2, h3, h4, h5, h6 {
 /* ── 1. KPI CARDS GRID (ESTILO HOMOLOGADO SECURITY GATE / SYNEXIA LUXURY) ── */
 .quality-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0.85rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.65rem;
 }
 
-@media (max-width: 1400px) {
+@media (max-width: 1100px) {
   .quality-kpi-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
   .quality-kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
   .quality-kpi-grid {
     grid-template-columns: 1fr;
   }
@@ -355,13 +372,13 @@ h1, h2, h3, h4, h5, h6 {
   border: 1.5px solid var(--border-card-gold, rgba(197, 168, 107, 0.32)) !important;
   border-top: 3.5px solid var(--gold, #c5a86b) !important;
   border-radius: var(--radius-xl, 18px);
-  padding: 1rem 1.15rem;
+  padding: 0.65rem 0.8rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.65rem;
   box-shadow: var(--shadow-card);
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  min-height: 82px;
+  min-height: 66px;
   box-sizing: border-box;
   backdrop-filter: blur(12px);
   cursor: pointer;
@@ -374,43 +391,6 @@ h1, h2, h3, h4, h5, h6 {
   border: 1.5px solid var(--border-card-gold, rgba(208, 175, 103, 0.28)) !important;
   border-top: 3.5px solid var(--gold, #d0af67) !important;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.quality-kpi-card::before {
-  content: '' !important;
-  position: absolute !important;
-  inset: -2px !important;
-  border-radius: inherit !important;
-  padding: 2px !important;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    transparent 120deg,
-    rgba(197, 168, 107, 0.45) 155deg,
-    rgba(224, 200, 122, 0.85) 185deg,
-    rgba(212, 175, 55, 0.95) 215deg,
-    rgba(184, 134, 11, 0.85) 245deg,
-    rgba(197, 168, 107, 0.50) 275deg,
-    transparent 305deg,
-    transparent 360deg
-  ) !important;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-  -webkit-mask-composite: xor !important;
-  mask-composite: exclude !important;
-  pointer-events: none !important;
-  z-index: 10 !important;
-  opacity: 0.65 !important;
-  filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.45)) !important;
-  transition: opacity 300ms ease, filter 300ms ease !important;
-  animation: star-border-spin 6.5s linear infinite !important;
-}
-
-.quality-kpi-card:hover::before,
-.quality-kpi-card.quality-kpi-card--active::before {
-  opacity: 1.0 !important;
-  animation-duration: 3s !important;
-  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.75)) drop-shadow(0 0 5px rgba(224, 200, 122, 0.65)) !important;
 }
 
 .quality-kpi-card:hover {
@@ -426,15 +406,6 @@ h1, h2, h3, h4, h5, h6 {
   transform: translateY(-2px);
 }
 
-@keyframes star-border-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 :host-context(.theme-dark) .quality-kpi-card.quality-kpi-card--active,
 :host-context(.dark) .quality-kpi-card.quality-kpi-card--active {
   border-color: var(--gold-light) !important;
@@ -443,8 +414,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .quality-kpi-card__icon {
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -453,7 +424,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .quality-kpi-card__icon .material-symbols-outlined {
-  font-size: 24px !important;
+  font-size: 20px !important;
   line-height: 1 !important;
 }
 
@@ -507,15 +478,19 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.08em;
   color: var(--text-muted);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .quality-kpi-card__value {
-  font-size: 1.75rem;
+  font-size: 1.38rem;
   font-weight: 700;
   font-family: var(--font-display);
   line-height: 1.1;
   color: var(--text-primary);
   margin: 2px 0;
+  white-space: nowrap;
 }
 
 .quality-kpi-card__sub {
@@ -525,6 +500,9 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.2;
   letter-spacing: 0.01em;
   transition: color 0.18s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .quality-kpi-card.quality-kpi-card--active .quality-kpi-card__sub {

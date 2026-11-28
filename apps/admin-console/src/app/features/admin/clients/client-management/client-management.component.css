@@ -46,6 +46,7 @@
   --c-inactive:     #6f7785;
   --c-inactive-bg:  rgba(111, 119, 133, 0.09);
   --c-info:         #2d7dd2;
+  --c-info-bg:      rgba(45, 125, 210, 0.08);
 
   --font-display:   'Outfit', 'Inter', system-ui, sans-serif;
   --font-body:      'Inter', system-ui, sans-serif;
@@ -61,19 +62,19 @@
 :host-context(.dark) {
   --border-card-gold: rgba(208, 175, 103, 0.28);
   --bg-card-exec:     linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
-  --bg-page:        #0b1119;
-  --bg-card:        rgba(17, 26, 38, 0.94);
+  --bg-page:        #080e18;
+  --bg-card:        rgba(15, 23, 42, 0.95);
   --bg-card-hover:  rgba(23, 35, 50, 0.98);
-  --border-card:    rgba(255, 255, 255, 0.08);
+  --border-card:    rgba(255, 255, 255, 0.10);
   --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
-  --text-primary:   #edf1f5;
-  --text-secondary: #9aa6b4;
-  --text-muted:     #667585;
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
   --text-gold:      #d0af67;
 
-  --navy:           #dfe7ef;
-  --navy-mid:       #16212f;
+  --navy:           #080e18;
+  --navy-mid:       #0f172a;
   --navy-light:     #1f2d3e;
   --gold:           #d0af67;
   --gold-light:     #e1c47c;
@@ -89,6 +90,8 @@
   --c-danger:       #ef7773;
   --c-danger-bg:    rgba(239, 83, 80, 0.12);
   --c-danger-bdr:   rgba(239, 83, 80, 0.24);
+  --c-inactive:     #64748b;
+  --c-inactive-bg:  rgba(100, 116, 139, 0.12);
   --c-info:         #77a8df;
   --c-info-bg:      rgba(96, 165, 250, 0.12);
 }
@@ -208,7 +211,7 @@
 
 .clients-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.9rem;
 }
 
@@ -306,6 +309,12 @@
   color: var(--c-inactive);
 }
 .clients-kpi-card__bar--inactive { background: var(--c-inactive); }
+
+.clients-kpi-card--destinations .clients-kpi-card__icon-wrap {
+  background: var(--c-info-bg);
+  color: var(--c-info);
+}
+.clients-kpi-card__bar--destinations { background: var(--c-info); }
 
 /* ─────────────────────────────────────────────────────────────
    SPLIT VIEW
@@ -1098,41 +1107,8 @@
 .clients-dialog__actions { display: flex; justify-content: flex-end; gap: 0.6rem; padding: 1rem 1.5rem; background: rgba(23, 32, 51, 0.02); border-top: 1px solid var(--border-card); }
 
 /* ─────────────────────────────────────────────────────────────
-   DARK MODE — :host-context(.theme-dark)
-   ───────────────────────────────────────────────────────────── */
-
-:host-context(.theme-dark) {
-  --bg-page:       #0d0b12;
-  --bg-card:       rgba(33, 29, 42, 0.90);
-  --border-card:   rgba(255,255,255,0.07);
-  --shadow-card:   0 18px 42px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04);
-  --text-primary:  #eceaf1;
-  --text-secondary:#9d99a8;
-  --text-muted:    #6a6577;
-  --text-gold:     #d6b667;
-  --gold-bg:       rgba(214, 182, 103, 0.08);
-  --gold-border:   rgba(214, 182, 103, 0.20);
-}
-
-:host-context(.theme-dark) .clients-page {
-  background:
-    radial-gradient(circle at 90% 5%, rgba(197, 168, 107, 0.07), transparent 30rem),
-    var(--bg-page);
-  color: var(--text-primary);
-}
-
-/* ─────────────────────────────────────────────────────────────
    MATRIZ DINÁMICA DE CONTACTOS Y DESTINOS FÍSICOS
    ───────────────────────────────────────────────────────────── */
-
-.clients-kpi-card--destinations .clients-kpi-card__icon-wrap {
-  background: rgba(197, 168, 107, 0.12);
-  color: var(--gold);
-}
-
-.clients-kpi-card__bar--destinations {
-  background: linear-gradient(90deg, #9b7626, #c5a86b);
-}
 
 .client-item__name-row {
   display: flex;
@@ -1283,29 +1259,27 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   MODO OSCURO (:host-context(.theme-dark), :host-context(.dark))
+   MODO OSCURO — Overrides de componentes
    ───────────────────────────────────────────────────────────── */
 
-:host-context(.theme-dark),
-:host-context(.dark) {
-  --navy:           #080e18;
-  --navy-mid:       #0f172a;
-  --gold:           #d0af67;
-  --gold-light:     #e1c47c;
-  --gold-bg:        rgba(208, 175, 103, 0.12);
-  --gold-border:    rgba(208, 175, 103, 0.25);
+:host-context(.theme-dark) .clients-kpi-card--total .clients-kpi-card__icon-wrap,
+:host-context(.dark) .clients-kpi-card--total .clients-kpi-card__icon-wrap {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
 
-  --bg-page:        #080e18;
-  --bg-card:        rgba(15, 23, 42, 0.95);
-  --bg-card-exec:   linear-gradient(145deg, rgba(23, 33, 48, 0.96) 0%, rgba(17, 26, 38, 0.98) 50%, rgba(36, 31, 22, 0.95) 100%);
-  --border-card:    rgba(255, 255, 255, 0.10);
-  --border-card-gold: rgba(208, 175, 103, 0.28);
-  --shadow-card:    0 16px 36px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+:host-context(.theme-dark) .clients-btn--primary,
+:host-context(.dark) .clients-btn--primary {
+  background: linear-gradient(135deg, #d0af67 0%, #b8860b 100%);
+  color: #080e18;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(208, 175, 103, 0.25);
+}
 
-  --text-primary:   #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted:     #64748b;
-  --text-gold:      #d0af67;
+:host-context(.theme-dark) .clients-btn--primary:hover:not(:disabled),
+:host-context(.dark) .clients-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e1c47c 0%, #c59b27 100%);
+  box-shadow: 0 6px 18px rgba(208, 175, 103, 0.35);
 }
 
 :host-context(.theme-dark) .client-sub-card,
@@ -1401,6 +1375,7 @@
    ───────────────────────────────────────────────────────────── */
 
 @media (max-width: 1050px) {
+  .clients-kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .clients-split { flex-direction: column; }
   .clients-directory {
     flex: none;

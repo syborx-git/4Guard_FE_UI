@@ -24,7 +24,7 @@
         <div class="roles-header__copy">
           <div class="roles-header__eyebrow">
             <a routerLink="/admin" class="roles-header__eyebrow-tag">
-              <span class="material-symbols-outlined">arrow_back</span>
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_back</span>
               <span>Administración WMS</span>
             </a>
             <span class="roles-header__eyebrow-sep">·</span>
@@ -384,7 +384,7 @@
             [disabled]="isSaving"
             aria-label="Registrar nuevo rol de usuario">
             <span class="material-symbols-outlined">add_moderator</span>
-            + Nuevo Rol
+            Nuevo Rol
           </button>
         }
       </div>
@@ -574,13 +574,13 @@
                 <div class="roles-readonly-grid">
                   <div class="roles-readonly-field">
                     <span class="roles-readonly-field__label">ID de Sistema (8 dígitos)</span>
-                    <span class="roles-readonly-field__value font-mono font-bold text-slate-800" [title]="'UUID Completo en BD: ' + selectedRole()!.id">
+                    <span class="roles-readonly-field__value font-mono font-bold text-slate-800 dark:text-slate-200" [title]="'UUID Completo en BD: ' + selectedRole()!.id">
                       #{{ getShortId(selectedRole()!.id) }}
                     </span>
                   </div>
                   <div class="roles-readonly-field">
                     <span class="roles-readonly-field__label">Código de Rol</span>
-                    <span class="roles-readonly-field__value font-mono font-bold text-amber-700">
+                    <span class="roles-readonly-field__value font-mono font-bold text-amber-700 dark:text-amber-400">
                       {{ selectedRole()!.code }}
                     </span>
                   </div>
